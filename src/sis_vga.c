@@ -50,7 +50,6 @@ extern void  SISSense30x(ScrnInfoPtr pScrn, Bool quiet);
 extern void  SISSenseChrontel(ScrnInfoPtr pScrn, Bool quiet);
 
 /* Our very own vgaHW functions */
-Bool SiSVGAInit(ScrnInfoPtr pScrn, DisplayModePtr mode);
 void SiSVGASave(ScrnInfoPtr pScrn, SISRegPtr save, int flags);
 void SiSVGARestore(ScrnInfoPtr pScrn, SISRegPtr restore, int flags);
 void SiSVGASaveFonts(ScrnInfoPtr pScrn);
@@ -61,6 +60,7 @@ void SiSVGAProtect(ScrnInfoPtr pScrn, Bool on);
 Bool SiSVGAMapMem(ScrnInfoPtr pScrn);
 void SiSVGAUnmapMem(ScrnInfoPtr pScrn);
 Bool SiSVGASaveScreen(ScreenPtr pScreen, int mode);
+static Bool SiSVGAInit(ScrnInfoPtr pScrn, DisplayModePtr mode, int fixsync);
 
 const CARD8 SiS6326TVRegs1[14] = {
      0x00,0x01,0x02,0x03,0x04,0x11,0x12,0x13,0x21,0x26,0x27,0x3a,0x3c,0x43
@@ -178,17 +178,15 @@ SISInit(ScrnInfoPtr pScrn, DisplayModePtr mode)
     unsigned int vclk[5];
     UShort       CRT_CPUthresholdLow, CRT_CPUthresholdHigh, CRT_ENGthreshold;
     double       a, b, c;
-    int          d, factor, offset;
+    int          d, factor, offset, fixsync = 1;
     int          num, denum, div, sbit, scale;
     Bool	 sis6326tvmode, sis6326himode;
-
-    PDEBUG(xf86DrvMsgVerb(pScrn->scrnIndex, X_INFO, 3, "SISInit()\n"));
 
     /* Save the registers for further processing */
     (*pSiS->SiSSave)(pScrn, pReg);
     
     /* Initialise the standard VGA registers */
-    if(!SiSVGAInit(pScrn, mode)) {
+    if(!SiSVGAInit(pScrn, mode, fixsync)) {
        xf86DrvMsg(pScrn->scrnIndex, X_ERROR, "SISInit: SiSVGAInit() failed\n");
        return FALSE;
     }
@@ -386,38 +384,22 @@ SISInit(ScrnInfoPtr pScrn, DisplayModePtr mode)
        } else {
 
           /* Set extended vertical overflow register */
-          pReg->sisRegs3C4[0x0A] = ((offset & 0xF00) >> 4) |
-                 (((mode->CrtcVTotal-2)     & 0x400) >> 10 ) |
-                 (((mode->CrtcVDisplay-1)   & 0x400) >>  9 ) |
-/*               (((mode->CrtcVSyncStart-1) & 0x400) >>  8 ) |  */
-	         (((mode->CrtcVBlankStart-1)& 0x400) >>  8 ) |
-/*               (((mode->CrtcVBlankStart-1)& 0x400) >>  7 );  */
-                 (((mode->CrtcVSyncStart)   & 0x400) >>  7 );
+          pReg->sisRegs3C4[0x0A] = (
+	      ((offset                                & 0xF00) >>  4) |
+              (((mode->CrtcVTotal - 2)                & 0x400) >> 10) |
+              (((mode->CrtcVDisplay - 1)              & 0x400) >>  9) |
+	      (((mode->CrtcVBlankStart - 1)           & 0x400) >>  8) |
+              (((mode->CrtcVSyncStart - fixsync)      & 0x400) >>  7));
 
           /* Set extended horizontal overflow register */
           pReg->sisRegs3C4[0x12] &= 0xE0;
           pReg->sisRegs3C4[0x12] |= (
-              (((mode->CrtcHTotal >> 3) - 5)      & 0x100) >> 8 |
-              (((mode->CrtcHDisplay >> 3) - 1)    & 0x100) >> 7 |
-/*            (((mode->CrtcHSyncStart >> 3) - 1)  & 0x100) >> 6 |  */
-              (((mode->CrtcHBlankStart >> 3) - 1) & 0x100) >> 6 |
-              ((mode->CrtcHSyncStart >> 3)        & 0x100) >> 5 |
-              (((mode->CrtcHBlankEnd >> 3) - 1)   & 0x40)  >> 2);
+              ((((mode->CrtcHTotal >> 3) - 5)          & 0x100) >> 8) |
+              ((((mode->CrtcHDisplay >> 3) - 1)        & 0x100) >> 7) |
+              ((((mode->CrtcHBlankStart >> 3) - 1)     & 0x100) >> 6) |
+              ((((mode->CrtcHSyncStart >> 3) - fixsync)& 0x100) >> 5) |
+              ((((mode->CrtcHBlankEnd >> 3) - 1)       & 0x40)  >> 2));
        }
-
-#ifdef TWDEBUG
-       xf86DrvMsg(0, X_INFO, "HDisplay %d HSyncStart %d HSyncEnd %d HTotal %d\n",
-		mode->CrtcHDisplay, mode->CrtcHSyncStart,
-		mode->CrtcHSyncEnd, mode->CrtcHTotal);
-       xf86DrvMsg(0, X_INFO, "HBlankSt %d  HBlankE %d\n",
-    		mode->CrtcHBlankStart, mode->CrtcHBlankEnd);
-
-       xf86DrvMsg(0, X_INFO, "VDisplay %d VSyncStart %d VSyncEnd %d VTotal %d\n",
-		mode->CrtcVDisplay, mode->CrtcVSyncStart,
-		mode->CrtcVSyncEnd, mode->CrtcVTotal);
-       xf86DrvMsg(0, X_INFO, "VBlankSt %d  VBlankE %d\n",
-    		mode->CrtcVBlankStart, mode->CrtcVBlankEnd);
-#endif
 
        /* enable (or disable) line compare */
        if(mode->CrtcVDisplay >= 1024)
@@ -712,15 +694,6 @@ SISInit(ScrnInfoPtr pScrn, DisplayModePtr mode)
        c = ((a / b) + 1.0) / 2;
        d = (int)c + 2;
 
-#ifdef TWDEBUG
-       xf86DrvMsg(0, X_INFO,
-          "Debug: w %d h %d r %d mclk %d bus %d factor %d bpp %d\n",
-          width, height, rate, mclk/1000, buswidth, factor,
-          pSiS->CurrentLayout.bitsPerPixel);
-       xf86DrvMsg(0, X_INFO, "Debug: a %f b %f c %f d %d (flags %x)\n",
-     	  a, b, c, d, pSiS->Flags);
-#endif
-
        CRT_CPUthresholdLow = d;
        if((pSiS->Flags & (RAMFLAG | SYNCDRAM)) == (RAMFLAG | SYNCDRAM)) {
           CRT_CPUthresholdLow += 2;
@@ -728,11 +701,6 @@ SISInit(ScrnInfoPtr pScrn, DisplayModePtr mode)
        CRT_CPUthresholdHigh = CRT_CPUthresholdLow + 3;
 
        CRT_ENGthreshold = 0x0F;
-
-#ifdef TWDEBUG
-       xf86DrvMsg(0, X_INFO, "Debug: Thlow %d thhigh %d\n",
-     	  CRT_CPUthresholdLow, CRT_CPUthresholdHigh);
-#endif
 
 #if 0  /* See comment in sis_dac.c on why this is commented */
        if(pSiS->Chipset == PCI_CHIP_SIS530) {
@@ -768,8 +736,8 @@ SISInit(ScrnInfoPtr pScrn, DisplayModePtr mode)
        pReg->sisRegs3C4[0x09] |= (CRT_CPUthresholdHigh & 0x0F);
 
        pReg->sisRegs3C4[0x3F] &= 0xEB;
-       pReg->sisRegs3C4[0x3F] |= (CRT_CPUthresholdHigh & 0x10) |
-                         	      ((CRT_CPUthresholdLow & 0x10) >> 2);
+       pReg->sisRegs3C4[0x3F] |= ((CRT_CPUthresholdHigh & 0x10) |
+                         	  ((CRT_CPUthresholdLow & 0x10) >> 2));
 
        if(pSiS->oldChipset >= OC_SIS530A) {
      	  pReg->sisRegs3C4[0x3F] &= 0xDF;
@@ -1040,7 +1008,7 @@ void SISVGAPreInit(ScrnInfoPtr pScrn)
     int    upperlimitch, lowerlimitch;
     int    chronteltype, chrontelidreg, upperlimitvb;
     
-    static const char *detectvb = "Detected %s (%s) video bridge (ID %d; Rev 0x%x)\n";
+    static const char *detectvb = "Detected SiS%s video bridge (%s, ID %d; Rev 0x%x)\n";
 #if 0
     UChar sr17=0;
 #endif
@@ -1141,7 +1109,7 @@ void SISVGAPreInit(ScrnInfoPtr pScrn)
 	}
 	
 	xf86DrvMsg(pScrn->scrnIndex, X_PROBED, detectvb, SiSVBTypeStr[sistypeidx], 
-		   		(pSiS->VBFlags2 & VB_SISUMC) ? "UMC" : "Charter", 1, temp1);
+		   		(pSiS->VBFlags2 & VB_SISUMC) ? "UMC-0" : "Charter/UMC-1", 1, temp1);
 
 	SISSense30x(pScrn, FALSE); 
 
@@ -1166,13 +1134,13 @@ void SISVGAPreInit(ScrnInfoPtr pScrn)
 	}
 	
 	xf86DrvMsg(pScrn->scrnIndex, X_PROBED, detectvb, SiSVBTypeStr[sistypeidx], 
-		   		(pSiS->VBFlags2 & VB_SISUMC) ? "UMC" : "Charter", 2, temp1);
+		   		(pSiS->VBFlags2 & VB_SISUMC) ? "UMC-0" : "Charter/UMC-1", 2, temp1);
 
 	SISSense30x(pScrn, FALSE);
 
     } else if (temp == 3) {
 
-    	xf86DrvMsg(pScrn->scrnIndex, X_PROBED, detectvb, "unsupported SiS303", "unknown", temp, 0);
+    	xf86DrvMsg(pScrn->scrnIndex, X_PROBED, detectvb, "303", "unsupported, unknown", temp, 0);
 
     } else {
 
@@ -1754,9 +1722,9 @@ SiSVGAUnmapMem(ScrnInfoPtr pScrn)
 }
 #endif
 
+#if 0
 static CARD32
-SiS_HBlankKGA(DisplayModePtr mode, SISRegPtr regp, int nBits, 
-	       unsigned int Flags)
+SiS_HBlankKGA(DisplayModePtr mode, SISRegPtr regp, int nBits, unsigned int Flags)
 {
     int    nExtBits = (nBits < 6) ? 0 : nBits - 6;
     CARD32 ExtBits;
@@ -1768,13 +1736,14 @@ SiS_HBlankKGA(DisplayModePtr mode, SISRegPtr regp, int nBits,
                           ((((mode->CrtcHBlankEnd >> 3) - 1) & 0x20) << 2);
     ExtBits             = ((mode->CrtcHBlankEnd >> 3) - 1) & ExtBitMask;
 
-    if((Flags & SISKGA_FIX_OVERSCAN) && ((mode->CrtcHBlankEnd >> 3) == (mode->CrtcHTotal >> 3))) {
+    if( (Flags & SISKGA_FIX_OVERSCAN) && 
+        ((mode->CrtcHBlankEnd >> 3) == (mode->CrtcHTotal >> 3))) {
        int i = (regp->sisRegs3D4[3] & 0x1F)        |
 	       ((regp->sisRegs3D4[5] & 0x80) >> 2) |
 	       ExtBits;
        if(Flags & SISKGA_ENABLE_ON_ZERO) {
-	  if((i-- > (((mode->CrtcHBlankStart >> 3) - 1) & (0x3F | ExtBitMask))) &&
-	     (mode->CrtcHBlankEnd == mode->CrtcHTotal)) {
+	  if( (i-- > (((mode->CrtcHBlankStart >> 3) - 1) & (0x3F | ExtBitMask))) &&
+	      (mode->CrtcHBlankEnd == mode->CrtcHTotal) ) {
 	     i = 0;
 	  }
        } else if (Flags & SISKGA_BE_TOT_DEC) i--;
@@ -1784,10 +1753,10 @@ SiS_HBlankKGA(DisplayModePtr mode, SISRegPtr regp, int nBits,
     }
     return ExtBits >> 6;
 }
+#endif
 
 static CARD32
-SiS_VBlankKGA(DisplayModePtr mode, SISRegPtr regp, int nBits, 
-	       unsigned int Flags)
+SiS_VBlankKGA(DisplayModePtr mode, SISRegPtr regp, int nBits, unsigned int Flags)
 {
     CARD32 nExtBits   = (nBits < 8) ? 0 : (nBits - 8);
     CARD32 ExtBitMask = ((1 << nExtBits) - 1) << 8;
@@ -1799,24 +1768,24 @@ SiS_VBlankKGA(DisplayModePtr mode, SISRegPtr regp, int nBits,
     if((Flags & SISKGA_FIX_OVERSCAN) && (mode->CrtcVBlankEnd == mode->CrtcVTotal)) {
        int i = regp->sisRegs3D4[22] | ExtBits;
        if(Flags & SISKGA_ENABLE_ON_ZERO) {
-	  if(((BitMask && ((i & BitMask) > (VBlankStart & BitMask)))
-	     || ((i > VBlankStart)  &&  		/* 8-bit case */
-	     ((i & 0x7F) > (VBlankStart & 0x7F)))) &&	/* 7-bit case */
-	     !(regp->sisRegs3D4[9] & 0x9F)) {		/* 1 scanline/row */
+	  if( ((BitMask && ((i & BitMask) > (VBlankStart & BitMask))) ||
+	       ((i > VBlankStart)  &&  		            /* 8-bit case */
+	        ((i & 0x7F) > (VBlankStart & 0x7F)))) &&    /* 7-bit case */
+	      (!(regp->sisRegs3D4[9] & 0x9F)) ) {	    /* 1 scanline/row */
 	     i = 0;
 	  } else {
 	     i--;
 	  }
-       } else if (Flags & SISKGA_BE_TOT_DEC) i--;
+       } else if(Flags & SISKGA_BE_TOT_DEC) i--;
 
        regp->sisRegs3D4[22] = i & 0xFF;
        ExtBits = i & 0xFF00;
     }
-    return ExtBits >> 8;
+    return (ExtBits >> 8);
 }
 
 Bool
-SiSVGAInit(ScrnInfoPtr pScrn, DisplayModePtr mode)
+SiSVGAInit(ScrnInfoPtr pScrn, DisplayModePtr mode, int fixsync)
 {
     SISPtr pSiS = SISPTR(pScrn);
     SISRegPtr regp = &pSiS->ModeReg;
@@ -1863,18 +1832,18 @@ SiSVGAInit(ScrnInfoPtr pScrn, DisplayModePtr mode)
     regp->sisRegs3D4[3]  = (((mode->CrtcHBlankEnd >> 3) - 1) & 0x1F) | 0x80;
     i = (((mode->CrtcHSkew << 2) + 0x10) & ~0x1F);
     if(i < 0x80)  regp->sisRegs3D4[3] |= i;
-    regp->sisRegs3D4[4]  = (mode->CrtcHSyncStart >> 3);
+    regp->sisRegs3D4[4]  = (mode->CrtcHSyncStart >> 3) - fixsync;
     regp->sisRegs3D4[5]  = ((((mode->CrtcHBlankEnd >> 3) - 1) & 0x20) << 2) |
-		           (((mode->CrtcHSyncEnd >> 3)) & 0x1F);
+		           (((mode->CrtcHSyncEnd >> 3) - fixsync) & 0x1F);			   
     regp->sisRegs3D4[6]  = (mode->CrtcVTotal - 2) & 0xFF;
-    regp->sisRegs3D4[7]  = (((mode->CrtcVTotal - 2) & 0x100) >> 8)      |
-	                   (((mode->CrtcVDisplay - 1) & 0x100) >> 7)    |
-	                   ((mode->CrtcVSyncStart & 0x100) >> 6)        |
-	                   (((mode->CrtcVBlankStart - 1) & 0x100) >> 5) |
-	                   0x10                                         |
-	                   (((mode->CrtcVTotal - 2) & 0x200)   >> 4)    |
-	                   (((mode->CrtcVDisplay - 1) & 0x200) >> 3)    |
-	                   ((mode->CrtcVSyncStart & 0x200) >> 2);
+    regp->sisRegs3D4[7]  = (((mode->CrtcVTotal - 2) & 0x100) >> 8)           |
+	                   (((mode->CrtcVDisplay - 1) & 0x100) >> 7)         |
+	                   (((mode->CrtcVSyncStart - fixsync) & 0x100) >> 6) |
+	                   (((mode->CrtcVBlankStart - 1) & 0x100) >> 5)      |
+	                   0x10                                              |
+	                   (((mode->CrtcVTotal - 2) & 0x200)   >> 4)         |
+	                   (((mode->CrtcVDisplay - 1) & 0x200) >> 3)         |
+	                   (((mode->CrtcVSyncStart - fixsync) & 0x200) >> 2);
     regp->sisRegs3D4[8]  = 0x00;
     regp->sisRegs3D4[9]  = (((mode->CrtcVBlankStart - 1) & 0x200) >> 4) | 0x40;
     if(mode->Flags & V_DBLSCAN) regp->sisRegs3D4[9] |= 0x80;
@@ -1886,8 +1855,8 @@ SiSVGAInit(ScrnInfoPtr pScrn, DisplayModePtr mode)
     regp->sisRegs3D4[13] = 0x00;
     regp->sisRegs3D4[14] = 0x00;
     regp->sisRegs3D4[15] = 0x00;
-    regp->sisRegs3D4[16] = mode->CrtcVSyncStart & 0xFF;
-    regp->sisRegs3D4[17] = (mode->CrtcVSyncEnd & 0x0F) | 0x20;
+    regp->sisRegs3D4[16] = (mode->CrtcVSyncStart - fixsync) & 0xFF;
+    regp->sisRegs3D4[17] = ((mode->CrtcVSyncEnd - fixsync) & 0x0F) | 0x20;
     regp->sisRegs3D4[18] = (mode->CrtcVDisplay - 1) & 0xFF;
     regp->sisRegs3D4[19] = pScrn->displayWidth >> 4;  
     regp->sisRegs3D4[20] = 0x00;
@@ -1897,7 +1866,9 @@ SiSVGAInit(ScrnInfoPtr pScrn, DisplayModePtr mode)
     else   	  regp->sisRegs3D4[23] = 0xC3;
     regp->sisRegs3D4[24] = 0xFF;
 
+#if 0    
     SiS_HBlankKGA(mode, regp, 0, SISKGA_FIX_OVERSCAN | SISKGA_ENABLE_ON_ZERO);
+#endif    
     SiS_VBlankKGA(mode, regp, 0, SISKGA_FIX_OVERSCAN | SISKGA_ENABLE_ON_ZERO);
 
     /* GR */

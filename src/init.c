@@ -1538,10 +1538,10 @@ SiSDetermineROMUsage(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo)
 	       else if(ROMAddr[romptr + (34 * 16)] == 0xff)
 	          SiS_Pr->SiS661LCD2TableSize = 34;
 	       else if(ROMAddr[romptr + (36 * 16)] == 0xff)	   /* 0.94 */
-	          SiS_Pr->SiS661LCD2TableSize = 36;  
+	          SiS_Pr->SiS661LCD2TableSize = 36;  		   /* 2.05.00+ */
 	       else if( (ROMAddr[romptr + (38 * 16)] == 0xff) ||   /* 2.00.00 - 2.02.00 */
 	       	 	(ROMAddr[0x6F] & 0x01) ) {		   /* 2.03.00+ */
-		  SiS_Pr->SiS661LCD2TableSize = 38;
+		  SiS_Pr->SiS661LCD2TableSize = 38;		   /* UMC data layout abandoned at 2.05.00 */
 		  SiS_Pr->SiS_EMIOffset = 16;
 	       }
 	    }
@@ -2508,7 +2508,6 @@ SiS_SetCRT1FIFO_300(SiS_Private *SiS_Pr, USHORT ModeNo, PSIS_HW_INFO HwInfo,
         VCLK = SiS_Pr->CSRClock;
      } else {
         index = SiS_Pr->SiS_RefIndex[RefreshRateTableIndex].Ext_CRTVCLK;
-        index &= 0x3F;
         VCLK = SiS_Pr->SiS_VCLKData[index].CLOCK;             /* Get VCLK  */
      }
 
@@ -2639,7 +2638,6 @@ SiS_SetCRT1FIFO_630(SiS_Private *SiS_Pr, USHORT ModeNo,
        VCLK = SiS_Pr->CSRClock;
     } else {
        index = SiS_Pr->SiS_RefIndex[RefreshRateTableIndex].Ext_CRTVCLK;
-       index &= 0x3F;
        VCLK = SiS_Pr->SiS_VCLKData[index].CLOCK;          /* Get VCLK  */
     }       
 
@@ -3461,6 +3459,11 @@ SiSSetMode(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo,USHORT ModeNo)
 #endif
          SiS_Pr->SiS_VGAINFO = 0x11;
 
+#ifdef LINUX_KERNEL
+   KeepLockReg = SiS_GetReg(SiS_Pr->SiS_P3c4,0x05);
+#endif
+   SiS_SetReg(SiS_Pr->SiS_P3c4,0x05,0x86);	 
+	 
    SiSInitPCIetc(SiS_Pr, HwInfo);
    SiSSetLVDSetc(SiS_Pr, HwInfo);
    SiSDetermineROMUsage(SiS_Pr, HwInfo);
@@ -3473,11 +3476,6 @@ SiSSetMode(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo,USHORT ModeNo)
 #endif
       ModeNo &= 0x7f;
    }
-
-#ifdef LINUX_KERNEL
-   KeepLockReg = SiS_GetReg(SiS_Pr->SiS_P3c4,0x05);
-#endif
-   SiS_SetReg(SiS_Pr->SiS_P3c4,0x05,0x86);
 
    SiS_UnLockCRT2(SiS_Pr, HwInfo);
 
@@ -3685,6 +3683,9 @@ SiSBIOSSetModeCRT2(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo, ScrnInfoPtr pScrn,
 #else
    SiS_Pr->SiS_VGAINFO = 0x11;
 #endif
+
+   SiS_SetReg(SiS_Pr->SiS_P3c4,0x05,0x86);
+   
    SiSInitPCIetc(SiS_Pr, HwInfo);
    SiSSetLVDSetc(SiS_Pr, HwInfo);
    SiSDetermineROMUsage(SiS_Pr, HwInfo);
@@ -3732,8 +3733,6 @@ SiSBIOSSetModeCRT2(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo, ScrnInfoPtr pScrn,
 
    }
 
-   SiS_SetReg(SiS_Pr->SiS_P3c4,0x05,0x86);
-
    SiS_UnLockCRT2(SiS_Pr, HwInfo);
 
    if(!SiS_Pr->UseCustomMode) {
@@ -3766,6 +3765,8 @@ SiSBIOSSetModeCRT2(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo, ScrnInfoPtr pScrn,
    SiS_SetTVMode(SiS_Pr, ModeNo, ModeIdIndex, HwInfo);
    SiS_GetLCDResInfo(SiS_Pr, ModeNo, ModeIdIndex, HwInfo);
    SiS_SetLowModeTest(SiS_Pr, ModeNo, HwInfo);
+   
+   SiS_ResetSegmentRegisters(SiS_Pr, HwInfo);
 
    /* Set mode on CRT2 */
    if( (SiS_Pr->SiS_VBType & VB_SISVB)    ||
@@ -3865,14 +3866,15 @@ SiSBIOSSetModeCRT1(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo, ScrnInfoPtr pScrn,
 #else
    SiS_Pr->SiS_VGAINFO = 0x11;
 #endif
+
+   SiS_SetReg(SiS_Pr->SiS_P3c4,0x05,0x86);
+   
    SiSInitPCIetc(SiS_Pr, HwInfo);
    SiSSetLVDSetc(SiS_Pr, HwInfo);
    SiSDetermineROMUsage(SiS_Pr, HwInfo);
 
    /* We don't clear the buffer in X */
    SiS_Pr->SiS_flag_clearbuffer = 0;
-
-   SiS_SetReg(SiS_Pr->SiS_P3c4,0x05,0x86);
 
    SiS_UnLockCRT2(SiS_Pr, HwInfo);
 
@@ -4106,13 +4108,6 @@ SiS_CalcCRRegisters(SiS_Private *SiS_Pr, int depth)
       else if(SiS_Pr->CHDisplay >= 640)  SiS_Pr->CCRT1CRTC[16] |= 0x40;
    }
 
-#if 0
-   if (mode->VScan >= 32)
-	regp->CRTC[9] |= 0x1F;
-   else if (mode->VScan > 1)
-	regp->CRTC[9] |= mode->VScan - 1;
-#endif
-
    SiS_Pr->CCRT1CRTC[8] =  (SiS_Pr->CVSyncStart     ) & 0xFF;			/* CR10 */
    SiS_Pr->CCRT1CRTC[9] =  ((SiS_Pr->CVSyncEnd      ) & 0x0F) | 0x80;		/* CR11 */
    SiS_Pr->CCRT1CRTC[10] = (SiS_Pr->CVDisplay    - 1) & 0xFF;			/* CR12 */
@@ -4326,9 +4321,7 @@ SiS_CheckBuildCustomMode(ScrnInfoPtr pScrn, DisplayModePtr mode, int VBFlags)
       pSiS->SiS_Pr->CVSyncStart >>= 1;
       pSiS->SiS_Pr->CVSyncEnd >>= 1;
       pSiS->SiS_Pr->CVTotal >>= 1;
-   }
-   if(pSiS->SiS_Pr->CFlags & V_DBLSCAN) {
-      /* pSiS->SiS_Pr->CDClock <<= 1; */
+   } else if(pSiS->SiS_Pr->CFlags & V_DBLSCAN) {
       pSiS->SiS_Pr->CVDisplay <<= 1;
       pSiS->SiS_Pr->CVSyncStart <<= 1;
       pSiS->SiS_Pr->CVSyncEnd <<= 1;
@@ -4339,6 +4332,15 @@ SiS_CheckBuildCustomMode(ScrnInfoPtr pScrn, DisplayModePtr mode, int VBFlags)
    pSiS->SiS_Pr->CHBlankEnd = pSiS->SiS_Pr->CHTotal;
    pSiS->SiS_Pr->CVBlankStart = pSiS->SiS_Pr->CVSyncStart - 1;
    pSiS->SiS_Pr->CVBlankEnd = pSiS->SiS_Pr->CVTotal;
+   
+   if((!(mode->type & M_T_BUILTIN)) && (mode->HDisplay <= 512)) {
+      pSiS->SiS_Pr->CModeFlag |= HalfDCLK;
+      pSiS->SiS_Pr->CDClock <<= 1;
+   }
+   
+   /* Note: For CRT2, HDisplay, HSync* and HTotal must be shifted left 
+    * in HalfDCLK mode.
+    */
    
    SiS_MakeClockRegs(pScrn, pSiS->SiS_Pr->CDClock, &pSiS->SiS_Pr->CSR2B, &pSiS->SiS_Pr->CSR2C);
 
@@ -4359,10 +4361,7 @@ SiS_CheckBuildCustomMode(ScrnInfoPtr pScrn, DisplayModePtr mode, int VBFlags)
    if((pSiS->SiS_Pr->CVDisplay >= 1024)	||
       (pSiS->SiS_Pr->CVTotal >= 1024)   ||
       (pSiS->SiS_Pr->CHDisplay >= 1024))
-      pSiS->SiS_Pr->CModeFlag |= LineCompareOff;
-
-   if(pSiS->SiS_Pr->CFlags & V_CLKDIV2)
-      pSiS->SiS_Pr->CModeFlag |= HalfDCLK;
+      pSiS->SiS_Pr->CModeFlag |= LineCompareOff;  
 
    pSiS->SiS_Pr->CInfoFlag = 0x0007;
 
@@ -4434,7 +4433,7 @@ SiS_FindPanelFromDB(SISPtr pSiS, USHORT panelvendor, USHORT panelproduct, int *m
  * modes derived from DDC or database data are M_T_BUILTIN
  */
 DisplayModePtr
-SiSBuildBuiltInModeList(ScrnInfoPtr pScrn, BOOLEAN includelcdmodes, BOOLEAN isfordvi)
+SiSBuildBuiltInModeList(ScrnInfoPtr pScrn, BOOLEAN includelcdmodes, BOOLEAN isfordvi, BOOLEAN fakecrt2modes)
 {
    SISPtr         pSiS = SISPTR(pScrn);
    unsigned short VRE, VBE, VRS, VBS, VDE, VT;
@@ -4444,7 +4443,7 @@ SiSBuildBuiltInModeList(ScrnInfoPtr pScrn, BOOLEAN includelcdmodes, BOOLEAN isfo
    float          num, denum, postscalar, divider;
    int            A, B, C, D, E, F, temp, i, j, k, l, index, vclkindex;
    DisplayModePtr new = NULL, current = NULL, first = NULL;
-   BOOLEAN        done = FALSE;
+   BOOLEAN        done = FALSE, IsHDCLK;
 #if 0
    DisplayModePtr backup = NULL;
 #endif
@@ -4471,26 +4470,31 @@ SiSBuildBuiltInModeList(ScrnInfoPtr pScrn, BOOLEAN includelcdmodes, BOOLEAN isfo
    while(pSiS->SiS_Pr->SiS_RefIndex[i].Ext_InfoFlag != 0xFFFF) {
 
       index = pSiS->SiS_Pr->SiS_RefIndex[i].Ext_CRT1CRTC;
+      if(fakecrt2modes) {
+         if(pSiS->SiS_Pr->SiS_RefIndex[i].Ext_FakeCRT2CRTC) {
+	    index = pSiS->SiS_Pr->SiS_RefIndex[i].Ext_FakeCRT2CRTC;
+	 }
+      }
 
       /* 0x5a (320x240) is a pure FTSN mode, not DSTN! */
       if((!pSiS->FSTN) &&
 	 (pSiS->SiS_Pr->SiS_RefIndex[i].ModeID == 0x5a))  {
-           i++;
-      	   continue;
+         i++;
+      	 continue;
       }
       if((pSiS->FSTN) &&
          (pSiS->SiS_Pr->SiS_RefIndex[i].XRes == 320) &&
 	 (pSiS->SiS_Pr->SiS_RefIndex[i].YRes == 240) &&
 	 (pSiS->SiS_Pr->SiS_RefIndex[i].ModeID != 0x5a)) {
-	   i++;
-	   continue;
+	 i++;
+	 continue;
       }
 
       if(!(new = xalloc(sizeof(DisplayModeRec)))) return first;
       memset(new, 0, sizeof(DisplayModeRec));
       if(!(new->name = xalloc(10))) {
-      		xfree(new);
-		return first;
+      	 xfree(new);
+	 return first;
       }
       if(!first) first = new;
       if(current) {
@@ -4508,8 +4512,12 @@ SiSBuildBuiltInModeList(ScrnInfoPtr pScrn, BOOLEAN includelcdmodes, BOOLEAN isfo
       current->type = M_T_DEFAULT;
 
       vclkindex = pSiS->SiS_Pr->SiS_RefIndex[i].Ext_CRTVCLK;
-      if(pSiS->VGAEngine == SIS_300_VGA) vclkindex &= 0x3F;
-
+      if(fakecrt2modes) {
+         if(pSiS->SiS_Pr->SiS_RefIndex[i].Ext_FakeCRT2Clk) {
+	    vclkindex = pSiS->SiS_Pr->SiS_RefIndex[i].Ext_FakeCRT2Clk;
+	 }
+      }
+      
       sr2b = pSiS->SiS_Pr->SiS_VCLKData[vclkindex].SR2B;
       sr2c = pSiS->SiS_Pr->SiS_VCLKData[vclkindex].SR2C;
 
@@ -4716,11 +4724,15 @@ SiSBuildBuiltInModeList(ScrnInfoPtr pScrn, BOOLEAN includelcdmodes, BOOLEAN isfo
           current->Flags |= V_INTERLACE;
 
       j = 0;
+      IsHDCLK = FALSE;
       while(pSiS->SiS_Pr->SiS_EModeIDTable[j].Ext_ModeID != 0xff) {
           if(pSiS->SiS_Pr->SiS_EModeIDTable[j].Ext_ModeID ==
 	                  pSiS->SiS_Pr->SiS_RefIndex[i].ModeID) {
               if(pSiS->SiS_Pr->SiS_EModeIDTable[j].Ext_ModeFlag & DoubleScanMode) {
 	      	  current->Flags |= V_DBLSCAN;
+              }
+	      if(pSiS->SiS_Pr->SiS_EModeIDTable[j].Ext_ModeFlag & HalfDCLK) {
+	      	  IsHDCLK = TRUE;
               }
 	      break;
           }
@@ -4734,8 +4746,12 @@ SiSBuildBuiltInModeList(ScrnInfoPtr pScrn, BOOLEAN includelcdmodes, BOOLEAN isfo
 	 current->VTotal <<= 1;
 	 current->VTotal |= 1;
       }
-      if(current->Flags & V_DBLSCAN) {
+
+      if(IsHDCLK) {
          current->Clock >>= 1;
+      }
+
+      if(current->Flags & V_DBLSCAN) {
 	 current->VDisplay >>= 1;
 	 current->VSyncStart >>= 1;
 	 current->VSyncEnd >>= 1;
@@ -4811,8 +4827,6 @@ SiSBuildBuiltInModeList(ScrnInfoPtr pScrn, BOOLEAN includelcdmodes, BOOLEAN isfo
 		  pSiS->AddedPlasmaModes = TRUE;
 		  
 		  strcpy(current->name, SiS_PlasmaMode[l].name);
-	          /* sprintf(current->name, "%dx%d", SiS_PlasmaMode[l].HDisplay,
-                                                  SiS_PlasmaMode[l].VDisplay); */
 
                   current->status = MODE_OK;
 
@@ -5052,9 +5066,6 @@ sisfb_mode_rate_to_dclock(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo,
     RefreshRateTableIndex = SiS_Pr->SiS_EModeIDTable[ModeIdIndex].REFindex;
     RefreshRateTableIndex += (rateindex - 1);
     ClockIndex = SiS_Pr->SiS_RefIndex[RefreshRateTableIndex].Ext_CRTVCLK;
-    if(HwInfo->jChipType < SIS_315H) {
-       ClockIndex &= 0x3F;
-    }
     Clock = SiS_Pr->SiS_VCLKData[ClockIndex].CLOCK * 1000;
     
     return(Clock);

@@ -177,6 +177,8 @@ typedef struct _SiS_Ext2Struct
 	USHORT XRes;
 	USHORT YRes;
 	UCHAR  Ext_PDC;
+	UCHAR  Ext_FakeCRT2CRTC;
+	UCHAR  Ext_FakeCRT2Clk;
 } SiS_Ext2Struct;
 
 typedef struct _SiS_Part2PortTblStruct

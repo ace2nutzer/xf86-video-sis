@@ -81,7 +81,7 @@ static void SiS301Restore(ScrnInfoPtr pScrn, SISRegPtr sisReg);
 static void SiS301BRestore(ScrnInfoPtr pScrn, SISRegPtr sisReg);
 static void SiSLVDSChrontelRestore(ScrnInfoPtr pScrn, SISRegPtr sisReg);
 static void SiS301LoadPalette(ScrnInfoPtr pScrn, int numColors,
-                      int *indicies, LOCO *colors, VisualPtr pVisual);
+                      int *indicies, LOCO *colors, int myshift);
 static void SetBlock(CARD16 port, CARD8 from, CARD8 to, CARD8 *DataPtr);
 
 UChar       SiSGetCopyROP(int rop);
@@ -568,11 +568,11 @@ SiS300Save(ScrnInfoPtr pScrn, SISRegPtr sisReg)
     if(!pSiS->UseVESA) {
 #endif
        if(pSiS->VBFlags & (VB_LVDS|VB_CHRONTEL))
-          (*pSiS->SiSSaveLVDSChrontel)(pScrn, sisReg);
-       if(pSiS->VBFlags & VB_301)
-          (*pSiS->SiSSave2)(pScrn, sisReg);
-       if(pSiS->VBFlags & (VB_301B|VB_301C|VB_302B|VB_301LV|VB_302LV|VB_302ELV))
-          (*pSiS->SiSSave3)(pScrn, sisReg);
+          SiSLVDSChrontelSave(pScrn, sisReg);
+       else if(pSiS->VBFlags & VB_301)
+          SiS301Save(pScrn, sisReg);
+       else if(pSiS->VBFlags & (VB_301B|VB_301C|VB_302B|VB_301LV|VB_302LV|VB_302ELV))
+          SiS301BSave(pScrn, sisReg);
 #ifndef TWDEBUG
     }
 #endif
@@ -719,11 +719,11 @@ SiS300Restore(ScrnInfoPtr pScrn, SISRegPtr sisReg)
     /* Restore panel link/video bridge registers */
     if(!(pSiS->UseVESA)) {
        if(pSiS->VBFlags & (VB_LVDS|VB_CHRONTEL))
-          (*pSiS->SiSRestoreLVDSChrontel)(pScrn, sisReg);
+          SiSLVDSChrontelRestore(pScrn, sisReg);
        else if(pSiS->VBFlags & VB_301)
-          (*pSiS->SiSRestore2)(pScrn, sisReg);
+          SiS301Restore(pScrn, sisReg);
        else if(pSiS->VBFlags & (VB_301B|VB_301C|VB_302B|VB_301LV|VB_302LV|VB_302ELV))
-          (*pSiS->SiSRestore3)(pScrn, sisReg);
+          SiS301BRestore(pScrn, sisReg);
     }
 
     /* MemClock needs this to take effect */
@@ -794,11 +794,11 @@ SiS315Save(ScrnInfoPtr pScrn, SISRegPtr sisReg)
     if(!pSiS->UseVESA) {
 #endif
        if(pSiS->VBFlags & (VB_LVDS|VB_CHRONTEL))
-          (*pSiS->SiSSaveLVDSChrontel)(pScrn, sisReg);
-       if(pSiS->VBFlags & VB_301)
-          (*pSiS->SiSSave2)(pScrn, sisReg);
-       if(pSiS->VBFlags & (VB_301B|VB_301C|VB_302B|VB_301LV|VB_302LV|VB_302ELV))
-          (*pSiS->SiSSave3)(pScrn, sisReg);
+          SiSLVDSChrontelSave(pScrn, sisReg);
+       else if(pSiS->VBFlags & VB_301)
+          SiS301Save(pScrn, sisReg);
+       else if(pSiS->VBFlags & (VB_301B|VB_301C|VB_302B|VB_301LV|VB_302LV|VB_302ELV))
+          SiS301BSave(pScrn, sisReg);
 #ifndef TWDEBUG
     }
 #endif
@@ -918,11 +918,11 @@ SiS315Restore(ScrnInfoPtr pScrn, SISRegPtr sisReg)
     /* Restore panel link/video bridge registers */
     if(!(pSiS->UseVESA)) {
        if(pSiS->VBFlags & (VB_LVDS|VB_CHRONTEL))
-          (*pSiS->SiSRestoreLVDSChrontel)(pScrn, sisReg);
-       if(pSiS->VBFlags & VB_301)
-          (*pSiS->SiSRestore2)(pScrn, sisReg);
-       if(pSiS->VBFlags & (VB_301B|VB_301C|VB_302B|VB_301LV|VB_302LV|VB_302ELV))
-          (*pSiS->SiSRestore3)(pScrn, sisReg);
+          SiSLVDSChrontelRestore(pScrn, sisReg);
+       else if(pSiS->VBFlags & VB_301)
+          SiS301Restore(pScrn, sisReg);
+       else if(pSiS->VBFlags & (VB_301B|VB_301C|VB_302B|VB_301LV|VB_302LV|VB_302ELV))
+          SiS301BRestore(pScrn, sisReg);
     }
 
     /* MemClock needs this to take effect */
@@ -1675,9 +1675,10 @@ int SiSMemBandWidth(ScrnInfoPtr pScrn, Bool IsForCRT2)
  * in order to support gamma correction. We hereby convert the
  * given colormap to a complete 24bit color palette and enable
  * the correspoding bit in SR7 to enable the 24bit lookup table.
- * Gamma correction is only supported on CRT1.
- * Why are there 6-bit-RGB values submitted even if bpp is 16 and
- * weight is 565? (Maybe because rgbBits is 6?)
+ * Gamma correction for CRT2 is only supported on SiS video bridges.
+ * There are there 6-bit-RGB values submitted even if bpp is 16 and
+ * weight is 565, because SetWeight() sets rgbBits to the maximum
+ * (which is 6 in the 565 case). 
  */
 void
 SISLoadPalette(ScrnInfoPtr pScrn, int numColors, int *indices, LOCO *colors,
@@ -1685,6 +1686,7 @@ SISLoadPalette(ScrnInfoPtr pScrn, int numColors, int *indices, LOCO *colors,
 {
      SISPtr  pSiS = SISPTR(pScrn);
      int     i, j, index;
+     int     myshift = 8 - pScrn->rgbBits;
      UChar   backup = 0;
      Bool    dogamma1 = pSiS->CRT1gamma;
      Bool    resetxvgamma = FALSE;
@@ -1693,8 +1695,6 @@ SISLoadPalette(ScrnInfoPtr pScrn, int numColors, int *indices, LOCO *colors,
 
      if(pSiS->DualHeadMode) dogamma1 = pSiSEnt->CRT1gamma;
 #endif
-
-     PDEBUG(ErrorF("SiSLoadPalette(%d)\n", numColors));
 
 #ifdef SISDUALHEAD
      if((!pSiS->DualHeadMode) || (pSiS->SecondHead)) {
@@ -1713,18 +1713,18 @@ SISLoadPalette(ScrnInfoPtr pScrn, int numColors, int *indices, LOCO *colors,
         }
 
         switch(pSiS->CurrentLayout.depth) {
-#ifdef SISGAMMA
           case 15:
 	     if(dogamma1) {
 	        orSISIDXREG(SISSR, 0x07, 0x04);
+		/* 315/330: depth 15 not supported, no MMIO code needed */
 	        for(i=0; i<numColors; i++) {
                    index = indices[i];
 		   if(index < 32) {   /* Paranoia */
 		      for(j=0; j<8; j++) {
-		         outSISREG(SISCOLIDX, (index * 8) + j);
-                         outSISREG(SISCOLDATA, colors[index].red << (8- pScrn->rgbBits));
-                         outSISREG(SISCOLDATA, colors[index].green << (8 - pScrn->rgbBits));
-                         outSISREG(SISCOLDATA, colors[index].blue << (8 - pScrn->rgbBits));
+		         outSISREG(SISCOLIDX, (index << 3) + j);
+                         outSISREG(SISCOLDATA, colors[index].red   << myshift);
+                         outSISREG(SISCOLDATA, colors[index].green << myshift);
+                         outSISREG(SISCOLDATA, colors[index].blue  << myshift);
 		      }
 		   }
                 }
@@ -1735,17 +1735,32 @@ SISLoadPalette(ScrnInfoPtr pScrn, int numColors, int *indices, LOCO *colors,
 	  case 16:
 	     if(dogamma1) {
                 orSISIDXREG(SISSR, 0x07, 0x04);
-	        for(i=0; i<numColors; i++) {
-                   index = indices[i];
-		   if(index < 64) {  /* Paranoia */
-		      for(j=0; j<4; j++) {
-		         outSISREG(SISCOLIDX, (index * 4) + j);
-                         outSISREG(SISCOLDATA, colors[index/2].red << (8 - pScrn->rgbBits));
-                         outSISREG(SISCOLDATA, colors[index].green << (8 - pScrn->rgbBits));
-                         outSISREG(SISCOLDATA, colors[index/2].blue << (8 - pScrn->rgbBits));
+		if(pSiS->ChipFlags & SiSCF_MMIOPalette) {
+		   for(i=0; i<numColors; i++) {
+                      index = indices[i];
+		      if(index < 64) {  /* Paranoia */
+		         for(j=0; j<4; j++) {
+			    MMIO_OUT32(pSiS->IOBase, 0x8570,
+			    		(colors[index].green     << (myshift + 8))  |
+                            		(colors[index >> 1].blue << (myshift + 16)) |
+                            		(colors[index >> 1].red  << myshift)        |
+					(((index << 2) + j)      << 24));
+		         }
 		      }
-		   }
-                }
+                   }
+		} else {
+	           for(i=0; i<numColors; i++) {
+                      index = indices[i];
+		      if(index < 64) {  /* Paranoia */
+		         for(j=0; j<4; j++) {
+		            outSISREG(SISCOLIDX, (index << 2) + j);
+                            outSISREG(SISCOLDATA, colors[index >> 1].red  << myshift);
+                            outSISREG(SISCOLDATA, colors[index].green     << myshift);
+                            outSISREG(SISCOLDATA, colors[index >> 1].blue << myshift);
+		         }
+		      }
+                   }
+		}
 	     } else {
 	        andSISIDXREG(SISSR, 0x07, ~0x04);
 	     }
@@ -1753,32 +1768,53 @@ SISLoadPalette(ScrnInfoPtr pScrn, int numColors, int *indices, LOCO *colors,
           case 24:
 	     if(dogamma1) {
 	        orSISIDXREG(SISSR, 0x07, 0x04);
-                for(i=0; i<numColors; i++)  {
-                   index = indices[i];
-		   if(index < 256) {   /* Paranoia */
-                      outSISREG(SISCOLIDX, index);
-                      outSISREG(SISCOLDATA, colors[index].red);
-                      outSISREG(SISCOLDATA, colors[index].green);
-                      outSISREG(SISCOLDATA, colors[index].blue);
+		if(pSiS->ChipFlags & SiSCF_MMIOPalette) {
+		   for(i=0; i<numColors; i++)  {
+                      index = indices[i];
+		      if(index < 256) {   /* Paranoia */
+		         MMIO_OUT32(pSiS->IOBase, 0x8570,
+			 		(colors[index].blue  << 16) |
+					(colors[index].green <<  8) |
+					(colors[index].red)         |
+			 		(index               << 24));
+		      }
 		   }
-                }
+		} else {
+                   for(i=0; i<numColors; i++)  {
+                      index = indices[i];
+		      if(index < 256) {   /* Paranoia */
+                         outSISREG(SISCOLIDX, index);
+                         outSISREG(SISCOLDATA, colors[index].red);
+                         outSISREG(SISCOLDATA, colors[index].green);
+                         outSISREG(SISCOLDATA, colors[index].blue);
+		      }
+                   }
+		}
 	     } else {
 	        andSISIDXREG(SISSR, 0x07, ~0x04);
 	     }
 	     break;
-#endif
 	  default:
-	     if((pScrn->rgbBits == 8) && (dogamma1))
-	        orSISIDXREG(SISSR, 0x07, 0x04);
-	     else
-	        andSISIDXREG(SISSR, 0x07, ~0x04);
-             for(i=0; i<numColors; i++)  {
-                index = indices[i];
-                outSISREG(SISCOLIDX, index);
-                outSISREG(SISCOLDATA, colors[index].red >> (8 - pScrn->rgbBits));
-                outSISREG(SISCOLDATA, colors[index].green >> (8 - pScrn->rgbBits));
-                outSISREG(SISCOLDATA, colors[index].blue >> (8 - pScrn->rgbBits));
-             }
+	     andSISIDXREG(SISSR, 0x07, ~0x04);
+	     if(pSiS->ChipFlags & SiSCF_MMIOPalette) {
+	        for(i=0; i<numColors; i++)  {
+                   index = indices[i];
+		   MMIO_OUT32(pSiS->IOBase, 0x8570,
+		   		((colors[index].blue)  << 16) |
+				((colors[index].green) <<  8) |
+				(colors[index].red)           |
+				(index                 << 24));
+		}
+	     } else {
+                for(i=0; i<numColors; i++) {
+		   /* In pio mode, only 6 bits are supported */
+                   index = indices[i];
+                   outSISREG(SISCOLIDX, index);
+                   outSISREG(SISCOLDATA, colors[index].red   >> 2);
+                   outSISREG(SISCOLDATA, colors[index].green >> 2);
+                   outSISREG(SISCOLDATA, colors[index].blue  >> 2);
+                }
+	     }
 	}
 
 	if(pSiS->VGAEngine == SIS_315_VGA) {
@@ -1801,7 +1837,11 @@ SISLoadPalette(ScrnInfoPtr pScrn, int numColors, int *indices, LOCO *colors,
           if(pSiS->VBFlags & CRT2_ENABLE) {
 	     /* Only the SiS bridges support a CRT2 palette */
 	     if(pSiS->VBFlags & VB_SISBRIDGE) {
-                (*pSiS->LoadCRT2Palette)(pScrn, numColors, indices, colors, pVisual);
+	        if((pSiS->CRT2SepGamma) && (pSiS->crt2cindices) && (pSiS->crt2colors)) {
+		   SiS301LoadPalette(pScrn, numColors, pSiS->crt2cindices, pSiS->crt2colors, myshift);
+		} else {
+                   SiS301LoadPalette(pScrn, numColors, indices, colors, myshift);
+		}
 	     }
           }
        }
@@ -1812,9 +1852,23 @@ SISLoadPalette(ScrnInfoPtr pScrn, int numColors, int *indices, LOCO *colors,
 
 }
 
+void
+SiS_UpdateGammaCRT2(ScrnInfoPtr pScrn)
+{
+    SISPtr  pSiS = SISPTR(pScrn);
+    
+    if((!pSiS->CRT2SepGamma) || (!pSiS->crt2cindices) || (!pSiS->crt2gcolortable)) return;
+    
+#ifdef SISDUALHEAD		
+    if(pSiS->DualHeadMode) return;
+#endif        
+    
+    SISCalculateGammaRampCRT2(pScrn);
+    SiS301LoadPalette(pScrn, pSiS->CRT2ColNum, pSiS->crt2cindices, pSiS->crt2colors, (8 - pScrn->rgbBits));
+}
+
 static  void
-SiS301LoadPalette(ScrnInfoPtr pScrn, int numColors, int *indices,
-                                        LOCO *colors, VisualPtr pVisual)
+SiS301LoadPalette(ScrnInfoPtr pScrn, int numColors, int *indices, LOCO *colors, int myshift)
 {
         SISPtr  pSiS = SISPTR(pScrn);
         int     i, j, index;
@@ -1825,13 +1879,10 @@ SiS301LoadPalette(ScrnInfoPtr pScrn, int numColors, int *indices,
 	if(pSiS->DualHeadMode) dogamma2 = pSiSEnt->CRT2gamma;
 #endif
 
-        PDEBUG(ErrorF("SiS301LoadPalette(%d)\n", numColors));
-
 	/* 301B-DH does not support a color palette for LCD */
 	if((pSiS->VBFlags & VB_30xBDH) && (pSiS->VBFlags & CRT2_LCD)) return;
 	
 	switch(pSiS->CurrentLayout.depth) {
-#ifdef SISGAMMA
           case 15:
 	     if(dogamma2) {
 	        orSISIDXREG(SISPART4, 0x0d, 0x08);
@@ -1839,10 +1890,10 @@ SiS301LoadPalette(ScrnInfoPtr pScrn, int numColors, int *indices,
                    index = indices[i];
 		   if(index < 32) {   /* Paranoia */
 		      for(j=0; j<8; j++) {
-		         outSISREG(SISCOL2IDX, (index * 8) + j);
-                         outSISREG(SISCOL2DATA, colors[index].red << (8- pScrn->rgbBits));
-                         outSISREG(SISCOL2DATA, colors[index].green << (8 - pScrn->rgbBits));
-                         outSISREG(SISCOL2DATA, colors[index].blue << (8 - pScrn->rgbBits));
+		         outSISREG(SISCOL2IDX, (index << 3) + j);
+                         outSISREG(SISCOL2DATA, colors[index].red   << myshift);
+                         outSISREG(SISCOL2DATA, colors[index].green << myshift);
+                         outSISREG(SISCOL2DATA, colors[index].blue  << myshift);
 		      }
 		   }
                 }
@@ -1853,14 +1904,14 @@ SiS301LoadPalette(ScrnInfoPtr pScrn, int numColors, int *indices,
 	  case 16:
 	     if(dogamma2) {
                 orSISIDXREG(SISPART4, 0x0d, 0x08);
-	        for(i=0; i<numColors; i++) {
+	        for(i = 0; i < numColors; i++) {
                    index = indices[i];
 		   if(index < 64) {  /* Paranoia */
-		      for(j=0; j<4; j++) {
-		         outSISREG(SISCOL2IDX, (index * 4) + j);
-                         outSISREG(SISCOL2DATA, colors[index/2].red << (8 - pScrn->rgbBits));
-                         outSISREG(SISCOL2DATA, colors[index].green << (8 - pScrn->rgbBits));
-                         outSISREG(SISCOL2DATA, colors[index/2].blue << (8 - pScrn->rgbBits));
+		      for(j = 0; j < 4; j++) {
+		         outSISREG(SISCOL2IDX, (index << 2) + j);
+                         outSISREG(SISCOL2DATA, colors[index >> 1].red  << myshift);
+                         outSISREG(SISCOL2DATA, colors[index].green     << myshift);
+                         outSISREG(SISCOL2DATA, colors[index >> 1].blue << myshift);
 		      }
 		   }
                 }
@@ -1871,7 +1922,7 @@ SiS301LoadPalette(ScrnInfoPtr pScrn, int numColors, int *indices,
           case 24:
 	     if(dogamma2) {
 	        orSISIDXREG(SISPART4, 0x0d, 0x08);
-                for(i=0; i<numColors; i++)  {
+                for(i = 0; i < numColors; i++) {
                    index = indices[i];
 		   if(index < 256) {   /* Paranoia */
                       outSISREG(SISCOL2IDX, index);
@@ -1884,13 +1935,9 @@ SiS301LoadPalette(ScrnInfoPtr pScrn, int numColors, int *indices,
 	        andSISIDXREG(SISPART4, 0x0d, ~0x08);
 	     }
 	     break;
-#endif
 	  default:
-	     if((pScrn->rgbBits == 8) && (dogamma2))
-	        orSISIDXREG(SISPART4, 0x0d, 0x08);
-	     else
-	        andSISIDXREG(SISPART4, 0x0d, ~0x08);
-             for(i=0; i<numColors; i++)  {
+	     orSISIDXREG(SISPART4, 0x0d, 0x08);
+             for(i = 0; i < numColors; i++) {
                 index = indices[i];
                 outSISREG(SISCOL2IDX,  index);
                 outSISREG(SISCOL2DATA, colors[index].red);
@@ -1903,9 +1950,11 @@ SiS301LoadPalette(ScrnInfoPtr pScrn, int numColors, int *indices,
 void
 SISDACPreInit(ScrnInfoPtr pScrn)
 {
-    SISPtr  pSiS = SISPTR(pScrn);
+    SISPtr pSiS = SISPTR(pScrn);
+    
+    pSiS->MaxClock = SiSMemBandWidth(pScrn, FALSE);
 
-    switch (pSiS->Chipset)  {
+    switch (pSiS->Chipset) {
       case PCI_CHIP_SIS550:
       case PCI_CHIP_SIS315:
       case PCI_CHIP_SIS315H:
@@ -1914,38 +1963,21 @@ SISDACPreInit(ScrnInfoPtr pScrn)
       case PCI_CHIP_SIS330:
       case PCI_CHIP_SIS660:
       case PCI_CHIP_SIS340:
-        pSiS->MaxClock               = SiSMemBandWidth(pScrn, FALSE);
-        pSiS->SiSSave                = SiS315Save;
-        pSiS->SiSSave2               = SiS301Save;
-        pSiS->SiSSave3               = SiS301BSave;
-        pSiS->SiSSaveLVDSChrontel    = SiSLVDSChrontelSave;
-        pSiS->SiSRestore             = SiS315Restore;
-        pSiS->SiSRestore2            = SiS301Restore;
-        pSiS->SiSRestore3            = SiS301BRestore;
-        pSiS->SiSRestoreLVDSChrontel = SiSLVDSChrontelRestore;
-        pSiS->LoadCRT2Palette        = SiS301LoadPalette;
+        pSiS->SiSSave     = SiS315Save;
+        pSiS->SiSRestore  = SiS315Restore;
         break;
       case PCI_CHIP_SIS300:
       case PCI_CHIP_SIS540:
       case PCI_CHIP_SIS630:
-        pSiS->MaxClock               = SiSMemBandWidth(pScrn, FALSE);
-        pSiS->SiSSave                = SiS300Save;
-        pSiS->SiSSave2               = SiS301Save;
-        pSiS->SiSSave3               = SiS301BSave;
-        pSiS->SiSSaveLVDSChrontel    = SiSLVDSChrontelSave;
-        pSiS->SiSRestore             = SiS300Restore;
-        pSiS->SiSRestore2            = SiS301Restore;
-        pSiS->SiSRestore3            = SiS301BRestore;
-        pSiS->SiSRestoreLVDSChrontel = SiSLVDSChrontelRestore;
-        pSiS->LoadCRT2Palette        = SiS301LoadPalette;
+        pSiS->SiSSave     = SiS300Save;
+        pSiS->SiSRestore  = SiS300Restore;
         break;
       case PCI_CHIP_SIS5597:
       case PCI_CHIP_SIS6326:
       case PCI_CHIP_SIS530:
       default:
-        pSiS->MaxClock               = SiSMemBandWidth(pScrn, FALSE);
-        pSiS->SiSRestore             = SiSRestore;
-        pSiS->SiSSave                = SiSSave;
+        pSiS->SiSSave     = SiSSave;
+        pSiS->SiSRestore  = SiSRestore;
         break;
     }
 }

@@ -62,17 +62,17 @@ static const struct _sis_vrate {
     CARD16 refresh;
     Bool SiS730valid32bpp;
 } sisx_vrate[] = {
-	{1,  320,  200,  70,  TRUE},
+	{1,  320,  200,  60,  TRUE}, {1,  320,  200,  70,  TRUE},
 	{1,  320,  240,  60,  TRUE},
 	{1,  400,  300,  60,  TRUE},
         {1,  512,  384,  60,  TRUE},
-	{1,  640,  400,  72,  TRUE},
+	{1,  640,  400,  60,  TRUE}, {1,  640,  400,  72,  TRUE},
 	{1,  640,  480,  60,  TRUE}, {2,  640,  480,  72,  TRUE}, {3,  640,  480,  75,  TRUE}, 
 	{4,  640,  480,  85,  TRUE}, {5,  640,  480, 100,  TRUE}, {6,  640,  480, 120,  TRUE}, 
 	{7,  640,  480, 160, FALSE}, {8,  640,  480, 200, FALSE},
 	{1,  720,  480,  60,  TRUE},
-	{1,  720,  576,  58,  TRUE},
-	{1,  768,  576,  58,  TRUE},
+	{1,  720,  576,  60,  TRUE},
+	{1,  768,  576,  60,  TRUE},
 	{1,  800,  480,  60,  TRUE}, {2,  800,  480,  75,  TRUE}, {3,  800,  480,  85,  TRUE},
 	{1,  800,  600,  56,  TRUE}, {2,  800,  600,  60,  TRUE}, {3,  800,  600,  72,  TRUE}, 
 	{4,  800,  600,  75,  TRUE}, {5,  800,  600,  85,  TRUE}, {6,  800,  600, 105,  TRUE}, 
@@ -1312,12 +1312,12 @@ UChar  	       SISSearchCRT1Rate(ScrnInfoPtr pScrn, DisplayModePtr mode);
 static void    SISWaitVBRetrace(ScrnInfoPtr pScrn);
 void           SISWaitRetraceCRT1(ScrnInfoPtr pScrn);
 void           SISWaitRetraceCRT2(ScrnInfoPtr pScrn);
-static Bool    InRegion(int x, int y, region r);
 static UShort  SiS_CheckModeCRT1(ScrnInfoPtr pScrn, DisplayModePtr mode,
 				 ULong VBFlags, Bool hcm);
 static UShort  SiS_CheckModeCRT2(ScrnInfoPtr pScrn, DisplayModePtr mode,
 				 ULong VBFlags, Bool hcm);				 
 #ifdef SISMERGED
+static Bool    InRegion(int x, int y, region r);
 static void    SISMergePointerMoved(int scrnIndex, int x, int y);
 #endif
 Bool           SiSBridgeIsInSlaveMode(ScrnInfoPtr pScrn);
@@ -1330,7 +1330,6 @@ void           SISDetermineLCDACap(ScrnInfoPtr pScrn);
 void           SISSaveDetectedDevices(ScrnInfoPtr pScrn);
 
 /* Our very own vgaHW functions (sis_vga.c) */
-extern Bool 	SiSVGAInit(ScrnInfoPtr pScrn, DisplayModePtr mode);
 extern void 	SiSVGASave(ScrnInfoPtr pScrn, SISRegPtr save, int flags);
 extern void 	SiSVGARestore(ScrnInfoPtr pScrn, SISRegPtr restore, int flags);
 extern void 	SiSVGASaveFonts(ScrnInfoPtr pScrn);
@@ -1361,7 +1360,7 @@ extern BOOLEAN 	SiSBIOSSetModeCRT1(SiS_Private *SiS_Pr, PSIS_HW_INFO HwDeviceExt
 extern BOOLEAN 	SiSBIOSSetModeCRT2(SiS_Private *SiS_Pr, PSIS_HW_INFO HwDeviceExtension,
 				   ScrnInfoPtr pScrn, DisplayModePtr mode, BOOLEAN IsCustom);			   
 extern DisplayModePtr SiSBuildBuiltInModeList(ScrnInfoPtr pScrn, BOOLEAN includelcdmodes,
-					      BOOLEAN isfordvi);
+					      BOOLEAN isfordvi, BOOLEAN fakecrt2modes);
 extern void 	SiS_Chrontel701xBLOn(SiS_Private *SiS_Pr, PSIS_HW_INFO HwDeviceExtension);
 extern void 	SiS_Chrontel701xBLOff(SiS_Private *SiS_Pr);
 extern void 	SiS_SiS30xBLOn(SiS_Private *SiS_Pr, PSIS_HW_INFO HwDeviceExtension);

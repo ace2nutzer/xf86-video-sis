@@ -35,19 +35,24 @@
 #ifndef _SIS_H
 #define _SIS_H_
 
-/* Always unlock the registers (should be set!) */
-#define UNLOCK_ALWAYS
-
 #define SISDRIVERVERSIONYEAR    4
-#define SISDRIVERVERSIONMONTH   11
-#define SISDRIVERVERSIONDAY     25
-#define SISDRIVERREVISION       1
+#define SISDRIVERVERSIONMONTH   12
+#define SISDRIVERVERSIONDAY     03
+#define SISDRIVERREVISION       2
 
-#define SISDRIVERIVERSION (SISDRIVERVERSIONYEAR << 16) |  \
-			  (SISDRIVERVERSIONMONTH << 8) |  \
-                          SISDRIVERVERSIONDAY 	       |  \
-			  (SISDRIVERREVISION << 24)
+#define SISDRIVERIVERSION ((SISDRIVERVERSIONYEAR << 16) |  \
+			   (SISDRIVERVERSIONMONTH << 8) |  \
+                           SISDRIVERVERSIONDAY 	       |  \
+			   (SISDRIVERREVISION << 24))
 
+#define SIS_NAME                "SIS"
+#define SIS_DRIVER_NAME         "sis"
+#define SIS_MAJOR_VERSION       0
+#define SIS_MINOR_VERSION       7
+#define SIS_PATCHLEVEL          0
+#define SIS_CURRENT_VERSION     ((SIS_MAJOR_VERSION << 16) | \
+                                 (SIS_MINOR_VERSION << 8) | SIS_PATCHLEVEL )			  
+			  
 #if 0
 #define TWDEBUG    /* for debugging */
 #endif
@@ -119,7 +124,9 @@
  */
 #undef SISUSEDEVPORT
 #if defined(linux) && (defined(__arm32__) || defined(__mips__))
-#define SISUSEDEVPORT		
+#ifndef SIS_NEED_MAP_IOP
+#define SISUSEDEVPORT	
+#endif	
 #endif
 
 /* Our #includes: Require the arch/platform dependent #defines above */
@@ -146,67 +153,56 @@
 #include "sis_dri.h"
 #endif /* XF86DRI */
 
-#if 1
+/* Configurable stuff: */
+
 #define SISDUALHEAD  		/* Include Dual Head code  */
-#endif
 
-#if 1
-#define SISMERGED		/* Include Merged-FB mode */
-#endif
+#define SISMERGED		/* Include Merged-FB code */
 
+#undef SISXINERAMA
 #ifdef SISMERGED
-#if 1
 #define SISXINERAMA		/* Include SiS Pseudo-Xinerama for MergedFB mode */
 #define SIS_XINERAMA_MAJOR_VERSION  1
 #define SIS_XINERAMA_MINOR_VERSION  1
 #endif
+
+#define SIS_ARGB_CURSOR		/* Include code for color hardware cursors */
+
+#define ENABLE_YPBPR		/* Include YPbPr support on SiS bridges (315 series and 661/741/760) */
+
+#define SISVRAMQ		/* Use VRAM queue mode on 315 series */
+
+#undef INCL_YUV_BLIT_ADAPTOR
+#ifdef SISVRAMQ
+#define INCL_YUV_BLIT_ADAPTOR	/* Include support for YUV->RGB blit adaptors (VRAM queue mode only) */
 #endif
 
-#if 1				/* Include code for gamma correction */
-#define SISGAMMA
-#ifdef XORG_VERSION_CURRENT
-#if XORG_VERSION_CURRENT >= XORG_VERSION_NUMERIC(6,9,0,0,0)
-#define SISGAMMARAMP
-#endif
-#endif		
+#if 0				
+#define SISDEINT		/* Include Xv deinterlacer code (not functional yet!) */
 #endif
 
-#if 1				/* Include code for color hardware cursors */
-#define SIS_ARGB_CURSOR
-#endif
+/* End of configurable stuff */
 
-#if 1				/* Include YPbPr support on SiS bridges (315 series and 661/741/760) */
-#define ENABLE_YPBPR
-#endif
+#define UNLOCK_ALWAYS		/* Always unlock the registers (should be set!) */
 
-#if 0				/* Include Xv deinterlacer code (not functional yet!) */
-#define SISDEINT		
-#endif
-
-#ifdef SISMERGED
-#ifdef SISXINERAMA
+#if defined(SISMERGED) && defined(SISXINERAMA)
 #define NEED_REPLIES  		/* ? */
 #define EXTENSION_PROC_ARGS void *
 #include "extnsionst.h"  	/* required */
 #include "panoramiXproto.h"  	/* required */
 #endif
-#endif
 
-#if 1
-#define SISVRAMQ		/* Use VRAM queue mode on 315 series */
-#endif
-
-/* Include support for YUV->RGB blit adaptors (VRAM queue mode only) */
-#undef INCL_YUV_BLIT_ADAPTOR
-#ifdef SISVRAMQ
-#if 1
-#define INCL_YUV_BLIT_ADAPTOR
-#endif
-#endif
-
+#undef SISCHECKOSSSE
 #ifdef XORG_VERSION_CURRENT
 #if XORG_VERSION_CURRENT >= XORG_VERSION_NUMERIC(6,9,0,0,0)
 #define SISCHECKOSSSE		/* Automatic check OS for SSE; requires SigIll facility */
+#endif
+#endif
+
+#undef SISGAMMARAMP
+#ifdef XORG_VERSION_CURRENT
+#if XORG_VERSION_CURRENT >= XORG_VERSION_NUMERIC(6,9,0,0,0)
+#define SISGAMMARAMP		/* Driver can set gamma ramp; requires additional symbols in xf86sym.h */
 #endif
 #endif
 
@@ -243,14 +239,9 @@
 #ifndef PCI_CHIP_SIS340
 #define PCI_CHIP_SIS340 	0x0340
 #endif
-
-#define SIS_NAME                "SIS"
-#define SIS_DRIVER_NAME         "sis"
-#define SIS_MAJOR_VERSION       0
-#define SIS_MINOR_VERSION       7
-#define SIS_PATCHLEVEL          0
-#define SIS_CURRENT_VERSION     ((SIS_MAJOR_VERSION << 16) | \
-                                 (SIS_MINOR_VERSION << 8) | SIS_PATCHLEVEL )
+#ifndef PCI_CHIP_SIS761
+#define PCI_CHIP_SIS761 	0x6340  /* ? */
+#endif
 
 /* pSiS->Flags (old series only) */
 #define SYNCDRAM                0x00000001
@@ -266,12 +257,9 @@
 #define BIOS_BASE               0xC0000
 #define BIOS_SIZE               0x10000
 
-#define SR_BUFFER_SIZE          5
-#define CR_BUFFER_SIZE          5
-
 #define SIS_VBFlagsVersion	1
 
-/* VBFlags - if anything is changed here, increase VBFlagsVersion! */
+/* pSiS->VBFlags - if anything is changed here, increase VBFlagsVersion! */
 #define CRT2_DEFAULT            0x00000001
 #define CRT2_LCD                0x00000002  /* Never change the order of the CRT2_XXX entries */
 #define CRT2_TV                 0x00000004  
@@ -385,7 +373,7 @@
 #define MISC_CRT1OVERLAYGAMMA	0x00000004  /* Current display mode supports overlay gamma corr on CRT1 */
 #define MISC_TVNTSC1024		0x00000008  /* Current display mode is TV NTSC/PALM/YPBPR525I 1024x768  */
 
-/* SiS6326Flags */
+/* pSiS->SiS6326Flags */
 #define SIS6326_HASTV		0x00000001
 #define SIS6326_TVSVIDEO        0x00000002
 #define SIS6326_TVCVBS          0x00000004
@@ -417,14 +405,14 @@ typedef unsigned long  ULong;
 typedef unsigned short UShort;
 typedef unsigned char  UChar;
 
-/* VGA engine types */
+/* pSiS->VGAEngine - VGA engine types */
 #define UNKNOWN_VGA 0
 #define SIS_530_VGA 1
 #define SIS_OLD_VGA 2
 #define SIS_300_VGA 3
 #define SIS_315_VGA 4   /* Includes 330/660/661/741/760 and M versions thereof */
 
-/* oldChipset */
+/* pSiS->oldChipset */
 #define OC_UNKNOWN   0
 #define OC_SIS86201  1
 #define OC_SIS86202  2
@@ -443,7 +431,7 @@ typedef unsigned char  UChar;
 #define CHRONTEL_700x 0
 #define CHRONTEL_701x 1
 
-/* ChipFlags */
+/* pSiS->ChipFlags */
 /* Use only lower 16 bit for chip id! (sisctrl) */
 #define SiSCF_LARGEOVERLAY  0x00000001
 #define SiSCF_Is651         0x00000002
@@ -461,6 +449,7 @@ typedef unsigned char  UChar;
 #define SiSCF_Real256ECore  0x00020000  /* 3D: Similar to 315 core, no T&L? (65x, 661, 740, 741) */
 #define SiSCF_XabreCore     0x00040000  /* 3D: Real Xabre */
 #define SiSCF_Ultra256Core  0x00080000  /* 3D: aka "Mirage 2"; similar to Xabre, no T&L?, no P:Shader? (760) */
+#define SiSCF_MMIOPalette   0x00100000  /* HW supports MMIO palette writing/reading */
 #define SiSCF_UseLCDA       0x01000000  
 #define SiSCF_760LFB        0x08000000  /* 760: LFB active (if not set, UMA only) */
 #define SiSCF_760UMA        0x10000000  /* 760: UMA active (if not set, LFB only) */
@@ -499,8 +488,11 @@ typedef unsigned char  UChar;
 #define SiS_SD_SUPPORTCENTER   0x08000000   /* If scaling supported: Centering of screen [NOT] supported (TMDS only) */
 #define SiS_SD_SUPPORTREDETECT 0x10000000   /* Support re-detection of CRT2 devices */
 #define SiS_SD_IS340SERIES     0x20000000
+#define SiS_SD_SUPPORTSGRCRT2  0x40000000   /* Separate CRT2 gamma correction supported */
+#define SiS_SD_CANSETGAMMA     0x80000000   /* Driver can set gamma ramp; otherwise: App needs to reset palette */
+					    /* after disabling sep CRT2 gamma corr */
 
-#define SIS_DIRECTKEY         0x03145792
+#define SIS_DIRECTKEY          0x03145792
 
 /* SiSCtrl: Check mode for CRT2 */
 #define SiS_CF2_LCD          0x01
@@ -553,24 +545,24 @@ typedef unsigned char  UChar;
 
 /* For backup of register contents */
 typedef struct {
-    UChar sisRegMiscOut;
-    UChar sisRegsATTR[22];
-    UChar sisRegsGR[10];
-    UChar sisDAC[768];
-    UChar sisRegs3C4[0x50];
-    UChar sisRegs3D4[0x90];
-    UChar sisRegs3C2;
-    UChar sisCapt[0x60];
-    UChar sisVid[0x50];
-    UChar VBPart1[0x50];
-    UChar VBPart2[0x100];
-    UChar VBPart3[0x50];
-    UChar VBPart4[0x50];
+    UChar  sisRegMiscOut;
+    UChar  sisRegsATTR[22];
+    UChar  sisRegsGR[10];
+    UChar  sisDAC[768];
+    UChar  sisRegs3C4[0x50];
+    UChar  sisRegs3D4[0x90];
+    UChar  sisRegs3C2;
+    UChar  sisCapt[0x60];
+    UChar  sisVid[0x50];
+    UChar  VBPart1[0x50];
+    UChar  VBPart2[0x100];
+    UChar  VBPart3[0x50];
+    UChar  VBPart4[0x50];
     UShort ch70xx[64];
-    ULong sisMMIO85C0;
-    UChar sis6326tv[0x46];
-    ULong sisRegsPCI50, sisRegsPCIA0;
-    UChar BIOSModeSave;
+    ULong  sisMMIO85C0;
+    UChar  sis6326tv[0x46];
+    ULong  sisRegsPCI50, sisRegsPCIA0;
+    UChar  BIOSModeSave;
 } SISRegRec, *SISRegPtr;
 
 typedef struct _sisModeInfoPtr {
@@ -710,6 +702,7 @@ typedef struct {
     Bool		ROM661New;
     Bool		XvUseMemcpy;
     Bool		BenchMemCpy;
+    Bool		HaveFastVidCpy;
     vidCopyFunc 	SiSFastVidCopy;
     unsigned int	CPUFlags;
 #ifdef SIS_NEED_MAP_IOP   
@@ -727,7 +720,7 @@ typedef struct {
 #define SISPTR(p)       ((SISPtr)((p)->driverPrivate))
 #define XAAPTR(p)       ((XAAInfoRecPtr)(SISPTR(p)->AccelInfoPtr))
 
-/* Relative merge position */
+/* MergedFB: Relative position */
 typedef enum {
    sisLeftOf,
    sisRightOf,
@@ -834,16 +827,7 @@ typedef struct {
     CloseScreenProcPtr  CloseScreen;
     Bool        	(*ModeInit)(ScrnInfoPtr pScrn, DisplayModePtr mode);
     void        	(*SiSSave)(ScrnInfoPtr pScrn, SISRegPtr sisreg);
-    void        	(*SiSSave2)(ScrnInfoPtr pScrn, SISRegPtr sisreg);
-    void        	(*SiSSave3)(ScrnInfoPtr pScrn, SISRegPtr sisreg);
-    void        	(*SiSSaveLVDSChrontel)(ScrnInfoPtr pScrn, SISRegPtr sisreg);
     void        	(*SiSRestore)(ScrnInfoPtr pScrn, SISRegPtr sisreg);
-    void        	(*SiSRestore2)(ScrnInfoPtr pScrn, SISRegPtr sisreg);
-    void        	(*SiSRestore3)(ScrnInfoPtr pScrn, SISRegPtr sisreg);
-    void        	(*SiSRestoreLVDSChrontel)(ScrnInfoPtr pScrn, SISRegPtr sisreg);
-    void        	(*LoadCRT2Palette)(ScrnInfoPtr pScrn, int numColors,
-                		int *indicies, LOCO *colors, VisualPtr pVisual);
-
     int       		cmdQueueLen;		/* Current cmdQueueLength (for 2D and 3D) */
     ULong		cmdQueueLenMax;
     ULong		cmdQueueLenMin;
@@ -900,6 +884,7 @@ typedef struct {
     UChar 		*ImageWriteBufferAddr;
 
     int 		Rotate;
+    Bool		RotateMouse;
     void        	(*PointerMoved)(int index, int x, int y);
 
     /* ShadowFB support */
@@ -951,16 +936,16 @@ typedef struct {
     CARD8 		*state, *pstate;
     void 		*base, *VGAbase;
 #ifdef SISDUALHEAD
-    BOOL 		DualHeadMode;		/* TRUE if we use dual head mode */
-    BOOL 		SecondHead;		/* TRUE is this is the second head */
+    Bool 		DualHeadMode;		/* TRUE if we use dual head mode */
+    Bool 		SecondHead;		/* TRUE is this is the second head */
     SISEntPtr 		entityPrivate;		/* Ptr to private entity (see above) */
-    BOOL		SiSXinerama;		/* Do we use Xinerama mode? */
+    Bool		SiSXinerama;		/* Do we use Xinerama mode? */
 #endif
     SISFBLayout         CurrentLayout;		/* Current framebuffer layout */
     UShort              SiS_DDC2_Index;
     UShort              SiS_DDC2_Data;
     UShort              SiS_DDC2_Clk;
-    BOOL		Primary;		/* Display adapter is primary */
+    Bool		Primary;		/* Display adapter is primary */
     xf86Int10InfoPtr    pInt;			/* Our int10 */
     int                 oldChipset;		/* Type of old chipset */
     int              	RealVideoRam;		/* 6326 can only address 4MB, but TQ can be above */
@@ -995,13 +980,13 @@ typedef struct {
     int			sis6326yfilterstrong;
     int			sis6326tvplug;
     int			sis6326fscadjust;
-    BOOL		sisfbfound;
-    BOOL		donttrustpdc;		/* Don't trust the detected PDC */
+    Bool		sisfbfound;
+    Bool		donttrustpdc;		/* Don't trust the detected PDC */
     UChar		sisfbpdc, sisfbpdca;
     UChar       	sisfblcda;
     int			sisfbscalelcd;
     ULong		sisfbspecialtiming;
-    BOOL		sisfb_haveemi, sisfb_haveemilcd, sisfb_tvposvalid, sisfb_havelock;
+    Bool		sisfb_haveemi, sisfb_haveemilcd, sisfb_tvposvalid, sisfb_havelock;
     UChar		sisfb_emi30,sisfb_emi31,sisfb_emi32,sisfb_emi33;
     int 		sisfb_tvxpos, sisfb_tvypos;
     char		sisfbdevname[16];
@@ -1040,6 +1025,8 @@ typedef struct {
     Atom		xv_GDV, xv_GHI, xv_OVR, xv_GBI, xv_TXS, xv_TYS, xv_CFI, xv_COC, xv_COF;
     Atom		xv_YFI, xv_GSS, xv_BRR, xv_BRG, xv_BRB, xv_PBR, xv_PBG, xv_PBB, xv_SHC;
     Atom		xv_BRR2, xv_BRG2, xv_BRB2, xv_PBR2, xv_PBG2, xv_PBB2, xv_PMD, xv_RDT;
+    Atom 		xv_GARC2,xv_GAGC2,xv_GABC2;
+    Atom		xv_BRRC2, xv_BRGC2, xv_BRBC2, xv_PBRC2, xv_PBGC2, xv_PBBC2;
 #ifdef TWDEBUG
     Atom		xv_STR;
 #endif        
@@ -1102,6 +1089,8 @@ typedef struct {
     IOADDRESS		MyPIOOffset;
     Bool		OverruleRanges;
     Bool		BenchMemCpy;
+    Bool		NeedCopyFastVidCpy;
+    Bool 		SiSFastVidCopyDone;
     vidCopyFunc 	SiSFastVidCopy;
     unsigned int	CPUFlags;
 #ifndef SISCHECKOSSSE    
@@ -1112,7 +1101,14 @@ typedef struct {
     void 		*VGAMemBase; /* mapped */
     Bool		VGAPaletteEnabled;
     Bool		VGACMapSaved;
-    
+    Bool		CRT2SepGamma;		/* CRT2 separate gamma stuff */
+    int			*crt2cindices;
+    LOCO                *crt2gcolortable, *crt2colors;	
+    int			CRT2ColNum;
+    float		GammaR2, GammaG2, GammaB2;
+    int			GammaR2i, GammaG2i, GammaB2i;
+    int			GammaBriR2, GammaBriG2, GammaBriB2;
+    int			GammaPBriR2, GammaPBriG2, GammaPBriB2;
 #ifdef SIS_NEED_MAP_IOP   
     CARD32              IOPAddress;      	/* I/O port physical address */
     UChar 		*IOPBase;         	/* I/O port linear address */   
@@ -1137,6 +1133,7 @@ typedef struct {
     int			maxCRT2_X1, maxCRT2_X2, maxCRT2_Y1, maxCRT2_Y2;
     int			maxClone_X1, maxClone_X2, maxClone_Y1, maxClone_Y2;
     int			MergedFBXDPI, MergedFBYDPI;
+    int			CRT1XOffs, CRT1YOffs, CRT2XOffs, CRT2YOffs;
 #ifdef SISXINERAMA
     Bool		UseSiSXinerama;
     Bool		CRT2IsScrn0;
@@ -1173,7 +1170,6 @@ typedef struct _MergedDisplayModeRec {
     DisplayModePtr CRT2;
     SiSScrn2Rel    CRT2Position;
 } SiSMergedDisplayModeRec, *SiSMergedDisplayModePtr;
-
 
 typedef struct _region {
     int x0,x1,y0,y1;
@@ -1272,8 +1268,9 @@ extern void  SISInitVideo(ScreenPtr pScreen);
 extern void  SIS6326InitVideo(ScreenPtr pScreen);
 
 /* For extended mempy() support */
+extern unsigned int SiSGetCPUFlags(ScrnInfoPtr pScrn);
 extern vidCopyFunc SiSVidCopyInit(ScreenPtr pScreen);
-extern unsigned int SiSGetCPUFlags(ScreenPtr pScreen);
+extern vidCopyFunc SiSVidCopyGetDefault(void);
 
 extern void  SiS_SetCHTVlumabandwidthcvbs(ScrnInfoPtr pScrn, int val);
 extern void  SiS_SetCHTVlumabandwidthsvideo(ScrnInfoPtr pScrn, int val);

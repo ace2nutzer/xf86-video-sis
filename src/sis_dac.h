@@ -41,6 +41,7 @@ void SiSIODump(ScrnInfoPtr pScrn);
 int  SiSMemBandWidth(ScrnInfoPtr pScrn, Bool IsForCRT2);
 int  SiSMclk(SISPtr pSiS);
 void SiSRestoreBridge(ScrnInfoPtr pScrn, SISRegPtr sisReg);
+void SiS_UpdateGammaCRT2(ScrnInfoPtr pScrn);
 
 extern void     SiS6326SetTVReg(ScrnInfoPtr pScrn, CARD8 index, CARD8 data);
 extern UChar    SiS6326GetTVReg(ScrnInfoPtr pScrn, CARD8 index);
@@ -48,6 +49,8 @@ extern void     SiS6326SetXXReg(ScrnInfoPtr pScrn, CARD8 index, CARD8 data);
 extern UChar   	SiS6326GetXXReg(ScrnInfoPtr pScrn, CARD8 index);
 
 extern int      SiSCalcVRate(DisplayModePtr mode);
+
+extern void     SISCalculateGammaRampCRT2(ScrnInfoPtr pScrn);
 
 /* Functions from init.c and init301.c (use their datatypes!) */
 extern void     SiS_UnLockCRT2(SiS_Private *SiS_Pr, PSIS_HW_INFO);

@@ -573,8 +573,16 @@ static FBLinearPtr SiS_AllocBuffers(ScrnInfoPtr pScrn, UChar **buf1,
 {   
     SISPtr pSiS = SISPTR(pScrn);
     int depth = pSiS->CurrentLayout.bitsPerPixel >> 3;
-    unsigned alignSize = (BUFSIZ + depth - 1) / depth;
+    unsigned alignSize;
     FBLinearPtr tmpFbBuffer = NULL;
+    
+    if(depth == 0) {
+       xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
+       		"Internal error: depth is 0!\n");
+       return NULL;
+    }
+    
+    alignSize = (BUFSIZ + depth - 1) / depth;
     
     if(!(tmpFbBuffer = SISAllocateOverlayMemory(pScrn, tmpFbBuffer, alignSize + 31))) {
        return NULL;
@@ -637,7 +645,7 @@ static int SiS_BenchmarkMemcpy(ScrnInfoPtr pScrn, SISMCFuncData *MCFunctions,
 	   tmp2 = time_function(curData->mFunc, buf1, buf2, BUFSIZ);
 	   tmp1 = (tmp2 < tmp1) ? tmp2 : tmp1;
 
-	   if(!frqBuf) {
+	   if((!frqBuf) || (tmp1 == 0)) {
 	      xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
 			   "\tChecked %s memcpy()... \t%u\n",curData->mName, tmp1);
 	   } else {
@@ -753,10 +761,8 @@ static void sigill_handler(void)
 }
 #endif
 
-static Bool CheckOSforSSE(ScreenPtr pScreen)
-{
-    ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum];
-    
+static Bool CheckOSforSSE(ScrnInfoPtr pScrn)
+{   
 #ifdef SISCHECKOSSSE  /* Check OS for SSE possible: */
     int signo = -1;
     
@@ -838,9 +844,8 @@ static SISMCFuncData MCFunctions_i386[] = {
 		: "a" (op)			\
 		: "cc")			
 
-static Bool cpuIDSupported(ScreenPtr pScreen)
+static Bool cpuIDSupported(ScrnInfoPtr pScrn)
 {
-    ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum];
     int eax, ebx, ecx, edx;
        
     /* Check for cpuid instruction */
@@ -879,13 +884,13 @@ static Bool cpuIDSupported(ScreenPtr pScreen)
     return TRUE;
 }
 
-static unsigned int SiS_GetCpuFeatures(ScreenPtr pScreen)
+static unsigned int SiS_GetCpuFeatures(ScrnInfoPtr pScrn)
 {
     unsigned int flags = 0, eax, ebx, ecx, edx;
     Bool IsAMD;
     
     /* Check if cpuid and rdtsc instructions are supported */
-    if(!cpuIDSupported(pScreen)) {
+    if(!cpuIDSupported(pScrn)) {
        return 0;
     }    
     
@@ -927,7 +932,7 @@ static SISMCFuncData MCFunctions_AMD64[] = {
 
 #define Def_FL  (SIS_CPUFL_LIBC | SIS_CPUFL_BI | SIS_CPUFL_BI2)
 
-static unsigned int SiS_GetCpuFeatures(ScreenPtr pScreen)
+static unsigned int SiS_GetCpuFeatures(ScrnInfoPtr pScrn)
 {
     return((unsigned int)(SIS_CPUFL_SSE|SIS_CPUFL_SSE2));
 }
@@ -938,7 +943,7 @@ static unsigned int SiS_GetCpuFeatures(ScreenPtr pScreen)
 
 #define Def_FL  (SIS_CPUFL_LIBC)
 
-static unsigned int SiS_GetCpuFeatures(ScreenPtr pScreen)
+static unsigned int SiS_GetCpuFeatures(ScrnInfoPtr pScrn)
 {
     return((unsigned int)(0));
 }
@@ -1007,16 +1012,15 @@ static vidCopyFunc SiSVidCopyInitGen(ScreenPtr pScreen, SISMCFuncData *MCFunctio
 /* 			    (called externally)			      */
 /**********************************************************************/
 
-unsigned int SiSGetCPUFlags(ScreenPtr pScreen)
+unsigned int SiSGetCPUFlags(ScrnInfoPtr pScrn)
 {
-      
-    unsigned int myCPUflags = SiS_GetCpuFeatures(pScreen);
+    unsigned int myCPUflags = SiS_GetCpuFeatures(pScrn);
     
 #ifdef SiS_checkosforsse    
     if(myCPUflags & (SIS_CPUFL_SSE | SIS_CPUFL_SSE2)) {
     
        /* Check if OS supports usage of SSE instructions */
-       if(!(CheckOSforSSE(pScreen))) {
+       if(!(CheckOSforSSE(pScrn))) {
           myCPUflags &= ~(SIS_CPUFL_SSE | SIS_CPUFL_SSE2);
        }
        
@@ -1043,6 +1047,10 @@ vidCopyFunc SiSVidCopyInit(ScreenPtr pScreen)
 #endif    
 }
 
+vidCopyFunc SiSVidCopyGetDefault(void)
+{    
+    return SiS_libc_memcpy;
+}
 
 #endif /* GNU C */
 

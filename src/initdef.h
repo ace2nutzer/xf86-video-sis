@@ -482,6 +482,7 @@
 #define VCLK100_300             0x43   /* Index in VCLKData table (300) */
 #define VCLK34_300              0x3d   /* Index in VCLKData table (300) */
 #define VCLK_CUSTOM_300		0x47
+
 #define VCLK65_315              0x0b   /* Index in (VB)VCLKData table (315) */
 #define VCLK108_2_315           0x19   /* Index in (VB)VCLKData table (315) */
 #define VCLK81_315		0x5b   /* Index in (VB)VCLKData table (315) */

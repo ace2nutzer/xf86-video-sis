@@ -712,6 +712,66 @@ SISCalculateGammaRamp(ScreenPtr pScreen, ScrnInfoPtr pScrn)
 }
 #endif
 
+void
+SISCalculateGammaRampCRT2(ScrnInfoPtr pScrn)
+{
+   SISPtr pSiS = SISPTR(pScrn);
+   int    i, fullscale;
+   int    myshift = 16 - pScrn->rgbBits;
+   int    maxvalue = (1 << pScrn->rgbBits) - 1;
+   int    reds = pScrn->mask.red >> pScrn->offset.red;     
+   int    greens = pScrn->mask.green >> pScrn->offset.green;
+   int    blues = pScrn->mask.blue >> pScrn->offset.blue;
+   float  framp, dramp, invgamma=0.0, v, prescale;
+    
+   dramp = 1. / (pSiS->CRT2ColNum - 1);
+    
+   fullscale = 65536 * (float)pSiS->GammaBriR2 / 1000;
+   prescale  = (float)pSiS->GammaPBriR2 / 1000;
+   invgamma  = 1. / pSiS->GammaR2;
+   
+   for(i = 0; i < pSiS->CRT2ColNum; i++) {
+      framp = pow(prescale * i * dramp, invgamma);
+      v = (fullscale < 0) ? (65535 + fullscale * framp) : fullscale * framp;
+      if(v < 0) v = 0;
+      else if(v > 65535) v = 65535;
+      pSiS->crt2gcolortable[i].red = ((UShort)v) >> myshift;
+   }
+   
+   fullscale = 65536 * (float)pSiS->GammaBriG2 / 1000;
+   prescale  = (float)pSiS->GammaPBriG2 / 1000;
+   invgamma  = 1. / pSiS->GammaG2;
+   
+   for(i = 0; i < pSiS->CRT2ColNum; i++) {
+      framp = pow(prescale * i * dramp, invgamma);
+      v = (fullscale < 0) ? (65535 + fullscale * framp) : fullscale * framp;
+      if(v < 0) v = 0;
+      else if(v > 65535) v = 65535;
+      pSiS->crt2gcolortable[i].green = ((UShort)v) >> myshift;
+   }
+   
+   fullscale = 65536 * (float)pSiS->GammaBriB2 / 1000;
+   prescale  = (float)pSiS->GammaPBriB2 / 1000;
+   invgamma  = 1. / pSiS->GammaB2;
+   
+   for(i = 0; i < pSiS->CRT2ColNum; i++) {
+      framp = pow(prescale * i * dramp, invgamma);
+      v = (fullscale < 0) ? (65535 + fullscale * framp) : fullscale * framp;
+      if(v < 0) v = 0;
+      else if(v > 65535) v = 65535;
+      pSiS->crt2gcolortable[i].blue = ((UShort)v) >> myshift;
+   }
+    
+   for(i = 0; i < pSiS->CRT2ColNum; i++) {
+      pSiS->crt2colors[i].red = 
+         pSiS->crt2gcolortable[i * maxvalue / reds].red;
+      pSiS->crt2colors[i].green = 
+         pSiS->crt2gcolortable[i * maxvalue / greens].green;
+      pSiS->crt2colors[i].blue  = 
+         pSiS->crt2gcolortable[i * maxvalue / blues].blue;
+   }
+}
+
 static void
 SISErrorLog(ScrnInfoPtr pScrn, const char *format, ...)
 {
@@ -861,19 +921,8 @@ SISProbe(DriverPtr drv, int flags)
 	    if(!pPriv->ptr) {
 	       pPriv->ptr = xnfcalloc(sizeof(SISEntRec), 1);
 	       pSiSEnt = pPriv->ptr;
-	       pSiSEnt->lastInstance = -1;
-	       pSiSEnt->DisableDual = FALSE;
-	       pSiSEnt->ErrorAfterFirst = FALSE;
-	       pSiSEnt->MapCountIOBase = pSiSEnt->MapCountFbBase = 0;
-	       pSiSEnt->FbBase = pSiSEnt->IOBase = NULL;
-  	       pSiSEnt->forceUnmapIOBase = FALSE;
-	       pSiSEnt->forceUnmapFbBase = FALSE;
-	       pSiSEnt->HWCursorCBufNum = pSiSEnt->HWCursorMBufNum = 0;
-#ifdef __alpha__
-	       pSiSEnt->MapCountIOBaseDense = 0;
-	       pSiSEnt->IOBaseDense = NULL;
-	       pSiSEnt->forceUnmapIOBaseDense = FALSE;
-#endif
+	       memset(pSiSEnt, 0, sizeof(SISEntRec));
+	       pSiSEnt->lastInstance = -1;	       
 	    } else {
 	       pSiSEnt = pPriv->ptr;
 	    }
@@ -1109,6 +1158,7 @@ SiSStrToRanges(range *r, char *s, int max)
  * If dest is NULL, return value is copy of i linked to itself.
  * For mergedfb auto-config, we only check the dimension
  * against virtualX/Y, if they were user-provided.
+ * No special treatment required for CRTxxOffs.
  */
 static DisplayModePtr
 SiSCopyModeNLink(ScrnInfoPtr pScrn, DisplayModePtr dest,
@@ -1442,30 +1492,48 @@ SiSGenerateModeList(ScrnInfoPtr pScrn, char* str,
 static void
 SiSRecalcDefaultVirtualSize(ScrnInfoPtr pScrn)
 {
+    SISPtr pSiS = SISPTR(pScrn);
     DisplayModePtr mode, bmode;
-    int max;
+    int maxh, maxv;
     static const char *str = "MergedFB: Virtual %s %d\n";
+    static const char *errstr = "Virtual %s to small for given CRT2Position offset\n";
 
+    mode = bmode = pScrn->modes;
+    maxh = maxv = 0;
+    do {
+       if(mode->HDisplay > maxh) maxh = mode->HDisplay;
+       if(mode->VDisplay > maxv) maxv = mode->VDisplay;
+       mode = mode->next;
+    } while(mode != bmode);
+    
+    maxh += pSiS->CRT1XOffs + pSiS->CRT2XOffs;
+    maxv += pSiS->CRT1YOffs + pSiS->CRT2YOffs;
+    
     if(!(pScrn->display->virtualX)) {
-       mode = bmode = pScrn->modes;
-       max = 0;
-       do {
-          if(mode->HDisplay > max) max = mode->HDisplay;
-          mode = mode->next;
-       } while(mode != bmode);
-       pScrn->virtualX = max;
-       pScrn->displayWidth = max;
-       xf86DrvMsg(pScrn->scrnIndex, X_PROBED, str, "width", max);
+       if(maxh > 4088) {
+          xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
+	  	"Virtual width with CRT2Position offset beyond hardware specs\n");
+          pSiS->CRT1XOffs = pSiS->CRT2XOffs = 0;
+	  maxh -= (pSiS->CRT1XOffs + pSiS->CRT2XOffs); 
+       } 
+       pScrn->virtualX = maxh;
+       pScrn->displayWidth = maxh;
+       xf86DrvMsg(pScrn->scrnIndex, X_PROBED, str, "width", maxh);
+    } else {
+       if(maxh < pScrn->display->virtualX) {
+          xf86DrvMsg(pScrn->scrnIndex, X_ERROR, errstr, "width");
+          pSiS->CRT1XOffs = pSiS->CRT2XOffs = 0;
+       }
     }
-    if(!(pScrn->display->virtualY)) {
-       mode = bmode = pScrn->modes;
-       max = 0;
-       do {
-          if(mode->VDisplay > max) max = mode->VDisplay;
-          mode = mode->next;
-       } while(mode != bmode);
-       pScrn->virtualY = max;
-       xf86DrvMsg(pScrn->scrnIndex, X_PROBED, str, "height", max);
+    
+    if(!(pScrn->display->virtualY)) {   
+       pScrn->virtualY = maxv;
+       xf86DrvMsg(pScrn->scrnIndex, X_PROBED, str, "height", maxv);
+    } else {
+       if(maxv < pScrn->display->virtualY) {
+          xf86DrvMsg(pScrn->scrnIndex, X_ERROR, errstr, "height");
+          pSiS->CRT1YOffs = pSiS->CRT2YOffs = 0;
+       }
     }
 }
 
@@ -1606,6 +1674,7 @@ SiSUpdateXineramaScreenInfo(ScrnInfoPtr pScrn1)
     SISPtr pSiS = SISPTR(pScrn1);
     int crt1scrnnum = 0, crt2scrnnum = 1;
     int x1=0, x2=0, y1=0, y2=0, h1=0, h2=0, w1=0, w2=0;
+    int realvirtX, realvirtY;
     DisplayModePtr currentMode, firstMode;
     Bool infochanged = FALSE;
 
@@ -1625,7 +1694,12 @@ SiSUpdateXineramaScreenInfo(ScrnInfoPtr pScrn1)
      * the maxCRT fields here (and not somewhere else, like in CopyNLink)
      *
      * *** For now: RandR will be disabled if SiS pseudo-Xinerama is on
+     *     or one of CRTxxOffs is non-zero.
      */
+    
+    /* "Real" virtual: Virtual without the Offset */
+    realvirtX = pScrn1->virtualX - pSiS->CRT1XOffs - pSiS->CRT2XOffs;
+    realvirtY = pScrn1->virtualY - pSiS->CRT1YOffs - pSiS->CRT2YOffs;
 
     if((pSiS->SiSXineramaVX != pScrn1->virtualX) || (pSiS->SiSXineramaVY != pScrn1->virtualY)) {
 
@@ -1647,8 +1721,8 @@ SiSUpdateXineramaScreenInfo(ScrnInfoPtr pScrn1)
           DisplayModePtr j = ((SiSMergedDisplayModePtr)currentMode->Private)->CRT2;
           SiSScrn2Rel srel = ((SiSMergedDisplayModePtr)currentMode->Private)->CRT2Position;
 
-          if((i->HDisplay <= pScrn1->virtualX) && (j->HDisplay <= pScrn1->virtualX) &&
-             (i->VDisplay <= pScrn1->virtualY) && (j->VDisplay <= pScrn1->virtualY)) {
+          if((i->HDisplay <= realvirtX) && (j->HDisplay <= realvirtX) &&
+             (i->VDisplay <= realvirtY) && (j->VDisplay <= realvirtY)) {
 
              if(srel != sisClone) {
                 if(pSiS->maxCRT1_X1 <= i->HDisplay) {
@@ -1704,49 +1778,49 @@ SiSUpdateXineramaScreenInfo(ScrnInfoPtr pScrn1)
     case sisLeftOf:
        x1 = min(pSiS->maxCRT1_X2, pScrn1->virtualX - pSiS->maxCRT1_X1);
        if(x1 < 0) x1 = 0;
-       y1 = 0;
+       y1 = pSiS->CRT1YOffs;
        w1 = pScrn1->virtualX - x1;
-       h1 = pScrn1->virtualY;
+       h1 = realvirtY;
        x2 = 0;
-       y2 = 0;
+       y2 = pSiS->CRT2YOffs;
        w2 = max(pSiS->maxCRT2_X2, pScrn1->virtualX - pSiS->maxCRT2_X1);
        if(w2 > pScrn1->virtualX) w2 = pScrn1->virtualX;
-       h2 = pScrn1->virtualY;
+       h2 = realvirtY;
        break;
     case sisRightOf:
        x1 = 0;
-       y1 = 0;
+       y1 = pSiS->CRT1YOffs;
        w1 = max(pSiS->maxCRT1_X1, pScrn1->virtualX - pSiS->maxCRT1_X2);
        if(w1 > pScrn1->virtualX) w1 = pScrn1->virtualX;
-       h1 = pScrn1->virtualY;
+       h1 = realvirtY;
        x2 = min(pSiS->maxCRT2_X1, pScrn1->virtualX - pSiS->maxCRT2_X2);
        if(x2 < 0) x2 = 0;
-       y2 = 0;
+       y2 = pSiS->CRT2YOffs;
        w2 = pScrn1->virtualX - x2;
-       h2 = pScrn1->virtualY;
+       h2 = realvirtY;
        break;
     case sisAbove:
-       x1 = 0;
+       x1 = pSiS->CRT1XOffs;
        y1 = min(pSiS->maxCRT1_Y2, pScrn1->virtualY - pSiS->maxCRT1_Y1);
        if(y1 < 0) y1 = 0;
-       w1 = pScrn1->virtualX;
+       w1 = realvirtX;
        h1 = pScrn1->virtualY - y1;
-       x2 = 0;
+       x2 = pSiS->CRT2XOffs;
        y2 = 0;
-       w2 = pScrn1->virtualX;
+       w2 = realvirtX;
        h2 = max(pSiS->maxCRT2_Y2, pScrn1->virtualY - pSiS->maxCRT2_Y1);
        if(h2 > pScrn1->virtualY) h2 = pScrn1->virtualY;
        break;
     case sisBelow:
-       x1 = 0;
+       x1 = pSiS->CRT1XOffs;
        y1 = 0;
-       w1 = pScrn1->virtualX;
+       w1 = realvirtX;
        h1 = max(pSiS->maxCRT1_Y1, pScrn1->virtualY - pSiS->maxCRT1_Y2);
        if(h1 > pScrn1->virtualY) h1 = pScrn1->virtualY;
-       x2 = 0;
+       x2 = pSiS->CRT2XOffs;
        y2 = min(pSiS->maxCRT2_Y1, pScrn1->virtualY - pSiS->maxCRT2_Y2);
        if(y2 < 0) y2 = 0;
-       w2 = pScrn1->virtualX;
+       w2 = realvirtX;
        h2 = pScrn1->virtualY - y2;
     default:
        break;
@@ -2247,11 +2321,11 @@ SiSDoPrivateDDC(ScrnInfoPtr pScrn, int *crtnum)
 
 static Bool
 SiSMakeOwnModeList(ScrnInfoPtr pScrn, Bool acceptcustommodes, Bool includelcdmodes,
-                   Bool isfordvi, Bool *havecustommodes)
+                   Bool isfordvi, Bool *havecustommodes, Bool fakecrt2modes)
 {
     DisplayModePtr tempmode, delmode, mymodes;
 
-    if((mymodes = SiSBuildBuiltInModeList(pScrn, includelcdmodes, isfordvi))) {
+    if((mymodes = SiSBuildBuiltInModeList(pScrn, includelcdmodes, isfordvi, fakecrt2modes))) {
        if(!acceptcustommodes) {
 	  while(pScrn->monitor->Modes)
              xf86DeleteMode(&pScrn->monitor->Modes, pScrn->monitor->Modes);
@@ -2718,8 +2792,8 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
     }
 
     /* Reset some entries */    
-    pSiS->SiSFastVidCopy = NULL;
-    pSiS->CPUFlags = 0;
+    pSiS->SiSFastVidCopy = SiSVidCopyGetDefault();
+    pSiS->SiSFastVidCopyDone = FALSE;
     
     /* Always do a ValidMode() inside Switchmode() */
     pSiS->skipswitchcheck = FALSE;
@@ -2761,7 +2835,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
        case PCI_CHIP_SIS315H:
 	  pSiS->sishw_ext.jChipType = SIS_315H;
 	  pSiS->VGAEngine = SIS_315_VGA;
-	  pSiS->ChipFlags |= SiSCF_315Core;
+	  pSiS->ChipFlags |= (SiSCF_315Core | SiSCF_MMIOPalette);
 	  pSiS->SiS_SD_Flags |= SiS_SD_IS315SERIES;
 	  pSiS->myCR63 = 0x63;
 	  pSiS->mmioSize = 128;
@@ -2770,7 +2844,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	  /* Override for simplicity */
 	  pSiS->Chipset = PCI_CHIP_SIS315H;
 	  pSiS->sishw_ext.jChipType = SIS_315;
-	  pSiS->ChipFlags |= SiSCF_315Core;
+	  pSiS->ChipFlags |= (SiSCF_315Core | SiSCF_MMIOPalette);
 	  pSiS->VGAEngine = SIS_315_VGA;
 	  pSiS->SiS_SD_Flags |= SiS_SD_IS315SERIES;
 	  pSiS->myCR63 = 0x63;
@@ -2780,7 +2854,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	  /* Override for simplicity */
 	  pSiS->Chipset = PCI_CHIP_SIS315H;
 	  pSiS->sishw_ext.jChipType = SIS_315PRO;
-	  pSiS->ChipFlags |= SiSCF_315Core;
+	  pSiS->ChipFlags |= (SiSCF_315Core | SiSCF_MMIOPalette);
 	  pSiS->VGAEngine = SIS_315_VGA;
 	  pSiS->SiS_SD_Flags |= SiS_SD_IS315SERIES;
 	  pSiS->myCR63 = 0x63;
@@ -2789,7 +2863,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
        case PCI_CHIP_SIS550:
 	  pSiS->sishw_ext.jChipType = SIS_550;
 	  pSiS->VGAEngine = SIS_315_VGA;
-	  pSiS->ChipFlags |= SiSCF_Integrated;
+	  pSiS->ChipFlags |= (SiSCF_Integrated | SiSCF_MMIOPalette);
 	  pSiS->SiS_SD_Flags |= SiS_SD_IS315SERIES;
 	  pSiS->myCR63 = 0x63;
 	  pSiS->mmioSize = 128;
@@ -2800,7 +2874,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	     pSiS->sishw_ext.jChipType = SIS_740;
 	  }
 	  pSiS->VGAEngine = SIS_315_VGA;
-	  pSiS->ChipFlags |= (SiSCF_Integrated | SiSCF_Real256ECore);
+	  pSiS->ChipFlags |= (SiSCF_Integrated | SiSCF_Real256ECore | SiSCF_MMIOPalette);
 	  pSiS->SiS_SD_Flags |= SiS_SD_IS315SERIES;
 	  pSiS->myCR63 = 0x63;
 	  pSiS->mmioSize = 128;
@@ -2808,7 +2882,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
        case PCI_CHIP_SIS330:
 	  pSiS->sishw_ext.jChipType = SIS_330;
 	  pSiS->VGAEngine = SIS_315_VGA;
-	  pSiS->ChipFlags |= SiSCF_XabreCore;
+	  pSiS->ChipFlags |= (SiSCF_XabreCore | SiSCF_MMIOPalette);
 	  pSiS->SiS_SD_Flags |= SiS_SD_IS330SERIES;
 	  pSiS->myCR63 = 0x53; /* sic! */
 	  pSiS->mmioSize = 256;
@@ -2848,7 +2922,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	      * !!! BUT WE DO NOT HAVE RelIO AT THIS POINT YET !!!
    	      */
 	     pSiS->VGAEngine = SIS_315_VGA;
-	     pSiS->ChipFlags |= SiSCF_Integrated;
+	     pSiS->ChipFlags |= (SiSCF_Integrated | SiSCF_MMIOPalette);
 	     pSiS->SiS_SD_Flags |= SiS_SD_IS330SERIES;
 	     pSiS->myCR63 = 0x53; /* sic! */
 	     pSiS->NewCRLayout = TRUE;
@@ -2857,7 +2931,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
        case PCI_CHIP_SIS340:
 	  pSiS->sishw_ext.jChipType = SIS_340;
 	  pSiS->VGAEngine = SIS_315_VGA;
-	  pSiS->ChipFlags |= SiSCF_XabreCore;
+	  pSiS->ChipFlags |= (SiSCF_XabreCore | SiSCF_MMIOPalette);
 	  pSiS->SiS_SD_Flags |= SiS_SD_IS340SERIES;
 	  pSiS->myCR63 = 0x53; /* sic! */
 	  pSiS->mmioSize = 256;
@@ -3362,35 +3436,16 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 
 #ifdef SISDUALHEAD
     /* Due to palette & timing problems we don't support 8bpp in DHM */
-    if((pSiS->DualHeadMode) && (pScrn->bitsPerPixel == 8)) {
-       SISErrorLog(pScrn, "Color depth 8 not supported in Dual Head mode.\n");
+    if((pSiS->DualHeadMode) && (pScrn->bitsPerPixel <= 8)) {
+       SISErrorLog(pScrn, "Color depth %d not supported in Dual Head mode.\n", 
+       			pScrn->bitsPerPixel);
        if(pSiSEnt) pSiSEnt->ErrorAfterFirst = TRUE;
        if(pSiS->pInt) xf86FreeInt10(pSiS->pInt);
        SISFreeRec(pScrn);
        return FALSE;
     }
 #endif
-
-    /* Setup gamma (the cmap layer needs this to be initialised) */
-    {  
-       Gamma zeros = {0.0, 0.0, 0.0};
-       if(!xf86SetGamma(pScrn, zeros)) {
-	  SISErrorLog(pScrn, "xf86SetGamma() error\n");
-#ifdef SISDUALHEAD
-	  if(pSiSEnt) pSiSEnt->ErrorAfterFirst = TRUE;
-#endif
-	  if(pSiS->pInt) xf86FreeInt10(pSiS->pInt);
-	  SISFreeRec(pScrn);
-          return FALSE;
-       }
-    }
-
-    /* We use a programamble clock */
-    pScrn->progClock = TRUE;
-
-    /* Set the bits per RGB for 8bpp mode */
-    if(pScrn->depth == 8) pScrn->rgbBits = 6;
-
+    
     /* Unlock registers */
     sisSaveUnlockExtRegisterLock(pSiS, &srlockReg, &crlockReg);
 
@@ -3480,11 +3535,47 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 
 #ifdef SISMERGED
     /* Due to palette & timing problems we don't support 8bpp in MFBM */
-    if((pSiS->MergedFB) && (pScrn->bitsPerPixel == 8)) {
-       SISErrorLog(pScrn, "MergedFB: Color depth 8 not supported, %s\n", mergeddisstr);
+    if((pSiS->MergedFB) && (pScrn->bitsPerPixel <= 8)) {
+       SISErrorLog(pScrn, "MergedFB: Color depth %d not supported, %s\n", 
+       			pScrn->bitsPerPixel, mergeddisstr);
        pSiS->MergedFB = pSiS->MergedFBAuto = FALSE;
     }
 #endif
+
+    /* Probe CPU features */
+#ifdef SISDUALHEAD    
+    if(pSiS->DualHeadMode) {
+       pSiS->CPUFlags = pSiSEnt->CPUFlags;
+    }
+#endif
+    if(!pSiS->CPUFlags) {    
+       pSiS->CPUFlags = SiSGetCPUFlags(pScrn);
+       pSiS->CPUFlags |= SIS_CPUFL_FLAG;
+#ifdef SISDUALHEAD           
+       if(pSiS->DualHeadMode) pSiSEnt->CPUFlags = pSiS->CPUFlags;
+#endif 
+    }
+
+    /* Setup gamma (the cmap layer needs this to be initialised) */
+    /* (Do this after evaluating options) */
+    {  
+       Gamma zeros = {0.0, 0.0, 0.0};
+       if(!xf86SetGamma(pScrn, zeros)) {
+	  SISErrorLog(pScrn, "xf86SetGamma() error\n");
+#ifdef SISDUALHEAD
+	  if(pSiSEnt) pSiSEnt->ErrorAfterFirst = TRUE;
+#endif
+	  if(pSiS->pInt) xf86FreeInt10(pSiS->pInt);
+	  SISFreeRec(pScrn);
+          return FALSE;
+       }
+    }
+
+    /* We use a programamble clock */
+    pScrn->progClock = TRUE;
+
+    /* Set the bits per RGB for 8bpp mode */
+    if(pScrn->depth == 8) pScrn->rgbBits = 8;
 
 #ifdef SISDUALHEAD
     if(pSiS->DualHeadMode) {
@@ -4316,13 +4407,33 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
     }
 #endif
 
-    if((pSiS->VGAEngine == SIS_300_VGA) || (pSiS->VGAEngine == SIS_315_VGA)) {
-       if( (pSiS->VBFlags & VB_SISBRIDGE) &&
-           (!((pSiS->VBFlags & VB_30xBDH) && (pSiS->VBFlags & CRT2_LCD))) ) {
-          xf86DrvMsg(pScrn->scrnIndex, X_INFO, "CRT2 gamma correction is %s\n",
-		pSiS->CRT2gamma ? "enabled" : "disabled");
+#ifdef SISDUALHEAD
+    if(pSiS->DualHeadMode) pSiS->CRT2SepGamma = FALSE;
+    
+    if((!pSiS->DualHeadMode) || (!pSiS->SecondHead)) 
+#endif	   
+    {
+       Bool isDH = FALSE;
+       if(pSiS->CRT2gamma) {
+          if( ((pSiS->VGAEngine != SIS_300_VGA) && (pSiS->VGAEngine != SIS_315_VGA)) ||
+              (!(pSiS->VBFlags & VB_SISBRIDGE)) ) {
+	     xf86DrvMsg(pScrn->scrnIndex, X_PROBED, 
+	  		"CRT2 gamma correction not supported by hardware\n");
+	     pSiS->CRT2gamma = pSiS->CRT2SepGamma = FALSE;
+          } else if((pSiS->VBFlags & VB_30xBDH) && (pSiS->VBFlags & CRT2_LCD)) {
+	     isDH = TRUE;
+	     xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
+	     		"CRT2 gamma correction not supported for LCD\n");   
+	     /* But leave it on, will be caught in LoadPalette */  		       
+          }
        }
-    }
+       if(pSiS->VBFlags & VB_SISBRIDGE) {
+          xf86DrvMsg(pScrn->scrnIndex, X_INFO, "CRT2 gamma correction is %s%s%s\n",
+		pSiS->CRT2gamma ? "enabled" : "disabled",
+		isDH ? " (for TV and VGA2) " : "",
+		pSiS->CRT2SepGamma ? " (separate from CRT1)" : "");
+       }
+    }     
 
     /* Eventually overrule TV Type (SVIDEO, COMPOSITE, SCART, HIVISION, YPBPR) */
     if(pSiS->VBFlags & VB_SISTVBRIDGE) {
@@ -5083,7 +5194,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	      * (our strict checking will filter out invalid ones anyway)
 	      */
 	     pScrn->monitor->nHsync = 1;
-	     pScrn->monitor->hsync[0].lo = 28;
+	     pScrn->monitor->hsync[0].lo = 25;
 	     pScrn->monitor->hsync[0].hi = 80;
 	     crt1freqoverruled = TRUE;
 	  }
@@ -5113,8 +5224,8 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 		  		pSiS->CRT1off ? 2 : 1);	   
 	     /* Set sane ranges for LCD and TV */
 	     pScrn->monitor->nVrefresh = 1;
-	     pScrn->monitor->vrefresh[0].lo = 50;  /* 50 1280x720@50; 56 720/768x576 */
-	     pScrn->monitor->vrefresh[0].hi = 71;  /* 71 for 640x400 */  
+	     pScrn->monitor->vrefresh[0].lo = 50; /* 50 for 1280x720@50 */
+	     pScrn->monitor->vrefresh[0].hi = 62;   
 	     crt1freqoverruled = TRUE;
 	  }
        }
@@ -5142,7 +5253,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 			(pSiS->CRT2pScrn->monitor->nHsync <= 0) ? "missing" : "bogus", 2);
 		/* Set sane ranges for LCD and TV */
 	        pSiS->CRT2pScrn->monitor->nHsync = 1;
-	        pSiS->CRT2pScrn->monitor->hsync[0].lo = 28;
+	        pSiS->CRT2pScrn->monitor->hsync[0].lo = 25;
 	        pSiS->CRT2pScrn->monitor->hsync[0].hi = 80;
 		crt2freqoverruled = TRUE;
 	     }
@@ -5165,8 +5276,8 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 			(pSiS->CRT2pScrn->monitor->nVrefresh <= 0) ? "missing" : "bogus", 2);
 		/* Set sane ranges for LCD and TV */
 	        pSiS->CRT2pScrn->monitor->nVrefresh = 1;
-	        pSiS->CRT2pScrn->monitor->vrefresh[0].lo = 50; /* 50: 1280x720@50; 56: 768/720x576 */
-	        pSiS->CRT2pScrn->monitor->vrefresh[0].hi = 71; /* 71 for 640x400 */
+	        pSiS->CRT2pScrn->monitor->vrefresh[0].lo = 50; /* 50 for 1280x720@50 */
+	        pSiS->CRT2pScrn->monitor->vrefresh[0].hi = 62; 
 		crt2freqoverruled = TRUE;
 	     }
           }  
@@ -5182,7 +5293,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
     /* Set the min pixel clock */
     pSiS->MinClock = 5000;
     if((pSiS->VGAEngine == SIS_300_VGA) || (pSiS->VGAEngine == SIS_315_VGA)) {
-       pSiS->MinClock = 12000;
+       pSiS->MinClock = 9500;
     }
     xf86DrvMsg(pScrn->scrnIndex, X_DEFAULT, "Min pixel clock is %d MHz\n",
                 pSiS->MinClock / 1000);
@@ -5236,13 +5347,14 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
           Bool acceptcustommodes = TRUE;  /* Accept user modelines */
 	  Bool includelcdmodes   = TRUE;  /* Include modes reported by DDC */
 	  Bool isfordvi          = FALSE; /* Is for digital DVI output */
+	  Bool fakecrt2modes     = FALSE; /* Fake some modes for CRT2 */
           if(pSiS->UseVESA) {
 	     acceptcustommodes = FALSE;
 	     includelcdmodes   = FALSE;
 	  }
 #ifdef SISDUALHEAD  /* Dual head is static. Output devices will not change. */
           if(pSiS->DualHeadMode) {
-	     if(!pSiS->SecondHead) {
+	     if(!pSiS->SecondHead) {  /* CRT2: */
 	        if(pSiS->VBFlags & VB_SISTMDSBRIDGE) {
 		   if(!(pSiS->VBFlags & VB_30xBDH)) {
 		      if(!(pSiS->VBFlags & (CRT2_LCD|CRT2_VGA))) includelcdmodes   = FALSE;
@@ -5252,18 +5364,23 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 		      if(pSiS->VBFlags & (CRT2_TV|CRT2_LCD)) {
 		         acceptcustommodes = FALSE;
 		         includelcdmodes   = FALSE;
+			 fakecrt2modes = TRUE;
 		      }
 		   }
 		} else {
 		   acceptcustommodes = FALSE;
 		   includelcdmodes   = FALSE;
+		   if(pSiS->VBFlags & (CRT2_TV|CRT2_LCD)) {
+		      fakecrt2modes = TRUE;
+		   }
 		}
 		clockRanges->interlaceAllowed = FALSE;
-	     } else {
+	     } else {		/* CRT1: */
 	        if(pSiS->VBFlags & CRT1_LCDA) {
 		   if(!(pSiS->VBFlags & VB_SISTMDSLCDABRIDGE)) {
 		      acceptcustommodes = FALSE;
-		      includelcdmodes = FALSE;
+		      includelcdmodes   = FALSE;
+		      fakecrt2modes     = TRUE;
 		      /* Will handle i-lace in mode-switching code */
 		   } else {
 		      isfordvi = TRUE;
@@ -5281,7 +5398,8 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	     if(pSiS->VBFlags & CRT1_LCDA) {
 	        if(!(pSiS->VBFlags & VB_SISTMDSLCDABRIDGE)) {
 		   acceptcustommodes = FALSE;
-		   includelcdmodes = FALSE;
+		   includelcdmodes   = FALSE;
+		   fakecrt2modes     = TRUE;
 		   /* Will handle i-lace in mode-switching code */
 		} else {
 		   isfordvi = TRUE;
@@ -5313,18 +5431,25 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	        if(pSiS->VBFlags & (CRT2_TV|CRT2_LCD)) {
 		   acceptcustommodes = FALSE;
 		   includelcdmodes   = FALSE;
+		   if(!(pSiS->VBFlags & DISPTYPE_CRT1)) {
+		      fakecrt2modes = TRUE;
+		   }
 		}
 	     }
 	  } else if(pSiS->VBFlags & (CRT2_ENABLE | CRT1_LCDA)) {
 	     acceptcustommodes = FALSE;
 	     includelcdmodes   = FALSE;
+	     if((pSiS->VBFlags & CRT1_LCDA) || (!(pSiS->VBFlags & DISPTYPE_CRT1))) {
+		fakecrt2modes = TRUE;
+	     }   
 	  } else {
 	     includelcdmodes   = FALSE;
 	  }
 	  /* Ignore interlace, mode switching code will handle this */
 
 	  pSiS->HaveCustomModes = FALSE;
-          if(SiSMakeOwnModeList(pScrn, acceptcustommodes, includelcdmodes, isfordvi, &pSiS->HaveCustomModes)) {
+          if(SiSMakeOwnModeList(pScrn, acceptcustommodes, includelcdmodes, 
+	  		isfordvi, &pSiS->HaveCustomModes, fakecrt2modes)) {
 	     xf86DrvMsg(pScrn->scrnIndex, X_INFO,
 	         "Replaced %s mode list with built-in modes\n",
 	     pSiS->HaveCustomModes ? "default" : "entire");
@@ -5445,7 +5570,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
        sisRestoreExtRegisterLock(pSiS,srlockReg,crlockReg);
        SISFreeRec(pScrn);
        return FALSE;
-    }
+    }    
 
     /* Check the virtual screen against the available memory */
     {
@@ -5547,6 +5672,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
        Bool acceptcustommodes = TRUE;
        Bool includelcdmodes   = TRUE;
        Bool isfordvi          = FALSE;
+       Bool fakecrt2modes     = FALSE;
 
        xf86DrvMsg(pScrn->scrnIndex, X_INFO, crtsetupstr, 2);
 
@@ -5574,15 +5700,20 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	     if(pSiS->VBFlags & (CRT2_LCD|CRT2_TV)) {
 	        includelcdmodes   = FALSE;
 	        acceptcustommodes = FALSE;
+		fakecrt2modes     = TRUE;
 	     }
 	  }
        } else {
           includelcdmodes   = FALSE;
 	  acceptcustommodes = FALSE;
+	  if(pSiS->VBFlags & (CRT2_LCD|CRT2_TV)) {
+	     fakecrt2modes = TRUE;
+	  }
        }
 
        pSiS->HaveCustomModes2 = FALSE;
-       if(!SiSMakeOwnModeList(pSiS->CRT2pScrn, acceptcustommodes, includelcdmodes, isfordvi, &pSiS->HaveCustomModes2)) {
+       if(!SiSMakeOwnModeList(pSiS->CRT2pScrn, acceptcustommodes, includelcdmodes, 
+       				isfordvi, &pSiS->HaveCustomModes2, fakecrt2modes)) {
 
 	  SISErrorLog(pScrn, "Building list of built-in modes for CRT2 failed, %s\n",
 	  			mergeddisstr);
@@ -6932,6 +7063,16 @@ SISBlockHandler(int i, pointer blockData, pointer pTimeout, pointer pReadmask)
     pScreen->BlockHandler = pSiS->BlockHandler;
     (*pScreen->BlockHandler) (i, blockData, pTimeout, pReadmask);
     pScreen->BlockHandler = SISBlockHandler;
+    
+#ifdef SISDUALHEAD    
+    if(pSiS->NeedCopyFastVidCpy) {
+       SISEntPtr pSiSEnt = pSiS->entityPrivate;
+       if(pSiSEnt->HaveFastVidCpy) {
+          pSiS->NeedCopyFastVidCpy = FALSE;
+          pSiS->SiSFastVidCopy = pSiSEnt->SiSFastVidCopy;
+       }
+    }
+#endif
 
     if(pSiS->VideoTimerCallback) {
        (*pSiS->VideoTimerCallback)(pScrn, currentTime.milliseconds);
@@ -6977,7 +7118,7 @@ SISScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
        pSiSEnt->refCount++;
     }
 #endif
-    
+
 #ifdef SIS_PC_PLATFORM
     /* Map 64k VGA window for saving/restoring CGA fonts */
     SiS_MapVGAMem(pScrn);
@@ -7222,27 +7363,8 @@ SISScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
     if(!pSiS->ShadowFB) SISDGAInit(pScreen);
 
     xf86SetBlackWhitePixels(pScreen);
-    
-    /* Probe CPU features */
-    if(!pSiS->CPUFlags) {
-#ifdef SISDUALHEAD
-       if(pSiS->DualHeadMode) {
-          if(!pSiS->SecondHead) {
-             pSiSEnt->CPUFlags = SiSGetCPUFlags(pScreen);
-          }
-          pSiS->CPUFlags = pSiSEnt->CPUFlags;
-       } else {
-#endif    
-          pSiS->CPUFlags = SiSGetCPUFlags(pScreen);
-#ifdef SISDUALHEAD
-       }
-#endif       	  
-       pSiS->CPUFlags |= SIS_CPUFL_FLAG;
-    }
            
-#ifdef TWDEBUG
-    xf86DrvMsg(0, X_INFO, "CPUFlags %x\n", pSiS->CPUFlags);
-#endif           
+
 
     /* Initialize the accelerators */
     switch(pSiS->VGAEngine) {
@@ -7257,18 +7379,31 @@ SISScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
        SiSAccelInit(pScreen);
     }
     
+#ifdef TWDEBUG 
+    xf86DrvMsg(pScrn->scrnIndex, X_INFO, "CPUFlags %x\n", pSiS->CPUFlags);
+#endif    
+
     /* Benchmark memcpy() methods (needs FB manager initialized) */
-    if(!pSiS->SiSFastVidCopy) {
+    /* Dual head: Do this AFTER the mode for CRT1 has been set */
+    pSiS->NeedCopyFastVidCpy = FALSE;
+    if(!pSiS->SiSFastVidCopyDone) {
 #ifdef SISDUALHEAD
-       if(pSiS->DualHeadMode) {
-          if(!pSiS->SecondHead) {
+       if(pSiS->DualHeadMode) {       
+          if(pSiS->SecondHead) {
 	     pSiSEnt->SiSFastVidCopy = SiSVidCopyInit(pScreen);
-          }
-          pSiS->SiSFastVidCopy = pSiSEnt->SiSFastVidCopy;
-       } else 
+	     pSiSEnt->HaveFastVidCpy = TRUE;
+	  } else {
+	     pSiS->NeedCopyFastVidCpy = TRUE;
+	  }
+	  pSiS->SiSFastVidCopy = pSiSEnt->SiSFastVidCopy;
+       } else {
 #endif    
           pSiS->SiSFastVidCopy = SiSVidCopyInit(pScreen);
+#ifdef SISDUALHEAD
+       }	  
+#endif	  
     }
+    pSiS->SiSFastVidCopyDone = TRUE;
     
     miInitializeBackingStore(pScreen);
     xf86SetBackingStore(pScreen);
@@ -7280,8 +7415,40 @@ SISScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
     if(pSiS->HWCursor) {
        SiSHWCursorInit(pScreen);
     }
+    
+#ifdef SISDUALHEAD
+    if(!pSiS->DualHeadMode) {
+#endif    
+       if((pSiS->VBFlags & VB_SISBRIDGE) && (pScrn->depth > 8)) {
+          
+	  pSiS->CRT2ColNum = 1 << pScrn->rgbBits;
 
-    /* Initialise default colourmap */
+          if((pSiS->crt2gcolortable = xalloc(pSiS->CRT2ColNum * 2 * sizeof(LOCO)))) {
+	     pSiS->crt2colors = &pSiS->crt2gcolortable[pSiS->CRT2ColNum];     
+             if((pSiS->crt2cindices = xalloc(256 * sizeof(int)))) {
+	        int i = pSiS->CRT2ColNum;
+	        SISCalculateGammaRampCRT2(pScrn);
+		while(i--) pSiS->crt2cindices[i] = i;
+	     } else {
+	        xfree(pSiS->crt2gcolortable);
+		pSiS->crt2gcolortable = NULL;
+		pSiS->CRT2SepGamma = FALSE;
+	     }
+	  } else {
+	     pSiS->CRT2SepGamma = FALSE;
+	  }
+
+          if(!pSiS->crt2cindices) {
+	     xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
+	  	"Failed to allocate cmap for CRT2, separate gamma correction disabled\n");
+	  }
+
+       }
+#ifdef SISDUALHEAD
+    } else pSiS->CRT2SepGamma = FALSE;
+#endif    
+
+    /* Initialise default colormap */
     if(!miCreateDefColormap(pScreen)) {
        SISSaveScreen(pScreen, SCREEN_SAVER_OFF);
        SISErrorLog(pScrn, "miCreateDefColormap() failed\n");
@@ -7308,7 +7475,7 @@ SISScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
        RefreshAreaFuncPtr refreshArea = SISRefreshArea;
 
        if(pSiS->Rotate) {
-          if(!pSiS->PointerMoved) {
+          if((!pSiS->PointerMoved) && (pSiS->RotateMouse)) {
              pSiS->PointerMoved = pScrn->PointerMoved;
              pScrn->PointerMoved = SISPointerMoved;
           }
@@ -7489,11 +7656,31 @@ SISScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
     }
 #endif
 
+    pSiS->SiS_SD_Flags &= ~SiS_SD_SUPPORTSGRCRT2;
+#ifdef SISDUALHEAD
+    if(!pSiS->DualHeadMode) {	
+#endif	
+       if(pSiS->VBFlags & VB_SISBRIDGE) {
+          if((pSiS->crt2cindices) && (pSiS->crt2gcolortable)) {
+             pSiS->SiS_SD_Flags |= SiS_SD_SUPPORTSGRCRT2;
+	  }
+       }
+#ifdef SISDUALHEAD
+    }
+#endif
+
     pSiS->SiS_SD_Flags &= ~SiS_SD_ISDEPTH8;
     if(pSiS->CurrentLayout.bitsPerPixel == 8) {
     	pSiS->SiS_SD_Flags |= SiS_SD_ISDEPTH8;
 	pSiS->SiS_SD_Flags &= ~SiS_SD_SUPPORTXVGAMMA1;
+	pSiS->SiS_SD_Flags &= ~SiS_SD_SUPPORTSGRCRT2;
     }
+       
+#ifdef SISGAMMARAMP
+    pSiS->SiS_SD_Flags |= SiS_SD_CANSETGAMMA;  
+#else
+    pSiS->SiS_SD_Flags &= ~SiS_SD_CANSETGAMMA;
+#endif	   
 
     return TRUE;
 }
@@ -8011,14 +8198,16 @@ SISMergePointerMoved(int scrnIndex, int x, int y)
   ScrnInfoPtr   pScrn2 = pSiS->CRT2pScrn;
   region 	out, in1, in2, f2, f1;
   int 		deltax, deltay;
+  int           temp1, temp2;
+  int		old1x0, old1y0, old2x0, old2y0;
 
-  f1.x0 = pSiS->CRT1frameX0;
+  f1.x0 = old1x0 = pSiS->CRT1frameX0;
   f1.x1 = pSiS->CRT1frameX1;
-  f1.y0 = pSiS->CRT1frameY0;
+  f1.y0 = old1y0 = pSiS->CRT1frameY0;
   f1.y1 = pSiS->CRT1frameY1;
-  f2.x0 = pScrn2->frameX0;
+  f2.x0 = old2x0 = pScrn2->frameX0;
   f2.x1 = pScrn2->frameX1;
-  f2.y0 = pScrn2->frameY0;
+  f2.y0 = old2y0 = pScrn2->frameY0;
   f2.y1 = pScrn2->frameY1;
 
   /* Define the outer region. Crossing this causes all frames to move */
@@ -8130,13 +8319,67 @@ SISMergePointerMoved(int scrnIndex, int x, int y)
      pSiS->CRT1frameY0 = f1.y0;
      pScrn2->frameX0 = f2.x0;
      pScrn2->frameY0 = f2.y0;
+     
+     switch(((SiSMergedDisplayModePtr)pSiS->CurrentLayout.mode->Private)->CRT2Position) {
+        case sisLeftOf:
+        case sisRightOf:
+	   if(pSiS->CRT1YOffs || pSiS->CRT2YOffs) {
+	      if(pSiS->CRT1frameY0 != old1y0) {
+	         if(pSiS->CRT1frameY0 < pSiS->CRT1YOffs) 
+	            pSiS->CRT1frameY0 = pSiS->CRT1YOffs;
+	   
+	         temp1 = pSiS->CRT1frameY0 + CDMPTR->CRT1->VDisplay;
+	         temp2 = pScrn1->virtualY - pSiS->CRT2YOffs;
+	         if(temp1 > temp2) 
+	            pSiS->CRT1frameY0 -= (temp1 - temp2);
+	      }
+	      if(pScrn2->frameY0 != old2y0) {
+	         if(pScrn2->frameY0 < pSiS->CRT2YOffs) 
+	            pScrn2->frameY0 = pSiS->CRT2YOffs;
+	   
+	         temp1 = pScrn2->frameY0   + CDMPTR->CRT2->VDisplay;
+	         temp2 = pScrn1->virtualY - pSiS->CRT1YOffs;
+	         if(temp1 > temp2) 
+	            pScrn2->frameY0 -= (temp1 - temp2);
+	      }
+	   }
+           break;
+        case sisBelow:
+        case sisAbove:
+	   if(pSiS->CRT1XOffs || pSiS->CRT2XOffs) {
+	      if(pSiS->CRT1frameX0 != old1x0) {
+	         if(pSiS->CRT1frameX0 < pSiS->CRT1XOffs) 
+	            pSiS->CRT1frameX0 = pSiS->CRT1XOffs;
+	   
+	         temp1 = pSiS->CRT1frameX0 + CDMPTR->CRT1->HDisplay;
+	         temp2 = pScrn1->virtualX - pSiS->CRT2XOffs;
+	         if(temp1 > temp2) 
+	            pSiS->CRT1frameX0 -= (temp1 - temp2);
+	      }
+	      if(pScrn2->frameX0 != old2x0) {
+	         if(pScrn2->frameX0 < pSiS->CRT2XOffs) 
+	            pScrn2->frameX0 = pSiS->CRT2XOffs;
+	   
+	         temp1 = pScrn2->frameX0   + CDMPTR->CRT2->HDisplay;
+	         temp2 = pScrn1->virtualX - pSiS->CRT1XOffs;
+	         if(temp1 > temp2) 
+	            pScrn2->frameX0 -= (temp1 - temp2);
+	      }
+	   }
+           break;
+        case sisClone:
+           break;
+     }
 
      pSiS->CRT1frameX1 = pSiS->CRT1frameX0 + CDMPTR->CRT1->HDisplay - 1;
      pSiS->CRT1frameY1 = pSiS->CRT1frameY0 + CDMPTR->CRT1->VDisplay - 1;
      pScrn2->frameX1   = pScrn2->frameX0   + CDMPTR->CRT2->HDisplay - 1;
      pScrn2->frameY1   = pScrn2->frameY0   + CDMPTR->CRT2->VDisplay - 1;
+     
+#if 0     
      pScrn1->frameX1   = pScrn1->frameX0   + pSiS->CurrentLayout.mode->HDisplay  - 1;
      pScrn1->frameY1   = pScrn1->frameY0   + pSiS->CurrentLayout.mode->VDisplay  - 1;
+#endif
 
      SISAdjustFrameHW_CRT1(pScrn1, pSiS->CRT1frameX0, pSiS->CRT1frameY0);
      SISAdjustFrameHW_CRT2(pScrn1, pScrn2->frameX0, pScrn2->frameY0);
@@ -8153,40 +8396,48 @@ SISAdjustFrameMerged(int scrnIndex, int x, int y, int flags)
     int HTotal = pSiS->CurrentLayout.mode->HDisplay;
     int VMax = VTotal;
     int HMax = HTotal;
+    int x1 = x, x2 = x;
+    int y1 = y, y2 = y;
 
     BOUND(x, 0, pScrn1->virtualX - HTotal);
     BOUND(y, 0, pScrn1->virtualY - VTotal);
+    if(SDMPTR(pScrn1)->CRT2Position != sisClone) {
+       BOUND(x1, pSiS->CRT1XOffs, pScrn1->virtualX - HTotal - pSiS->CRT2XOffs);
+       BOUND(y1, pSiS->CRT1YOffs, pScrn1->virtualY - VTotal - pSiS->CRT2YOffs);
+       BOUND(x2, pSiS->CRT2XOffs, pScrn1->virtualX - HTotal - pSiS->CRT1XOffs);
+       BOUND(y2, pSiS->CRT2YOffs, pScrn1->virtualY - VTotal - pSiS->CRT1YOffs);
+    }
 
     switch(SDMPTR(pScrn1)->CRT2Position) {
         case sisLeftOf:
-            pScrn2->frameX0 = x;
-            BOUND(pScrn2->frameY0,   y, y + VMax - CDMPTR->CRT2->VDisplay);
-            pSiS->CRT1frameX0 = x + CDMPTR->CRT2->HDisplay;
-            BOUND(pSiS->CRT1frameY0, y, y + VMax - CDMPTR->CRT1->VDisplay);
+            pScrn2->frameX0 = x2;
+            BOUND(pScrn2->frameY0,   y2, y2 + VMax - CDMPTR->CRT2->VDisplay);
+            pSiS->CRT1frameX0 = x1 + CDMPTR->CRT2->HDisplay;
+            BOUND(pSiS->CRT1frameY0, y1, y1 + VMax - CDMPTR->CRT1->VDisplay);
             break;
         case sisRightOf:
-            pSiS->CRT1frameX0 = x;
-            BOUND(pSiS->CRT1frameY0, y, y + VMax - CDMPTR->CRT1->VDisplay);
-            pScrn2->frameX0 = x + CDMPTR->CRT1->HDisplay;
-            BOUND(pScrn2->frameY0,   y, y + VMax - CDMPTR->CRT2->VDisplay);
+            pSiS->CRT1frameX0 = x1;
+            BOUND(pSiS->CRT1frameY0, y1, y1 + VMax - CDMPTR->CRT1->VDisplay);
+            pScrn2->frameX0 = x2 + CDMPTR->CRT1->HDisplay;
+            BOUND(pScrn2->frameY0,   y2, y2 + VMax - CDMPTR->CRT2->VDisplay);
             break;
         case sisAbove:
-            BOUND(pScrn2->frameX0,   x, x + HMax - CDMPTR->CRT2->HDisplay);
-            pScrn2->frameY0 = y;
-            BOUND(pSiS->CRT1frameX0, x, x + HMax - CDMPTR->CRT1->HDisplay);
-            pSiS->CRT1frameY0 = y + CDMPTR->CRT2->VDisplay;
+            BOUND(pScrn2->frameX0,   x2, x2 + HMax - CDMPTR->CRT2->HDisplay);
+            pScrn2->frameY0 = y2;
+            BOUND(pSiS->CRT1frameX0, x1, x1  + HMax - CDMPTR->CRT1->HDisplay);
+            pSiS->CRT1frameY0 = y1 + CDMPTR->CRT2->VDisplay;
             break;
         case sisBelow:
-            BOUND(pSiS->CRT1frameX0, x, x + HMax - CDMPTR->CRT1->HDisplay);
-            pSiS->CRT1frameY0 = y;
-            BOUND(pScrn2->frameX0,   x, x + HMax - CDMPTR->CRT2->HDisplay);
-            pScrn2->frameY0 = y + CDMPTR->CRT1->VDisplay;
+            BOUND(pSiS->CRT1frameX0, x1, x1 + HMax - CDMPTR->CRT1->HDisplay);
+            pSiS->CRT1frameY0 = y1;
+            BOUND(pScrn2->frameX0,   x2, x2 + HMax - CDMPTR->CRT2->HDisplay);
+            pScrn2->frameY0 = y2 + CDMPTR->CRT1->VDisplay;
             break;
         case sisClone:
-            BOUND(pSiS->CRT1frameX0, x, x + HMax - CDMPTR->CRT1->HDisplay);
-            BOUND(pSiS->CRT1frameY0, y, y + VMax - CDMPTR->CRT1->VDisplay);
-            BOUND(pScrn2->frameX0,   x, x + HMax - CDMPTR->CRT2->HDisplay);
-            BOUND(pScrn2->frameY0,   y, y + VMax - CDMPTR->CRT2->VDisplay);
+            BOUND(pSiS->CRT1frameX0, x,  x + HMax - CDMPTR->CRT1->HDisplay);
+            BOUND(pSiS->CRT1frameY0, y,  y + VMax - CDMPTR->CRT1->VDisplay);
+            BOUND(pScrn2->frameX0,   x,  x + HMax - CDMPTR->CRT2->HDisplay);
+            BOUND(pScrn2->frameY0,   y,  y + VMax - CDMPTR->CRT2->VDisplay);
             break;
     }
 
@@ -8202,8 +8453,13 @@ SISAdjustFrameMerged(int scrnIndex, int x, int y, int flags)
     pSiS->CRT1frameY1 = pSiS->CRT1frameY0 + CDMPTR->CRT1->VDisplay - 1;
     pScrn2->frameX1   = pScrn2->frameX0   + CDMPTR->CRT2->HDisplay - 1;
     pScrn2->frameY1   = pScrn2->frameY0   + CDMPTR->CRT2->VDisplay - 1;
+    
     pScrn1->frameX1   = pScrn1->frameX0   + pSiS->CurrentLayout.mode->HDisplay  - 1;
     pScrn1->frameY1   = pScrn1->frameY0   + pSiS->CurrentLayout.mode->VDisplay  - 1;
+    if(SDMPTR(pScrn1)->CRT2Position != sisClone) {
+       pScrn1->frameX1 += pSiS->CRT1XOffs + pSiS->CRT2XOffs;
+       pScrn1->frameY1 += pSiS->CRT1YOffs + pSiS->CRT2YOffs;
+    }
 
     SISAdjustFrameHW_CRT1(pScrn1, pSiS->CRT1frameX0, pSiS->CRT1frameY0);
     SISAdjustFrameHW_CRT2(pScrn1, pScrn2->frameX0, pScrn2->frameY0);
@@ -8546,6 +8802,16 @@ SISCloseScreen(int scrnIndex, ScreenPtr pScreen)
     if(pSiS->blitadaptor) {
        xfree(pSiS->blitadaptor);
        pSiS->blitadaptor = NULL;
+    }
+    
+    if(pSiS->crt2gcolortable) {
+       xfree(pSiS->crt2gcolortable);
+       pSiS->crt2gcolortable = NULL;
+    }
+
+    if(pSiS->crt2cindices) {
+       xfree(pSiS->crt2cindices);
+       pSiS->crt2cindices = NULL;
     }
 
     pScrn->vtSema = FALSE;
@@ -11676,7 +11942,7 @@ SiSValidLCDUserMode(SISPtr pSiS, ULong VBFlags, DisplayModePtr mode, Bool isforl
 #endif       
    } else { /* 301, 301B, 302B (no LCDA!) */
       if(mode->Clock > 130000)  return FALSE;
-      if(mode->Clock > 108500) {
+      if(mode->Clock > 111000) {
          xf86DrvMsg(pSiS->pScrn->scrnIndex, X_WARNING,
 	 	"WARNING: Mode clock beyond video bridge specs (%dMHz). Hardware damage might occure.\n",
 		mode->Clock / 1000);
