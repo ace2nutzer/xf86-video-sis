@@ -16,7 +16,7 @@
  * 3) The name of the author may not be used to endorse or promote products
  *    derived from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESSED OR
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
  * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
  * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
@@ -344,7 +344,11 @@ void SISLCDPreInit(ScrnInfoPtr pScrn, Bool quiet)
     if(pSiS->VBFlags & CRT2_LCD) {
        inSISIDXREG(SISCR, 0x36, CR36);
        inSISIDXREG(SISCR, 0x37, CR37);
-       inSISIDXREG(SISCR, 0x7D, CR7D);
+       if(pSiS->sishw_ext.jChipType < SIS_661) {
+          inSISIDXREG(SISCR, 0x3C, CR7D);
+       } else {
+          inSISIDXREG(SISCR, 0x7D, CR7D);
+       }
        if(pSiS->SiS_Pr->SiS_CustomT == CUT_BARCO1366) {
           pSiS->VBLCDFlags |= VB_LCD_BARCO1366;
 	  pSiS->LCDwidth = 1360;
@@ -427,8 +431,7 @@ void SISLCDPreInit(ScrnInfoPtr pScrn, Bool quiet)
 	     xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
 			"Detected LCD/plasma panel (%dx%d, %d, %sexp., RGB%d [%02x%02x%02x])\n",
 			pSiS->LCDwidth, pSiS->LCDheight,
-			((pSiS->VGAEngine == SIS_315_VGA) &&
-			 (!pSiS->NewCRLayout)) ?
+			((pSiS->VGAEngine == SIS_315_VGA) && (!pSiS->ROM661New)) ?
 			 	((CR36 & 0x0f) - 1) : ((CR36 & 0xf0) >> 4),
 			(CR37 & 0x10) ? "" : "non-",
 			(CR37 & 0x01) ? 18 : 24,

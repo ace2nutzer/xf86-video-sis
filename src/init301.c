@@ -133,17 +133,23 @@ GetLCDStructPtr661(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo)
 {
    UCHAR  *ROMAddr = HwInfo->pjVirtualRomBase;
    UCHAR  *myptr = NULL;
-   USHORT romindex = 0;
+   USHORT romindex = 0, reg = 0, idx = 0;
 
-   /* Use the BIOS tables only for LVDS panels; DVI is unreliable
+   /* Use the BIOS tables only for LVDS panels; TMDS is unreliable
     * due to the variaty of panels the BIOS doesn't know about.
     */
 
    if((SiS_Pr->SiS_ROMNew) && (SiS_Pr->SiS_VBType & VB_SIS301LV302LV)) {
-      myptr = (UCHAR *)SiS_LCDStruct661;
+   
+      if(HwInfo->jChipType < SIS_661) reg = 0x3c;
+      else                            reg = 0x7d;
+      
+      idx = (SiS_GetReg(SiS_Pr->SiS_P3d4,reg) & 0x1f) * 26;
+   
+      myptr = (UCHAR *)&SiS_LCDStruct661[idx];
       romindex = SISGETROMW(0x100);  
       if(romindex) {
-         romindex += ((SiS_GetReg(SiS_Pr->SiS_P3d4,0x7d) & 0x1f) * 26);
+         romindex += idx;
          myptr = &ROMAddr[romindex];
       }
    }
@@ -156,7 +162,7 @@ GetLCDStructPtr661_2(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo)
    UCHAR  *ROMAddr = HwInfo->pjVirtualRomBase;
    USHORT romptr = 0;
 
-   /* Use the BIOS tables only for LVDS panels; DVI is unreliable
+   /* Use the BIOS tables only for LVDS panels; TMDS is unreliable
     * due to the variaty of panels the BIOS doesn't know about.
     */
 
@@ -334,7 +340,7 @@ SiS_GetRatePtr(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
   do {
      if(SiS_Pr->SiS_RefIndex[RefreshRateTableIndex + i].ModeID != ModeNo) break;
      temp = SiS_Pr->SiS_RefIndex[RefreshRateTableIndex + i].Ext_InfoFlag;
-     temp &= ModeInfoFlag;
+     temp &= ModeTypeMask;
      if(temp < SiS_Pr->SiS_ModeType) break;
      i++;
      index--;
@@ -507,7 +513,8 @@ SiS_PanelDelay(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo, USHORT DelayTime)
 
       if((HwInfo->jChipType >= SIS_661)    ||
          (HwInfo->jChipType <= SIS_315PRO) ||
-	 (HwInfo->jChipType == SIS_330)) {
+	 (HwInfo->jChipType == SIS_330)    ||
+	 (SiS_Pr->SiS_ROMNew)) {
 
          if(!(DelayTime & 0x01)) {
 	    SiS_DDC2Delay(SiS_Pr, 0x1000);
@@ -956,7 +963,7 @@ SiS_GetVBInfo(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
 
   SiS_Pr->SiS_SetFlag = 0;
 
-  SiS_Pr->SiS_ModeType = modeflag & ModeInfoFlag;
+  SiS_Pr->SiS_ModeType = modeflag & ModeTypeMask;
 
   tempbx = 0;
   if(SiS_BridgeIsOn(SiS_Pr)) {
@@ -1863,12 +1870,6 @@ SiS_GetLCDResInfo(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
 		}
 		if(ModeNo == 0x3a || ModeNo == 0x4d || ModeNo == 0x65) {
 	      	   /* Do not scale to 1280x1024 (all bridges) */
-	      	   SiS_Pr->SiS_LCDInfo |= DontExpandLCD;
-	   	}
-		break;
-	case Panel_1600x1200:
-		if(SiS_Pr->SiS_VBType & VB_SISTMDS) {
-	      	   /* No idea about the timing and zoom factors (C bridge only) */
 	      	   SiS_Pr->SiS_LCDInfo |= DontExpandLCD;
 	   	}
 		break;
@@ -4806,9 +4807,11 @@ SiS_SetCRT2Sync(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT RefreshRateTableIndex
   	         }
 	      }
 	      if(SiS_Pr->SiS_VBInfo & (SetCRT2ToLCD | SetCRT2ToLCDA)) {
-	         if(SiS_Pr->SiS_LCDInfo & LCDSync) {
-	            tempah = SiS_Pr->SiS_LCDInfo;
-		    tempbl = (tempah >> 6) & 0x03;
+	         if(!(SiS_Pr->SiS_LCDInfo & LCDPass11)) {
+	            if(SiS_Pr->SiS_LCDInfo & LCDSync) {
+	               tempah = SiS_Pr->SiS_LCDInfo;
+		       tempbl = (tempah >> 6) & 0x03;
+		    }
 	         }
 	      }
 	   }
@@ -4913,7 +4916,7 @@ SiS_SetCRT2FIFO_300(SiS_Private *SiS_Pr,USHORT ModeNo,
 
      CRT1ModeNo = 0xfe;
      VCLK = SiS_Pr->CSRClock_CRT1;					/* Get VCLK */
-     data2 = (SiS_Pr->CModeFlag_CRT1 & ModeInfoFlag) - 2;
+     data2 = (SiS_Pr->CModeFlag_CRT1 & ModeTypeMask) - 2;
      switch(data2) {							/* Get color depth */
         case 0 : colorth = 1; break;
         case 1 : colorth = 1; break;
@@ -7478,7 +7481,7 @@ SiS_SetGroup4_C_ELV(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo,
    if(!(temp & 0x01)) {
       SiS_SetRegAND(SiS_Pr->SiS_Part4Port,0x3a,0xdf);
       SiS_SetRegAND(SiS_Pr->SiS_Part4Port,0x25,0xfc);
-      if(HwInfo->jChipType < SIS_661) {
+      if((HwInfo->jChipType < SIS_661) && (!(SiS_Pr->SiS_ROMNew))) {
          SiS_SetRegAND(SiS_Pr->SiS_Part4Port,0x25,0xf8);
       }
       SiS_SetRegAND(SiS_Pr->SiS_Part4Port,0x0f,0xfb);
@@ -7486,7 +7489,7 @@ SiS_SetGroup4_C_ELV(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo,
       else if(SiS_Pr->SiS_TVMode & TVSetYPbPr525p) temp = 0x0002;
       else if(SiS_Pr->SiS_TVMode & TVSetHiVision)  temp = 0x0400;
       else					   temp = 0x0402;
-      if(HwInfo->jChipType >= SIS_661) {
+      if((HwInfo->jChipType >= SIS_661) || (SiS_Pr->SiS_ROMNew)) {
          temp1 = 0;
 	 if(SiS_Pr->SiS_TVMode & TVAspect43) temp1 = 4;
 	 SiS_SetRegANDOR(SiS_Pr->SiS_Part4Port,0x0f,0xfb,temp1);
@@ -7499,6 +7502,9 @@ SiS_SetGroup4_C_ELV(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo,
 	 SiS_SetRegANDOR(SiS_Pr->SiS_Part4Port,0x26,0xf8,(temp & 0xff));
       }
       SiS_SetRegANDOR(SiS_Pr->SiS_Part4Port,0x3a,0xfb,(temp >> 8));
+      if(ModeNo > 0x13) {
+         SiS_SetRegAND(SiS_Pr->SiS_Part4Port,0x3b,0xfd);
+      }
 
       if(HwInfo->jChipType >= SIS_661) { 		/* ? */
          if(SiS_Pr->SiS_TVMode & TVAspect43) {
@@ -7591,6 +7597,8 @@ SiS_SetGroup4(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
         if(SiS_Pr->SiS_VBType & VB_SIS301LV302LV) {
 	   if(SiS_IsDualLink(SiS_Pr, HwInfo)) {
 	      SiS_SetRegOR(SiS_Pr->SiS_Part4Port,0x27,0x2c);
+	   } else {
+	      SiS_SetRegAND(SiS_Pr->SiS_Part4Port,0x27,~0x20);
 	   }
 
 	   if(SiS_Pr->SiS_VBType & (VB_SIS302LV | VB_SIS302ELV)) {
@@ -7716,7 +7724,7 @@ SiS_SetGroup4(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
      SiS_SetReg(SiS_Pr->SiS_Part4Port,0x1E,temp);
 
      temp = 0x0036; tempbx = 0xD0;
-     if((IS_SIS550650740660) && (SiS_Pr->SiS_VBType & VB_SIS301LV302LV)) {
+     if((HwInfo->jChipType >= SIS_315H) && (SiS_Pr->SiS_VBType & VB_SIS301LV302LV)) {
 	temp = 0x0026; tempbx = 0xC0; /* See En/DisableBridge() */
      }
      if(SiS_Pr->SiS_VBInfo & SetCRT2ToTV) {
@@ -7746,6 +7754,8 @@ SiS_SetGroup4(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
 	if(HwInfo->jChipType >= SIS_315H) {
 	   if(SiS_IsDualLink(SiS_Pr, HwInfo)) {
 	      SiS_SetRegOR(SiS_Pr->SiS_Part4Port,0x27,0x2c);
+	   } else {
+	      SiS_SetRegAND(SiS_Pr->SiS_Part4Port,0x27,~0x20);
 	   }
 	}
 	if(SiS_Pr->SiS_VBType & (VB_SIS302LV | VB_SIS302ELV)) {
@@ -8834,15 +8844,8 @@ SiS_SetCRT2Group(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo, USHORT ModeNo)
 	       (SiS_Pr->SiS_CustomT == CUT_BARCO1024)) {
 	       SetOEMLCDData2(SiS_Pr, HwInfo, ModeNo, ModeIdIndex,RefreshRateTableIndex);
 	    }
-            if(HwInfo->jChipType == SIS_730) {
-               SiS_DisplayOn(SiS_Pr);
-	    }
+	    SiS_DisplayOn(SiS_Pr);
          }
-      }
-      if(SiS_Pr->SiS_IF_DEF_LVDS == 1) {
-          if(HwInfo->jChipType != SIS_730) {
-             SiS_DisplayOn(SiS_Pr);
-	  }
       }
    }
 #endif
@@ -8852,7 +8855,7 @@ SiS_SetCRT2Group(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo, USHORT ModeNo)
       if(SiS_Pr->SiS_SetFlag & LowModeTests) {
 	 if(HwInfo->jChipType < SIS_661) {
 	    SiS_FinalizeLCD(SiS_Pr, ModeNo, ModeIdIndex, HwInfo);
-            SiS_OEM310Setting(SiS_Pr, HwInfo, ModeNo, ModeIdIndex);
+            SiS_OEM310Setting(SiS_Pr, HwInfo, ModeNo, ModeIdIndex, RefreshRateTableIndex);
 	 } else {
 	    SiS_OEM661Setting(SiS_Pr, HwInfo, ModeNo, ModeIdIndex, RefreshRateTableIndex);
 	 }
@@ -9560,6 +9563,7 @@ SiS_SenseLCDDDC(SiS_Private *SiS_Pr, SISPtr pSiS)
    USHORT index, myindex, lumsize, numcodes, panelvendor, panelproduct;
    unsigned char cr37=0, seekcode;
    BOOLEAN checkexpand = FALSE;
+   BOOLEAN havesync = FALSE;
    int retry, i;
    unsigned char buffer[256];
 
@@ -9623,20 +9627,20 @@ SiS_SenseLCDDDC(SiS_Private *SiS_Pr, SISPtr pSiS)
       /* Catch a few clear cases: */
       if(!(checkedid1(buffer))) {
          xf86DrvMsg(pSiS->pScrn->scrnIndex, X_PROBED,
-	 	"CRT2: EDID corrupt\n");
+	 	"LCD sense: EDID corrupt\n");
 	 return 0;
       }
 
       if(!(buffer[0x14] & 0x80)) {
          xf86DrvMsg(pSiS->pScrn->scrnIndex, X_PROBED,
-	        "CRT2: Attached display expects analog input (0x%02x)\n",
+	        "LCD sense: Attached display expects analog input (0x%02x)\n",
 		buffer[0x14]);
       	 return 0;
       }
       
       if((buffer[0x18] & 0x18) != 0x08) {
          xf86DrvMsg(pSiS->pScrn->scrnIndex, X_PROBED,
-	 	"CRT2: Attached display is not of RGB but of %s type (0x%02x)\n", 
+	 	"LCD sense: Attached display is not of RGB but of %s type (0x%02x)\n", 
 		((buffer[0x18] & 0x18) == 0x00) ? "monochrome/greyscale" :
 		  ( ((buffer[0x18] & 0x18) == 0x10) ? "non-RGB multicolor" : 
 		     "undefined"),
@@ -9716,15 +9720,18 @@ SiS_SenseLCDDDC(SiS_Private *SiS_Pr, SISPtr pSiS)
       	        break;
          }
 
-	 if(paneltype != Panel_Custom) {
-	    if((buffer[0x47] & 0x18) == 0x18) {
-	       cr37 |= ((((buffer[0x47] & 0x06) ^ 0x06) << 5) | 0x20);
-	    } else {
-	       /* What now? There is no digital separate output timing... */
-	       xf86DrvMsg(pSiS->pScrn->scrnIndex, X_WARNING,
-	       	   "CRT2: Unable to retrieve Sync polarity information\n");
-	       cr37 |= 0xc0;  /* Default */
-	    }
+	 /* Save sync: This is used if "Pass 1:1" is off; in this case
+	  * we always use the panel's native mode = this "preferred mode"
+	  * we just have been analysing. Hence, we also need its sync.
+	  */
+	 if((buffer[0x47] & 0x18) == 0x18) {
+	    cr37 |= ((((buffer[0x47] & 0x06) ^ 0x06) << 5) | 0x20);
+	    havesync = TRUE;
+	 } else {
+	    /* What now? There is no digital separate output timing... */
+	    xf86DrvMsg(pSiS->pScrn->scrnIndex, X_WARNING,
+	       	   "LCD sense: Unable to retrieve Sync polarity information\n");
+	    cr37 |= 0xc0;  /* Default */
 	 }
 
       }
@@ -9749,8 +9756,7 @@ SiS_SenseLCDDDC(SiS_Private *SiS_Pr, SISPtr pSiS)
        * detailed timing blocks
        */
       if(paneltype == Panel_Custom) {
-
-         BOOLEAN havesync = FALSE;
+         
 	 int i, temp, base = 0x36;
 	 unsigned long estpack;
 	 const unsigned short estx[] = {
@@ -9871,7 +9877,7 @@ SiS_SenseLCDDDC(SiS_Private *SiS_Pr, SISPtr pSiS)
 		     SiS_Pr->CP_HSync_P[i] = (buffer[base+17] & 0x02) ? TRUE : FALSE;
 		     SiS_Pr->CP_VSync_P[i] = (buffer[base+17] & 0x04) ? TRUE : FALSE;
 		     SiS_Pr->CP_SyncValid[i] = TRUE;
-		     if(!havesync) {
+		     if((i == SiS_Pr->CP_PreferredIndex) && (!havesync)) {
 	                cr37 |= ((((buffer[base+17] & 0x06) ^ 0x06) << 5) | 0x20);
 			havesync = TRUE;
 	   	     }
@@ -9898,10 +9904,6 @@ SiS_SenseLCDDDC(SiS_Private *SiS_Pr, SISPtr pSiS)
 	    cr37 |= 0x10;
 	    SiS_Pr->CP_Vendor = panelvendor;
 	    SiS_Pr->CP_Product = panelproduct;
-	    if(!havesync) {
-	       xf86DrvMsg(pSiS->pScrn->scrnIndex, X_WARNING,
-	       	   "CRT2: Unable to retrieve Sync polarity information\n");
-   	    }
 	 }
 	 
       }
@@ -9926,21 +9928,21 @@ SiS_SenseLCDDDC(SiS_Private *SiS_Pr, SISPtr pSiS)
 
       if(!(checkedid2(buffer))) {
          xf86DrvMsg(pSiS->pScrn->scrnIndex, X_PROBED,
-	 	"CRT2: EDID corrupt\n");
+	 	"LCD sense: EDID corrupt\n");
 	 return 0;
       }
 
       if((buffer[0x41] & 0x0f) == 0x03) {
          index = 0x42 + 3;
          xf86DrvMsg(pSiS->pScrn->scrnIndex, X_PROBED,
-	 	"CRT2: Display supports TMDS input on primary interface\n");
+	 	"LCD sense: Display supports TMDS input on primary interface\n");
       } else if((buffer[0x41] & 0xf0) == 0x30) {
          index = 0x46 + 3;
          xf86DrvMsg(pSiS->pScrn->scrnIndex, X_PROBED,
-	 	"CRT2: Display supports TMDS input on secondary interface\n");
+	 	"LCD sense: Display supports TMDS input on secondary interface\n");
       } else {
          xf86DrvMsg(pSiS->pScrn->scrnIndex, X_PROBED,
-	 	"CRT2: Display does not support TMDS video interface (0x%02x)\n", 
+	 	"LCD sense: Display does not support TMDS video interface (0x%02x)\n", 
 		buffer[0x41]);
 	 return 0;
       }
@@ -10050,13 +10052,14 @@ SiS_SenseLCDDDC(SiS_Private *SiS_Pr, SISPtr pSiS)
 	 }
 	 if(buffer[myindex] == seekcode) {
 	    cr37 |= ((((buffer[myindex + 1] & 0x0c) ^ 0x0c) << 4) | 0x20);
+	    havesync = TRUE;
 	 } else {
 	    xf86DrvMsg(pSiS->pScrn->scrnIndex, X_WARNING,
-	        "CRT2: Unable to retrieve Sync polarity information\n");
+	        "LCD sense: Unable to retrieve Sync polarity information\n");
 	 }
       } else {
          xf86DrvMsg(pSiS->pScrn->scrnIndex, X_WARNING,
-	     "CRT2: Unable to retrieve Sync polarity information\n");
+	     "LCD sense: Unable to retrieve Sync polarity information\n");
       }
       
       /* Check against our database; Eg. Sanyo projector reports
@@ -10131,6 +10134,10 @@ SiS_SenseLCDDDC(SiS_Private *SiS_Pr, SISPtr pSiS)
 
 	       if((SiS_Pr->CP_PreferredX == xres) && (SiS_Pr->CP_PreferredY == yres)) {
 	          SiS_Pr->CP_PreferredIndex = i;
+		  if(!havesync) {
+	             cr37 |= ((((buffer[index + 17] & 0x06) ^ 0x06) << 5) | 0x20);
+		     havesync = TRUE;
+	   	  }
 	       }
 
 	       SiS_Pr->CP_HSync_P[i] = (buffer[index + 17] & 0x02) ? TRUE : FALSE;
@@ -10160,7 +10167,7 @@ SiS_SenseLCDDDC(SiS_Private *SiS_Pr, SISPtr pSiS)
    for(i = 0; i < 7; i++) {
       if(SiS_Pr->CP_DataValid[i]) {
          xf86DrvMsg(pSiS->pScrn->scrnIndex, X_PROBED,
-            "Non-standard LCD timing data no. %d:\n", i);
+            "Non-standard LCD/DVI-D timing data no. %d:\n", i);
          xf86DrvMsg(pSiS->pScrn->scrnIndex, X_PROBED,
 	    "   HDisplay %d HSync %d HSyncEnd %d HTotal %d\n",
 	    SiS_Pr->CP_HDisplay[i], SiS_Pr->CP_HSyncStart[i],
@@ -10188,7 +10195,7 @@ SiS_SenseLCDDDC(SiS_Private *SiS_Pr, SISPtr pSiS)
        SiS_Pr->PanelSelfDetected = TRUE;
 #ifdef TWDEBUG
        xf86DrvMsgVerb(pSiS->pScrn->scrnIndex, X_PROBED, 3, 
-       	   "CRT2: [DDC LCD results: 0x%02x, 0x%02x]\n", paneltype, cr37);
+       	   "LCD sense: [DDC LCD results: 0x%02x, 0x%02x]\n", paneltype, cr37);
 #endif	
    } else {
        SiS_SetRegAND(SiS_Pr->SiS_P3d4,0x32,~0x08);
@@ -10224,7 +10231,7 @@ SiS_SenseVGA2DDC(SiS_Private *SiS_Pr, SISPtr pSiS)
       DDCdatatype = 1;
    } else {
    	xf86DrvMsg(pSiS->pScrn->scrnIndex, X_PROBED,
-		"Do DDC answer\n");
+		"VGA2 sense: Do DDC answer\n");
    	return 0;				/* no DDC support (or no device attached) */
    }
 
@@ -10233,7 +10240,7 @@ SiS_SenseVGA2DDC(SiS_Private *SiS_Pr, SISPtr pSiS)
    do {
       if(SiS_ReadDDC(SiS_Pr, DDCdatatype, buffer)) {
          xf86DrvMsg(pSiS->pScrn->scrnIndex, X_PROBED,
-	 	"CRT2: DDC read failed (attempt %d), %s\n", 
+	 	"VGA2 sense: DDC read failed (attempt %d), %s\n", 
 		(3-retry), (retry == 1) ? "giving up" : "retrying");
 	 retry--;
 	 if(retry == 0) return 0xFFFF;
@@ -10246,13 +10253,13 @@ SiS_SenseVGA2DDC(SiS_Private *SiS_Pr, SISPtr pSiS)
    switch(DDCdatatype) {
    case 1:
       if(!(checkedid1(buffer))) {
-          xf86DrvMsg(pSiS->pScrn->scrnIndex, X_PROBED,
-	  	"CRT2: EDID corrupt\n");
+          xf86DrvMsg(pSiS->pScrn->scrnIndex, X_ERROR,
+	  	"VGA2 sense: EDID corrupt\n");
       	  return 0;
       }
       if(buffer[0x14] & 0x80) {			/* Display uses digital input */
-          xf86DrvMsg(pSiS->pScrn->scrnIndex, X_PROBED,
-	  	"CRT2: Attached display expects digital input\n");
+          xf86DrvMsg(pSiS->pScrn->scrnIndex, X_ERROR,
+	  	"VGA2 sense: Attached display expects digital input\n");
       	  return 0;
       }
       SiS_Pr->CP_Vendor = buffer[9] | (buffer[8] << 8);
@@ -10262,16 +10269,16 @@ SiS_SenseVGA2DDC(SiS_Private *SiS_Pr, SISPtr pSiS)
    case 3:
    case 4:
       if(!(checkedid2(buffer))) {
-          xf86DrvMsg(pSiS->pScrn->scrnIndex, X_PROBED,
-	  	"CRT2: EDID corrupt\n");
+          xf86DrvMsg(pSiS->pScrn->scrnIndex, X_ERROR,
+	  	"VGA2 sense: EDID corrupt\n");
       	  return 0;
       }
       if( ((buffer[0x41] & 0x0f) != 0x01) &&  	/* Display does not support analog input */
           ((buffer[0x41] & 0x0f) != 0x02) &&
 	  ((buffer[0x41] & 0xf0) != 0x10) &&
 	  ((buffer[0x41] & 0xf0) != 0x20) ) {
-	  xf86DrvMsg(pSiS->pScrn->scrnIndex, X_PROBED,
-	     	"CRT2: Attached display does not support analog input (0x%02x)\n",
+	  xf86DrvMsg(pSiS->pScrn->scrnIndex, X_ERROR,
+	     	"VGA2 sense: Attached display does not support analog input (0x%02x)\n",
 		buffer[0x41]);
 	  return 0;
       }
@@ -11144,24 +11151,6 @@ SetPhaseIncr(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo,
   }
 }
 
-void
-SiS_OEM310Setting(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo,
-                  USHORT ModeNo,USHORT ModeIdIndex)
-{
-   SetDelayComp(SiS_Pr,HwInfo,ModeNo);
-
-   if(SiS_Pr->UseCustomMode) return;
-
-   if((SiS_Pr->SiS_VBType & VB_SISVB) && (SiS_Pr->SiS_VBInfo & SetCRT2ToTV)) {
-      SetAntiFlicker(SiS_Pr,HwInfo,ModeNo,ModeIdIndex);
-      SetPhaseIncr(SiS_Pr,HwInfo,ModeNo,ModeIdIndex);
-      SetYFilter(SiS_Pr,HwInfo,ModeNo,ModeIdIndex);
-      if(SiS_Pr->SiS_VBType & VB_SIS301) {
-         SetEdgeEnhance(SiS_Pr,HwInfo,ModeNo,ModeIdIndex);
-      }
-   }
-}
-
 static void
 SetDelayComp661(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo, USHORT ModeNo,
                 USHORT ModeIdIndex, USHORT RTI)
@@ -11285,31 +11274,30 @@ SetCRT2SyncDither661(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo, USHORT ModeNo, US
       } else {
          infoflag = SiS_Pr->SiS_RefIndex[RTI].Ext_InfoFlag;
       }
+      
+      if(!(SiS_Pr->SiS_LCDInfo & LCDPass11)) {
+         infoflag = SiS_GetReg(SiS_Pr->SiS_P3d4,0x37); /* No longer check D5 */
+      }
+      
       infoflag &= 0xc0;
 
-      temp = SiS_GetReg(SiS_Pr->SiS_P3d4,0x37);
-      if(SiS_Pr->SiS_LCDInfo & LCDPass11) {
-         temp &= 0x3f;
-	 temp |= infoflag;
-      } else {
-         if(temp & 0x20) infoflag = temp;
-      }
-      if(temp & 0x01) infoflag |= 0x01;
-
       if(SiS_Pr->SiS_VBInfo & SetCRT2ToLCD) {
-         temp = 0x0c;
-         if(infoflag & 0x01) temp ^= 0x14;  /* BIOS: 18, wrong */
-         temp |= (infoflag >> 6);
+         temp = (infoflag >> 6) | 0x0c;
+         if(SiS_Pr->SiS_LCDInfo & LCDRGB18Bit) {
+	    temp ^= 0x04;
+	    if(SiS_Pr->SiS_ModeType >= Mode24Bpp) temp |= 0x10;
+	 }
          SiS_SetRegANDOR(SiS_Pr->SiS_Part2Port,0x1a,0xe0,temp);
       } else {
-         temp = 0;
-         if(infoflag & 0x01) temp |= 0x80;
-         SiS_SetRegANDOR(SiS_Pr->SiS_Part1Port,0x1a,0x7f,temp);
          temp = 0x30;
-         if(infoflag & 0x01) temp = 0x20;
-         infoflag &= 0xc0;
+         if(SiS_Pr->SiS_LCDInfo & LCDRGB18Bit) temp = 0x20;
          temp |= infoflag;
          SiS_SetRegANDOR(SiS_Pr->SiS_Part1Port,0x19,0x0f,temp);
+         temp = 0;
+         if(SiS_Pr->SiS_LCDInfo & LCDRGB18Bit) {
+	    if(SiS_Pr->SiS_ModeType >= Mode24Bpp) temp |= 0x80;
+	 }
+         SiS_SetRegANDOR(SiS_Pr->SiS_Part1Port,0x1a,0x7f,temp);
       }
 
    }
@@ -11345,6 +11333,30 @@ SetPanelParms661(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo)
 	 }
       }
 
+   }
+}
+
+void
+SiS_OEM310Setting(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo,
+                  USHORT ModeNo,USHORT ModeIdIndex,USHORT RRTI)
+{
+   if((SiS_Pr->SiS_ROMNew) && (SiS_Pr->SiS_VBType & VB_SISLVDS)) {
+      SetDelayComp661(SiS_Pr,HwInfo,ModeNo,ModeIdIndex,RRTI);
+      if(SiS_Pr->SiS_VBInfo & (SetCRT2ToLCD | SetCRT2ToLCDA)) {
+         SetCRT2SyncDither661(SiS_Pr,HwInfo,ModeNo,RRTI);
+         SetPanelParms661(SiS_Pr,HwInfo);
+      }
+   } else {
+      SetDelayComp(SiS_Pr,HwInfo,ModeNo);
+   }
+
+   if((SiS_Pr->SiS_VBType & VB_SISVB) && (SiS_Pr->SiS_VBInfo & SetCRT2ToTV)) {
+      SetAntiFlicker(SiS_Pr,HwInfo,ModeNo,ModeIdIndex);
+      SetPhaseIncr(SiS_Pr,HwInfo,ModeNo,ModeIdIndex);
+      SetYFilter(SiS_Pr,HwInfo,ModeNo,ModeIdIndex);
+      if(SiS_Pr->SiS_VBType & VB_SIS301) {
+         SetEdgeEnhance(SiS_Pr,HwInfo,ModeNo,ModeIdIndex);
+      }
    }
 }
 
@@ -11387,6 +11399,7 @@ SiS_FinalizeLCD(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
   USHORT resinfo,modeflag;
 
   if(!(SiS_Pr->SiS_VBType & VB_SIS301LV302LV)) return;
+  if(SiS_Pr->SiS_ROMNew) return;
 
   if(SiS_Pr->SiS_VBInfo & (SetCRT2ToLCD | SetCRT2ToLCDA)) {
      if(SiS_Pr->LVDSHL != -1) {

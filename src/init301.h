@@ -35,7 +35,7 @@
  * * 3) The name of the author may not be used to endorse or promote products
  * *    derived from this software without specific prior written permission.
  * *
- * * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESSED OR
+ * * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
  * * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
  * * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
  * * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
@@ -372,7 +372,7 @@ USHORT  SiS_SenseVGA2DDC(SiS_Private *SiS_Pr, SISPtr pSiS);
 
 #ifdef SIS315H
 void    SiS_OEM310Setting(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo,
-                          USHORT ModeNo,USHORT ModeIdIndex);
+                          USHORT ModeNo,USHORT ModeIdIndex, USHORT RRTI);
 void    SiS_OEM661Setting(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo,
                           USHORT ModeNo,USHORT ModeIdIndex, USHORT RRTI);
 void    SiS_FinalizeLCD(SiS_Private *, USHORT, USHORT, PSIS_HW_INFO);

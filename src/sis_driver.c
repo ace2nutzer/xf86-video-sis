@@ -16,7 +16,7 @@
  * 3) The name of the author may not be used to endorse or promote products
  *    derived from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESSED OR
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
  * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
  * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
@@ -2357,25 +2357,23 @@ static Bool
 SISPreInit(ScrnInfoPtr pScrn, int flags)
 {
     SISPtr pSiS;
+#ifdef SISDUALHEAD
+    SISEntPtr pSiSEnt = NULL;
+#endif    
     MessageType from;
     unsigned char usScratchCR17, CR5F;
     unsigned char usScratchCR32, usScratchCR63;
-    unsigned char usScratchSR1F;
-    unsigned long int i;
+    unsigned char usScratchSR1F, tempreg;
+    unsigned char srlockReg, crlockReg;
+    unsigned int i;
     int temp;
     ClockRangePtr clockRanges;
     int pix24flags;
-#ifdef SISDUALHEAD
-    SISEntPtr pSiSEnt = NULL;
-#endif
 #if defined(SISMERGED) || defined(SISDUALHEAD)
     DisplayModePtr first, p, n;
 #endif
-    unsigned char srlockReg,crlockReg;
-    unsigned char tempreg;
     xf86MonPtr pMonitor = NULL;
     Bool didddc2;
-
     vbeInfoPtr pVbe;
     VbeInfoBlock *vbe;
 

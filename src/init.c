@@ -38,7 +38,7 @@
  * * 3) The name of the author may not be used to endorse or promote products
  * *    derived from this software without specific prior written permission.
  * *
- * * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESSED OR
+ * * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
  * * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
  * * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
  * * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
@@ -2001,7 +2001,7 @@ SiS_GetColorDepth(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex)
     	modeflag = SiS_Pr->SiS_EModeIDTable[ModeIdIndex].Ext_ModeFlag;
   }
 
-  index = (modeflag & ModeInfoFlag) - ModeEGA;
+  index = (modeflag & ModeTypeMask) - ModeEGA;
   if(index < 0) index = 0;
   return(ColorDepth[index]);
 }

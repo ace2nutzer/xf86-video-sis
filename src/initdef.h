@@ -35,7 +35,7 @@
  * * 3) The name of the author may not be used to endorse or promote products
  * *    derived from this software without specific prior written permission.
  * *
- * * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESSED OR
+ * * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
  * * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
  * * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
  * * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
@@ -129,7 +129,7 @@
 #define Mode24Bpp               0x06
 #define Mode32Bpp               0x07
 
-#define ModeInfoFlag            0x07
+#define ModeTypeMask            0x07
 #define IsTextMode              0x07
 
 #define DACInfoFlag             0x0018
