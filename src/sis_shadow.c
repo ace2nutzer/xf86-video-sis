@@ -32,7 +32,9 @@
 #include "servermd.h"
 
 void SISPointerMoved(int index, int x, int y);
+void SISPointerMovedReflect(int index, int x, int y);
 void SISRefreshArea(ScrnInfoPtr pScrn, int num, BoxPtr pbox);
+void SISRefreshAreaReflect(ScrnInfoPtr pScrn, int num, BoxPtr pbox);
 void SISRefreshArea8(ScrnInfoPtr pScrn, int num, BoxPtr pbox);
 void SISRefreshArea16(ScrnInfoPtr pScrn, int num, BoxPtr pbox);
 void SISRefreshArea24(ScrnInfoPtr pScrn, int num, BoxPtr pbox);
@@ -52,17 +54,37 @@ SISPointerMoved(int index, int x, int y)
 }
 
 void
+SISPointerMovedReflect(int index, int x, int y)
+{
+    ScrnInfoPtr pScrn = xf86Screens[index];
+    SISPtr pSiS = SISPTR(pScrn);
+
+    switch(pSiS->Reflect) {
+    case 1: /* x */
+       (*pSiS->PointerMoved)(index, pScrn->pScreen->width - x - 1, y);
+       break;
+    case 2: /* y */
+       (*pSiS->PointerMoved)(index, x, pScrn->pScreen->height - y - 1);
+       break;
+    case 3: /* x + y */
+       (*pSiS->PointerMoved)(index, pScrn->pScreen->width - x - 1, pScrn->pScreen->height - y - 1);
+    }
+}
+
+/* Refresh area (unreflected, unrotated */
+
+void
 SISRefreshArea(ScrnInfoPtr pScrn, int num, BoxPtr pbox)
 {
     SISPtr pSiS = SISPTR(pScrn);
     int    width, height, Bpp, FBPitch;
     CARD8  *src, *dst;
-   
+
     Bpp = pScrn->bitsPerPixel >> 3;
     FBPitch = BitmapBytePad(pScrn->displayWidth * pScrn->bitsPerPixel);
-    
+
     while(num--) {
-    
+
        width = (pbox->x2 - pbox->x1) * Bpp;
        height = pbox->y2 - pbox->y1;
        src = pSiS->ShadowPtr + (pbox->y1 * pSiS->ShadowPitch) +  (pbox->x1 * Bpp);
@@ -73,10 +95,117 @@ SISRefreshArea(ScrnInfoPtr pScrn, int num, BoxPtr pbox)
 	  dst += FBPitch;
 	  src += pSiS->ShadowPitch;
        }
-	
+
        pbox++;
     }
-} 
+}
+
+/* RefreshArea for reflection */
+
+void
+SISRefreshAreaReflect(ScrnInfoPtr pScrn, int num, BoxPtr pbox)
+{
+    SISPtr pSiS = SISPTR(pScrn);
+    int    width, height, Bpp, FBPitch, twidth;
+    CARD8  *src, *dst, *tdst, *tsrc;
+    CARD16 *tdst16, *tsrc16;
+    CARD32 *tdst32, *tsrc32;
+
+    Bpp = pScrn->bitsPerPixel >> 3;
+    FBPitch = BitmapBytePad(pScrn->displayWidth * pScrn->bitsPerPixel);
+
+    while(num--) {
+       width = (pbox->x2 - pbox->x1) * Bpp;
+       height = pbox->y2 - pbox->y1;
+       src = pSiS->ShadowPtr + (pbox->y1 * pSiS->ShadowPitch) +  (pbox->x1 * Bpp);
+       dst = pSiS->FbBase;
+       switch(pSiS->Reflect) {
+       case 1:	/* x */
+	  dst += (pbox->y1 * FBPitch) + ((pScrn->displayWidth - pbox->x1 - 1) * Bpp);
+	  switch(Bpp) {
+	     case 1:
+		while(height--) {
+		   tdst = dst;
+		   tsrc = src;
+		   twidth = width;
+		   while(twidth--) *tdst-- = *tsrc++;
+		   dst += FBPitch;
+		   src += pSiS->ShadowPitch;
+		}
+		break;
+	     case 2:
+		width >>= 1;
+		while(height--) {
+		   tdst16 = (CARD16 *)dst;
+		   tsrc16 = (CARD16 *)src;
+		   twidth = width;
+		   while(twidth--) *tdst16-- = *tsrc16++;
+		   dst += FBPitch;
+		   src += pSiS->ShadowPitch;
+		}
+		break;
+	     case 4:
+		width >>= 2;
+		while(height--) {
+		   tdst32 = (CARD32 *)dst;
+		   tsrc32 = (CARD32 *)src;
+		   twidth = width;
+		   while(twidth--) *tdst32-- = *tsrc32++;
+		   dst += FBPitch;
+		   src += pSiS->ShadowPitch;
+		}
+	  }
+	  break;
+       case 2:	/* y */
+	  dst += ((pScrn->virtualY - pbox->y1 - 1) * FBPitch) + (pbox->x1 * Bpp);
+	  while(height--) {
+	     SiSMemCopyToVideoRam(pSiS, dst, src, width);
+	     dst -= FBPitch;
+	     src += pSiS->ShadowPitch;
+	  }
+	  break;
+       case 3:	/* x + y */
+	  dst += ((pScrn->virtualY - pbox->y1 - 1) * FBPitch) + ((pScrn->displayWidth - pbox->x1 - 1) * Bpp);
+	  switch(Bpp) {
+	     case 1:
+		while(height--) {
+		   tdst = dst;
+		   tsrc = src;
+		   twidth = width;
+		   while(twidth--) *tdst-- = *tsrc++;
+		   dst -= FBPitch;
+		   src += pSiS->ShadowPitch;
+		}
+		break;
+	     case 2:
+	        width >>= 1;
+		while(height--) {
+		   tdst16 = (CARD16 *)dst;
+		   tsrc16 = (CARD16 *)src;
+		   twidth = width;
+		   while(twidth--) *tdst16-- = *tsrc16++;
+		   dst -= FBPitch;
+		   src += pSiS->ShadowPitch;
+		}
+		break;
+	     case 4:
+		width >>= 2;
+		while(height--) {
+		   tdst32 = (CARD32 *)dst;
+		   tsrc32 = (CARD32 *)src;
+		   twidth = width;
+		   while(twidth--) *tdst32-- = *tsrc32++;
+		   dst -= FBPitch;
+		   src += pSiS->ShadowPitch;
+		}
+		break;
+	  }
+       }
+       pbox++;
+    }
+}
+
+/* RefreshArea()s for rotation */
 
 void
 SISRefreshArea8(ScrnInfoPtr pScrn, int num, BoxPtr pbox)
@@ -108,9 +237,9 @@ SISRefreshArea8(ScrnInfoPtr pScrn, int num, BoxPtr pbox)
 	  dst = (CARD32 *)dstPtr;
 	  count = height;
 	  while(count--) {
-	     *(dst++) = src[0]                    | 
-		        (src[srcPitch]     <<  8) | 
-		        (src[srcPitch * 2] << 16) | 
+	     *(dst++) = src[0]                    |
+		        (src[srcPitch]     <<  8) |
+		        (src[srcPitch * 2] << 16) |
 			(src[srcPitch * 3] << 24);
 	     src += (srcPitch * 4);
 	  }
@@ -120,7 +249,7 @@ SISRefreshArea8(ScrnInfoPtr pScrn, int num, BoxPtr pbox)
 
        pbox++;
     }
-} 
+}
 
 void
 SISRefreshArea16(ScrnInfoPtr pScrn, int num, BoxPtr pbox)
@@ -194,23 +323,23 @@ SISRefreshArea24(ScrnInfoPtr pScrn, int num, BoxPtr pbox)
 	  dst = (CARD32 *)dstPtr;
 	  count = height;
 	  while(count--) {
-	     dst[0] = src[0]         | 
-		      (src[1] << 8)  | 
+	     dst[0] = src[0]         |
+		      (src[1] << 8)  |
 		      (src[2] << 16) |
-		      (src[srcPitch] << 24);		
-	     dst[1] = src[srcPitch + 1]         | 
+		      (src[srcPitch] << 24);
+	     dst[1] = src[srcPitch + 1]         |
 		      (src[srcPitch + 2] << 8)  |
 		      (src[srcPitch * 2] << 16) |
-		      (src[(srcPitch * 2) + 1] << 24);		
-	     dst[2] = src[(srcPitch * 2) + 2]         | 
+		      (src[(srcPitch * 2) + 1] << 24);
+	     dst[2] = src[(srcPitch * 2) + 2]         |
 		      (src[srcPitch * 3] << 8)        |
 		      (src[(srcPitch * 3) + 1] << 16) |
-		      (src[(srcPitch * 3) + 2] << 24);	
+		      (src[(srcPitch * 3) + 2] << 24);
 	     dst += 3;
 	     src += (srcPitch << 2);
 	  }
 	  srcPtr += pSiS->Rotate * 3;
-	  dstPtr += dstPitch; 
+	  dstPtr += dstPitch;
        }
 
        pbox++;

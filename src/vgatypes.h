@@ -135,10 +135,15 @@ enum _SIS_CHIP_TYPE {
     SIS_330,
     SIS_661,
     SIS_741,
+    SIS_670,
     SIS_660,
     SIS_760,
     SIS_761,
+    SIS_762,
+    SIS_770,
     SIS_340,
+    SIS_341,
+    SIS_342,
     MAX_SIS_CHIP
 };
 
@@ -155,11 +160,11 @@ struct _SIS_HW_INFO
 
     BOOLEAN UseROM;		 /* Use the ROM image if provided */
 
-#ifdef LINUX_KERNEL    
-    UCHAR SISIOMEMTYPE *pjVideoMemoryAddress; 
+#ifdef LINUX_KERNEL
+    UCHAR SISIOMEMTYPE *pjVideoMemoryAddress;
     				 /* base virtual memory address */
                                  /* of Linear VGA memory */
-				 
+
     ULONG  ulVideoMemorySize;    /* size, in bytes, of the memory on the board */
 #endif
 
@@ -183,7 +188,7 @@ struct _SIS_HW_INFO
 #define SISFB_GET_INFO_SIZE	0x8004f300
 #define SISFB_GET_INFO		0x8000f301  /* Must be patched with result from ..._SIZE at D[29:16] */
 /* deprecated ioctl number (for older versions of sisfb) */
-#define SISFB_GET_INFO_OLD    	0x80046ef8  
+#define SISFB_GET_INFO_OLD    	0x80046ef8
 
 /* ioctls for tv parameters (position) */
 #define SISFB_SET_TVPOSOFFSET   0x4004f304
@@ -236,10 +241,16 @@ struct _SISFB_INFO {
 	CARD8 	sisfb_haveemilcd;
 
 	CARD8 	sisfb_lcdpdca;
-	
+
 	CARD16  sisfb_tvxpos, sisfb_tvypos;  	/* Warning: Values + 32 ! */
 
-	CARD8 reserved[208]; 			/* for future use */
+	CARD32	sisfb_heapsize;			/* heap size (in KB) */
+	CARD32	sisfb_videooffset;		/* Offset of viewport in video memory (in bytes) */
+
+	CARD32	sisfb_curfstn;			/* currently running FSTN/DSTN mode */
+	CARD32	sisfb_curdstn;
+
+	CARD8 reserved[192]; 			/* for future use */
 };
 
 #endif /* LINUX_XF86 */

@@ -391,8 +391,7 @@ SiSSave(ScrnInfoPtr pScrn, SISRegPtr sisReg)
            break;
         default:
            max=0x37;
-           break;
-        }
+    }
 
     /* Save extended SR registers */
     for(i = 0x00; i <= max; i++) {
@@ -452,7 +451,6 @@ SiSRestore(ScrnInfoPtr pScrn, SISRegPtr sisReg)
            break;
         default:
            max = 0x37;
-           break;
     }
 
     /* Disable TV on 6326 before restoring */
@@ -489,7 +487,7 @@ SiSRestore(ScrnInfoPtr pScrn, SISRegPtr sisReg)
           SiS6326SetTVReg(pScrn, i, sisReg->sis6326tv[i]);
 #ifdef TWDEBUG
           xf86DrvMsg(pScrn->scrnIndex, X_INFO,
-	 	"VR%02x restored to %02x\n",
+		"VR%02x restored to %02x\n",
 		i, sisReg->sis6326tv[i]);
 #endif
        }
@@ -498,7 +496,7 @@ SiSRestore(ScrnInfoPtr pScrn, SISRegPtr sisReg)
        tmp = SiS6326GetXXReg(pScrn, 0x14);
        SiS6326SetXXReg(pScrn, 0x14, 0xc8);
        if(!(sisReg->sisRegs3C4[0x0D] & 0x04)) {
-    	  tmp = SiS6326GetXXReg(pScrn, 0x13);
+	  tmp = SiS6326GetXXReg(pScrn, 0x13);
 	  SiS6326SetXXReg(pScrn, 0x13, 0xf6);
 	  tmp = SiS6326GetXXReg(pScrn, 0x14);
 	  SiS6326SetXXReg(pScrn, 0x14, 0xbf);
@@ -547,9 +545,9 @@ SiS300Save(ScrnInfoPtr pScrn, SISRegPtr sisReg)
        sisReg->sisRegsPCIA0 = pciReadLong(0x00000000, 0xA0);
 #ifdef TWDEBUG
        xf86DrvMsg(pScrn->scrnIndex, X_INFO,
-       		"PCI Config 50 = %lx\n", sisReg->sisRegsPCI50);
+		"PCI Config 50 = %lx\n", sisReg->sisRegsPCI50);
        xf86DrvMsg(pScrn->scrnIndex, X_INFO,
-       		"PCI Config A0 = %lx\n", sisReg->sisRegsPCIA0);
+		"PCI Config A0 = %lx\n", sisReg->sisRegsPCIA0);
 #endif
     }
 
@@ -572,7 +570,7 @@ SiS300Save(ScrnInfoPtr pScrn, SISRegPtr sisReg)
 
 #ifdef TWDEBUG
     xf86DrvMsg(pScrn->scrnIndex, X_INFO,
-    	"BIOS mode ds:449 = 0x%x\n", sisReg->BIOSModeSave);
+	"BIOS mode ds:449 = 0x%x\n", sisReg->BIOSModeSave);
 #endif
 }
 
@@ -582,7 +580,7 @@ SiS300Restore(ScrnInfoPtr pScrn, SISRegPtr sisReg)
 {
     SISPtr pSiS = SISPTR(pScrn);
     int i,temp;
-    CARD32 temp1;
+    CARD32 temp1, temp2;
 
     PDEBUG(xf86DrvMsgVerb(pScrn->scrnIndex, X_INFO, 4, "SiS300Restore()\n"));
 
@@ -600,11 +598,11 @@ SiS300Restore(ScrnInfoPtr pScrn, SISRegPtr sisReg)
 
     if(!(pSiS->UseVESA)) {
        if(pSiS->VBFlags & VB_LVDS) {
-          SiSRegInit(pSiS->SiS_Pr, pSiS->RelIO + 0x30);
+	  SiSRegInit(pSiS->SiS_Pr, pSiS->RelIO + 0x30);
 	  SiSSetLVDSetc(pSiS->SiS_Pr, &pSiS->sishw_ext, 0);
 	  SiS_GetVBType(pSiS->SiS_Pr, &pSiS->sishw_ext);
-          SiS_UnLockCRT2(pSiS->SiS_Pr, &pSiS->sishw_ext);
-          SiS_DisableBridge(pSiS->SiS_Pr, &pSiS->sishw_ext);
+	  SiS_UnLockCRT2(pSiS->SiS_Pr, &pSiS->sishw_ext);
+	  SiS_DisableBridge(pSiS->SiS_Pr, &pSiS->sishw_ext);
        }
     }
 
@@ -620,7 +618,7 @@ SiS300Restore(ScrnInfoPtr pScrn, SISRegPtr sisReg)
 	  outSISIDXREG(SISCR, 0x1A, sisReg->sisRegs3D4[0x19]);
        inSISIDXREG(SISCR,0x19,val);
        if(val == sisReg->sisRegs3D4[0x1A])
-          outSISIDXREG(SISCR, 0x19, sisReg->sisRegs3D4[0x1A]);
+	  outSISIDXREG(SISCR, 0x19, sisReg->sisRegs3D4[0x1A]);
     }
 
     /* Set (and leave) PCI_IO_ENABLE on if accelerators are on */
@@ -642,10 +640,10 @@ SiS300Restore(ScrnInfoPtr pScrn, SISRegPtr sisReg)
     for(i = 0x06; i <= 0x3D; i++) {
        temp = sisReg->sisRegs3C4[i];
        if(!(pSiS->UseVESA)) {
-          if(pSiS->VBFlags & VB_LVDS) {
-             if(i == 0x11) {
-	        inSISIDXREG(SISSR,0x11,temp);
-	    	temp &= 0x0c;
+	  if(pSiS->VBFlags & VB_LVDS) {
+	     if(i == 0x11) {
+		inSISIDXREG(SISSR,0x11,temp);
+		temp &= 0x0c;
 		temp |= (sisReg->sisRegs3C4[i] & 0xf3);
 	     }
           }
@@ -686,24 +684,20 @@ SiS300Restore(ScrnInfoPtr pScrn, SISRegPtr sisReg)
     /* Restore FQBQ and GUI timer settings */
     if(pSiS->Chipset == PCI_CHIP_SIS630) {
        temp1 = pciReadLong(0x00000000, 0x50);
+       temp2 = pciReadLong(0x00000000, 0xA0);
        if(pciReadLong(0x00000000, 0x00) == 0x06301039) {
           temp1 &= 0xf0ffffff;
           temp1 |= (sisReg->sisRegsPCI50 & ~0xf0ffffff);
+	  temp2 &= 0xf0ffffff;
+          temp2 |= (sisReg->sisRegsPCIA0 & ~0xf0ffffff);
        } else {  /* 730 */
           temp1 &= 0xfffff9ff;
           temp1 |= (sisReg->sisRegsPCI50 & ~0xfffff9ff);
+	  temp2 &= 0x00ffffff;
+          temp2 |= (sisReg->sisRegsPCIA0 & ~0x00ffffff);
        }
        pciWriteLong(0x00000000, 0x50, temp1);
-
-       temp1 = pciReadLong(0x00000000, 0xA0);
-       if(pciReadLong(0x00000000, 0x00) == 0x06301039) {
-          temp1 &= 0xf0ffffff;
-          temp1 |= (sisReg->sisRegsPCIA0 & ~0xf0ffffff);
-       } else {	/* 730 */
-          temp1 &= 0x00ffffff;
-          temp1 |= (sisReg->sisRegsPCIA0 & ~0x00ffffff);
-       }
-       pciWriteLong(0x00000000, 0xA0, temp1);
+       pciWriteLong(0x00000000, 0xA0, temp2);
     }
 
     /* Restore panel link/video bridge registers */
@@ -817,7 +811,7 @@ SiS315Restore(ScrnInfoPtr pScrn, SISRegPtr sisReg)
 
     /* Wait for accelerator to finish on-going drawing operations. */
     inSISIDXREG(SISSR, 0x1E, temp);
-    if(temp & (0x40|0x10|0x02))  {	/* 0x40 = 2D, 0x10 = 3D enabled*/
+    if(temp & (0x40|0x10|0x02))  {	/* 0x40 = 2D, 0x02 = 3D enabled*/
        while ( (SIS_MMIO_IN32(pSiS->IOBase, 0x85CC) & 0x80000000) != 0x80000000){};
        while ( (SIS_MMIO_IN32(pSiS->IOBase, 0x85CC) & 0x80000000) != 0x80000000){};
        while ( (SIS_MMIO_IN32(pSiS->IOBase, 0x85CC) & 0x80000000) != 0x80000000){};
@@ -830,7 +824,7 @@ SiS315Restore(ScrnInfoPtr pScrn, SISRegPtr sisReg)
      * uses.
      */
     andSISIDXREG(SISCR, 0x55, 0x33);
-    outSISIDXREG(SISSR, 0x26, 0x01);
+    orSISIDXREG(SISSR, 0x26, 0x01);
     outSISIDXREG(SISSR, 0x27, 0x1F);
 
     /* Restore extended CR registers */
@@ -843,12 +837,12 @@ SiS315Restore(ScrnInfoPtr pScrn, SISRegPtr sisReg)
     outSISIDXREG(SISCR, pSiS->myCR63, sisReg->sisRegs3D4[pSiS->myCR63]);
 
     /* Leave PCI_IO_ENABLE on if accelerators are on (Is this required?) */
-    if(sisReg->sisRegs3C4[0x1e] & 0x50) {  /* 0x40=2D, 0x10=3D */
+    if(sisReg->sisRegs3C4[0x1e] & 0x52) {  /* 0x40=2D, 0x02=3D */
        sisReg->sisRegs3C4[0x20] |= 0x20;
        outSISIDXREG(SISSR, 0x20, sisReg->sisRegs3C4[0x20]);
     }
 
-    if(pSiS->sishw_ext.jChipType >= SIS_661) {
+    if(pSiS->SiS_Pr->SiS_SensibleSR11) {
        sisReg->sisRegs3C4[0x11] &= 0x0f;
     }
 
@@ -1307,52 +1301,52 @@ SiSMclk(SISPtr pSiS)
     case PCI_CHIP_SIS660:
     case PCI_CHIP_SIS340:
 
-        /* Numerator */
+	/* Numerator */
 	inSISIDXREG(SISSR, 0x28, Num);
-        mclk = 14318 * ((Num & 0x7f) + 1);
+	mclk = 14318 * ((Num & 0x7f) + 1);
 
-        /* Denumerator */
+	/* Denumerator */
 	inSISIDXREG(SISSR, 0x29, Denum);
-        mclk = mclk / ((Denum & 0x1f) + 1);
+	mclk = mclk / ((Denum & 0x1f) + 1);
 
-        /* Divider */
-        if((Num & 0x80) != 0)  mclk *= 2;
+	/* Divider */
+	if((Num & 0x80) != 0)  mclk *= 2;
 
-        /* Post-Scaler */
-        if((Denum & 0x80) == 0) {
-           mclk = mclk / (((Denum & 0x60) >> 5) + 1);
-        } else {
-           mclk = mclk / ((((Denum & 0x60) >> 5) + 1) * 2);
-        }
-        break;
+	/* Post-Scaler */
+	if((Denum & 0x80) == 0) {
+	   mclk = mclk / (((Denum & 0x60) >> 5) + 1);
+	} else {
+	   mclk = mclk / ((((Denum & 0x60) >> 5) + 1) * 2);
+	}
+	break;
 
     case PCI_CHIP_SIS5597:
     case PCI_CHIP_SIS6326:
     case PCI_CHIP_SIS530:
     default:
-        /* Numerator */
-        inSISIDXREG(SISSR, 0x28, Num);
-        mclk = 14318 * ((Num & 0x7f) + 1);
+	/* Numerator */
+	inSISIDXREG(SISSR, 0x28, Num);
+	mclk = 14318 * ((Num & 0x7f) + 1);
 
-        /* Denumerator */
+	/* Denumerator */
 	inSISIDXREG(SISSR, 0x29, Denum);
-        mclk = mclk / ((Denum & 0x1f) + 1);
+	mclk = mclk / ((Denum & 0x1f) + 1);
 
-        /* Divider. Doesn't work on older cards */
+	/* Divider. Doesn't work on older cards */
 	if(pSiS->oldChipset >= OC_SIS5597) {
-           if(Num & 0x80) mclk *= 2;
+	   if(Num & 0x80) mclk *= 2;
 	}
 
-        /* Post-scaler. Values' meaning depends on SR13 bit 7  */
+	/* Post-scaler. Values' meaning depends on SR13 bit 7  */
 	inSISIDXREG(SISSR, 0x13, Base);
-        if((Base & 0x80) == 0) {
-           mclk = mclk / (((Denum & 0x60) >> 5) + 1);
-        } else {
-           /* Values 00 and 01 are reserved */
-           if ((Denum & 0x60) == 0x40)  mclk /= 6;
-           if ((Denum & 0x60) == 0x60)  mclk /= 8;
-        }
-        break;
+	if((Base & 0x80) == 0) {
+	   mclk = mclk / (((Denum & 0x60) >> 5) + 1);
+	} else {
+	   /* Values 00 and 01 are reserved */
+	   if ((Denum & 0x60) == 0x40)  mclk /= 6;
+	   if ((Denum & 0x60) == 0x60)  mclk /= 8;
+	}
+	break;
     }
 
     return(mclk);
@@ -1371,10 +1365,10 @@ SiSMclk(SISPtr pSiS)
 static int
 SiSEstimateCRT2Clock(ScrnInfoPtr pScrn, Bool IsForMergedFBCRT2)
 {
-        SISPtr pSiS = SISPTR(pScrn);
+	SISPtr pSiS = SISPTR(pScrn);
 
 	if(pSiS->VBFlags & CRT2_LCD) {
-  	   if(pSiS->VBLCDFlags & (VB_LCD_320x480 | VB_LCD_800x600 | VB_LCD_640x480)) {
+	   if(pSiS->VBLCDFlags & (VB_LCD_320x480 | VB_LCD_800x600 | VB_LCD_640x480)) {
 	      return 40000;
 	   } else if(pSiS->VBLCDFlags & (VB_LCD_1024x768 | VB_LCD_1024x600 | VB_LCD_1152x768)) {
 	      return 65000;
@@ -1411,16 +1405,16 @@ SiSEstimateCRT2Clock(ScrnInfoPtr pScrn, Bool IsForMergedFBCRT2)
 	   if(pSiS->VBFlags & VB_CHRONTEL) {
 	      switch(pSiS->VGAEngine) {
 	      case SIS_300_VGA:
-                 return 50000;
+		 return 50000;
 	      case SIS_315_VGA:
 	      default:
 		 return 70000;
 	      }
 	   } else if(pSiS->VBFlags & VB_SISBRIDGE) {
 	      if(pSiS->SiS_SD_Flags & SiS_SD_SUPPORTYPBPR)
-	         return 75000;
+		 return 75000;
 	      else
-	         return 70000;
+		 return 70000;
 	   }
 	}
 
@@ -1430,12 +1424,12 @@ SiSEstimateCRT2Clock(ScrnInfoPtr pScrn, Bool IsForMergedFBCRT2)
 /* Calculate the maximum dotclock */
 int SiSMemBandWidth(ScrnInfoPtr pScrn, Bool IsForCRT2)
 {
-        SISPtr pSiS = SISPTR(pScrn);
+	SISPtr pSiS = SISPTR(pScrn);
 #ifdef SISDUALHEAD
-        SISEntPtr pSiSEnt = pSiS->entityPrivate;
+	SISEntPtr pSiSEnt = pSiS->entityPrivate;
 #endif
-        int          bus = pSiS->BusWidth;
-        int          mclk = pSiS->MemClock;
+	int          bus = pSiS->BusWidth;
+	int          mclk = pSiS->MemClock;
 	int          bpp = pSiS->CurrentLayout.bitsPerPixel;
 	int	     max = 0;
 	float        magic = 0.0, total;
@@ -1446,23 +1440,23 @@ int SiSMemBandWidth(ScrnInfoPtr pScrn, Bool IsForCRT2)
 #ifdef __SUNPRO_C
 #define const
 #endif
-        const float  magicDED[4] = { 1.2,      1.368421, 2.263158, 1.2};
-        const float  magicINT[4] = { 1.441177, 1.441177, 2.588235, 1.441177 };
+	const float  magicDED[4] = { 1.2,      1.368421, 2.263158, 1.2};
+	const float  magicINT[4] = { 1.441177, 1.441177, 2.588235, 1.441177 };
 #ifdef __SUNPRO_C
 #undef const
 #endif
 
-        switch(pSiS->Chipset) {
+	switch(pSiS->Chipset) {
 
-        case PCI_CHIP_SIS5597:
-	        total = ((mclk * (bus / 8)) * 0.7) / bytesperpixel;
+	case PCI_CHIP_SIS5597:
+		total = ((mclk * (bus / 8)) * 0.7) / bytesperpixel;
 		if(total > 135000) total = 135000;
 		xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
 			"Maximum pixel clock at %d bpp is %g MHz\n",
 			bpp, total/1000);
-                return(int)(total);
+		return(int)(total);
 
-        case PCI_CHIP_SIS6326:
+	case PCI_CHIP_SIS6326:
 		total = ((mclk * (bus / 8)) * 0.7) / bytesperpixel;
 		if(total > 175500) total = 175500;
 		xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
@@ -1470,17 +1464,17 @@ int SiSMemBandWidth(ScrnInfoPtr pScrn, Bool IsForCRT2)
 			bpp, total/1000);
 		return(int)(total);
 
-        case PCI_CHIP_SIS530:
-	        total = ((mclk * (bus / 8)) * 0.7) / bytesperpixel;
+	case PCI_CHIP_SIS530:
+		total = ((mclk * (bus / 8)) * 0.7) / bytesperpixel;
 		if(total > 230000) total = 230000;
 		xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
 			"Maximum pixel clock at %d bpp is %g MHz\n",
 			bpp, total/1000);
 		return(int)(total);
 
-        case PCI_CHIP_SIS300:
-        case PCI_CHIP_SIS540:
-        case PCI_CHIP_SIS630:
+	case PCI_CHIP_SIS300:
+	case PCI_CHIP_SIS540:
+	case PCI_CHIP_SIS630:
 	case PCI_CHIP_SIS315:
 	case PCI_CHIP_SIS315H:
 	case PCI_CHIP_SIS315PRO:
@@ -1489,16 +1483,16 @@ int SiSMemBandWidth(ScrnInfoPtr pScrn, Bool IsForCRT2)
 	case PCI_CHIP_SIS330:
 	case PCI_CHIP_SIS660:
 	case PCI_CHIP_SIS340:
-	        switch(pSiS->Chipset) {
-        	case PCI_CHIP_SIS300:
-	            magic = magicDED[bus/64];
+		switch(pSiS->Chipset) {
+		case PCI_CHIP_SIS300:
+		    magic = magicDED[bus/64];
 		    max = 540000;
-                    break;
-        	case PCI_CHIP_SIS540:
-       	 	case PCI_CHIP_SIS630:
+		    break;
+		case PCI_CHIP_SIS540:
+		case PCI_CHIP_SIS630:
 		    magic = magicINT[bus/64];
 		    max = 540000;
-                    break;
+		    break;
 		case PCI_CHIP_SIS315:
 		case PCI_CHIP_SIS315H:
 		case PCI_CHIP_SIS315PRO:
@@ -1508,7 +1502,7 @@ int SiSMemBandWidth(ScrnInfoPtr pScrn, Bool IsForCRT2)
 		    break;
 		case PCI_CHIP_SIS550:
 		    magic = magicINT[bus/64];
-		    max = 620000;
+		    max = 610000;
 		    break;
 		case PCI_CHIP_SIS650:
 		    magic = magicINT[bus/64];
@@ -1516,27 +1510,27 @@ int SiSMemBandWidth(ScrnInfoPtr pScrn, Bool IsForCRT2)
 		    break;
 		case PCI_CHIP_SIS660:
 		    if((pSiS->sishw_ext.jChipType >= SIS_660) &&
-		       (!(pSiS->ChipFlags & SiSCF_760UMA))) {
+		       (pSiS->ChipFlags & SiSCF_760LFB)) {
 		       magic = magicDED[bus/64];
 		    } else {
 		       magic = magicINT[bus/64];
 		    }
-		    max = 800000;
+		    max = 680000;
 		case PCI_CHIP_SIS340:
 		    magic = magicDED[bus/64];
 		    max = 800000;
 		    break;
-                }
+		}
 
-                PDEBUG(ErrorF("mclk: %d, bus: %d, magic: %g, bpp: %d\n",
-                                mclk, bus, magic, bpp));
+		PDEBUG(ErrorF("mclk: %d, bus: %d, magic: %g, bpp: %d\n",
+				mclk, bus, magic, bpp));
 
-                total = mclk * bus / bpp;
+		total = mclk * bus / bpp;
 
-                xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
+		xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
 			"Memory bandwidth at %d bpp is %g MHz\n", bpp, total/1000);
 
-                if((pSiS->VBFlags & CRT2_ENABLE) && (!pSiS->CRT1off)) {
+		if((pSiS->VBFlags & CRT2_ENABLE) && (!pSiS->CRT1off)) {
 
 		    maxcrt2 = 135000;
 		    if(pSiS->VBFlags & (VB_301B|VB_302B)) maxcrt2 = 162000;
@@ -1568,12 +1562,12 @@ int SiSMemBandWidth(ScrnInfoPtr pScrn, Bool IsForCRT2)
 
 		    if(DHM) {
 
-		        if(!GetForCRT1) {
+			if(!GetForCRT1) {
 
 			     /* First head = CRT2 */
 
 			     if(crt2clock) {
-			        /* We use the mem bandwidth as max clock; this
+				/* We use the mem bandwidth as max clock; this
 				 * might exceed the 70% limit a bit, but that
 				 * does not matter; we take care of that limit
 				 * when we calc CRT1. Overall, we might use up
@@ -1582,16 +1576,16 @@ int SiSMemBandWidth(ScrnInfoPtr pScrn, Bool IsForCRT2)
 				 * The "* macic" is just to compensate the
 				 * calculation below.
 				*/
-			        total = crt2used * magic;
+				total = crt2used * magic;
 
 			     } else {
-			        /*  We don't know about the second head's
+				/*  We don't know about the second head's
 				 *  depth yet. So we assume it uses the
-			         *  same. But since the maximum dotclock
+				 *  same. But since the maximum dotclock
 				 *  is limited on CRT2, we can assume a
 				 *  maximum here.
-			         */
-                                if((total / 2) > (maxcrt2 + 2000)) {
+				 */
+				if((total / 2) > (maxcrt2 + 2000)) {
 				    total = (maxcrt2 + 2000) * magic;
 				    crt2used = maxcrt2 + 2000;
 				} else {
@@ -1599,10 +1593,10 @@ int SiSMemBandWidth(ScrnInfoPtr pScrn, Bool IsForCRT2)
 				    crt2used = total;
 				}
 
-                             }
+			     }
 
 			     xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
-		       	           "Bandwidth reserved for CRT2 is %g Mhz\n",
+				  "Bandwidth reserved for CRT2 is %g MHz\n",
 				      crt2used/1000);
 
 			} else {
@@ -1614,21 +1608,21 @@ int SiSMemBandWidth(ScrnInfoPtr pScrn, Bool IsForCRT2)
 			      */
 
 			     if(crt2clock) {
-			        total -= (crt2used * pSiSEnt->pScrn_1->bitsPerPixel / bpp);
+				total -= (crt2used * pSiSEnt->pScrn_1->bitsPerPixel / bpp);
 				xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
-		       	           "Bandwidth reserved for CRT2 at %d bpp is %g Mhz\n",
+				   "Bandwidth reserved for CRT2 at %d bpp is %g Mhz\n",
 				      bpp,
 				      (crt2used * pSiSEnt->pScrn_1->bitsPerPixel / bpp)/1000);
 			     } else {
-			        total -= (pSiSEnt->maxUsedClock * pSiSEnt->pScrn_1->bitsPerPixel / bpp);
+				total -= (pSiSEnt->maxUsedClock * pSiSEnt->pScrn_1->bitsPerPixel / bpp);
 				xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
-		       	           "Bandwidth reserved for CRT2 at %d bpp is %d Mhz\n",
+				   "Bandwidth reserved for CRT2 at %d bpp is %d Mhz\n",
 				      bpp,
 				      (pSiSEnt->maxUsedClock * pSiSEnt->pScrn_1->bitsPerPixel / bpp)/1000);
 			     }
 
 			     xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
-			        "Bandwidth available for CRT1 is %g MHz\n", total/1000);
+				 "Bandwidth available for CRT1 is %g MHz\n", total/1000);
 #endif
 			}
 
@@ -1638,29 +1632,29 @@ int SiSMemBandWidth(ScrnInfoPtr pScrn, Bool IsForCRT2)
 			    total -= crt2used;
 			} else {
                             if((total / 2) > (maxcrt2 + 2000)) {
-			    	total -= (maxcrt2 + 2000);
+				total -= (maxcrt2 + 2000);
 				crt2used = maxcrt2 + 2000;
 			    } else {
-			    	total /= 2;
+				total /= 2;
 				crt2used = total;
 			    }
 			}
 			xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
-		       	  "Bandwidth reserved for CRT2 is %g Mhz\n", crt2used/1000);
+			  "Bandwidth reserved for CRT2 is %g Mhz\n", crt2used/1000);
 
 			xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
 			  "Bandwidth available for CRT1 is %g MHz\n", total/1000);
 
-                    }
+		    }
 
-                }
+		}
 
 		total /= magic;
 		if(total > (max / 2)) total = max / 2;
-                return(int)(total);
+		return(int)(total);
 
         default:
-                return(135000);
+		return(135000);
         }
 }
 
@@ -1689,11 +1683,13 @@ SISLoadPalette(ScrnInfoPtr pScrn, int numColors, int *indices, LOCO *colors,
      if(pSiS->DualHeadMode) dogamma1 = pSiSEnt->CRT1gamma;
 #endif
 
+     PDEBUG(xf86DrvMsg(pScrn->scrnIndex, X_INFO, "LoadPalette()\n"));
+
 #ifdef SISDUALHEAD
      if((!pSiS->DualHeadMode) || (pSiS->SecondHead)) {
 #endif
 
-        if(pSiS->VGAEngine == SIS_315_VGA) {
+	if(pSiS->VGAEngine == SIS_315_VGA) {
 	   inSISIDXREG(SISSR, 0x1f, backup);
 	   andSISIDXREG(SISSR, 0x1f, 0xe7);
 	   if( (pSiS->XvGamma) &&
@@ -1703,110 +1699,110 @@ SISLoadPalette(ScrnInfoPtr pScrn, int numColors, int *indices, LOCO *colors,
 	      orSISIDXREG(SISSR, 0x1f, 0x10);
 	      resetxvgamma = TRUE;
 	   }
-        }
+	}
 
-        switch(pSiS->CurrentLayout.depth) {
-          case 15:
+	switch(pSiS->CurrentLayout.depth) {
+	  case 15:
 	     if(dogamma1) {
-	        orSISIDXREG(SISSR, 0x07, 0x04);
+		orSISIDXREG(SISSR, 0x07, 0x04);
 		/* 315/330: depth 15 not supported, no MMIO code needed */
-	        for(i=0; i<numColors; i++) {
-                   index = indices[i];
+		for(i=0; i<numColors; i++) {
+		   index = indices[i];
 		   if(index < 32) {   /* Paranoia */
 		      for(j=0; j<8; j++) {
-		         outSISREG(SISCOLIDX, (index << 3) + j);
-                         outSISREG(SISCOLDATA, colors[index].red   << myshift);
-                         outSISREG(SISCOLDATA, colors[index].green << myshift);
-                         outSISREG(SISCOLDATA, colors[index].blue  << myshift);
+			 outSISREG(SISCOLIDX, (index << 3) + j);
+			 outSISREG(SISCOLDATA, colors[index].red   << myshift);
+			 outSISREG(SISCOLDATA, colors[index].green << myshift);
+			 outSISREG(SISCOLDATA, colors[index].blue  << myshift);
 		      }
 		   }
-                }
+		}
 	     } else {
-	        andSISIDXREG(SISSR, 0x07, ~0x04);
+		andSISIDXREG(SISSR, 0x07, ~0x04);
 	     }
 	     break;
 	  case 16:
 	     if(dogamma1) {
-                orSISIDXREG(SISSR, 0x07, 0x04);
+		orSISIDXREG(SISSR, 0x07, 0x04);
 		if(pSiS->ChipFlags & SiSCF_MMIOPalette) {
 		   for(i=0; i<numColors; i++) {
-                      index = indices[i];
+		      index = indices[i];
 		      if(index < 64) {  /* Paranoia */
-		         for(j=0; j<4; j++) {
+			 for(j=0; j<4; j++) {
 			    SIS_MMIO_OUT32(pSiS->IOBase, 0x8570,
-			    		   (colors[index].green     << (myshift + 8))  |
-                            		   (colors[index >> 1].blue << (myshift + 16)) |
-                            		   (colors[index >> 1].red  << myshift)        |
+					   (colors[index].green     << (myshift + 8))  |
+					   (colors[index >> 1].blue << (myshift + 16)) |
+					   (colors[index >> 1].red  << myshift)        |
 					   (((index << 2) + j)      << 24));
-		         }
+			 }
 		      }
-                   }
+		   }
 		} else {
-	           for(i=0; i<numColors; i++) {
-                      index = indices[i];
+		   for(i=0; i<numColors; i++) {
+		      index = indices[i];
 		      if(index < 64) {  /* Paranoia */
-		         for(j=0; j<4; j++) {
-		            outSISREG(SISCOLIDX, (index << 2) + j);
-                            outSISREG(SISCOLDATA, colors[index >> 1].red  << myshift);
-                            outSISREG(SISCOLDATA, colors[index].green     << myshift);
-                            outSISREG(SISCOLDATA, colors[index >> 1].blue << myshift);
-		         }
+			 for(j=0; j<4; j++) {
+			    outSISREG(SISCOLIDX, (index << 2) + j);
+			    outSISREG(SISCOLDATA, colors[index >> 1].red  << myshift);
+			    outSISREG(SISCOLDATA, colors[index].green     << myshift);
+			    outSISREG(SISCOLDATA, colors[index >> 1].blue << myshift);
+			 }
 		      }
-                   }
+		   }
 		}
 	     } else {
-	        andSISIDXREG(SISSR, 0x07, ~0x04);
+		andSISIDXREG(SISSR, 0x07, ~0x04);
 	     }
 	     break;
           case 24:
 	     if(dogamma1) {
-	        orSISIDXREG(SISSR, 0x07, 0x04);
+		orSISIDXREG(SISSR, 0x07, 0x04);
 		if(pSiS->ChipFlags & SiSCF_MMIOPalette) {
 		   for(i=0; i<numColors; i++)  {
-                      index = indices[i];
+		      index = indices[i];
 		      if(index < 256) {   /* Paranoia */
-		         SIS_MMIO_OUT32(pSiS->IOBase, 0x8570,
-			 	        (colors[index].blue  << 16) |
+			 SIS_MMIO_OUT32(pSiS->IOBase, 0x8570,
+					(colors[index].blue  << 16) |
 					(colors[index].green <<  8) |
 					(colors[index].red)         |
-			 		(index               << 24));
+					(index               << 24));
 		      }
 		   }
 		} else {
-                   for(i=0; i<numColors; i++)  {
-                      index = indices[i];
+		   for(i=0; i<numColors; i++)  {
+		      index = indices[i];
 		      if(index < 256) {   /* Paranoia */
-                         outSISREG(SISCOLIDX, index);
-                         outSISREG(SISCOLDATA, colors[index].red);
-                         outSISREG(SISCOLDATA, colors[index].green);
-                         outSISREG(SISCOLDATA, colors[index].blue);
+			 outSISREG(SISCOLIDX, index);
+			 outSISREG(SISCOLDATA, colors[index].red);
+			 outSISREG(SISCOLDATA, colors[index].green);
+			 outSISREG(SISCOLDATA, colors[index].blue);
 		      }
-                   }
+		   }
 		}
 	     } else {
-	        andSISIDXREG(SISSR, 0x07, ~0x04);
+		andSISIDXREG(SISSR, 0x07, ~0x04);
 	     }
 	     break;
 	  default:
 	     andSISIDXREG(SISSR, 0x07, ~0x04);
 	     if(pSiS->ChipFlags & SiSCF_MMIOPalette) {
 	        for(i=0; i<numColors; i++)  {
-                   index = indices[i];
+		   index = indices[i];
 		   SIS_MMIO_OUT32(pSiS->IOBase, 0x8570,
-		   		  ((colors[index].blue)  << 16) |
+				  ((colors[index].blue)  << 16) |
 				  ((colors[index].green) <<  8) |
 				  (colors[index].red)           |
 				  (index                 << 24));
 		}
 	     } else {
-                for(i=0; i<numColors; i++) {
+		for(i=0; i<numColors; i++) {
 		   /* In pio mode, only 6 bits are supported */
-                   index = indices[i];
-                   outSISREG(SISCOLIDX, index);
-                   outSISREG(SISCOLDATA, colors[index].red   >> 2);
-                   outSISREG(SISCOLDATA, colors[index].green >> 2);
-                   outSISREG(SISCOLDATA, colors[index].blue  >> 2);
-                }
+		   index = indices[i];
+		   outSISREG(SISCOLIDX, index);
+		   outSISREG(SISCOLDATA, colors[index].red   >> 2);
+		   outSISREG(SISCOLDATA, colors[index].green >> 2);
+		   outSISREG(SISCOLDATA, colors[index].blue  >> 2);
+		}
 	     }
 	}
 
@@ -1828,13 +1824,13 @@ SISLoadPalette(ScrnInfoPtr pScrn, int numColors, int *indices, LOCO *colors,
        switch(pSiS->VGAEngine) {
        case SIS_300_VGA:
        case SIS_315_VGA:
-          if(pSiS->VBFlags & CRT2_ENABLE) {
+	  if(pSiS->VBFlags & CRT2_ENABLE) {
 	     /* Only the SiS bridges support a CRT2 palette */
 	     if(pSiS->VBFlags & VB_SISBRIDGE) {
-	        if((pSiS->CRT2SepGamma) && (pSiS->crt2cindices) && (pSiS->crt2colors)) {
+		if((pSiS->CRT2SepGamma) && (pSiS->crt2cindices) && (pSiS->crt2colors)) {
 		   SiS301LoadPalette(pScrn, numColors, pSiS->crt2cindices, pSiS->crt2colors, myshift);
 		} else {
-                   SiS301LoadPalette(pScrn, numColors, indices, colors, myshift);
+		   SiS301LoadPalette(pScrn, numColors, indices, colors, myshift);
 		}
 	     }
           }
@@ -1863,11 +1859,11 @@ SiS_UpdateGammaCRT2(ScrnInfoPtr pScrn)
 static  void
 SiS301LoadPalette(ScrnInfoPtr pScrn, int numColors, int *indices, LOCO *colors, int myshift)
 {
-        SISPtr  pSiS = SISPTR(pScrn);
-        int     i, j, index;
+	SISPtr  pSiS = SISPTR(pScrn);
+	int     i, j, index;
 	Bool    dogamma2 = pSiS->CRT2gamma;
 #ifdef SISDUALHEAD
-        SISEntPtr pSiSEnt = pSiS->entityPrivate;
+	SISEntPtr pSiSEnt = pSiS->entityPrivate;
 
 	if(pSiS->DualHeadMode) dogamma2 = pSiSEnt->CRT2gamma;
 #endif
@@ -1878,64 +1874,64 @@ SiS301LoadPalette(ScrnInfoPtr pScrn, int numColors, int *indices, LOCO *colors, 
 	switch(pSiS->CurrentLayout.depth) {
           case 15:
 	     if(dogamma2) {
-	        orSISIDXREG(SISPART4, 0x0d, 0x08);
-	        for(i=0; i<numColors; i++) {
-                   index = indices[i];
+		orSISIDXREG(SISPART4, 0x0d, 0x08);
+		for(i=0; i<numColors; i++) {
+		   index = indices[i];
 		   if(index < 32) {   /* Paranoia */
 		      for(j=0; j<8; j++) {
-		         outSISREG(SISCOL2IDX, (index << 3) + j);
-                         outSISREG(SISCOL2DATA, colors[index].red   << myshift);
-                         outSISREG(SISCOL2DATA, colors[index].green << myshift);
-                         outSISREG(SISCOL2DATA, colors[index].blue  << myshift);
+			 outSISREG(SISCOL2IDX, (index << 3) + j);
+			 outSISREG(SISCOL2DATA, colors[index].red   << myshift);
+			 outSISREG(SISCOL2DATA, colors[index].green << myshift);
+			 outSISREG(SISCOL2DATA, colors[index].blue  << myshift);
 		      }
 		   }
-                }
+		}
 	     } else {
-	        andSISIDXREG(SISPART4, 0x0d, ~0x08);
+		andSISIDXREG(SISPART4, 0x0d, ~0x08);
 	     }
 	     break;
 	  case 16:
 	     if(dogamma2) {
-                orSISIDXREG(SISPART4, 0x0d, 0x08);
-	        for(i = 0; i < numColors; i++) {
-                   index = indices[i];
+		orSISIDXREG(SISPART4, 0x0d, 0x08);
+		for(i = 0; i < numColors; i++) {
+		   index = indices[i];
 		   if(index < 64) {  /* Paranoia */
 		      for(j = 0; j < 4; j++) {
-		         outSISREG(SISCOL2IDX, (index << 2) + j);
-                         outSISREG(SISCOL2DATA, colors[index >> 1].red  << myshift);
-                         outSISREG(SISCOL2DATA, colors[index].green     << myshift);
-                         outSISREG(SISCOL2DATA, colors[index >> 1].blue << myshift);
+			 outSISREG(SISCOL2IDX, (index << 2) + j);
+			 outSISREG(SISCOL2DATA, colors[index >> 1].red  << myshift);
+			 outSISREG(SISCOL2DATA, colors[index].green     << myshift);
+			 outSISREG(SISCOL2DATA, colors[index >> 1].blue << myshift);
 		      }
 		   }
-                }
+		}
 	     } else {
-	        andSISIDXREG(SISPART4, 0x0d, ~0x08);
+		andSISIDXREG(SISPART4, 0x0d, ~0x08);
 	     }
 	     break;
           case 24:
 	     if(dogamma2) {
-	        orSISIDXREG(SISPART4, 0x0d, 0x08);
-                for(i = 0; i < numColors; i++) {
-                   index = indices[i];
+		orSISIDXREG(SISPART4, 0x0d, 0x08);
+		for(i = 0; i < numColors; i++) {
+		   index = indices[i];
 		   if(index < 256) {   /* Paranoia */
-                      outSISREG(SISCOL2IDX, index);
-                      outSISREG(SISCOL2DATA, colors[index].red);
-                      outSISREG(SISCOL2DATA, colors[index].green);
-                      outSISREG(SISCOL2DATA, colors[index].blue);
+		      outSISREG(SISCOL2IDX, index);
+		      outSISREG(SISCOL2DATA, colors[index].red);
+		      outSISREG(SISCOL2DATA, colors[index].green);
+		      outSISREG(SISCOL2DATA, colors[index].blue);
 		   }
-                }
+        	}
 	     } else {
-	        andSISIDXREG(SISPART4, 0x0d, ~0x08);
+		andSISIDXREG(SISPART4, 0x0d, ~0x08);
 	     }
 	     break;
 	  default:
 	     orSISIDXREG(SISPART4, 0x0d, 0x08);
-             for(i = 0; i < numColors; i++) {
-                index = indices[i];
-                outSISREG(SISCOL2IDX,  index);
-                outSISREG(SISCOL2DATA, colors[index].red);
-                outSISREG(SISCOL2DATA, colors[index].green);
-                outSISREG(SISCOL2DATA, colors[index].blue);
+	     for(i = 0; i < numColors; i++) {
+		index = indices[i];
+		outSISREG(SISCOL2IDX,  index);
+		outSISREG(SISCOL2DATA, colors[index].red);
+		outSISREG(SISCOL2DATA, colors[index].green);
+		outSISREG(SISCOL2DATA, colors[index].blue);
              }
 	 }
 }
@@ -1948,30 +1944,30 @@ SISDACPreInit(ScrnInfoPtr pScrn)
     pSiS->MaxClock = SiSMemBandWidth(pScrn, FALSE);
 
     switch (pSiS->Chipset) {
-      case PCI_CHIP_SIS550:
-      case PCI_CHIP_SIS315:
-      case PCI_CHIP_SIS315H:
-      case PCI_CHIP_SIS315PRO:
-      case PCI_CHIP_SIS650:
-      case PCI_CHIP_SIS330:
-      case PCI_CHIP_SIS660:
-      case PCI_CHIP_SIS340:
-        pSiS->SiSSave     = SiS315Save;
-        pSiS->SiSRestore  = SiS315Restore;
-        break;
-      case PCI_CHIP_SIS300:
-      case PCI_CHIP_SIS540:
-      case PCI_CHIP_SIS630:
-        pSiS->SiSSave     = SiS300Save;
-        pSiS->SiSRestore  = SiS300Restore;
-        break;
-      case PCI_CHIP_SIS5597:
-      case PCI_CHIP_SIS6326:
-      case PCI_CHIP_SIS530:
-      default:
-        pSiS->SiSSave     = SiSSave;
-        pSiS->SiSRestore  = SiSRestore;
-        break;
+       case PCI_CHIP_SIS550:
+       case PCI_CHIP_SIS315:
+       case PCI_CHIP_SIS315H:
+       case PCI_CHIP_SIS315PRO:
+       case PCI_CHIP_SIS650:
+       case PCI_CHIP_SIS330:
+       case PCI_CHIP_SIS660:
+       case PCI_CHIP_SIS340:
+          pSiS->SiSSave     = SiS315Save;
+          pSiS->SiSRestore  = SiS315Restore;
+          break;
+       case PCI_CHIP_SIS300:
+       case PCI_CHIP_SIS540:
+       case PCI_CHIP_SIS630:
+          pSiS->SiSSave     = SiS300Save;
+          pSiS->SiSRestore  = SiS300Restore;
+          break;
+       case PCI_CHIP_SIS5597:
+       case PCI_CHIP_SIS6326:
+       case PCI_CHIP_SIS530:
+       default:
+          pSiS->SiSSave     = SiSSave;
+          pSiS->SiSRestore  = SiSRestore;
+          break;
     }
 }
 

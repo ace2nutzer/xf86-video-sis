@@ -6,7 +6,7 @@
  * Copyright (C) 2001-2005 by Thomas Winischhofer, Vienna, Austria
  *
  * Preliminary 315/330 support by Thomas Winischhofer
- * Portions of Mesa 4/5 changes by Eric Anholt
+ * Portions of Mesa 4/5/6 changes by Eric Anholt
  *
  * Licensed under the following terms:
  *
@@ -90,20 +90,20 @@ static char SISKernelDriverName[] = "sis";
 static char SISClientDriverName[] = "sis";
 
 static Bool SISInitVisualConfigs(ScreenPtr pScreen);
-static Bool SISCreateContext(ScreenPtr pScreen, VisualPtr visual, 
+static Bool SISCreateContext(ScreenPtr pScreen, VisualPtr visual,
                    drm_context_t hwContext, void *pVisualConfigPriv,
                    DRIContextType contextStore);
 static void SISDestroyContext(ScreenPtr pScreen, drm_context_t hwContext,
                    DRIContextType contextStore);
-static void SISDRISwapContext(ScreenPtr pScreen, DRISyncType syncType, 
-                   DRIContextType readContextType, 
+static void SISDRISwapContext(ScreenPtr pScreen, DRISyncType syncType,
+                   DRIContextType readContextType,
                    void *readContextStore,
-                   DRIContextType writeContextType, 
+                   DRIContextType writeContextType,
                    void *writeContextStore);
 static void SISDRIInitBuffers(WindowPtr pWin, RegionPtr prgn, CARD32 index);
-static void SISDRIMoveBuffers(WindowPtr pParent, DDXPointRec ptOldOrg, 
+static void SISDRIMoveBuffers(WindowPtr pParent, DDXPointRec ptOldOrg,
                    RegionPtr prgnSrc, CARD32 index);
-			   	   
+
 static Bool
 SISInitVisualConfigs(ScreenPtr pScreen)
 {
@@ -230,7 +230,7 @@ SISInitVisualConfigs(ScreenPtr pScreen)
     }
     break;
   }
- 
+
   pSIS->numVisualConfigs = numConfigs;
   pSIS->pVisualConfigs = pConfigs;
   pSIS->pVisualConfigsPriv = pSISConfigs;
@@ -239,7 +239,7 @@ SISInitVisualConfigs(ScreenPtr pScreen)
   return TRUE;
 }
 
-Bool 
+Bool
 SISDRIScreenInit(ScreenPtr pScreen)
 {
   ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum];
@@ -266,7 +266,7 @@ SISDRIScreenInit(ScreenPtr pScreen)
                 "[dri] SISDRIScreenInit failed (libdri.a too old)\n");
      return FALSE;
   }
-     
+
   /* Check the DRI version */
   {
      int major, minor, patch;
@@ -282,23 +282,23 @@ SISDRIScreenInit(ScreenPtr pScreen)
   }
 
   pDRIInfo = DRICreateInfoRec();
-  if (!pDRIInfo) return FALSE;
+  if(!pDRIInfo) return FALSE;
   pSIS->pDRIInfo = pDRIInfo;
 
   pDRIInfo->drmDriverName = SISKernelDriverName;
   pDRIInfo->clientDriverName = SISClientDriverName;
 
-#ifdef SISHAVECREATEBUSID  
+#ifdef SISHAVECREATEBUSID
   if(xf86LoaderCheckSymbol("DRICreatePCIBusID")) {
      pDRIInfo->busIdString = DRICreatePCIBusID(pSIS->PciInfo);
   } else {
-#endif  
+#endif
      pDRIInfo->busIdString = xalloc(64);
      sprintf(pDRIInfo->busIdString, "PCI:%d:%d:%d",
              ((pciConfigPtr)pSIS->PciInfo->thisCard)->busnum,
       	     ((pciConfigPtr)pSIS->PciInfo->thisCard)->devnum,
-      	     ((pciConfigPtr)pSIS->PciInfo->thisCard)->funcnum);   
-#ifdef SISHAVECREATEBUSID  	     
+      	     ((pciConfigPtr)pSIS->PciInfo->thisCard)->funcnum);
+#ifdef SISHAVECREATEBUSID
   }
 #endif
 
@@ -315,21 +315,28 @@ SISDRIScreenInit(ScreenPtr pScreen)
   pDRIInfo->ddxDriverPatchVersion = 0;
 #endif
 
-  pDRIInfo->frameBufferPhysicalAddress = pSIS->FbAddress;
+  pDRIInfo->frameBufferPhysicalAddress = pSIS->realFbAddress;
 
-  /* TW: This was FbMapSize which is wrong as we must not
-   *     ever overwrite HWCursor and TQ area. On the other
-   *     hand, using availMem here causes MTRR allocation
-   *     to fail ("base is not aligned to size"). Since
-   *     DRI memory management is done via framebuffer
-   *     device, I assume that the size given here
-   *     is NOT used for eventual memory management.
+  /* This was FbMapSize which is wrong as we must not
+   * ever overwrite HWCursor and TQ area. On the other
+   * hand, using availMem here causes MTRR allocation
+   * to fail ("base is not aligned to size"). Since
+   * DRI memory management is done via framebuffer
+   * device, I assume that the size given here
+   * is NOT used for eventual memory management.
+   *
+   * TODO: For SiS76x, this needs special attention
+   * if the UMA area is skipped. The memory layout
+   * is different then; the viewport is NOT at the
+   * start of the video memory but after the UMA
+   * area (or eventually even further up if the user
+   * gave a MaxXFBMem limit).
    */
-  pDRIInfo->frameBufferSize = pSIS->FbMapSize;   /* availMem; */
-  
-  /* TW: scrnOffset is being calulated in sis_vga.c */
+  pDRIInfo->frameBufferSize = pSIS->FbMapSize;
+
+  /* scrnOffset is being calulated in sis_vga.c */
   pDRIInfo->frameBufferStride = pSIS->scrnOffset;
-  
+
   pDRIInfo->ddxDrawableTableEntry = SIS_MAX_DRAWABLES;
 
   if(SAREA_MAX_DRAWABLES < SIS_MAX_DRAWABLES)
@@ -349,9 +356,8 @@ SISDRIScreenInit(ScreenPtr pScreen)
   /* For now the mapping works by using a fixed size defined
    * in the SAREA header
    */
-  if(sizeof(XF86DRISAREARec)+sizeof(SISSAREAPriv) > SAREA_MAX) {
-     xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
-		"Data does not fit in SAREA\n");
+  if(sizeof(XF86DRISAREARec) + sizeof(SISSAREAPriv) > SAREA_MAX) {
+     xf86DrvMsg(pScrn->scrnIndex, X_ERROR, "Data does not fit in SAREA\n");
      return FALSE;
   }
   pDRIInfo->SAREASize = SAREA_MAX;
@@ -374,8 +380,7 @@ SISDRIScreenInit(ScreenPtr pScreen)
   pDRIInfo->bufferRequests = DRI_ALL_WINDOWS;
 
   if(!DRIScreenInit(pScreen, pDRIInfo, &pSIS->drmSubFD)) {
-     xf86DrvMsg(pScreen->myNum, X_ERROR,
-               "[dri] DRIScreenInit failed. Disabling DRI.\n");
+     xf86DrvMsg(pScreen->myNum, X_ERROR, "[dri] DRIScreenInit failed. Disabling DRI.\n");
      xfree(pDRIInfo->devPrivate);
      pDRIInfo->devPrivate = 0;
      DRIDestroyInfoRec(pSIS->pDRIInfo);
@@ -431,6 +436,7 @@ SISDRIScreenInit(ScreenPtr pScreen)
 
   /* AGP */
   do {
+
     pSIS->agpWantedSize = pSIS->agpWantedPages * AGP_PAGE_SIZE;
     pSIS->agpSize = 0;
     pSIS->agpCmdBufSize = 0;
@@ -466,46 +472,67 @@ SISDRIScreenInit(ScreenPtr pScreen)
 #define AGP_DEFAULT_SIZE    (AGP_DEFAULT_SIZE_MB * 1024 * 1024)
 
     if(drmAgpAlloc(pSIS->drmSubFD, pSIS->agpWantedSize, 0, NULL, &pSIS->agpHandle) < 0) {
+
        xf86DrvMsg(pScreen->myNum, X_ERROR, "[drm] Failed to allocate %dMB AGP memory\n",
                   (int)(pSIS->agpWantedSize / (1024 * 1024)));
+
        if(pSIS->agpWantedSize > AGP_DEFAULT_SIZE) {
+
           xf86DrvMsg(pScreen->myNum, X_INFO, "[drm] Retrying with %dMB\n", AGP_DEFAULT_SIZE_MB);
+
           pSIS->agpWantedSize = AGP_DEFAULT_SIZE;
+
           if(drmAgpAlloc(pSIS->drmSubFD, pSIS->agpWantedSize, 0, NULL, &pSIS->agpHandle) < 0) {
              xf86DrvMsg(pScreen->myNum, X_ERROR, "[drm] Failed to allocate %dMB AGP memory, AGP disabled\n",
 	  	        AGP_DEFAULT_SIZE_MB);
              drmAgpRelease(pSIS->drmSubFD);
              break;
 	  }
+
        } else {
+
           drmAgpRelease(pSIS->drmSubFD);
           break;
+
        }
+
     }
 
     xf86DrvMsg(pScreen->myNum, X_INFO, "[drm] Allocated %dMB AGP memory\n",
     		(int)(pSIS->agpWantedSize / (1024 * 1024)));
 
     if(drmAgpBind(pSIS->drmSubFD, pSIS->agpHandle, 0) < 0) {
+
        xf86DrvMsg(pScreen->myNum, X_ERROR, "[drm] Failed to bind AGP memory\n");
        drmAgpFree(pSIS->drmSubFD, pSIS->agpHandle);
+
        if(pSIS->agpWantedSize > AGP_DEFAULT_SIZE) {
+
           xf86DrvMsg(pScreen->myNum, X_INFO, "[drm] Retrying with %dMB\n", AGP_DEFAULT_SIZE_MB);
-          pSIS->agpWantedSize = AGP_DEFAULT_SIZE;
+	  pSIS->agpWantedSize = AGP_DEFAULT_SIZE;
+
           if(drmAgpAlloc(pSIS->drmSubFD, pSIS->agpWantedSize, 0, NULL, &pSIS->agpHandle) < 0) {
+
 	     xf86DrvMsg(pScreen->myNum, X_ERROR, "[drm] Failed to re-allocate AGP memory, AGP disabled\n");
 	     drmAgpRelease(pSIS->drmSubFD);
              break;
+
 	  } else if(drmAgpBind(pSIS->drmSubFD, pSIS->agpHandle, 0) < 0) {
+
 	     xf86DrvMsg(pScreen->myNum, X_ERROR, "[drm] Failed to bind AGP memory again, AGP disabled\n");
              drmAgpFree(pSIS->drmSubFD, pSIS->agpHandle);
 	     drmAgpRelease(pSIS->drmSubFD);
              break;
+
 	  }
+
        } else {
+
           drmAgpRelease(pSIS->drmSubFD);
           break;
+
        }
+
     }
 
     xf86DrvMsg(pScreen->myNum, X_INFO, "[drm] Bound %dMB AGP memory\n",
@@ -518,7 +545,10 @@ SISDRIScreenInit(ScreenPtr pScreen)
     pSISDRI->agp.size = pSIS->agpSize;
     if(drmAddMap(pSIS->drmSubFD, (drm_handle_t)0, pSISDRI->agp.size, DRM_AGP, 0, &pSISDRI->agp.handle) < 0) {
        xf86DrvMsg(pScreen->myNum, X_ERROR, "[drm] Failed to map public AGP area, AGP disabled\n");
-       pSISDRI->agp.size = 0;
+       drmAgpUnbind(pSIS->drmSubFD, pSIS->agpHandle);
+       drmAgpFree(pSIS->drmSubFD, pSIS->agpHandle);
+       drmAgpRelease(pSIS->drmSubFD);
+       pSIS->agpSize = pSISDRI->agp.size = 0;
        break;
     }
 
@@ -537,7 +567,7 @@ SISDRIScreenInit(ScreenPtr pScreen)
 #else
        {
    	   drm_sis_agp_t agp;
-      
+
            agp.offset = AGP_VTXBUF_SIZE;
            agp.size = pSIS->agpSize - AGP_VTXBUF_SIZE;
            drmCommandWrite(pSIS->drmSubFD, DRM_SIS_AGP_INIT, &agp, sizeof(agp));
@@ -550,7 +580,7 @@ SISDRIScreenInit(ScreenPtr pScreen)
        pSIS->agpCmdBufAddr = pSIS->agpAddr;
        pSIS->agpCmdBufBase = pSIS->agpCmdBufAddr - pSIS->agpAddr + pSIS->agpBase;
        pSIS->agpCmdBufFree = 0;
-         
+
        pSISDRI->AGPCmdBufOffset = pSIS->agpCmdBufAddr - pSIS->agpAddr;
        pSISDRI->AGPCmdBufSize = pSIS->agpCmdBufSize;
 
@@ -559,98 +589,50 @@ SISDRIScreenInit(ScreenPtr pScreen)
 #else
        {
    	   drm_sis_agp_t agp;
-      
+
            agp.offset = AGP_CMDBUF_SIZE;
            agp.size = pSIS->agpSize - AGP_CMDBUF_SIZE;
            drmCommandWrite(pSIS->drmSubFD, DRM_SIS_AGP_INIT, &agp, sizeof(agp));
        }
 #endif
     }
-  }
-  while(0);
-    
-  /* enable IRQ */
-  pSIS->irq = drmGetInterruptFromBusID(pSIS->drmSubFD,
-           ((pciConfigPtr)pSIS->PciInfo->thisCard)->busnum,
-           ((pciConfigPtr)pSIS->PciInfo->thisCard)->devnum,
-           ((pciConfigPtr)pSIS->PciInfo->thisCard)->funcnum);
+  } while(0);
 
-  if((drmCtlInstHandler(pSIS->drmSubFD, pSIS->irq)) != 0) {
+  /* Eventually grab and enable IRQ */
+  pSIS->irqEnabled = FALSE;
+  pSIS->irq = drmGetInterruptFromBusID(pSIS->drmSubFD,
+	   ((pciConfigPtr)pSIS->PciInfo->thisCard)->busnum,
+	   ((pciConfigPtr)pSIS->PciInfo->thisCard)->devnum,
+	   ((pciConfigPtr)pSIS->PciInfo->thisCard)->funcnum);
+
+  if(pSIS->irq < 0) {
      xf86DrvMsg(pScrn->scrnIndex, X_INFO,
-         "[drm] Failed to add IRQ %d handler, stereo disabled\n",
-         pSIS->irq);
-     pSIS->irqEnabled = FALSE;
+	  "[drm] Got no valid IRQ number for device %d:%d:%d (code %d)\n",
+	   ((pciConfigPtr)pSIS->PciInfo->thisCard)->busnum,
+	   ((pciConfigPtr)pSIS->PciInfo->thisCard)->devnum,
+	   ((pciConfigPtr)pSIS->PciInfo->thisCard)->funcnum,
+	   pSIS->irq);
+  } else if((drmCtlInstHandler(pSIS->drmSubFD, pSIS->irq)) != 0) {
+     xf86DrvMsg(pScrn->scrnIndex, X_INFO,
+	  "[drm] Failed to add IRQ %d handler\n",
+	   pSIS->irq);
   } else {
+     xf86DrvMsg(pScrn->scrnIndex, X_INFO,
+	  "[drm] Successfully installed handler for IRQ %d\n",
+	   pSIS->irq);
      pSIS->irqEnabled = TRUE;
   }
-  
+
   pSISDRI->irqEnabled = pSIS->irqEnabled;
-  
+
   if(!(SISInitVisualConfigs(pScreen))) {
      SISDRICloseScreen(pScreen);
      return FALSE;
   }
 
-  xf86DrvMsg(pScrn->scrnIndex, X_INFO, "[dri] Visual configs initialized.\n" );
+  xf86DrvMsg(pScrn->scrnIndex, X_INFO, "[dri] Visual configs initialized\n" );
 
-  return TRUE;   
-}
-
-void
-SISDRICloseScreen(ScreenPtr pScreen)
-{
-  ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum];
-  SISPtr pSIS = SISPTR(pScrn);
-
-  if(pSIS->VGAEngine == SIS_315_VGA) {
-#ifdef SIS315DRI
-     if(pSIS->cmdQ_SharedWritePortBackup) {
-        pSIS->cmdQ_SharedWritePort = pSIS->cmdQ_SharedWritePortBackup;
-     }
-#endif
-  } else {
-     if(pSIS->cmdQueueLenPtrBackup) {
-        pSIS->cmdQueueLenPtr = pSIS->cmdQueueLenPtrBackup;
-        *(pSIS->cmdQueueLenPtr) = 0;
-     }
-  }
-
-  DRICloseScreen(pScreen);
-
-  if(pSIS->pDRIInfo) {
-     if(pSIS->pDRIInfo->devPrivate) {
-        xfree(pSIS->pDRIInfo->devPrivate);
-        pSIS->pDRIInfo->devPrivate=0;
-     }
-     DRIDestroyInfoRec(pSIS->pDRIInfo);
-     pSIS->pDRIInfo=0;
-  }
-  if(pSIS->pVisualConfigs) xfree(pSIS->pVisualConfigs);
-  if(pSIS->pVisualConfigsPriv) xfree(pSIS->pVisualConfigsPriv);
-
-  if(pSIS->agpSize){
-     xf86DrvMsg(pScreen->myNum, X_INFO, "[drm] Freeing AGP memory\n");
-     drmAgpFree(pSIS->drmSubFD, pSIS->agpHandle);
-     xf86DrvMsg(pScreen->myNum, X_INFO, "[drm] Releasing AGP module\n");
-     drmAgpRelease(pSIS->drmSubFD);
-  } 
-}
-
-/* TODO: xserver receives driver's swapping event and do something
- *       according the data initialized in this function
- */
-static Bool
-SISCreateContext(ScreenPtr pScreen, VisualPtr visual, 
-          drm_context_t hwContext, void *pVisualConfigPriv,
-          DRIContextType contextStore)
-{
   return TRUE;
-}
-
-static void
-SISDestroyContext(ScreenPtr pScreen, drm_context_t hwContext, 
-           DRIContextType contextStore)
-{
 }
 
 Bool
@@ -663,32 +645,39 @@ SISDRIFinishScreenInit(ScreenPtr pScreen)
   pSiS->pDRIInfo->driverSwapMethod = DRI_HIDE_X_CONTEXT;
   /* pSiS->pDRIInfo->driverSwapMethod = DRI_SERVER_SWAP; */
 
-  pSISDRI=(SISDRIPtr)pSiS->pDRIInfo->devPrivate;
-  pSISDRI->deviceID=pSiS->Chipset;  
-  pSISDRI->width=pScrn->virtualX;
-  pSISDRI->height=pScrn->virtualY;
-  pSISDRI->mem=pScrn->videoRam*1024;
-  pSISDRI->bytesPerPixel= (pScrn->bitsPerPixel+7) / 8; 
+  pSISDRI = (SISDRIPtr)pSiS->pDRIInfo->devPrivate;
+  pSISDRI->deviceID = pSiS->Chipset;
+  pSISDRI->width    = pScrn->virtualX;
+  pSISDRI->height   = pScrn->virtualY;
+  pSISDRI->mem      = pScrn->videoRam * 1024;
+  pSISDRI->bytesPerPixel = (pScrn->bitsPerPixel+7) / 8;
+
   /* TODO */
-  pSISDRI->scrnX=pSISDRI->width;
-  pSISDRI->scrnY=pSISDRI->height;
-  
-/*
-  pSISDRI->textureOffset=pSiS->texOffset;
-  pSISDRI->textureSize=pSiS->texSize;
-  pSISDRI->fbOffset=pSiS->fbOffset;
-  pSISDRI->backOffset=pSiS->backOffset;
-  pSISDRI->depthOffset=pSiS->depthOffset;
-*/
+  pSISDRI->scrnX    = pSISDRI->width;
+  pSISDRI->scrnY    = pSISDRI->height;
+
+  /* TODO:
+     For SiS76x UMA skipping, FbBaseOffset needs
+     attention. Perhaps the fbOffset field is
+     meant for this...?
+  */
+
+  /*
+  pSISDRI->textureOffset = pSiS->texOffset;
+  pSISDRI->textureSize   = pSiS->texSize;
+  pSISDRI->fbOffset      = pSiS->fbOffset;
+  pSISDRI->backOffset    = pSiS->backOffset;
+  pSISDRI->depthOffset   = pSiS->depthOffset;
+  */
 
   /* set SAREA value */
   {
     SISSAREAPriv *saPriv;
 
     saPriv = (SISSAREAPriv*)DRIGetSAREAPrivate(pScreen);
-    
+
     assert(saPriv);
-          
+
     saPriv->CtxOwner = -1;
     saPriv->QueueLength = *(pSiS->cmdQueueLenPtr);
     pSiS->cmdQueueLenPtrBackup = pSiS->cmdQueueLenPtr;
@@ -711,11 +700,86 @@ SISDRIFinishScreenInit(ScreenPtr pScreen)
     }
   }
 
-  return DRIFinishScreenInit(pScreen);  
+  return DRIFinishScreenInit(pScreen);
+}
+
+void
+SISDRICloseScreen(ScreenPtr pScreen)
+{
+  ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum];
+  SISPtr pSIS = SISPTR(pScrn);
+
+  if(pSIS->VGAEngine == SIS_315_VGA) {
+#ifdef SIS315DRI
+     if(pSIS->cmdQ_SharedWritePortBackup) {
+        pSIS->cmdQ_SharedWritePort = pSIS->cmdQ_SharedWritePortBackup;
+     }
+#endif
+  } else {
+     if(pSIS->cmdQueueLenPtrBackup) {
+        pSIS->cmdQueueLenPtr = pSIS->cmdQueueLenPtrBackup;
+        *(pSIS->cmdQueueLenPtr) = 0;
+     }
+  }
+
+  if(pSIS->irqEnabled) {
+     xf86DrvMsg(pScreen->myNum, X_INFO, "[drm] Removing IRQ handler\n");
+     drmCtlUninstHandler(pSIS->drmSubFD);
+     pSIS->irqEnabled = FALSE;
+     pSIS->irq = 0;
+  }
+
+  if(pSIS->agpSize){
+     xf86DrvMsg(pScreen->myNum, X_INFO, "[drm] Freeing AGP memory\n");
+     drmAgpUnbind(pSIS->drmSubFD, pSIS->agpHandle);
+     drmAgpFree(pSIS->drmSubFD, pSIS->agpHandle);
+     xf86DrvMsg(pScreen->myNum, X_INFO, "[drm] Releasing AGP module\n");
+     drmAgpRelease(pSIS->drmSubFD);
+     pSIS->agpSize = 0;
+  }
+
+  DRICloseScreen(pScreen);
+
+  if(pSIS->pDRIInfo) {
+     if(pSIS->pDRIInfo->devPrivate) {
+        xfree(pSIS->pDRIInfo->devPrivate);
+        pSIS->pDRIInfo->devPrivate = NULL;
+     }
+     DRIDestroyInfoRec(pSIS->pDRIInfo);
+     pSIS->pDRIInfo = NULL;
+  }
+
+  if(pSIS->pVisualConfigs) {
+     xfree(pSIS->pVisualConfigs);
+     pSIS->pVisualConfigs = NULL;
+  }
+
+  if(pSIS->pVisualConfigsPriv) {
+     xfree(pSIS->pVisualConfigsPriv);
+     pSIS->pVisualConfigsPriv = NULL;
+  }
+
+}
+
+/* TODO: xserver receives driver's swapping event and do something
+ *       according the data initialized in this function
+ */
+static Bool
+SISCreateContext(ScreenPtr pScreen, VisualPtr visual,
+          drm_context_t hwContext, void *pVisualConfigPriv,
+          DRIContextType contextStore)
+{
+  return TRUE;
 }
 
 static void
-SISDRISwapContext(ScreenPtr pScreen, DRISyncType syncType, 
+SISDestroyContext(ScreenPtr pScreen, drm_context_t hwContext,
+           DRIContextType contextStore)
+{
+}
+
+static void
+SISDRISwapContext(ScreenPtr pScreen, DRISyncType syncType,
            DRIContextType oldContextType, void *oldContext,
            DRIContextType newContextType, void *newContext)
 {
@@ -732,9 +796,9 @@ SISDRISwapContext(ScreenPtr pScreen, DRISyncType syncType,
     SISLostContext(pScreen);
   }
 #endif
-  
+
   /* mEndPrimitive */
-  /* 
+  /*
    * TODO: do this only if X-Server get lock. If kernel supports delayed
    * signal, needless to do this
    */
@@ -765,7 +829,7 @@ SISDRIInitBuffers(WindowPtr pWin, RegionPtr prgn, CARD32 index)
 }
 
 static void
-SISDRIMoveBuffers(WindowPtr pParent, DDXPointRec ptOldOrg, 
+SISDRIMoveBuffers(WindowPtr pParent, DDXPointRec ptOldOrg,
            RegionPtr prgnSrc, CARD32 index)
 {
   ScreenPtr pScreen = pParent->drawable.pScreen;
@@ -782,11 +846,11 @@ SISDRIMoveBuffers(WindowPtr pParent, DDXPointRec ptOldOrg,
 }
 
 #if 0
-void SISLostContext(ScreenPtr pScreen) 
+void SISLostContext(ScreenPtr pScreen)
 {
 }
 
-void SISSwapContextPrivate(ScreenPtr pScreen) 
+void SISSwapContextPrivate(ScreenPtr pScreen)
 {
 }
 #endif

@@ -369,6 +369,11 @@ vidCopyFunc SiSVidCopyInit(ScreenPtr pScreen, vidCopyFunc *UMemCpy)
     return SiS_libc_memcpy;
 }
 
+vidCopyFunc SiSVidCopyGetDefault(void)
+{
+    return SiS_libc_memcpy;
+}
+
 #else /* ! Everything below is gcc specific ! */
 
 /************************************************************************/
@@ -1023,7 +1028,8 @@ static unsigned int SiS_GetCpuFeatures(ScrnInfoPtr pScrn)
 /**********************************************************************/
 
 #ifdef SiS_canBenchmark
-static vidCopyFunc SiSVidCopyInitGen(ScreenPtr pScreen, SISMCFuncData *MCFunctions, vidCopyFunc *UMemCpy)
+static vidCopyFunc
+SiSVidCopyInitGen(ScreenPtr pScreen, SISMCFuncData *MCFunctions, vidCopyFunc *UMemCpy)
 {
     ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum];
     SISPtr pSiS = SISPTR(pScrn);
@@ -1085,7 +1091,8 @@ static vidCopyFunc SiSVidCopyInitGen(ScreenPtr pScreen, SISMCFuncData *MCFunctio
 /* 			    (called externally)			      */
 /**********************************************************************/
 
-unsigned int SiSGetCPUFlags(ScrnInfoPtr pScrn)
+unsigned int
+SiSGetCPUFlags(ScrnInfoPtr pScrn)
 {
     unsigned int myCPUflags = SiS_GetCpuFeatures(pScrn);
 

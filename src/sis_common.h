@@ -42,22 +42,22 @@
 #define DRM_SIS_FB_INIT		0x16
 
 typedef struct {
-  	int context;
-  	unsigned long offset;
-  	unsigned long size;
-  	void *free;
+	int context;
+	unsigned long offset;
+	unsigned long size;
+	void *free;
 } drm_sis_mem_t;
 
 typedef struct {
-  	unsigned long offset, size;
+	unsigned long offset, size;
 } drm_sis_agp_t;
 
 typedef struct {
-  	unsigned long offset, size;
+	unsigned long offset, size;
 } drm_sis_fb_t;
 
 typedef struct {
-  	unsigned int left, right;
+	unsigned int left, right;
 } drm_sis_flip_t;
 
 #endif /* _SIS_COMMON_H_ */

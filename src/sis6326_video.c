@@ -1,7 +1,7 @@
 /* $XFree86$ */
 /* $XdotOrg$ */
 /*
- * Xv driver for SiS 5597/5598, 6236 and 530/620.
+ * Xv driver for SiS 5597/5598, 6326 and 530/620.
  *
  * Copyright (C) 2001-2005 by Thomas Winischhofer, Vienna, Austria.
  *
@@ -64,10 +64,10 @@ static int 	SIS6326GetPortAttribute(ScrnInfoPtr, Atom ,INT32 *, pointer);
 static void 	SIS6326QueryBestSize(ScrnInfoPtr, Bool, short, short, short,
 			short, unsigned int *,unsigned int *, pointer);
 static int 	SIS6326PutImage( ScrnInfoPtr,
-    			short, short, short, short, short, short, short, short,
-    			int, unsigned char*, short, short, Bool, RegionPtr, pointer);
+			short, short, short, short, short, short, short, short,
+			int, unsigned char*, short, short, Bool, RegionPtr, pointer);
 static int 	SIS6326QueryImageAttributes(ScrnInfoPtr,
-    			int, unsigned short *, unsigned short *, int *, int *);
+			int, unsigned short *, unsigned short *, int *, int *);
 static void 	SIS6326VideoTimerCallback(ScrnInfoPtr pScrn, Time now);
 static void     SIS6326InitOffscreenImages(ScreenPtr pScrn);
 
@@ -83,7 +83,7 @@ static Atom xvDisableGfx;
 #define IMAGE_MIN_HEIGHT       24
 #define IMAGE_MAX_WIDTH       720  /* Are these correct for the chips ? */
 #define IMAGE_MAX_HEIGHT      576
-#define IMAGE_MAX_WIDTH_5597  384  
+#define IMAGE_MAX_WIDTH_5597  384
 #define IMAGE_MAX_HEIGHT_5597 288
 
 #if 0
@@ -112,7 +112,7 @@ static CARD8 getvideoreg(SISPtr pSiS, CARD8 reg)
 {
     CARD8 ret;
     inSISIDXREG(SISCR, reg, ret);
-    return(ret);
+    return ret;
 }
 
 static __inline void setvideoreg(SISPtr pSiS, CARD8 reg, CARD8 data)
@@ -120,13 +120,9 @@ static __inline void setvideoreg(SISPtr pSiS, CARD8 reg, CARD8 data)
     outSISIDXREG(SISCR, reg, data);
 }
 
-static void setvideoregmask(SISPtr pSiS, CARD8 reg, CARD8 data, CARD8 mask)
+static __inline void setvideoregmask(SISPtr pSiS, CARD8 reg, CARD8 data, CARD8 mask)
 {
-    CARD8   old;
-
-    inSISIDXREG(SISCR, reg, old);
-    data = (data & mask) | (old & (~mask));
-    outSISIDXREG(SISCR, reg, data);
+    setSISIDXREGmask(SISCR, reg, data, mask);
 }
 
 /* VBlank */
@@ -158,34 +154,31 @@ void SIS6326InitVideo(ScreenPtr pScreen)
     if(newAdaptor) {
         SIS6326InitOffscreenImages(pScreen);
     }
-    
+
     num_adaptors = xf86XVListGenericAdaptors(pScrn, &adaptors);
 
     if(newAdaptor) {
-    	if(!num_adaptors) {
-        	num_adaptors = 1;
-        	adaptors = &newAdaptor;
-    	} else {
-        	/* need to free this someplace */
-        	newAdaptors = xalloc((num_adaptors + 1) * sizeof(XF86VideoAdaptorPtr*));
-        	if(newAdaptors) {
-        		memcpy(newAdaptors, adaptors, num_adaptors *
-                    		sizeof(XF86VideoAdaptorPtr));
-        		newAdaptors[num_adaptors] = newAdaptor;
-        		adaptors = newAdaptors;
-        		num_adaptors++;
-        	}
-    	}
+	if(!num_adaptors) {
+		num_adaptors = 1;
+		adaptors = &newAdaptor;
+	} else {
+		/* need to free this someplace */
+		newAdaptors = xalloc((num_adaptors + 1) * sizeof(XF86VideoAdaptorPtr*));
+		if(newAdaptors) {
+			memcpy(newAdaptors, adaptors, num_adaptors *
+				sizeof(XF86VideoAdaptorPtr));
+			newAdaptors[num_adaptors] = newAdaptor;
+			adaptors = newAdaptors;
+			num_adaptors++;
+		}
+	}
     }
 
     if(num_adaptors)
-        xf86XVScreenInit(pScreen, adaptors, num_adaptors);
+	xf86XVScreenInit(pScreen, adaptors, num_adaptors);
 
     if(newAdaptors)
-    	xfree(newAdaptors);
-#if 0
-    oldW = 0; oldH = 0;  /* DEBUG */
-#endif
+	xfree(newAdaptors);
 }
 
 /* client libraries expect an encoding */
@@ -238,7 +231,7 @@ static XF86AttributeRec SIS6326Attributes[NUM_ATTRIBUTES] =
 
 static XF86ImageRec SIS6326Images[NUM_IMAGES] =
 {
-    XVIMAGE_YUY2, /* TW: If order is changed, SIS6326OffscreenImages must be adapted */
+    XVIMAGE_YUY2, /* If order is changed, SIS6326OffscreenImages must be adapted */
     XVIMAGE_UYVY,
     XVIMAGE_YV12,
     XVIMAGE_I420,
@@ -251,8 +244,7 @@ static XF86ImageRec SIS6326Images[NUM_IMAGES] =
       16,
       XvPacked,
       1,
-/*    15, 0x001F, 0x03E0, 0x7C00,  - incorrect! */
-      15, 0x7C00, 0x03E0, 0x001F,  
+      15, 0x7C00, 0x03E0, 0x001F,
       0, 0, 0,
       0, 0, 0,
       0, 0, 0,
@@ -269,8 +261,7 @@ static XF86ImageRec SIS6326Images[NUM_IMAGES] =
       16,
       XvPacked,
       1,
-/*    16, 0x001F, 0x07E0, 0xF800,  - incorrect!  */
-      16, 0xF800, 0x07E0, 0x001F, 
+      16, 0xF800, 0x07E0, 0x001F,
       0, 0, 0,
       0, 0, 0,
       0, 0, 0,
@@ -282,7 +273,7 @@ static XF86ImageRec SIS6326Images[NUM_IMAGES] =
 
 static XF86ImageRec SIS6326ImagesNoYV12[NUM_IMAGES_NOYV12] =
 {
-    XVIMAGE_YUY2, /* TW: If order is changed, SIS6326OffscreenImages must be adapted */
+    XVIMAGE_YUY2, /* If order is changed, SIS6326OffscreenImages must be adapted */
     XVIMAGE_UYVY,
     {
       0x35315652,
@@ -293,8 +284,7 @@ static XF86ImageRec SIS6326ImagesNoYV12[NUM_IMAGES_NOYV12] =
       16,
       XvPacked,
       1,
-/*    15, 0x001F, 0x03E0, 0x7C00,  */
-      15, 0x7C00, 0x03E0, 0x001F,  /* TW: Should be more correct than the other... */
+      15, 0x7C00, 0x03E0, 0x001F,
       0, 0, 0,
       0, 0, 0,
       0, 0, 0,
@@ -311,8 +301,7 @@ static XF86ImageRec SIS6326ImagesNoYV12[NUM_IMAGES_NOYV12] =
       16,
       XvPacked,
       1,
-/*    16, 0x001F, 0x07E0, 0xF800,   */
-      16, 0xF800, 0x07E0, 0x001F,   /* TW: Should be more correct than the other... */
+      16, 0xF800, 0x07E0, 0x001F,
       0, 0, 0,
       0, 0, 0,
       0, 0, 0,
@@ -353,7 +342,7 @@ typedef struct {
 } SISOverlayRec, *SISOverlayPtr;
 
 typedef struct {
-    FBLinearPtr  linear;	/* TW: We now use Linear, not Area */
+    FBLinearPtr  linear;
     CARD32       bufAddr[2];
 
     unsigned char currentBuf;
@@ -363,7 +352,7 @@ typedef struct {
     int    id;
     short  srcPitch, height, width;
     CARD32 totalSize;
-    
+
     char          brightness;
     unsigned char contrast;
 
@@ -384,7 +373,7 @@ typedef struct {
     int          pitch;
     int          offset;
 
-} SISPortPrivRec, *SISPortPrivPtr;        
+} SISPortPrivRec, *SISPortPrivPtr;
 
 #define GET_PORT_PRIVATE(pScrn) \
    (SISPortPrivPtr)((SISPTR(pScrn))->adaptor->pPortPrivates[0].ptr)
@@ -393,7 +382,7 @@ static void
 SIS6326SetPortDefaults(ScrnInfoPtr pScrn, SISPortPrivPtr pPriv)
 {
     SISPtr    pSiS = SISPTR(pScrn);
-    
+
     pPriv->colorKey    = 0x000101fe;
     pPriv->videoStatus = 0;
     pPriv->brightness  = pSiS->XvDefBri; /* 0; - see sis_opt.c */
@@ -411,65 +400,64 @@ SIS6326ResetVideo(ScrnInfoPtr pScrn)
 #ifdef UNLOCK_ALWAYS
     sisSaveUnlockExtRegisterLock(pSiS, NULL, NULL);
 #endif
-    if(getvideoreg (pSiS, Index_VI6326_Passwd) != 0xa1) {
-        setvideoreg (pSiS, Index_VI6326_Passwd, 0x86);
-        if(getvideoreg (pSiS, Index_VI6326_Passwd) != 0xa1)
-            xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
-                       "Xv: Video password could not unlock video registers\n");
+    if(getvideoreg(pSiS, Index_VI6326_Passwd) != 0xa1) {
+       setvideoreg(pSiS, Index_VI6326_Passwd, 0x86);
+       if(getvideoreg(pSiS, Index_VI6326_Passwd) != 0xa1)
+          xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
+                     "Xv: Video password could not unlock video registers\n");
     }
 
     /* Initialize the overlay ----------------------------------- */
 
     switch(pSiS->Chipset) {
-    case PCI_CHIP_SIS6326:
-       /* Disable overlay (D[1]) & capture (D[0]) */
-       setvideoregmask(pSiS, Index_VI6326_Control_Misc0,      0x00, 0x03);
-
-       /* What do these do? (Datasheet names these bits "reserved") */
-       setvideoregmask(pSiS, Index_VI6326_Control_Misc0,      0x00, 0x18);
-       setvideoregmask(pSiS, Index_VI6326_Control_Misc0,      0x00, 0x0c);
-
-       /* Select YUV format (D[6]) and "gfx + video" mode (D[4]), odd polarity? (D[7]) */
-       setvideoregmask(pSiS, Index_VI6326_Control_Misc0,      0x40, 0xD0);
-       /* No interrupt, no filter, disable dithering */
-       setvideoregmask(pSiS, Index_VI6326_Control_Misc1,      0x00, 0x7A);
-       /* Disable VMI (D[4:3]), Brooktree support (D[6]) and system memory framebuffer (D[7]) */
-       setvideoregmask(pSiS, Index_VI6326_Control_Misc3,      0x00, 0xF8);
-       /* Disable video decimation */
-       setvideoregmask(pSiS, Index_VI6326_Control_Misc6,      0x00, 0x80);
-       break;
     case PCI_CHIP_SIS5597:
        /* Disable overlay (D[1]) & capture (D[0]) */
-       setvideoregmask(pSiS, Index_VI6326_Control_Misc0,      0x00, 0x03);
+       setvideoregmask(pSiS, Index_VI6326_Control_Misc0,     0x00, 0x03);
 
        /* What do these do? (Datasheet names these bits "reserved") */
-       setvideoregmask(pSiS, Index_VI6326_Control_Misc0,      0x00, 0x18);
-       setvideoregmask(pSiS, Index_VI6326_Control_Misc0,      0x00, 0x0c);
+       setvideoregmask(pSiS, Index_VI6326_Control_Misc0,     0x00, 0x18);
+       setvideoregmask(pSiS, Index_VI6326_Control_Misc0,     0x00, 0x0c);
 
        /* Select YUV format (D[6]) and "gfx + video" mode (D[4]), odd polarity? (D[7]) */
-       setvideoregmask(pSiS, Index_VI6326_Control_Misc0,      0x40, 0xD0);
+       setvideoregmask(pSiS, Index_VI6326_Control_Misc0,     0x40, 0xD0);
        /* No interrupt, no filter, disable dithering */
-       setvideoregmask(pSiS, Index_VI6326_Control_Misc1,      0x00, 0x7A);
+       setvideoregmask(pSiS, Index_VI6326_Control_Misc1,     0x00, 0x7A);
        /* Disable Brooktree support (D[6]) and system memory framebuffer (D[7]) */
-       setvideoregmask(pSiS, Index_VI6326_Control_Misc3,      0x00, 0xC0);
+       setvideoregmask(pSiS, Index_VI6326_Control_Misc3,     0x00, 0xC0);
        /* Disable video decimation (has a really strange effect if enabled) */
-       setvideoregmask(pSiS, Index_VI6326_Control_Misc6,      0x00, 0x80);
+       setvideoregmask(pSiS, Index_VI6326_Control_Misc6,     0x00, 0x80);
        break;
-    case PCI_CHIP_SIS530:
-       /* What is this? (Bit is "reserved") */
-       setvideoregmask (pSiS, Index_VI6326_Control_Misc4,     0x40, 0x40);
-       /* Disable overlay (D[1]) */
-       setvideoregmask(pSiS, Index_VI6326_Control_Misc0,      0x00, 0x02);
+    case PCI_CHIP_SIS6326:
+       /* Disable overlay (D[1]) & capture (D[0]) */
+       setvideoregmask(pSiS, Index_VI6326_Control_Misc0,     0x00, 0x03);
 
        /* What do these do? (Datasheet names these bits "reserved") */
-       setvideoregmask(pSiS, Index_VI6326_Control_Misc0,      0x00, 0x18);
-       setvideoregmask(pSiS, Index_VI6326_Control_Misc0,      0x00, 0x0c);
+       setvideoregmask(pSiS, Index_VI6326_Control_Misc0,     0x00, 0x18);
+       setvideoregmask(pSiS, Index_VI6326_Control_Misc0,     0x00, 0x0c);
+
+       /* Select YUV format (D[6]) and "gfx + video" mode (D[4]), odd polarity? (D[7]) */
+       setvideoregmask(pSiS, Index_VI6326_Control_Misc0,     0x40, 0xD0);
+       /* No interrupt, no filter, disable dithering */
+       setvideoregmask(pSiS, Index_VI6326_Control_Misc1,     0x00, 0x7A);
+       /* Disable VMI (D[4:3]), Brooktree support (D[6]) and system memory framebuffer (D[7]) */
+       setvideoregmask(pSiS, Index_VI6326_Control_Misc3,     0x00, 0xF8);
+       /* Disable video decimation */
+       setvideoregmask(pSiS, Index_VI6326_Control_Misc6,     0x00, 0x80);
+       break;
+    case PCI_CHIP_SIS530:
+       setvideoregmask(pSiS, Index_VI6326_Control_Misc4,     0x40, 0x40);
+       /* Disable overlay (D[1]) */
+       setvideoregmask(pSiS, Index_VI6326_Control_Misc0,     0x00, 0x02);
+
+       /* What do D[3:2] do? (Datasheet names these bits "reserved") */
+       setvideoregmask(pSiS, Index_VI6326_Control_Misc0,     0x00, 0x18);
+       setvideoregmask(pSiS, Index_VI6326_Control_Misc0,     0x00, 0x0c);
 
        /* Select YUV format (D[6]) and "gfx + video" mode (D[4]) */
-       setvideoregmask(pSiS, Index_VI6326_Control_Misc0,      0x40, 0x50);
+       setvideoregmask(pSiS, Index_VI6326_Control_Misc0,     0x40, 0x50);
        break;
     default:
-    	xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
+	xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
 		"Internal error: SiS6326ResetVideo() called with invalid chipset (%x)\n",
 		pSiS->Chipset);
         return;
@@ -477,7 +465,9 @@ SIS6326ResetVideo(ScrnInfoPtr pScrn)
 
     /* Clear format selection */
     setvideoregmask(pSiS, Index_VI6326_Control_Misc1,         0x00, 0x04);
-    setvideoregmask(pSiS, Index_VI6326_Control_Misc4,         0x00, 0x07);
+    if(pSiS->oldChipset >= OC_SIS5597) {
+       setvideoregmask(pSiS, Index_VI6326_Control_Misc4,      0x00, 0x05);
+    }
 
     /* Select RGB Chromakey format (D[2]=0), CCIR 601 UV data format (D[1]=0) */
     /* D[1]: 1 = 2's complement, 0 = CCIR 601 format */
@@ -506,8 +496,8 @@ SIS6326ResetVideo(ScrnInfoPtr pScrn)
 
     /* set default properties for overlay     ------------------------------- */
 
-    setvideoregmask (pSiS, Index_VI6326_Contrast_Enh_Ctrl,    0x04, 0x07);
-    setvideoreg (pSiS, Index_VI6326_Brightness,               0x20);
+    setvideoregmask(pSiS, Index_VI6326_Contrast_Enh_Ctrl,    0x04, 0x07);
+    setvideoreg(pSiS, Index_VI6326_Brightness,               0x20);
 
     if(pSiS->oldChipset < OC_SIS6205A || pSiS->oldChipset > OC_SIS82204) {
        setvideoregmask(pSiS, Index_VI6326_AlphaGraph,         0x00, 0xF8);
@@ -516,6 +506,7 @@ SIS6326ResetVideo(ScrnInfoPtr pScrn)
        setvideoregmask(pSiS, Index_VI6326_AlphaGraph,         0x00, 0xE1);
        setvideoregmask(pSiS, Index_VI6326_AlphaVideo,         0xE1, 0xE1);
     }
+
 }
 
 static XF86VideoAdaptorPtr
@@ -529,23 +520,23 @@ SIS6326SetupImageVideo(ScreenPtr pScreen)
 #if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,1,99,1,0)
     XAAInfoRecPtr pXAA = pSiS->AccelInfoPtr;
 
-    if (!pXAA || !pXAA->FillSolidRects)
-	return NULL;
+    if(!pXAA || !pXAA->FillSolidRects)
+       return NULL;
 #endif
 
     if(!(adapt = xcalloc(1, sizeof(XF86VideoAdaptorRec) +
                             sizeof(SISPortPrivRec) +
                             sizeof(DevUnion))))
-    	return NULL;
+       return NULL;
 
     adapt->type = XvWindowMask | XvInputMask | XvImageMask;
     adapt->flags = VIDEO_OVERLAID_IMAGES | VIDEO_CLIP_TO_VIEWPORT;
     adapt->name = "SIS 5597/5598/6326/530/620 Video Overlay";
     adapt->nEncodings = 1;
     if(pSiS->oldChipset < OC_SIS6326) {
-      adapt->pEncodings = &DummyEncoding5597;
+       adapt->pEncodings = &DummyEncoding5597;
     } else {
-      adapt->pEncodings = &DummyEncoding;
+       adapt->pEncodings = &DummyEncoding;
     }
     adapt->nFormats = NUM_FORMATS;
     adapt->pFormats = SIS6326Formats;
@@ -637,7 +628,7 @@ RegionsEqual(RegionPtr A, RegionPtr B)
 
 static int
 SIS6326SetPortAttribute(ScrnInfoPtr pScrn, Atom attribute,
-  		    INT32 value, pointer data)
+		    INT32 value, pointer data)
 {
   SISPortPrivPtr pPriv = (SISPortPrivPtr)data;
 
@@ -689,17 +680,17 @@ SIS6326GetPortAttribute(
   return Success;
 }
 
-static void 
+static void
 SIS6326QueryBestSize(
-  ScrnInfoPtr pScrn, 
+  ScrnInfoPtr pScrn,
   Bool motion,
-  short vid_w, short vid_h, 
-  short drw_w, short drw_h, 
-  unsigned int *p_w, unsigned int *p_h, 
+  short vid_w, short vid_h,
+  short drw_w, short drw_h,
+  unsigned int *p_w, unsigned int *p_h,
   pointer data
 ){
   *p_w = drw_w;
-  *p_h = drw_h; 
+  *p_h = drw_h;
 
   /* TODO: report the HW limitation */
 }
@@ -715,20 +706,11 @@ calc_scale_factor(SISPtr pSiS, SISOverlayPtr pOverlay, ScrnInfoPtr pScrn,
   int srcW = pOverlay->srcW;
   int srcH = pOverlay->srcH;
 
-#if 0
-  /* DEBUG */
-  if((oldH != dstH) || (oldW != dstW)){
-  	xf86DrvMsg(0, X_INFO, "Video size %dx%d\n", dstW, dstH);
-	oldH = dstH; oldW = dstW;
-  }
-  /* /DEBUG */
-#endif
-
-  /* TW: For double scan modes, we need to double the height */
+  /* For double scan modes, we need to double the height */
   if(pSiS->CurrentLayout.mode->Flags & V_DBLSCAN) {
 	dstH <<= 1;
   }
-  /* TW: For interlace modes, we need to half the height */
+  /* For interlace modes, we need to half the height */
   if(pSiS->CurrentLayout.mode->Flags & V_INTERLACE) {
 	dstH >>= 1;
   }
@@ -736,16 +718,16 @@ calc_scale_factor(SISPtr pSiS, SISOverlayPtr pOverlay, ScrnInfoPtr pScrn,
   /* Horizontal */
   if(dstW < IMAGE_MIN_WIDTH) dstW = IMAGE_MIN_WIDTH;
   if(dstW == srcW) {
-        pOverlay->HUSF    = 0x00;
-        pOverlay->HIntBit = 0x01;
+	pOverlay->HUSF    = 0x00;
+	pOverlay->HIntBit = 0x01;
   } else if(dstW > srcW) {
 	pOverlay->HIntBit = 0x00;
 	temp = srcW * 64 / (dstW + 1);
 	if(temp > 63) temp = 63;
 	pOverlay->HUSF = temp;
   } else {
-  	/* 6326 can't scale below factor .440 - to check with 530/620 */
-        if(((dstW * 1000) / srcW) < 440) dstW = ((srcW * 440) / 1000) + 1;
+	/* 6326 can't scale below factor .440 - to check with 530/620 */
+	if(((dstW * 1000) / srcW) < 440) dstW = ((srcW * 440) / 1000) + 1;
 	temp = srcW / dstW;
 	if(temp > 15) temp = 15;
 	pOverlay->HIntBit = temp;
@@ -756,15 +738,15 @@ calc_scale_factor(SISPtr pSiS, SISOverlayPtr pOverlay, ScrnInfoPtr pScrn,
   /* Vertical */
   if(dstH < IMAGE_MIN_HEIGHT) dstH = IMAGE_MIN_HEIGHT;
   if(dstH == srcH) {
-        pOverlay->VUSF = 0x00;
+	pOverlay->VUSF = 0x00;
 	pOverlay->PitchMult = 1;
   } else if(dstH > srcH) {
-  	temp = srcH * 64 / (dstH + 1);
+	temp = srcH * 64 / (dstH + 1);
 	if (temp > 63) temp = 63;
 	pOverlay->VUSF = temp;
 	pOverlay->PitchMult = 1;
   } else {
-        /* 6326 can't scale below factor .440 - to check with 530/620 */
+	/* 6326 can't scale below factor .440 - to check with 530/620 */
 	if(((dstH * 1000) / srcH) < 440) dstH = ((srcH * 440) / 1000) + 1;
 	temp = srcH / dstH;
 	if(srcH % dstH) {
@@ -784,13 +766,12 @@ calc_line_buf_size(SISOverlayPtr pOverlay)
     CARD32 line = pOverlay->srcW;
 
     if( (pOverlay->pixelFormat == PIXEL_FMT_YV12) ||
-        (pOverlay->pixelFormat == PIXEL_FMT_I420) )
-    {
-        I = (line >> 5) + (((line >> 6) * 2)) + 3;
+        (pOverlay->pixelFormat == PIXEL_FMT_I420) ) {
+	I = (line >> 5) + (((line >> 6) * 2)) + 3;
 	I <<= 5;
     } else { /* YUV2, UYVY, RGB */
-        I = line << 1;
-        if(I & 7)  I += 8;
+	I = line << 1;
+	if(I & 7)  I += 8;
     }
     I += 8;
     I >>= 3;
@@ -812,35 +793,35 @@ set_format(SISPtr pSiS, SISOverlayPtr pOverlay)
 {
     CARD8 fmt, misc0, misc1, misc4;
 
-    switch (pOverlay->pixelFormat){
+    switch(pOverlay->pixelFormat) {
     case PIXEL_FMT_YV12:
     case PIXEL_FMT_I420: /* V/530 V/6326 */
-        fmt   = 0x80;  /* D[7:6]  10 YUV2(=YUYV), 01 VYUY, 00 UYVY, 11 YVYU / 00 RGB 555, 01 RGB 565 */
+	fmt   = 0x80;  /* D[7:6]  10 YUV2(=YUYV), 01 VYUY, 00 UYVY, 11 YVYU / 00 RGB 555, 01 RGB 565 */
 	misc0 = 0x40;  /* D[6]: 1 = YUV, 0 = RGB */
 	misc4 = 0x05;  /* D[1:0] 00 RGB 555, 01 YUV 422, 10 RGB 565; D[2] 1 = YUV420 mode */
 	misc1 = 0xff;
-        break;
+	break;
     case PIXEL_FMT_UYVY:
-        fmt   = 0x00;  /* D[7:6]  10 YUV2(=YUYV), 01 VYUY, 00 UYVY, 11 YVYU / 00 RGB 555, 01 RGB 565 */
+	fmt   = 0x00;  /* D[7:6]  10 YUV2(=YUYV), 01 VYUY, 00 UYVY, 11 YVYU / 00 RGB 555, 01 RGB 565 */
 	misc0 = 0x40;  /* D[6]: 1 = YUV, 0 = RGB */
 	misc4 = 0x00;  /* D[1:0] 00 RGB 555, 01 YUV 422, 10 RGB 565; D[2] 1 = YUV420 mode */
 	misc1 = 0xff;
-        break;
+	break;
     case PIXEL_FMT_YUY2: /* V/530 V/6326 */
-        fmt   = 0x80;  /* D[7:6]  10 YUV2(=YUYV), 01 VYUY, 00 UYVY, 11 YVYU / 00 RGB 555, 01 RGB 565 */
+	fmt   = 0x80;  /* D[7:6]  10 YUV2(=YUYV), 01 VYUY, 00 UYVY, 11 YVYU / 00 RGB 555, 01 RGB 565 */
 	misc0 = 0x40;  /* D[6]: 1 = YUV, 0 = RGB */
 	misc4 = 0x00;  /* D[1:0]  00 RGB 555, 01 YUV 422, 10 RGB 565; D[2] 1 = YUV420 mode */
 	misc1 = 0xff;
-        break;
+	break;
     case PIXEL_FMT_RGB6: /* V/530 V/6326 */
-        fmt   = 0x40;  /* D[7:6]  10 YUV2(=YUYV), 01 VYUY, 00 UYVY, 11 YVYU / 00 RGB 555, 01 RGB 565 */
+	fmt   = 0x40;  /* D[7:6]  10 YUV2(=YUYV), 01 VYUY, 00 UYVY, 11 YVYU / 00 RGB 555, 01 RGB 565 */
 	misc0 = 0x00;  /* D[6]: 1 = YUV, 0 = RGB */
 	misc4 = 0xff;
 	misc1 = 0x00;  /* D[2] = Capture format selection (DS5597) - WDR sets this */
 	break;
     case PIXEL_FMT_RGB5: /* V/530 V/6326 */
     default:
-        fmt   = 0x00;  /* D[7:6]  10 YUV2(=YUYV), 01 VYUY, 00 UYVY, 11 YVYU / 00 RGB 555, 01 RGB 565 */
+	fmt   = 0x00;  /* D[7:6]  10 YUV2(=YUYV), 01 VYUY, 00 UYVY, 11 YVYU / 00 RGB 555, 01 RGB 565 */
 	misc0 = 0x00;  /* D[6]: 1 = YUV, 0 = RGB */
 	misc4 = 0xff;
 	misc1 = 0x04;  /* D[2] = Capture format selection (DS5597) - WDR sets this */
@@ -850,15 +831,15 @@ set_format(SISPtr pSiS, SISOverlayPtr pOverlay)
     setvideoregmask(pSiS, Index_VI6326_VideoFormatSelect, fmt,   0xC0);
     setvideoregmask(pSiS, Index_VI6326_Control_Misc0,     misc0, 0x40);
     if(misc4 == 0xff) {
-	  setvideoregmask(pSiS, Index_VI6326_Control_Misc1,  misc1, 0x04);
-	  if(pSiS->oldChipset >= OC_SIS5597) {
-               setvideoregmask(pSiS, Index_VI6326_Control_Misc4, 0x00, 0x05);
-	  }
+       setvideoregmask(pSiS, Index_VI6326_Control_Misc1, misc1, 0x04);
+       if(pSiS->oldChipset >= OC_SIS5597) {
+	  setvideoregmask(pSiS, Index_VI6326_Control_Misc4, 0x00, 0x05);
+       }
     } else {
-          if(pSiS->oldChipset >= OC_SIS5597) {
-               setvideoregmask(pSiS, Index_VI6326_Control_Misc4,  misc4, 0x05);
-	  }
-	  setvideoregmask(pSiS, Index_VI6326_Control_Misc1,  0x00, 0x04);
+       if(pSiS->oldChipset >= OC_SIS5597) {
+	  setvideoregmask(pSiS, Index_VI6326_Control_Misc4, misc4, 0x05);
+       }
+       setvideoregmask(pSiS, Index_VI6326_Control_Misc1, 0x00, 0x04);
     }
 }
 
@@ -868,13 +849,13 @@ set_colorkey(SISPtr pSiS, CARD32 colorkey)
     CARD8 r, g, b, s;
 
     b = (CARD8)(colorkey & 0xFF);
-    g = (CARD8)((colorkey>>8) & 0xFF);
-    r = (CARD8)((colorkey>>16) & 0xFF);
+    g = (CARD8)((colorkey >> 8) & 0xFF);
+    r = (CARD8)((colorkey >> 16) & 0xFF);
 
     if(pSiS->CurrentLayout.bitsPerPixel >= 24) {
-         s = b;
-	 b = r;
-	 r = s;
+       s = b;
+       b = r;
+       r = s;
     }
 
     setvideoreg(pSiS, Index_VI6326_Overlay_ColorKey_Blue_Min  ,(CARD8)b);
@@ -908,10 +889,10 @@ set_contrast_data(SISPtr pSiS, int value)
   if(temp > 3) temp = 3;
   setvideoregmask(pSiS, Index_VI6326_Contrast_Enh_Ctrl, (temp << 6), 0xC0);
   switch(temp) {
-    case 0: temp =  2048; break;
-    case 1: temp =  4096; break;
-    case 2: temp =  8192; break;
-    case 3: temp = 16384; break;
+     case 0: temp =  2048; break;
+     case 1: temp =  4096; break;
+     case 2: temp =  8192; break;
+     case 3: temp = 16384; break;
   }
   temp <<= 10;
   temp /= value;
@@ -939,24 +920,24 @@ set_overlay(SISPtr pSiS, SISOverlayPtr pOverlay, SISPortPrivPtr pPriv, int index
     top = pOverlay->dstBox.y1;
     bottom = pOverlay->dstBox.y2;
     if(bottom > screenY) {
-        bottom = screenY;
+       bottom = screenY;
     }
 
     left = pOverlay->dstBox.x1;
     right = pOverlay->dstBox.x2;
     if(right > screenX) {
-        right = screenX;
+       right = screenX;
     }
 
     /* TW: DoubleScan modes require Y coordinates * 2 */
     if(pSiS->CurrentLayout.mode->Flags & V_DBLSCAN) {
-    	 top <<= 1;
-	 bottom <<= 1;
+       top <<= 1;
+       bottom <<= 1;
     }
     /* TW: Interlace modes require Y coordinates / 2 */
     if(pSiS->CurrentLayout.mode->Flags & V_INTERLACE) {
-    	 top >>= 1;
-	 bottom >>= 1;
+       top >>= 1;
+       bottom >>= 1;
     }
 
     h_over = (((left>>8) & 0x07) | ((right>>4) & 0x70));
@@ -965,8 +946,8 @@ set_overlay(SISPtr pSiS, SISOverlayPtr pOverlay, SISPortPrivPtr pPriv, int index
     pitch = pOverlay->pitch * pOverlay->PitchMult;
     pitch >>= 2;   /* Datasheet: Unit = double word - verified */
     if(pitch > 0xfff) {
-    	pitch = pOverlay->pitch * (0xFFF * 2 / pOverlay->pitch);
-	pOverlay->VUSF = 0x3F;
+       pitch = pOverlay->pitch * (0xFFF * 2 / pOverlay->pitch);
+       pOverlay->VUSF = 0x3F;
     }
 
     /* set color key */
@@ -984,9 +965,9 @@ set_overlay(SISPtr pSiS, SISOverlayPtr pOverlay, SISPortPrivPtr pPriv, int index
     /* Set U/V pitch if using planar formats */
     if( (pOverlay->pixelFormat == PIXEL_FMT_YV12) ||
     	(pOverlay->pixelFormat == PIXEL_FMT_I420) )  {
-	/* Set U/V pitch */  /* Datasheet: Unit = double word - verified */
-	setvideoreg(pSiS, Index_VI6326_Disp_UV_Buf_Pitch_Low, (CARD8)pitch >> 1);
-        setvideoregmask(pSiS, Index_VI6326_Disp_UV_Buf_Pitch_High, (CARD8)(pitch >> 9), 0x0f);
+       /* Set U/V pitch */  /* Datasheet: Unit = double word - verified */
+       setvideoreg(pSiS, Index_VI6326_Disp_UV_Buf_Pitch_Low, (CARD8)pitch >> 1);
+       setvideoregmask(pSiS, Index_VI6326_Disp_UV_Buf_Pitch_High, (CARD8)(pitch >> 9), 0x0f);
     }
 
     /* set line buffer size */
@@ -999,10 +980,10 @@ set_overlay(SISPtr pSiS, SISOverlayPtr pOverlay, SISPortPrivPtr pPriv, int index
 
     /* TW: We don't have to wait for vertical retrace in all cases */
     if(pPriv->mustwait) {
-	watchdog = WATCHDOG_DELAY;
-	while ((!pOverlay->VBlankActiveFunc(pSiS)) && --watchdog);
-	if(!watchdog) xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
-			"Xv: Waiting for vertical retrace timed-out\n");
+       watchdog = WATCHDOG_DELAY;
+       while ((!pOverlay->VBlankActiveFunc(pSiS)) && --watchdog);
+       if(!watchdog) xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
+		"Xv: Waiting for vertical retrace timed-out\n");
     }
 
     /* set destination window position */
@@ -1015,17 +996,17 @@ set_overlay(SISPtr pSiS, SISOverlayPtr pOverlay, SISPortPrivPtr pPriv, int index
     setvideoreg(pSiS, Index_VI6326_Win_Ver_Over,           (CARD8)v_over);
 
     /* Set Y start address */
-    setvideoreg (pSiS, Index_VI6326_Disp_Y_Buf_Start_Low,    (CARD8)(pOverlay->PSY));
-    setvideoreg (pSiS, Index_VI6326_Disp_Y_Buf_Start_Middle, (CARD8)((pOverlay->PSY)>>8));
+    setvideoreg(pSiS, Index_VI6326_Disp_Y_Buf_Start_Low,    (CARD8)(pOverlay->PSY));
+    setvideoreg(pSiS, Index_VI6326_Disp_Y_Buf_Start_Middle, (CARD8)((pOverlay->PSY)>>8));
     if(pSiS->oldChipset <= OC_SIS6326) {  	/* all old chipsets incl 6326 */
        /* Set overflow bits */
-       setvideoregmask (pSiS, Index_VI6326_Disp_Capt_Y_Buf_Start_High,
+       setvideoregmask(pSiS, Index_VI6326_Disp_Capt_Y_Buf_Start_High,
                                              (CARD8)(((pOverlay->PSY)>>12) & 0xF0), 0xF0);
        /* Set framebuffer end address */
-       setvideoreg (pSiS, Index_VI6326_Disp_Y_End,    (CARD8)(pOverlay->YUVEnd));
+       setvideoreg(pSiS, Index_VI6326_Disp_Y_End,    (CARD8)(pOverlay->YUVEnd));
     } else {  				/* 530/620 */
        /* Set overflow bits */
-       setvideoregmask (pSiS, Index_VI6326_Disp_Capt_Y_Buf_Start_High,
+       setvideoregmask(pSiS, Index_VI6326_Disp_Capt_Y_Buf_Start_High,
                                              (CARD8)(((pOverlay->PSY)>>13) & 0xF8), 0xF8);
     }
 
@@ -1037,18 +1018,18 @@ set_overlay(SISPtr pSiS, SISOverlayPtr pOverlay, SISPortPrivPtr pPriv, int index
         CARD32 PSV = pOverlay->PSV;
 
         /* set U/V start address */
-        setvideoreg (pSiS, Index_VI6326_U_Buf_Start_Low,   (CARD8)PSU);
-        setvideoreg (pSiS, Index_VI6326_U_Buf_Start_Middle,(CARD8)(PSU >> 8));
+        setvideoreg(pSiS, Index_VI6326_U_Buf_Start_Low,   (CARD8)PSU);
+        setvideoreg(pSiS, Index_VI6326_U_Buf_Start_Middle,(CARD8)(PSU >> 8));
 
-        setvideoreg (pSiS, Index_VI6326_V_Buf_Start_Low,   (CARD8)PSV);
-        setvideoreg (pSiS, Index_VI6326_V_Buf_Start_Middle,(CARD8)(PSV >> 8));
+        setvideoreg(pSiS, Index_VI6326_V_Buf_Start_Low,   (CARD8)PSV);
+        setvideoreg(pSiS, Index_VI6326_V_Buf_Start_Middle,(CARD8)(PSV >> 8));
 
-	setvideoreg (pSiS, Index_VI6326_UV_Buf_Start_High,
+	setvideoreg(pSiS, Index_VI6326_UV_Buf_Start_High,
 					(CARD8)(((PSU >> 16) & 0x0F) | ((PSV >> 12) & 0xF0)) );
 
 	if(pSiS->oldChipset > OC_SIS6326) {
 	   /* Set bit 20 of the addresses in Misc5 (530/620 only) */
-	   setvideoreg (pSiS, Index_VI6326_Control_Misc5,
+	   setvideoreg(pSiS, Index_VI6326_Control_Misc5,
 				(CARD8)(((PSU >> (20-1)) & 0x02) | ((PSV >> (20-2)) & 0x04)) );
 	}
     }
@@ -1109,19 +1090,19 @@ SIS6326DisplayVideo(ScrnInfoPtr pScrn, SISPortPrivPtr pPriv)
    overlay.dstBox.y2 = pPriv->drw_y + pPriv->drw_h - pScrn->frameY0;
 
    if((overlay.dstBox.x1 > overlay.dstBox.x2) ||
-   		(overlay.dstBox.y1 > overlay.dstBox.y2))
-     return;
+      (overlay.dstBox.y1 > overlay.dstBox.y2))
+      return;
 
    if((overlay.dstBox.x2 < 0) || (overlay.dstBox.y2 < 0))
-     return;
+      return;
 
    if(overlay.dstBox.x1 < 0) {
-     srcOffsetX = pPriv->src_w * (-overlay.dstBox.x1) / pPriv->drw_w;
-     overlay.dstBox.x1 = 0;
+      srcOffsetX = pPriv->src_w * (-overlay.dstBox.x1) / pPriv->drw_w;
+      overlay.dstBox.x1 = 0;
    }
    if(overlay.dstBox.y1 < 0) {
-     srcOffsetY = pPriv->src_h * (-overlay.dstBox.y1) / pPriv->drw_h;
-     overlay.dstBox.y1 = 0;
+      srcOffsetY = pPriv->src_h * (-overlay.dstBox.y1) / pPriv->drw_h;
+      overlay.dstBox.y1 = 0;
    }
 
    switch(pPriv->id){
@@ -1168,13 +1149,13 @@ SIS6326DisplayVideo(ScrnInfoPtr pScrn, SISPortPrivPtr pPriv)
    overlay.srcW = pPriv->src_w - (sx - pPriv->src_x);
    overlay.srcH = pPriv->src_h - (sy - pPriv->src_y);
 
-   if ( (pPriv->oldx1 != overlay.dstBox.x1) ||
-   	(pPriv->oldx2 != overlay.dstBox.x2) ||
-	(pPriv->oldy1 != overlay.dstBox.y1) ||
-	(pPriv->oldy2 != overlay.dstBox.y2) ) {
-	pPriv->mustwait = 1;
-	pPriv->oldx1 = overlay.dstBox.x1; pPriv->oldx2 = overlay.dstBox.x2;
-	pPriv->oldy1 = overlay.dstBox.y1; pPriv->oldy2 = overlay.dstBox.y2;
+   if( (pPriv->oldx1 != overlay.dstBox.x1) ||
+       (pPriv->oldx2 != overlay.dstBox.x2) ||
+       (pPriv->oldy1 != overlay.dstBox.y1) ||
+       (pPriv->oldy2 != overlay.dstBox.y2) ) {
+      pPriv->mustwait = 1;
+      pPriv->oldx1 = overlay.dstBox.x1; pPriv->oldx2 = overlay.dstBox.x2;
+      pPriv->oldy1 = overlay.dstBox.y1; pPriv->oldy2 = overlay.dstBox.y2;
    }
 
    /* calculate line buffer length */
@@ -1188,9 +1169,8 @@ SIS6326DisplayVideo(ScrnInfoPtr pScrn, SISPortPrivPtr pPriv)
 
    /* set (not only determine) if line buffer is to be merged */
    if(pSiS->oldChipset > OC_SIS5597) {
-      int temp;
+      int temp = 384;
       if(pSiS->oldChipset <= OC_SIS6326) temp = 352;
-      else                               temp = 384;
       merge_line_buf(pSiS, pPriv, (overlay.srcW > temp));
    }
 
@@ -1199,9 +1179,9 @@ SIS6326DisplayVideo(ScrnInfoPtr pScrn, SISPortPrivPtr pPriv)
 
    /* enable overlay */
    if(pSiS->oldChipset > OC_SIS6326) {
-       setvideoregmask (pSiS, Index_VI6326_Control_Misc4, 0x40, 0x40);
+      setvideoregmask(pSiS, Index_VI6326_Control_Misc4, 0x40, 0x40);
    }
-   setvideoregmask (pSiS, Index_VI6326_Control_Misc0, 0x02, 0x02);
+   setvideoregmask(pSiS, Index_VI6326_Control_Misc0, 0x02, 0x02);
 
    pPriv->mustwait = 0;
 }
@@ -1212,8 +1192,8 @@ SIS6326FreeOverlayMemory(ScrnInfoPtr pScrn)
     SISPortPrivPtr pPriv = GET_PORT_PRIVATE(pScrn);
 
     if(pPriv->linear) {
-        xf86FreeOffscreenLinear(pPriv->linear);
-	pPriv->linear = NULL;
+       xf86FreeOffscreenLinear(pPriv->linear);
+       pPriv->linear = NULL;
     }
 }
 
@@ -1223,8 +1203,7 @@ SIS6326StopVideo(ScrnInfoPtr pScrn, pointer data, Bool shutdown)
   SISPortPrivPtr pPriv = (SISPortPrivPtr)data;
   SISPtr pSiS = SISPTR(pScrn);
 
-  if(pPriv->grabbedByV4L)
-  	return;
+  if(pPriv->grabbedByV4L) return;
 
   REGION_EMPTY(pScrn->pScreen, &pPriv->clip);
 
@@ -1264,8 +1243,7 @@ SIS6326PutImage(
    CARD32 *src, *dest;
    unsigned long i;
 
-   if(pPriv->grabbedByV4L)
-   	return Success;
+   if(pPriv->grabbedByV4L) return Success;
 
    pPriv->drw_x = drw_x;
    pPriv->drw_y = drw_y;
@@ -1285,7 +1263,7 @@ SIS6326PutImage(
 	       V sample period  2    2	 (8 bit per pixel, subsampled)
 	       U sample period  2    2   (8 bit per pixel, subsampled)
 
- 	 Y plane is fully sampled (width*height), U and V planes
+	 Y plane is fully sampled (width*height), U and V planes
 	 are sampled in 2x2 blocks, hence a group of 4 pixels requires
 	 4 + 1 + 1 = 6 bytes. The data is planar, ie in single planes
 	 for Y, U and V.
@@ -1342,7 +1320,7 @@ SIS6326PutImage(
       dest = (CARD32 *)(pSiS->FbBase + pPriv->bufAddr[pPriv->currentBuf]);
       src  = (CARD32 *)buf;
       for(i = 0; i < (totalSize/16); i++) {
-         *dest++ = *src++;
+	 *dest++ = *src++;
 	 *dest++ = *src++;
 	 *dest++ = *src++;
 	 *dest++ = *src++;
@@ -1359,16 +1337,16 @@ SIS6326PutImage(
 #else
          !REGION_EQUAL(pScrn->pScreen, &pPriv->clip, clipBoxes)) ) {
 #endif
-     /* We always paint colorkey for V4L */
-     if(!pPriv->grabbedByV4L)
-     	REGION_COPY(pScrn->pScreen, &pPriv->clip, clipBoxes);
-     /* draw these */
+      /* We always paint colorkey for V4L */
+      if(!pPriv->grabbedByV4L)
+     	 REGION_COPY(pScrn->pScreen, &pPriv->clip, clipBoxes);
+      /* draw these */
 #if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,1,99,1,0)
-     (*pSiS->AccelInfoPtr->FillSolidRects)(pScrn, pPriv->colorKey, GXcopy, ~0,
+      (*pSiS->AccelInfoPtr->FillSolidRects)(pScrn, pPriv->colorKey, GXcopy, ~0,
                     REGION_NUM_RECTS(clipBoxes),
                     REGION_RECTS(clipBoxes));
 #else
-     xf86XVFillKeyHelper(pScrn->pScreen, pPriv->colorKey, clipBoxes);
+      xf86XVFillKeyHelper(pScrn->pScreen, pPriv->colorKey, clipBoxes);
 #endif
    }
 
@@ -1406,34 +1384,34 @@ SIS6326QueryImageAttributes(
     switch(id) {
     case PIXEL_FMT_YV12:
     case PIXEL_FMT_I420:
-        *w = (*w + 7) & ~7;
-        *h = (*h + 1) & ~1;
-        pitchY = *w;
-    	pitchUV = *w >> 1;
-    	if(pitches) {
-      	    pitches[0] = pitchY;
-            pitches[1] = pitches[2] = pitchUV;
+	*w = (*w + 7) & ~7;
+	*h = (*h + 1) & ~1;
+	pitchY = *w;
+	pitchUV = *w >> 1;
+	if(pitches) {
+	    pitches[0] = pitchY;
+	    pitches[1] = pitches[2] = pitchUV;
         }
-    	sizeY = pitchY * (*h);
-    	sizeUV = pitchUV * ((*h) >> 1);
-    	if(offsets) {
-          offsets[0] = 0;
-          offsets[1] = sizeY;
-          offsets[2] = sizeY + sizeUV;
-        }
-        size = sizeY + (sizeUV << 1);
-    	break;
+	sizeY = pitchY * (*h);
+	sizeUV = pitchUV * ((*h) >> 1);
+	if(offsets) {
+	  offsets[0] = 0;
+	  offsets[1] = sizeY;
+	  offsets[2] = sizeY + sizeUV;
+	}
+	size = sizeY + (sizeUV << 1);
+	break;
     case PIXEL_FMT_YUY2:
     case PIXEL_FMT_UYVY:
     case PIXEL_FMT_RGB5:
     case PIXEL_FMT_RGB6:
     default:
-        *w = (*w + 1) & ~1;
-        pitchY = *w << 1;
-    	if(pitches) pitches[0] = pitchY;
-    	if(offsets) offsets[0] = 0;
-    	size = pitchY * (*h);
-    	break;
+	*w = (*w + 1) & ~1;
+	pitchY = *w << 1;
+	if(pitches) pitches[0] = pitchY;
+	if(offsets) offsets[0] = 0;
+	size = pitchY * (*h);
+	break;
     }
 
     return size;
@@ -1451,30 +1429,30 @@ SIS6326VideoTimerCallback(ScrnInfoPtr pScrn, Time now)
     if(!pScrn->vtSema) return;
 
     if(pSiS->adaptor) {
-    	pPriv = GET_PORT_PRIVATE(pScrn);
+	pPriv = GET_PORT_PRIVATE(pScrn);
 	if(!pPriv->videoStatus) pPriv = NULL;
     }
 
     if(pPriv) {
        if(pPriv->videoStatus & TIMER_MASK) {
-          if(pPriv->videoStatus & OFF_TIMER) {
+	  if(pPriv->videoStatus & OFF_TIMER) {
 	     if(pPriv->offTime < now) {
-                /* Turn off the overlay */
-	        sridx = inSISREG(SISSR); cridx = inSISREG(SISCR);
-                close_overlay(pSiS, pPriv);
-	        outSISREG(SISSR, sridx); outSISREG(SISCR, cridx);
-	        pPriv->mustwait = 1;
-                pPriv->videoStatus = FREE_TIMER;
-                pPriv->freeTime = now + FREE_DELAY;
-	        pSiS->VideoTimerCallback = SIS6326VideoTimerCallback;
+		/* Turn off the overlay */
+		sridx = inSISREG(SISSR); cridx = inSISREG(SISCR);
+		close_overlay(pSiS, pPriv);
+		outSISREG(SISSR, sridx); outSISREG(SISCR, cridx);
+		pPriv->mustwait = 1;
+		pPriv->videoStatus = FREE_TIMER;
+		pPriv->freeTime = now + FREE_DELAY;
+		pSiS->VideoTimerCallback = SIS6326VideoTimerCallback;
 	     }
-          } else if(pPriv->videoStatus & FREE_TIMER) {  
+          } else if(pPriv->videoStatus & FREE_TIMER) {
              if(pPriv->freeTime < now) {
-                SIS6326FreeOverlayMemory(pScrn);
-	        pPriv->mustwait = 1;
-                pPriv->videoStatus = 0;
-             }
-          } else
+		SIS6326FreeOverlayMemory(pScrn);
+		pPriv->mustwait = 1;
+		pPriv->videoStatus = 0;
+	     }
+	  } else
 	     pSiS->VideoTimerCallback = SIS6326VideoTimerCallback;
        }
     }
@@ -1496,18 +1474,18 @@ SIS6326AllocSurface (
     int size, depth;
 
     if((w < IMAGE_MIN_WIDTH) || (h < IMAGE_MIN_HEIGHT))
-    	return BadValue;
+       return BadValue;
 
     if(pSiS->oldChipset < OC_SIS6326) {
-      if((w > IMAGE_MAX_WIDTH_5597) || (h > IMAGE_MAX_HEIGHT_5597))
-    	  return BadValue;
+       if((w > IMAGE_MAX_WIDTH_5597) || (h > IMAGE_MAX_HEIGHT_5597))
+	  return BadValue;
     } else {
-      if((w > IMAGE_MAX_WIDTH) || (h > IMAGE_MAX_HEIGHT))
-    	  return BadValue;
+       if((w > IMAGE_MAX_WIDTH) || (h > IMAGE_MAX_HEIGHT))
+	  return BadValue;
     }
 
     if(pPriv->grabbedByV4L)
-    	return BadAlloc;
+       return BadAlloc;
 
     depth = pSiS->CurrentLayout.bitsPerPixel >> 3;
 
@@ -1516,7 +1494,7 @@ SIS6326AllocSurface (
     size = h * pPriv->pitch;
     pPriv->linear = SISAllocateOverlayMemory(pScrn, pPriv->linear, ((size + depth - 1) / depth));
     if(!pPriv->linear)
-    	return BadAlloc;
+       return BadAlloc;
 
     pPriv->totalSize = size;
 
@@ -1545,9 +1523,9 @@ SIS6326StopSurface (XF86SurfacePtr surface)
     SISPtr pSiS = SISPTR(surface->pScrn);
 
     if(pPriv->grabbedByV4L && pPriv->videoStatus) {
-        close_overlay(pSiS, pPriv);
-	pPriv->mustwait = 1;
-	pPriv->videoStatus = 0;
+       close_overlay(pSiS, pPriv);
+       pPriv->mustwait = 1;
+       pPriv->videoStatus = 0;
     }
     return Success;
 }
@@ -1558,9 +1536,9 @@ SIS6326FreeSurface (XF86SurfacePtr surface)
     SISPortPrivPtr pPriv = (SISPortPrivPtr)(surface->devPrivate.ptr);
 
     if(pPriv->grabbedByV4L) {
-	SIS6326StopSurface(surface);
-	SIS6326FreeOverlayMemory(surface->pScrn);
-	pPriv->grabbedByV4L = FALSE;
+       SIS6326StopSurface(surface);
+       SIS6326FreeOverlayMemory(surface->pScrn);
+       pPriv->grabbedByV4L = FALSE;
     }
     return Success;
 }
@@ -1603,7 +1581,7 @@ SIS6326DisplaySurface (
    SISPortPrivPtr pPriv = (SISPortPrivPtr)(surface->devPrivate.ptr);
 
    if(!pPriv->grabbedByV4L)
-    	return Success;
+      return Success;
 
    pPriv->drw_x = drw_x;
    pPriv->drw_y = drw_y;
@@ -1623,11 +1601,11 @@ SIS6326DisplaySurface (
 
    if(pPriv->autopaintColorKey) {
 #if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,1,99,1,0)
-   	(*XAAPTR(pScrn)->FillSolidRects)(pScrn, pPriv->colorKey, GXcopy, ~0,
+      (*XAAPTR(pScrn)->FillSolidRects)(pScrn, pPriv->colorKey, GXcopy, ~0,
                     REGION_NUM_RECTS(clipBoxes),
                     REGION_RECTS(clipBoxes));
 #else
-        xf86XVFillKeyHelper(pScrn->pScreen, pPriv->colorKey, clipBoxes);
+      xf86XVFillKeyHelper(pScrn->pScreen, pPriv->colorKey, clipBoxes);
 #endif
    }
 

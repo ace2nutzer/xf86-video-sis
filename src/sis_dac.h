@@ -43,37 +43,37 @@ int  SiSMclk(SISPtr pSiS);
 void SiSRestoreBridge(ScrnInfoPtr pScrn, SISRegPtr sisReg);
 void SiS_UpdateGammaCRT2(ScrnInfoPtr pScrn);
 
-extern void     SiS6326SetTVReg(ScrnInfoPtr pScrn, CARD8 index, CARD8 data);
-extern UChar    SiS6326GetTVReg(ScrnInfoPtr pScrn, CARD8 index);
-extern void     SiS6326SetXXReg(ScrnInfoPtr pScrn, CARD8 index, CARD8 data);
-extern UChar   	SiS6326GetXXReg(ScrnInfoPtr pScrn, CARD8 index);
+extern void	SiS6326SetTVReg(ScrnInfoPtr pScrn, CARD8 index, CARD8 data);
+extern UChar	SiS6326GetTVReg(ScrnInfoPtr pScrn, CARD8 index);
+extern void	SiS6326SetXXReg(ScrnInfoPtr pScrn, CARD8 index, CARD8 data);
+extern UChar	SiS6326GetXXReg(ScrnInfoPtr pScrn, CARD8 index);
 
-extern int      SiSCalcVRate(DisplayModePtr mode);
+extern float	SiSCalcVRate(DisplayModePtr mode);
 
-extern void     SISCalculateGammaRampCRT2(ScrnInfoPtr pScrn);
+extern void	SISCalculateGammaRampCRT2(ScrnInfoPtr pScrn);
 
 /* Functions from init.c and init301.c (use their datatypes!) */
-extern void     SiS_UnLockCRT2(SiS_Private *SiS_Pr, PSIS_HW_INFO);
-extern void     SiS_LockCRT2(SiS_Private *SiS_Pr, PSIS_HW_INFO);
-extern void     SiS_DisableBridge(SiS_Private *SiS_Pr, PSIS_HW_INFO);
-extern void     SiS_EnableBridge(SiS_Private *SiS_Pr, PSIS_HW_INFO);
-extern USHORT 	SiS_GetCH700x(SiS_Private *SiS_Pr, USHORT tempbx);
-extern void 	SiS_SetCH700x(SiS_Private *SiS_Pr, USHORT tempbx);
-extern USHORT 	SiS_GetCH701x(SiS_Private *SiS_Pr, USHORT tempbx);
-extern void 	SiS_SetCH701x(SiS_Private *SiS_Pr, USHORT tempbx);
-extern USHORT 	SiS_GetCH70xx(SiS_Private *SiS_Pr, USHORT tempbx);
-extern void 	SiS_SetCH70xx(SiS_Private *SiS_Pr, USHORT tempbx);
-extern void     SiS_SetCH70xxANDOR(SiS_Private *SiS_Pr, USHORT tempax, USHORT tempbh);
-extern void     SiS_DDC2Delay(SiS_Private *SiS_Pr, USHORT delaytime);
-extern USHORT   SiS_ReadDDC1Bit(SiS_Private *SiS_Pr);
-extern USHORT   SiS_HandleDDC(SiS_Private *SiS_Pr, ULONG VBFlags, int VGAEngine,
+extern void	SiS_UnLockCRT2(SiS_Private *SiS_Pr, PSIS_HW_INFO);
+extern void	SiS_LockCRT2(SiS_Private *SiS_Pr, PSIS_HW_INFO);
+extern void	SiS_DisableBridge(SiS_Private *SiS_Pr, PSIS_HW_INFO);
+extern void	SiS_EnableBridge(SiS_Private *SiS_Pr, PSIS_HW_INFO);
+extern USHORT	SiS_GetCH700x(SiS_Private *SiS_Pr, USHORT tempbx);
+extern void	SiS_SetCH700x(SiS_Private *SiS_Pr, USHORT tempbx);
+extern USHORT	SiS_GetCH701x(SiS_Private *SiS_Pr, USHORT tempbx);
+extern void	SiS_SetCH701x(SiS_Private *SiS_Pr, USHORT tempbx);
+extern USHORT	SiS_GetCH70xx(SiS_Private *SiS_Pr, USHORT tempbx);
+extern void	SiS_SetCH70xx(SiS_Private *SiS_Pr, USHORT tempbx);
+extern void	SiS_SetCH70xxANDOR(SiS_Private *SiS_Pr, USHORT tempax, USHORT tempbh);
+extern void	SiS_DDC2Delay(SiS_Private *SiS_Pr, USHORT delaytime);
+extern USHORT	SiS_ReadDDC1Bit(SiS_Private *SiS_Pr);
+extern USHORT	SiS_HandleDDC(SiS_Private *SiS_Pr, ULONG VBFlags, int VGAEngine,
                               USHORT adaptnum, USHORT DDCdatatype, UCHAR *buffer);
-extern void     SiS_SetChrontelGPIO(SiS_Private *SiS_Pr, USHORT myvbinfo);
-extern void     SiS_DisplayOn(SiS_Private *SiS_Pr);
+extern void	SiS_SetChrontelGPIO(SiS_Private *SiS_Pr, USHORT myvbinfo);
+extern void	SiS_DisplayOn(SiS_Private *SiS_Pr);
 extern UCHAR	SiS_GetSetModeID(ScrnInfoPtr pScrn, UCHAR id);
-extern void     SiS_SetEnableDstn(SiS_Private *SiS_Pr, int enable);
-extern void     SiS_SetEnableFstn(SiS_Private *SiS_Pr, int enable);
+extern void	SiS_SetEnableDstn(SiS_Private *SiS_Pr, int enable);
+extern void	SiS_SetEnableFstn(SiS_Private *SiS_Pr, int enable);
 extern void	SiSRegInit(SiS_Private *SiS_Pr, USHORT BaseAddr);
-extern void     SiSSetLVDSetc(SiS_Private *SiS_Pr, PSIS_HW_INFO HwDeviceExtension, USHORT ModeNo);
-extern void     SiS_GetVBType(SiS_Private *SiS_Pr, PSIS_HW_INFO);
+extern void	SiSSetLVDSetc(SiS_Private *SiS_Pr, PSIS_HW_INFO HwDeviceExtension, USHORT ModeNo);
+extern void	SiS_GetVBType(SiS_Private *SiS_Pr, PSIS_HW_INFO);
 /* End of init.c/init301.c imports */

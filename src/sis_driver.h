@@ -37,7 +37,7 @@
  *     -) VBE 3.0 on SiS300 and 315 series do not support 24 fpp modes
  *     -) Only SiS315 series support 1920x1440x32
  */
- 
+
 static const UShort VESAModeIndices[] = {
    /*   x    y     8      16    (24)    32   */
        320, 200, 0x138, 0x10e, 0x000, 0x000,
@@ -52,7 +52,7 @@ static const UShort VESAModeIndices[] = {
       1600,1200, 0x130, 0x131, 0x000, 0x13e,
       1920,1440, 0x13f, 0x140, 0x000, 0x141,
       9999,9999, 0,     0,     0,     0
-};      
+};
 
 /* For calculating refresh rate index (CR33) */
 static const struct _sis_vrate {
@@ -67,15 +67,15 @@ static const struct _sis_vrate {
 	{1,  400,  300,  60,  TRUE},
         {1,  512,  384,  60,  TRUE},
 	{1,  640,  400,  60,  TRUE}, {1,  640,  400,  72,  TRUE},
-	{1,  640,  480,  60,  TRUE}, {2,  640,  480,  72,  TRUE}, {3,  640,  480,  75,  TRUE}, 
-	{4,  640,  480,  85,  TRUE}, {5,  640,  480, 100,  TRUE}, {6,  640,  480, 120,  TRUE}, 
+	{1,  640,  480,  60,  TRUE}, {2,  640,  480,  72,  TRUE}, {3,  640,  480,  75,  TRUE},
+	{4,  640,  480,  85,  TRUE}, {5,  640,  480, 100,  TRUE}, {6,  640,  480, 120,  TRUE},
 	{7,  640,  480, 160, FALSE}, {8,  640,  480, 200, FALSE},
 	{1,  720,  480,  60,  TRUE},
 	{1,  720,  576,  60,  TRUE},
 	{1,  768,  576,  60,  TRUE},
 	{1,  800,  480,  60,  TRUE}, {2,  800,  480,  75,  TRUE}, {3,  800,  480,  85,  TRUE},
-	{1,  800,  600,  56,  TRUE}, {2,  800,  600,  60,  TRUE}, {3,  800,  600,  72,  TRUE}, 
-	{4,  800,  600,  75,  TRUE}, {5,  800,  600,  85,  TRUE}, {6,  800,  600, 105,  TRUE}, 
+	{1,  800,  600,  56,  TRUE}, {2,  800,  600,  60,  TRUE}, {3,  800,  600,  72,  TRUE},
+	{4,  800,  600,  75,  TRUE}, {5,  800,  600,  85,  TRUE}, {6,  800,  600, 105,  TRUE},
 	{7,  800,  600, 120, FALSE}, {8,  800,  600, 160, FALSE},
 	{1,  848,  480,  39,  TRUE}, {2,  848,  480,  60,  TRUE},
 	{1,  856,  480,  39,  TRUE}, {2,  856,  480,  60,  TRUE},
@@ -89,8 +89,8 @@ static const struct _sis_vrate {
 	{1, 1152,  768,  60,  TRUE},
 	{1, 1152,  864,  60,  TRUE}, {1, 1152,  864,  75,  TRUE}, {2, 1152,  864,  84, FALSE},
 	{1, 1280,  720,  60,  TRUE}, {2, 1280,  720,  75, FALSE}, {3, 1280,  720,  85,  TRUE},
-	{1, 1280,  768,  60,  TRUE},
-	{1, 1280,  800,  60,  TRUE},
+	{1, 1280,  768,  60,  TRUE}, {2, 1280,  768,  75,  TRUE}, {3, 1280,  768,  85,  TRUE},
+	{1, 1280,  800,  60,  TRUE}, {2, 1280,  800,  75,  TRUE}, {3, 1280,  800,  85,  TRUE},
 	{1, 1280,  960,  60,  TRUE}, {2, 1280,  960,  85,  TRUE},
 	{1, 1280, 1024,  43, FALSE}, {2, 1280, 1024,  60,  TRUE}, {3, 1280, 1024,  75, FALSE},
 	{4, 1280, 1024,  85,  TRUE},
@@ -103,7 +103,7 @@ static const struct _sis_vrate {
 	{1, 1920, 1080,  30,  TRUE},
 	{1, 1920, 1440,  60,  TRUE}, {2, 1920, 1440,  65,  TRUE}, {3, 1920, 1440,  70,  TRUE},
 	{4, 1920, 1440,  75,  TRUE}, {5, 1920, 1440,  85,  TRUE}, {6, 1920, 1440, 100,  TRUE},
-	{1, 2048, 1536,  60,  TRUE}, {2, 2048, 1536,  65,  TRUE}, {3, 2048, 1536,  70,  TRUE}, 
+	{1, 2048, 1536,  60,  TRUE}, {2, 2048, 1536,  65,  TRUE}, {3, 2048, 1536,  70,  TRUE},
 	{4, 2048, 1536,  75,  TRUE}, {5, 2048, 1536,  85,  TRUE},
 	{0,    0,    0,   0, FALSE}
 };
@@ -130,7 +130,7 @@ static const chswtable mychswtable[] = {
 };
 
 /*     These machines require special timing/handling
- */ 
+ */
 const customttable mycustomttable[] = {
         { SIS_630, "2.00.07", "09/27/2002-13:38:25",
 	  0x3240A8,
@@ -244,6 +244,15 @@ const customttable mycustomttable[] = {
 	  0x1043, 0x1612,
 	  "Asus", "A2H (V2)", CUT_ASUSA2H_2, "ASUS_A2H_2"
 	},
+#if 0
+	{ SIS_550, "1.02.0z", "",
+	  0x317f37,	/* 320x240 LCD panel */
+	  { 0, 0, 0, 0, 0 },
+	  { 0, 0, 0, 0, 0 },
+	  0, 0,
+	  "AAEON", "AOP-8060", CUT_AOP8060, "AAEON_AOP_8060"
+	},
+#endif
 	{ 4321, "", "",			/* never autodetected */
 	  0,
 	  { 0, 0, 0, 0, 0 },
@@ -656,7 +665,7 @@ static DisplayModeRec SiS6326SIS1600x1200_60Mode = {
 };
 
 /*     TV filters for SiS video bridges
- */ 
+ */
 static const struct _SiSTVFilter301 {
 	UChar filter[7][4];
 } SiSTVFilter301[] = {
@@ -780,7 +789,7 @@ static const struct _SiSTVFilter301B {
 };
 
 /*     TV scaling data for SiS video bridges
- */ 
+ */
 typedef struct _SiSTVVScale {
         UShort ScaleVDE;
 	int sindex;
@@ -1281,12 +1290,12 @@ static void SISAdjustFrame(int scrnIndex, int x, int y, int flags);
 static Bool SISSaveScreenDH(ScreenPtr pScreen, int mode);
 #endif
 #ifdef X_XF86MiscPassMessage
-static int  SISHandleMessage(int scrnIndex, const char *msgtype, 
+static int  SISHandleMessage(int scrnIndex, const char *msgtype,
 		      const char *msgval, char **retmsg);
-static int  SISCheckModeTimingForCRT2Type(ScrnInfoPtr pScrn, UShort cond, UShort hdisplay, 
-		      UShort vdisplay, UShort htotal, UShort vtotal, 
+static int  SISCheckModeTimingForCRT2Type(ScrnInfoPtr pScrn, UShort cond, UShort hdisplay,
+		      UShort vdisplay, UShort htotal, UShort vtotal,
 		      UShort hsyncstart, UShort hsyncend, UShort vsyncstart,
-		      UShort vsyncend, int clock, Bool quiet);		      
+		      UShort vsyncend, int clock, Bool quiet);
 #endif
 
 /* Optional functions */
@@ -1324,10 +1333,10 @@ static UShort  SiS_CheckModeCRT1(ScrnInfoPtr pScrn, DisplayModePtr mode,
 				 ULong VBFlags, Bool hcm);
 static UShort  SiS_CheckModeCRT2(ScrnInfoPtr pScrn, DisplayModePtr mode,
 				 ULong VBFlags, Bool hcm);
-			      
+
 #ifdef SISMERGED
 static Bool    InRegion(int x, int y, region r);
-static void    SISMergePointerMoved(int scrnIndex, int x, int y);
+static void    SISMergedPointerMoved(int scrnIndex, int x, int y);
 #endif
 Bool           SiSBridgeIsInSlaveMode(ScrnInfoPtr pScrn);
 UShort	       SiS_GetModeNumber(ScrnInfoPtr pScrn, DisplayModePtr mode, ULong VBFlags);
@@ -1352,7 +1361,9 @@ extern Bool 	SiSVGASaveScreen(ScreenPtr pScreen, int mode);
 
 /* shadow */
 extern void 	SISPointerMoved(int index, int x, int y);
+extern void 	SISPointerMovedReflect(int index, int x, int y);
 extern void 	SISRefreshArea(ScrnInfoPtr pScrn, int num, BoxPtr pbox);
+extern void 	SISRefreshAreaReflect(ScrnInfoPtr pScrn, int num, BoxPtr pbox);
 extern void 	SISRefreshArea8(ScrnInfoPtr pScrn, int num, BoxPtr pbox);
 extern void 	SISRefreshArea16(ScrnInfoPtr pScrn, int num, BoxPtr pbox);
 extern void 	SISRefreshArea24(ScrnInfoPtr pScrn, int num, BoxPtr pbox);
@@ -1385,9 +1396,9 @@ extern BOOLEAN	SiSSetMode(SiS_Private *SiS_Pr, PSIS_HW_INFO HwDeviceExtension,
 extern BOOLEAN 	SiSBIOSSetModeCRT1(SiS_Private *SiS_Pr, PSIS_HW_INFO HwDeviceExtension,
 				   ScrnInfoPtr pScrn, DisplayModePtr mode, BOOLEAN IsCustom);
 extern BOOLEAN 	SiSBIOSSetModeCRT2(SiS_Private *SiS_Pr, PSIS_HW_INFO HwDeviceExtension,
-				   ScrnInfoPtr pScrn, DisplayModePtr mode, BOOLEAN IsCustom);			   
+				   ScrnInfoPtr pScrn, DisplayModePtr mode, BOOLEAN IsCustom);
 extern DisplayModePtr SiSBuildBuiltInModeList(ScrnInfoPtr pScrn, BOOLEAN includelcdmodes,
-					      BOOLEAN isfordvi, BOOLEAN fakecrt2modes);
+					      BOOLEAN isfordvi, BOOLEAN fakecrt2modes, BOOLEAN IsForCRT2);
 extern void 	SiS_Chrontel701xBLOn(SiS_Private *SiS_Pr, PSIS_HW_INFO HwDeviceExtension);
 extern void 	SiS_Chrontel701xBLOff(SiS_Private *SiS_Pr);
 extern void 	SiS_SiS30xBLOn(SiS_Private *SiS_Pr, PSIS_HW_INFO HwDeviceExtension);

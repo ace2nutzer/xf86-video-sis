@@ -109,7 +109,7 @@
 #define SetNotSimuMode          0x0400
 #define SetNotSimuTVMode        SetNotSimuMode
 #define SetDispDevSwitch        0x0800
-#define SetCRT2ToYPbPr525750    0x0800   
+#define SetCRT2ToYPbPr525750    0x0800
 #define LoadDACFlag             0x1000
 #define DisableCRT2Display      0x2000
 #define DriverMode              0x4000
@@ -153,7 +153,7 @@
 #define SupportCHTV 		0x0800
 #define Support64048060Hz       0x0800  /* Special for 640x480 LCD */
 #define SupportHiVision         0x0010
-#define SupportYPbPr750p        0x1000  
+#define SupportYPbPr750p        0x1000
 #define SupportLCD              0x0020
 #define SupportRAMDAC2          0x0040	/* All           (<= 100Mhz) */
 #define SupportRAMDAC2_135      0x0100  /* All except DH (<= 135Mhz) */
@@ -161,6 +161,7 @@
 #define SupportRAMDAC2_202      0x0400  /* C             (<= 202Mhz) */
 #define InterlaceMode           0x0080
 #define SyncPP                  0x0000
+#define HaveWideTiming		0x2000	/* Have specific wide- and non-wide timing */
 #define SyncPN                  0x4000
 #define SyncNP                  0x8000
 #define SyncNN                  0xc000
@@ -209,7 +210,8 @@
 #define SF_IsM661		0x0020
 #define SF_IsM741		0x0040
 #define SF_IsM760		0x0080
-#define SF_760LFB		0x8000  /* 760: We have LFB */
+#define SF_760UMA		0x4000  /* 76x: We have UMA */
+#define SF_760LFB		0x8000  /* 76x: We have LFB */
 
 /* CR32 (Newer 630, and 315 series)
 
@@ -229,25 +231,19 @@
 #define TVOverScanShift         4
 
 /* CR35 (661 series only)
-
    [0]    1 = PAL, 0 = NTSC
    [1]    1 = NTSC-J (if D0 = 0)
    [2]    1 = PALM (if D0 = 1)
    [3]    1 = PALN (if D0 = 1)
    [4]    1 = Overscan (Chrontel only)
    [7:5]  (only if D2 in CR38 is set)
-          000  525i
- 	  001  525p
+	  000  525i
+	  001  525p
 	  010  750p
 	  011  1080i (or HiVision on 301, 301B)
-
-   These bits are being translated to TVMode flag.
-
 */
 
-/*
-   CR37
-
+/* CR37
    [0]   Set 24/18 bit (0/1) RGB to LVDS/TMDS transmitter (set by BIOS)
    [3:1] External chip
          300 series:
@@ -261,7 +257,7 @@
 	    010   LVDS
 	    011   LVDS + Chrontel 7019
 	  660 series [2:1] only:
-	     reserved (now in CR38)
+	     reserved (chip type now in CR38)
 	  All other combinations reserved
    [3]    661 only: Pass 1:1 data
    [4]    LVDS: 0: Panel Link expands / 1: Panel Link does not expand
@@ -321,6 +317,7 @@
 #define Enable302LV_DualLink    0x04   /* 302LV only; enable dual link */
 
 /* CR39 (661 and later)
+   D[7]   LVDS (SiS or third party)
    D[1:0] YPbPr Aspect Ratio
           00 4:3 letterbox
 	  01 4:3
@@ -342,13 +339,33 @@
 	 0101 Set Contrast event
 	 0110 Set Mute event
 	 0111 Set Volume Up/Down event
-   [4]   Enable Backlight Control by BIOS/driver 
+   [4]   Enable Backlight Control by BIOS/driver
          (set by driver; set means that the BIOS should
 	 not touch the backlight registers because eg.
 	 the driver already switched off the backlight)
    [5]   PAL/NTSC (set by BIOS)
    [6]   Expansion On/Off (set by BIOS; copied to CR32[4])
    [7]   TV UnderScan/OverScan (set by BIOS)
+*/
+
+/* CR7C - 661 and later
+   [7]   DualEdge enabled (or: to be enabled)
+   [6]   CRT2 = TV/LCD/VGA enabled (or: to be enabled)
+   [5]   Init done (set at end of SiS_Init)
+   {4]   LVDS LCD capabilities
+   [3]   LVDS LCD capabilities
+   [2]   LVDS LCD capabilities (PWD)
+   [1]   LVDS LCD capabilities (PWD)
+   [0]   LVDS=1, TMDS=0 (SiS or third party)
+*/
+
+/* CR7E - 661 and later
+   VBType:
+   [7] LVDS (third party)
+   [3] 301C
+   [2] 302LV
+   [1] 301LV
+   [0] 301B
 */
 
 /* LCDResInfo */
@@ -360,7 +377,6 @@
 #define Panel300_1024x600       0x06
 #define Panel300_1152x768       0x07
 #define Panel300_1280x768       0x0a
-#define Panel300_320x480        0x0e 	/* fstn - This is fake, can be any */
 #define Panel300_Custom		0x0f
 #define Panel300_Barco1366      0x10
 
@@ -375,9 +391,9 @@
 #define Panel310_1400x1050      0x09
 #define Panel310_1280x768       0x0a
 #define Panel310_1600x1200      0x0b
-#define Panel310_640x480_2      0x0c
-#define Panel310_640x480_3      0x0d
-#define Panel310_320x480        0x0e    /* fstn - TW: This is fake, can be any */
+#define Panel310_320x240_2      0x0c    /* xSTN */
+#define Panel310_320x240_3      0x0d    /* xSTN */
+#define Panel310_320x240_1      0x0e    /* xSTN - This is fake, can be any */
 #define Panel310_Custom		0x0f
 
 #define Panel661_800x600        0x01
@@ -411,11 +427,11 @@
 #define Panel_1680x1050         0x0d    /* 661etc  */
 #define Panel_1280x720		0x0e    /* 661etc  */
 #define Panel_Custom		0x0f	/* MUST BE 0x0f (for DVI DDC detection) */
-#define Panel_320x480           0x10    /* SiS 550 fstn - TW: This is fake, can be any */
+#define Panel_320x240_1         0x10    /* SiS 550 xSTN */
 #define Panel_Barco1366         0x11
 #define Panel_848x480		0x12
-#define Panel_640x480_2		0x13    /* SiS 550 */
-#define Panel_640x480_3		0x14    /* SiS 550 */
+#define Panel_320x240_2		0x13    /* SiS 550 xSTN */
+#define Panel_320x240_3		0x14    /* SiS 550 xSTN */
 #define Panel_1280x768_2        0x15	/* 30xLV */
 #define Panel_1280x768_3        0x16    /* (unused) */
 #define Panel_1280x800_2	0x17    /* 30xLV */
@@ -485,22 +501,22 @@
 #define VCLK_CUSTOM_300		0x47
 
 #define VCLK65_315              0x0b   /* Indices in (VB)VCLKData table (315) */
-#define VCLK108_2_315           0x19   
-#define VCLK81_315		0x5b   
-#define VCLK162_315             0x5e   
-#define VCLK108_3_315           0x45   
-#define VCLK100_315             0x46   
+#define VCLK108_2_315           0x19
+#define VCLK81_315		0x5b
+#define VCLK162_315             0x5e
+#define VCLK108_3_315           0x45
+#define VCLK100_315             0x46
 #define VCLK34_315              0x55
 #define VCLK68_315		0x0d
-#define VCLK_1280x800_315_2	0x5c   
-#define VCLK121_315		0x5d   
-#define VCLK130_315		0x72   
+#define VCLK_1280x800_315_2	0x5c
+#define VCLK121_315		0x5d
+#define VCLK130_315		0x72
 #define VCLK_1280x720		0x5f
 #define VCLK_1280x768_2		0x60
 #define VCLK_1280x768_3		0x61   /* (unused?) */
 #define VCLK_CUSTOM_315		0x62
 #define VCLK_1280x720_2		0x63
-#define VCLK_720x480		0x67 
+#define VCLK_720x480		0x67
 #define VCLK_720x576		0x68
 #define VCLK_768x576		0x68
 #define VCLK_848x480		0x65

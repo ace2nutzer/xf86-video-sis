@@ -1,7 +1,7 @@
 /* $XFree86$ */
 /* $XdotOrg$ */
 /*
- * Register access macros and register definitions 
+ * Register access macros and register definitions
  *
  * Copyright (C) 2001-2005 by Thomas Winischhofer, Vienna, Austria
  *
@@ -48,7 +48,7 @@
 #define SIS_NEED_setSISIDXREG
 #define SIS_NEED_setSISIDXREGmask
 */
- 
+
 /* Video RAM access macros */
 
 /* (Currently, these are use on all platforms; USB2VGA is handled
@@ -98,7 +98,7 @@
                       UChar __Temp = inSISREG(base); 	\
                       outSISREG(base, __Temp | (val)); 	\
                     } while (0)
-		    
+
 #define andSISREG(base,val)     			\
 		    do { 				\
                       UChar __Temp = inSISREG(base); 	\
@@ -115,8 +115,8 @@
 		    do { 			\
                       outSISREG(base, idx); 	\
 		      outSISREG((base)+1, val); \
-                    } while (0)			    
-		    		    
+                    } while (0)
+
 #define orSISIDXREG(base,idx,val)   				\
 		    do { 					\
                       UChar __Temp; 				\
@@ -124,7 +124,7 @@
                       __Temp = inSISREG((base)+1) | (val); 	\
 		      outSISREG((base)+1, __Temp);		\
                     } while (0)
-		    
+
 #define andSISIDXREG(base,idx,and)  				\
 		    do { 					\
                       UChar __Temp; 				\
@@ -132,7 +132,7 @@
                       __Temp = inSISREG((base)+1) & (and); 	\
 		      outSISREG((base)+1, __Temp);		\
                     } while (0)
-		    
+
 #define setSISIDXREG(base,idx,and,or)   		   		\
 		    do { 				   		\
                       UChar __Temp; 		   			\
@@ -148,8 +148,8 @@
 		      __Temp = (inSISREG((base)+1)) & (~(mask));\
 		      __Temp |= ((data) & (mask));	   	\
 		      outSISREG((base)+1, __Temp);		\
-		    } while(0)		    
-		    
+		    } while(0)
+
 #else /* USEDEVPORT */
 
 extern int sisdevport;
@@ -217,7 +217,7 @@ static void orSISREG(ULong base, UChar val)
     lseek(sisdevport, base, SEEK_SET);
     read(sisdevport, &tmp, 1);
     tmp |= val;
-    lseek(sisdevport, base, SEEK_SET);		     
+    lseek(sisdevport, base, SEEK_SET);
     write(sisdevport, &tmp, 1);
 }
 #endif
@@ -229,7 +229,7 @@ static void andSISREG(ULong base, UChar val)
     lseek(sisdevport, base, SEEK_SET);
     read(sisdevport, &tmp, 1);
     tmp &= val;
-    lseek(sisdevport, base, SEEK_SET);		     
+    lseek(sisdevport, base, SEEK_SET);
     write(sisdevport, &tmp, 1);
 }
 #endif
@@ -256,7 +256,7 @@ static UChar __inSISIDXREG(ULong base, UChar idx)
 }
 #define inSISIDXREG(base,idx,var)  var = __inSISIDXREG(base, idx);
 #endif
-	    
+
 #ifdef SIS_NEED_orSISIDXREG
 static void orSISIDXREG(ULong base, UChar idx, UChar val)
 {
@@ -265,7 +265,7 @@ static void orSISIDXREG(ULong base, UChar idx, UChar val)
     write(sisdevport, &idx, 1);
     read(sisdevport, &tmp, 1);
     tmp |= val;
-    lseek(sisdevport, base + 1, SEEK_SET);		     
+    lseek(sisdevport, base + 1, SEEK_SET);
     write(sisdevport, &tmp, 1);
 }
 #endif
@@ -278,7 +278,7 @@ static void andSISIDXREG(ULong base, UChar idx, UChar val)
     write(sisdevport, &idx, 1);
     read(sisdevport, &tmp, 1);
     tmp &= val;
-    lseek(sisdevport, base + 1, SEEK_SET);		     		     
+    lseek(sisdevport, base + 1, SEEK_SET);
     write(sisdevport, &tmp, 1);
 }
 #endif
@@ -293,13 +293,13 @@ static void setSISIDXREG(ULong base, UChar idx,
     read(sisdevport, &tmp, 1);
     tmp &= myand;
     tmp |= myor;
-    lseek(sisdevport, base + 1, SEEK_SET);		     		     
+    lseek(sisdevport, base + 1, SEEK_SET);
     write(sisdevport, &tmp, 1);
-}			 
+}
 #endif
-	    
+
 #ifdef SIS_NEED_setSISIDXREGmask
-static void setSISIDXREGmask(ULong base, UChar idx, 
+static void setSISIDXREGmask(ULong base, UChar idx,
                              UChar data, UChar mask)
 {
     UChar tmp;
@@ -308,7 +308,7 @@ static void setSISIDXREGmask(ULong base, UChar idx,
     read(sisdevport, &tmp, 1);
     tmp &= ~(mask);
     tmp |= (data & mask);
-    lseek(sisdevport, base + 1, SEEK_SET);		     		     
+    lseek(sisdevport, base + 1, SEEK_SET);
     write(sisdevport, &tmp, 1);
 }
 #endif
@@ -542,30 +542,30 @@ static void setSISIDXREGmask(ULong base, UChar idx,
 #define  VI_Misc0_Fmt_YVU420P			0x0C /* YUV420 Planar (I420, YV12) */
 #define  VI_Misc0_Fmt_YUYV			0x28 /* YUYV Packed (=YUY2) */
 #define  VI_Misc0_Fmt_UYVY			0x08 /* (UYVY) */
-#define  VI_Misc0_Fmt_YVYU                      0x38 /* (YVYU) (315 series only?) */
+#define  VI_Misc0_Fmt_YVYU			0x38 /* (YVYU) (315 series only?) */
 #define  VI_Misc0_Fmt_NV21			0x5c /* (330 series only?) */
 #define  VI_Misc0_Fmt_NV12			0x4c /* (330 series only?) */
-#define  VI_Misc0_ChromaKeyRGBYUV               0x40 /* 300 series only: 0 = RGB, 1 = YUV */
+#define  VI_Misc0_ChromaKeyRGBYUV		0x40 /* 300 series only: 0 = RGB, 1 = YUV */
 
 /* Bits for Index_VI_Control_Misc1 */
-#define  VI_Misc1_DisableGraphicsAtOverlay      0x01 /* Disables graphics display in overlay area */
+#define  VI_Misc1_DisableGraphicsAtOverlay	0x01 /* Disables graphics display in overlay area */
 #define  VI_Misc1_BOB_Enable			0x02 /* Enable BOB de-interlacer */
 #define	 VI_Misc1_Line_Merge			0x04
 #define  VI_Misc1_Field_Mode			0x08 /* ? Assume even/odd fields interleaved in memory ? */
-#define  VI_Misc1_Non_Interleave                0x10 /* ? Odd and Even fields are not interleaved ? */
+#define  VI_Misc1_Non_Interleave		0x10 /* ? Odd and Even fields are not interleaved ? */
 #define  VI_Misc1_Buf_Addr_Lock			0x20 /* 315 series only? */
-/* #define  VI_Misc1_?                          0x40  */
-/* #define  VI_Misc1_?                          0x80  */
+/* #define  VI_Misc1_?				0x40  */
+/* #define  VI_Misc1_?				0x80  */
 
 /* Bits for Index_VI_Control_Misc2 */
 #define  VI_Misc2_Select_Video2			0x01
 #define  VI_Misc2_Video2_On_Top			0x02
-#define  VI_Misc2_DisableGraphics              	0x04 /* Disable graphics display entirely (<= 650 only, not >= M650, 651) */
+#define  VI_Misc2_DisableGraphics       	0x04 /* Disable graphics display entirely (<= 650 only, not >= M650, 651) */
 #define  VI_Misc2_Vertical_Interpol		0x08
-#define  VI_Misc2_Dual_Line_Merge               0x10  /* dual-overlay chips only; "dual video windows relative line buffer merge" */
-#define  VI_Misc2_All_Line_Merge                0x20  /* > 315 only */
+#define  VI_Misc2_Dual_Line_Merge		0x10  /* dual-overlay chips only; "dual video windows relative line buffer merge" */
+#define  VI_Misc2_All_Line_Merge		0x20  /* > 315 only */
 #define  VI_Misc2_Auto_Flip_Enable		0x40
-#define  VI_Misc2_Video_Reg_Write_Enable        0x80  /* 315 series only? */
+#define  VI_Misc2_Video_Reg_Write_Enable	0x80  /* 315 series only? */
 
 /* Bits for Index_VI_Control_Misc3 */
 #define  VI_Misc3_Submit_Video_1		0x01  /* AKA "address ready" */
@@ -576,11 +576,11 @@ static void setSISIDXREGmask(ULong base, UChar idx,
 #define  VI_ROP_Never				0x00
 #define  VI_ROP_DestKey				0x03
 #define  VI_ROP_ChromaKey			0x05
-#define  VI_ROP_NotChromaKey                    0x0A
+#define  VI_ROP_NotChromaKey			0x0A
 #define  VI_ROP_Always				0x0F
 
 
-/* Video registers (6326 and 530/620) --------------- */
+/* Video registers (559x, 6326 and 530/620) --------------- */
 #define  Index_VI6326_Passwd                        0x80
 
 /* Video overlay horizontal start/end, unit=screen pixels */
