@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/sis_driver.c,v 1.19 2004/08/14 15:26:51 twini Exp $ */
+/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/sis_driver.c,v 1.20 2004/08/20 18:57:06 kem Exp $ */
 /*
  * SiS driver main code
  *
@@ -3840,7 +3840,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	if(pSiS->Chipset == PCI_CHIP_SIS530) {
 		/* Check if Flat Panel is enabled */
 		inSISIDXREG(SISSR, 0x0e, tempreg);
-		if(!tempreg & 0x04) pSiS->availMem -= pSiS->CursorSize;
+		if(!(tempreg & 0x04)) pSiS->availMem -= pSiS->CursorSize;
 
 		/* Set up mask for MMIO register */
 		pSiS->CmdQueLenMask = (pSiS->TurboQueue) ? 0x1FFF : 0x00FF;
