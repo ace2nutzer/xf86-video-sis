@@ -1,4 +1,4 @@
-/* $XFree86$ */
+/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/sis/vgatypes.h,v 1.21 2004/01/23 22:29:06 twini Exp $ */
 /*
  * General type definitions for universal mode switching modules
  *

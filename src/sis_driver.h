@@ -1,4 +1,4 @@
-/* $XFree86$ */
+/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/sis/sis_driver.h,v 1.36 2004/01/23 22:29:05 twini Exp $ */
 /*
  * Global data and definitions
  *

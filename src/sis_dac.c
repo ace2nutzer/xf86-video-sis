@@ -1,4 +1,4 @@
-/* $XFree86$ */
+/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/sis/sis_dac.c,v 1.57 2004/02/02 03:55:29 dawes Exp $ */
 /*
  * DAC helper functions (Save/Restore, MemClk, etc)
  *

@@ -1,4 +1,4 @@
-/* $XFree86$ */
+/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/sis/init.h,v 1.46 2004/01/27 11:58:27 twini Exp $ */
 /*
  * Data and prototypes for init.c
  *
