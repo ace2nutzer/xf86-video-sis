@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg$ */
+/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/sis310_accel.c,v 1.4 2004/07/26 22:40:56 twini Exp $ */
 /*
  * 2D Acceleration for SiS 315 and 330 series
  *
@@ -554,7 +554,7 @@ static void SiSSetupForScreenToScreenCopy(ScrnInfoPtr pScrn,
 	   SiSSetupSRCTrans(trans_color)
 	   SiSSetupCMDFlag(TRANSPARENT_BITBLT)
 	} else {
-	   SiSSetupROP(XAACopyROP[rop])
+	   SiSSetupROP(XAAGetCopyROP(rop))
 	   /* Set command - not needed, both 0 */
 	   /* SiSSetupCMDFlag(BITBLT | SRCVIDEO) */
 	}
@@ -677,14 +677,14 @@ SiSSetupForSolidFill(ScrnInfoPtr pScrn, int color,
 	SiSSetupDSTColorDepth(pSiS->SiS310_AccelDepth);
 	SiSCheckQueue(16 * 1);
 	SiSSetupPATFGDSTRect(color, pSiS->scrnOffset, -1)
-	SiSSetupROP(XAAPatternROP[rop])
+	SiSSetupROP(XAAGetPatternROP(rop))
 	SiSSetupCMDFlag(PATFG)
         SiSSyncWP
 #else
   	SiSSetupPATFG(color)
 	SiSSetupDSTRect(pSiS->scrnOffset, -1)
 	SiSSetupDSTColorDepth(pSiS->DstColor);
-	SiSSetupROP(XAAPatternROP[rop])
+	SiSSetupROP(XAAGetPatternROP(rop))
 	SiSSetupCMDFlag(PATFG | pSiS->SiS310_AccelDepth)
 #endif
 }
@@ -822,7 +822,7 @@ SiSSetupForSolidLine(ScrnInfoPtr pScrn, int color, int rop,
 	SiSCheckQueue(16 * 3);
         SiSSetupLineCountPeriod(1, 1)
 	SiSSetupPATFGDSTRect(color, pSiS->scrnOffset, -1)
-	SiSSetupROP(XAAPatternROP[rop])
+	SiSSetupROP(XAAGetPatternROP(rop))
 	SiSSetupCMDFlag(PATFG | LINE)
         SiSSyncWP
 #else
@@ -830,7 +830,7 @@ SiSSetupForSolidLine(ScrnInfoPtr pScrn, int color, int rop,
 	SiSSetupPATFG(color)
 	SiSSetupDSTRect(pSiS->scrnOffset, -1)
 	SiSSetupDSTColorDepth(pSiS->DstColor)
-	SiSSetupROP(XAAPatternROP[rop])
+	SiSSetupROP(XAAGetPatternROP(rop))
 	SiSSetupCMDFlag(PATFG | LINE | pSiS->SiS310_AccelDepth)
 #endif
 }
@@ -942,7 +942,7 @@ SiSSetupForDashedLine(ScrnInfoPtr pScrn,
 	SiSSetupPATFG(fg)
 #endif
 
-	SiSSetupROP(XAAPatternROP[rop])
+	SiSSetupROP(XAAGetPatternROP(rop))
 
 	SiSSetupCMDFlag(LINE | LINE_STYLE)
 
@@ -1022,7 +1022,7 @@ SiSSetupForMonoPatternFill(ScrnInfoPtr pScrn,
 
 	SiSSetupMONOPAT(patx,paty)
 
-	SiSSetupROP(XAAPatternROP[rop])
+	SiSSetupROP(XAAGetPatternROP(rop))
 
 #ifdef SISVRAMQ
         SiSSetupCMDFlag(PATMONO)
@@ -1181,7 +1181,7 @@ SiSSetupForColor8x8PatternFill(ScrnInfoPtr pScrn, int patternx, int patterny,
 	   patadr += 16;  /* = 64 due to (CARD32 *) */
 	}
 
-	SiSSetupROP(XAAPatternROP[rop])
+	SiSSetupROP(XAAGetPatternROP(rop))
 
 	SiSSetupCMDFlag(PATPATREG)
 
@@ -1240,7 +1240,7 @@ SiSSetupForCPUToScreenColorExpandFill(ScrnInfoPtr pScrn,
 
 #ifdef SISVRAMQ
         SiSSetupDSTColorDepth(pSiS->SiS310_AccelDepth);
-	SiSSetupROP(XAACopyROP[rop]);
+	SiSSetupROP(XAAGetCopyROP(rop));
 	SiSSetupSRCFGDSTRect(fg, pSiS->scrnOffset, -1)
 	if(bg == -1) {
 	   SiSSetupCMDFlag(TRANSPARENT | ENCOLOREXP | SRCVIDEO);
@@ -1251,7 +1251,7 @@ SiSSetupForCPUToScreenColorExpandFill(ScrnInfoPtr pScrn,
         SiSSyncWP
 #else
 	SiSSetupSRCXY(0,0);
-	SiSSetupROP(XAACopyROP[rop]);
+	SiSSetupROP(XAAGetCopyROP(rop));
 	SiSSetupSRCFG(fg);
 	SiSSetupDSTRect(pSiS->scrnOffset, -1);
 	SiSSetupDSTColorDepth(pSiS->DstColor);
@@ -1352,7 +1352,7 @@ SiSSetupForScanlineCPUToScreenColorExpandFill(ScrnInfoPtr pScrn,
 #endif
 	SiSSetupSRCXY(0,0);
 
-	SiSSetupROP(XAACopyROP[rop]);
+	SiSSetupROP(XAAGetCopyROP(rop));
 	SiSSetupSRCFG(fg);
 	SiSSetupDSTRect(pSiS->scrnOffset, -1);
 #ifndef SISVRAMQ
@@ -1480,7 +1480,7 @@ SiSSetupForScreenToScreenColorExpand(ScrnInfoPtr pScrn,
 	SiSSetupDSTColorDepth(pSiS->DstColor)
 #endif
 	SiSSetupDSTRect(pSiS->scrnOffset, -1)
-	SiSSetupROP(XAACopyROP[rop])
+	SiSSetupROP(XAAGetCopyROP(rop))
 	SiSSetupSRCFG(fg)
 	/* SiSSetupSRCXY(0,0) */
 

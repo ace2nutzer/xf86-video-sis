@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg$ */
+/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/sis_accel.c,v 1.3 2004/06/17 13:20:13 twini Exp $ */
 /*
  * 2D acceleration for SiS5597/5598 and 6326
  *
@@ -272,7 +272,7 @@ SiSSetupForScreenToScreenCopy(ScrnInfoPtr pScrn, int xdir, int ydir,
     sisBLTSync;
     sisSETPITCH(pSiS->scrnOffset, pSiS->scrnOffset);
 
-    sisSETROP(XAACopyROP[rop]);
+    sisSETROP(XAAGetCopyROP(rop));
     pSiS->Xdirection = xdir;
     pSiS->Ydirection = ydir;
 }
@@ -329,8 +329,8 @@ SiSSetupForFillRectSolid(ScrnInfoPtr pScrn, int color, int rop,
     SISPtr pSiS = SISPTR(pScrn);
 
     sisBLTSync;
-    sisSETBGROPCOL(XAACopyROP[rop], color);
-    sisSETFGROPCOL(XAACopyROP[rop], color);
+    sisSETBGROPCOL(XAAGetCopyROP(rop), color);
+    sisSETFGROPCOL(XAAGetCopyROP(rop), color);
     sisSETPITCH(pSiS->scrnOffset, pSiS->scrnOffset);
 }
 
@@ -436,8 +436,8 @@ static void SiSSetupForSolidLine(ScrnInfoPtr pScrn,
     SISPtr pSiS = SISPTR(pScrn);
 
     sisBLTSync;
-    sisSETBGROPCOL(XAACopyROP[rop], 0);
-    sisSETFGROPCOL(XAACopyROP[rop], color);
+    sisSETBGROPCOL(XAAGetCopyROP(rop), 0);
+    sisSETFGROPCOL(XAAGetCopyROP(rop), color);
 }
 
 static void SiSSubsequentSolidTwoPointLine(ScrnInfoPtr pScrn,
@@ -539,11 +539,11 @@ SiSSetupForScanlineCPUToScreenColorExpandFill(ScrnInfoPtr pScrn,
         sisSETROPBG(0xAA);             /* dst = dst (=noop) */
 	pSiS->CommandReg |= sisSRCFG;
     } else {
-        sisSETBGROPCOL(XAAPatternROP[rop], bg);
+        sisSETBGROPCOL(XAAGetPatternROP(rop), bg);
 	pSiS->CommandReg |= sisSRCFG | sisPATBG;
     }
 
-    sisSETFGROPCOL(XAACopyROP[rop], fg);
+    sisSETFGROPCOL(XAAGetCopyROP(rop), fg);
 
     sisSETDSTPITCH(pSiS->scrnOffset);
 }

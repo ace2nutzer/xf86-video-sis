@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg$ */
+/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/sis_driver.c,v 1.10 2004/07/26 22:40:56 twini Exp $ */
 /*
  * SiS driver main code
  *
@@ -178,7 +178,8 @@ static PciChipsets SISPciChipsets[] = {
 };
 
 static const char *xaaSymbols[] = {
-    "XAACopyROP",
+    "XAAGetCopyROP",
+    "XAAGetPatternROP",
     "XAACreateInfoRec",
     "XAADestroyInfoRec",
     "XAAHelpPatternROP",
