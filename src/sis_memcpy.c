@@ -792,6 +792,8 @@ static Bool CheckOSforSSE(ScrnInfoPtr pScrn)
     
     return (signo >= 0) ? FALSE : TRUE;
 #else
+    SISPtr pSiS = SISPTR(pScrn);
+    
     xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
     	"Checking OS for SSE support is supported in X.org 6.8.2 and later.\n");
     if(pSiS->XvSSEMemcpy) {
