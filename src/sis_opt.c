@@ -1595,18 +1595,18 @@ SiSOptions(ScrnInfoPtr pScrn)
 	        pSiS->BenchMemCpy = val ? TRUE : FALSE;
 	        xf86DrvMsg(pScrn->scrnIndex, X_CONFIG, 
 	   		"Xv: Will %sbenchmark memcpy() methods\n",
-			val ? "" : "not ");
+			val ? "" : "not ");		
+	     }
 #ifndef SISCHECKOSSSE			
-	  	if(val) {
-		   if(xf86GetOptValBool(pSiS->Options, OPTION_XVSSECOPY, &val)) {
-		      pSiS->XvSSEMemcpy = val ? TRUE : FALSE;
-		      xf86DrvMsg(pScrn->scrnIndex, X_CONFIG,
+	     if(pSiS->BenchMemCpy) {
+		if(xf86GetOptValBool(pSiS->Options, OPTION_XVSSECOPY, &val)) {
+		   pSiS->XvSSEMemcpy = val ? TRUE : FALSE;
+		   xf86DrvMsg(pScrn->scrnIndex, X_CONFIG,
 		      		"Xv: Will %scheck SSE memcpy()\n", 
 			val ? "" : "not ");
-		   }
 		}
-#endif		
 	     }
+#endif	     
 	  } else pSiS->BenchMemCpy = FALSE;
        }
 
