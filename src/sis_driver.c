@@ -2393,7 +2393,10 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
     DisplayModePtr first, p, n;
 #endif
     xf86MonPtr pMonitor = NULL;
-    Bool didddc2, fromDDC;
+    Bool didddc2, fromDDC, crt1freqoverruled = FALSE;
+#ifdef SISMERGED
+    Bool crt2freqoverruled = FALSE;
+#endif    
 
     static const char *ddcsstr = "CRT%d DDC monitor info: ************************************\n";
     static const char *ddcestr = "End of CRT%d DDC monitor info ******************************\n";
@@ -2407,6 +2410,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
     static const char *mergeddisstr = "MergedFB mode disabled";
     static const char *modesforstr = "Modes for CRT%d: *********************************************\n";
     static const char *crtsetupstr = "------------------------ CRT%d setup -------------------------\n";
+    static const char *crt2monname = "CRT2";
 #endif
 #if defined(SISDUALHEAD) || defined(SISMERGED)
     static const char *notsuitablestr = "Not using mode \"%s\" (not suitable for %s mode)\n";
@@ -4986,6 +4990,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
           memcpy(pSiS->CRT2pScrn->monitor, pScrn->monitor, sizeof(MonRec));
           pSiS->CRT2pScrn->monitor->DDC = NULL;
 	  pSiS->CRT2pScrn->monitor->Modes = NULL;
+	  pSiS->CRT2pScrn->monitor->id = (char *)crt2monname;
 	  tempm = pScrn->monitor->Modes;
 	  while(tempm) {
 	     if(!(newm = xalloc(sizeof(DisplayModeRec)))) break;
@@ -5050,6 +5055,9 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
     * This should "fix" the - by far - most common configuration
     * mistakes.
     */
+    
+    crt1freqoverruled = FALSE;
+    
     fromDDC = FALSE;
     if((pScrn->monitor->nHsync <= 0) || (pSiS->OverruleRanges)) {
        if((pScrn->monitor->nHsync <= 0) && (pScrn->monitor->DDC)) {
@@ -5077,6 +5085,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	     pScrn->monitor->nHsync = 1;
 	     pScrn->monitor->hsync[0].lo = 28;
 	     pScrn->monitor->hsync[0].hi = 80;
+	     crt1freqoverruled = TRUE;
 	  }
        }
     }
@@ -5106,6 +5115,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	     pScrn->monitor->nVrefresh = 1;
 	     pScrn->monitor->vrefresh[0].lo = 50;  /* 50 1280x720@50; 56 720/768x576 */
 	     pScrn->monitor->vrefresh[0].hi = 71;  /* 71 for 640x400 */  
+	     crt1freqoverruled = TRUE;
 	  }
        }
     }
@@ -5114,6 +5124,8 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 #ifdef SISMERGED
     if(pSiS->MergedFB) {
     
+       crt2freqoverruled = FALSE;
+       
        fromDDC = FALSE;
        if((pSiS->CRT2pScrn->monitor->nHsync <= 0) || (pSiS->OverruleRanges)) {
           if((pSiS->CRT2pScrn->monitor->nHsync <= 0) && (pSiS->CRT2pScrn->monitor->DDC)) {
@@ -5132,6 +5144,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	        pSiS->CRT2pScrn->monitor->nHsync = 1;
 	        pSiS->CRT2pScrn->monitor->hsync[0].lo = 28;
 	        pSiS->CRT2pScrn->monitor->hsync[0].hi = 80;
+		crt2freqoverruled = TRUE;
 	     }
 	  }
        }	  
@@ -5154,6 +5167,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	        pSiS->CRT2pScrn->monitor->nVrefresh = 1;
 	        pSiS->CRT2pScrn->monitor->vrefresh[0].lo = 50; /* 50: 1280x720@50; 56: 768/720x576 */
 	        pSiS->CRT2pScrn->monitor->vrefresh[0].hi = 71; /* 71 for 640x400 */
+		crt2freqoverruled = TRUE;
 	     }
           }  
        }
@@ -5381,6 +5395,8 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
      */
     {
        int minpitch, maxpitch, minheight, maxheight;
+       pointer backupddc = pScrn->monitor->DDC;
+       
        minpitch = 256;
        minheight = 128;
        switch(pSiS->VGAEngine) {
@@ -5399,9 +5415,14 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
           maxheight = 2048;
           break;
        }
+       
 #ifdef SISMERGED
        pSiS->CheckForCRT2 = FALSE;
 #endif
+ 
+       /* Suppress bogus DDC warning */
+       if(crt1freqoverruled) pScrn->monitor->DDC = NULL;
+
        i = xf86ValidateModes(pScrn, pScrn->monitor->Modes,
                       pScrn->display->modes, clockRanges, NULL,
                       minpitch, maxpitch,
@@ -5411,6 +5432,8 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
                       pScrn->display->virtualY,
                       pSiS->maxxfbmem,
                       LOOKUP_BEST_REFRESH);
+		      
+       pScrn->monitor->DDC = backupddc;
     }
 
     if(i == -1) {
@@ -5575,8 +5598,14 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
     }
 
     if(pSiS->MergedFB) {
+    
+       pointer backupddc = pSiS->CRT2pScrn->monitor->DDC;
+       
+       /* Suppress bogus DDC warning */
+       if(crt2freqoverruled) pSiS->CRT2pScrn->monitor->DDC = NULL;
 
        pSiS->CheckForCRT2 = TRUE;
+       
        i = xf86ValidateModes(pSiS->CRT2pScrn, pSiS->CRT2pScrn->monitor->Modes,
                       pSiS->CRT2pScrn->display->modes, clockRanges,
                       NULL, 256, 4088,
@@ -5585,7 +5614,9 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
                       pScrn->display->virtualY ? pScrn->virtualY : 0,
                       pSiS->maxxfbmem,
                       LOOKUP_BEST_REFRESH);
+		      
        pSiS->CheckForCRT2 = FALSE;
+       pSiS->CRT2pScrn->monitor->DDC = backupddc;
 
        if(i == -1) {
           SISErrorLog(pScrn, "xf86ValidateModes() error, %s.\n", mergeddisstr);
@@ -5634,7 +5665,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
        pSiS->CRT1Modes = pScrn->modes;
        pSiS->CRT1CurrentMode = pScrn->currentMode;
 
-       xf86DrvMsg(pScrn->scrnIndex, X_INFO, "Generating MergedFB mode list\n");
+       xf86DrvMsg(pScrn->scrnIndex, X_INFO, "MergedFB: Generating mode list\n");
 
        pScrn->modes = SiSGenerateModeList(pScrn, pSiS->MetaModes,
 	            	                  pSiS->CRT1Modes, pSiS->CRT2pScrn->modes,
