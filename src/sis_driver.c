@@ -295,11 +295,13 @@ static const char *driSymbols[] = {
     NULL
 };
 
+#ifdef XFree86LOADER
 static const char *driRefSymbols[] = {
     "DRICreatePCIBusID",  /* not REQUIRED */
     NULL
 };
 #endif
+#endif  /* XF86DRI */
 
 #ifdef XFree86LOADER
 
