@@ -143,7 +143,7 @@
 #define CRT2Mode                0x0800
 #define HalfDCLK                0x1000
 #define NoSupportSimuTV         0x2000
-#define NoSupportLCDScale	0x4000 /* TMDS: No scaling possible (no matter what panel) */
+#define NoSupportLCDScale	0x4000 /* SiS bridge: No scaling possible (no matter what panel) */
 #define DoubleScanMode          0x8000
 
 /* Infoflag */
@@ -488,8 +488,7 @@
 #define VCLK100_315             0x46   /* Index in VBVCLKData table (315) */
 #define VCLK34_315              0x55
 #define VCLK68_315		0x0d
-#define VCLK69_315		0x5c   /* deprecated ! Index in VBVCLKData table (315) */
-#define VCLK83_315		0x5c   /* Index in VBVCLKData table (315) */
+#define VCLK_1280x800_315	0x5c   /* Index in VBVCLKData table (315) */
 #define VCLK121_315		0x5d   /* Index in VBVCLKData table (315) */
 #define VCLK_1280x720		0x5f
 #define VCLK_1280x768_2		0x60

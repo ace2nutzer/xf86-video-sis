@@ -90,7 +90,7 @@
 #  undef SISNEWRENDER
 #  ifdef XORG_VERSION_CURRENT
 #   include "xorgVersion.h"
-#   if XORG_VERSION_CURRENT >= XORG_VERSION_NUMERIC(6,7,0,0,0)
+#   if XORG_VERSION_CURRENT > XORG_VERSION_NUMERIC(6,7,0,0,0)
 #    define SISNEWRENDER
 #   endif
 #  endif

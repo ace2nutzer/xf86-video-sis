@@ -1505,6 +1505,21 @@ SiS_GetLCDInfoBIOS(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo)
 #endif
 }
 
+static void
+SiS_CheckScaling(SiS_Private *SiS_Pr, USHORT resinfo, const UCHAR *nonscalingmodes)
+{
+    int i = 0;
+    while(nonscalingmodes[i] != 0xff) {
+        if(nonscalingmodes[i++] == resinfo) {
+	   if((SiS_Pr->SiS_VBInfo & SetCRT2ToLCD) ||
+	      (SiS_Pr->UsePanelScaler == -1)) {
+	      SiS_Pr->SiS_LCDInfo |= DontExpandLCD;
+	   }
+	   break;
+	}
+    }
+}
+
 void
 SiS_GetLCDResInfo(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
 		  PSIS_HW_INFO HwInfo)
@@ -1591,6 +1606,71 @@ SiS_GetLCDResInfo(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
      if(SiS_Pr->SiS_LCDResInfo < SiS_Pr->SiS_PanelMinLVDS)
 	SiS_Pr->SiS_LCDResInfo = SiS_Pr->SiS_PanelMinLVDS;
   }
+  
+  temp = SiS_GetReg(SiS_Pr->SiS_P3d4,0x37);
+  SiS_Pr->SiS_LCDInfo = temp & ~0x000e;
+  /* Need temp below! */
+  
+  if(SiS_Pr->SiS_LCDResInfo == Panel_1280x960) SiS_Pr->SiS_LCDInfo &= ~DontExpandLCD;
+
+  if(!SiS_Pr->UsePanelScaler)          SiS_Pr->SiS_LCDInfo &= ~DontExpandLCD;
+  else if(SiS_Pr->UsePanelScaler == 1) SiS_Pr->SiS_LCDInfo |= DontExpandLCD;
+
+  /* Dual link, Pass 1:1 BIOS default, etc. */
+#ifdef SIS315H
+  if(HwInfo->jChipType >= SIS_661) {
+     if(SiS_Pr->SiS_LCDInfo & DontExpandLCD) {
+        if(temp & 0x08) SiS_Pr->SiS_LCDInfo |= LCDPass11;
+     }
+     if(SiS_Pr->SiS_VBType & (VB_SIS302LV | VB_SIS302ELV)) {
+        if(SiS_Pr->SiS_ROMNew) {
+	   if(temp & 0x02) SiS_Pr->SiS_LCDInfo |= LCDDualLink;
+	} else if((myptr = GetLCDStructPtr661(SiS_Pr, HwInfo))) {
+           if(myptr[2] & 0x01) SiS_Pr->SiS_LCDInfo |= LCDDualLink;
+	}
+     }
+  } else if(HwInfo->jChipType >= SIS_315H) { 
+     if(SiS_Pr->SiS_LCDInfo & DontExpandLCD) {
+        if(SiS_GetReg(SiS_Pr->SiS_P3d4,0x39) & 0x01) SiS_Pr->SiS_LCDInfo |= LCDPass11;
+     }
+     if((SiS_Pr->SiS_ROMNew) && (!(SiS_Pr->PanelSelfDetected))) {
+        SiS_Pr->SiS_LCDInfo &= ~(LCDRGB18Bit);
+	temp = SiS_GetReg(SiS_Pr->SiS_P3d4,0x35);
+        if(temp & 0x01) SiS_Pr->SiS_LCDInfo |= LCDRGB18Bit;
+	if(SiS_Pr->SiS_VBType & (VB_SIS302LV | VB_SIS302ELV)) {
+	   if(temp & 0x02) SiS_Pr->SiS_LCDInfo |= LCDDualLink;
+	}
+     } else if(!(SiS_Pr->SiS_ROMNew)) {
+        if(SiS_Pr->SiS_VBType & (VB_SIS302LV | VB_SIS302ELV)) {
+           if((SiS_Pr->SiS_CustomT == CUT_CLEVO1024) &&
+	      (SiS_Pr->SiS_LCDResInfo == Panel_1024x768)) {
+	      SiS_Pr->SiS_LCDInfo |= LCDDualLink;
+	   }
+           if((SiS_Pr->SiS_LCDResInfo == Panel_1280x1024) ||
+	      (SiS_Pr->SiS_LCDResInfo == Panel_1400x1050) ||
+              (SiS_Pr->SiS_LCDResInfo == Panel_1600x1200) ||
+	      (SiS_Pr->SiS_LCDResInfo == Panel_1680x1050)) {
+	      SiS_Pr->SiS_LCDInfo |= LCDDualLink;
+	   }
+        }
+     }
+  }
+#endif
+
+  /* Pass 1:1 */
+  if((SiS_Pr->SiS_IF_DEF_LVDS == 1) || (SiS_Pr->SiS_VBType & VB_NoLCD)) {
+     /* Always center screen on LVDS (if scaling is disabled) */
+     SiS_Pr->SiS_LCDInfo &= ~LCDPass11;
+  } else if(SiS_Pr->SiS_VBType & VB_SISVB) {
+     if(SiS_Pr->SiS_VBType & VB_SISLVDS) {
+        /* Always center screen on SiS LVDS (if scaling is disabled) */
+        SiS_Pr->SiS_LCDInfo &= ~LCDPass11;
+     } else {
+        /* By default, pass 1:1 on SiS TMDS (if scaling is disabled) */
+        SiS_Pr->SiS_LCDInfo |= LCDPass11;
+        if(SiS_Pr->CenterScreen == 1) SiS_Pr->SiS_LCDInfo &= ~LCDPass11;
+     }
+  }
 
   SiS_Pr->PanelVCLKIdx300 = VCLK65_300;
   SiS_Pr->PanelVCLKIdx315 = VCLK108_2_315;
@@ -1660,15 +1740,21 @@ SiS_GetLCDResInfo(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
 			    SiS_GetLCDInfoBIOS(SiS_Pr, HwInfo);
 			    break;
      case Panel_1280x768:   SiS_Pr->PanelXRes = 1280; SiS_Pr->PanelYRes =  768;
-     			    SiS_Pr->PanelHT   = 1688; SiS_Pr->PanelVT   =  802;
-			    SiS_Pr->PanelHRS  =   48; SiS_Pr->PanelHRS  =  112;
-			    SiS_Pr->PanelVRS  =    3; SiS_Pr->PanelVRE  =    6;
-			    SiS_Pr->PanelVCLKIdx300 = VCLK81_300;
-			    SiS_Pr->PanelVCLKIdx315 = VCLK81_315;
+     			    if(SiS_Pr->SiS_IF_DEF_LVDS == 1) {
+			       SiS_Pr->PanelHT   = 1408; SiS_Pr->PanelVT   =  806;
+			       SiS_Pr->PanelVCLKIdx300 = VCLK81_300; /* ? */
+			       SiS_Pr->PanelVCLKIdx315 = VCLK81_315; /* ? */
+			    } else {
+     			       SiS_Pr->PanelHT   = 1688; SiS_Pr->PanelVT   =  802;
+			       SiS_Pr->PanelHRS  =   48; SiS_Pr->PanelHRS  =  112;
+			       SiS_Pr->PanelVRS  =    3; SiS_Pr->PanelVRE  =    6;
+			       SiS_Pr->PanelVCLKIdx300 = VCLK81_300;
+			       SiS_Pr->PanelVCLKIdx315 = VCLK81_315;
+			    }
 			    break;
      case Panel_1280x768_2: SiS_Pr->PanelXRes = 1280; SiS_Pr->PanelYRes =  768;
-     			    SiS_Pr->PanelHT   = 1408; SiS_Pr->PanelVT   =  806;
-			    SiS_Pr->PanelHRS  =   16; SiS_Pr->PanelHRE  =   64;
+     			    SiS_Pr->PanelHT   = 1660; SiS_Pr->PanelVT   =  806;
+			    SiS_Pr->PanelHRS  =   48; SiS_Pr->PanelHRE  =  112;
 			    SiS_Pr->PanelVRS  =    3; SiS_Pr->PanelVRE  =    6;
 			    SiS_Pr->PanelVCLKIdx315 = VCLK_1280x768_2;
 			    SiS_GetLCDInfoBIOS(SiS_Pr, HwInfo);
@@ -1681,10 +1767,10 @@ SiS_GetLCDResInfo(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
 			    SiS_GetLCDInfoBIOS(SiS_Pr, HwInfo);
 			    break;
      case Panel_1280x800:   SiS_Pr->PanelXRes = 1280; SiS_Pr->PanelYRes =  800;
-     			    SiS_Pr->PanelHT   = 1656; SiS_Pr->PanelVT   =  841;  /* 1408, 816 */
-			    SiS_Pr->PanelHRS   =  32; SiS_Pr->PanelHRE  =  312;  /*   16,  64 */
-			    SiS_Pr->PanelVRS   =  16; SiS_Pr->PanelVRE  =    8;  /*    4,   3 */
-			    SiS_Pr->PanelVCLKIdx315 = VCLK83_315;
+     			    SiS_Pr->PanelHT   = 1552; SiS_Pr->PanelVT   =  812; 
+			    SiS_Pr->PanelHRS   =  48; SiS_Pr->PanelHRE  =  112; 
+			    SiS_Pr->PanelVRS   =   4; SiS_Pr->PanelVRE  =    3; 
+			    SiS_Pr->PanelVCLKIdx315 = VCLK_1280x800_315;
 			    SiS_GetLCDInfoBIOS(SiS_Pr, HwInfo);
 			    break;
      case Panel_1280x960:   SiS_Pr->PanelXRes = 1280; SiS_Pr->PanelYRes =  960;
@@ -1725,6 +1811,12 @@ SiS_GetLCDResInfo(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
 			    SiS_Pr->PanelVCLKIdx315 = VCLK121_315;
 			    SiS_GetLCDInfoBIOS(SiS_Pr, HwInfo);
 			    break;
+     case Panel_Barco1366:  SiS_Pr->PanelXRes = 1360; SiS_Pr->PanelYRes = 1024;
+     			    SiS_Pr->PanelHT   = 1688; SiS_Pr->PanelVT   = 1066;
+     			    break;
+     case Panel_848x480:    SiS_Pr->PanelXRes =  848; SiS_Pr->PanelYRes =  480;
+     			    SiS_Pr->PanelHT   = 1088; SiS_Pr->PanelVT   =  525;
+     			    break;
      case Panel_Custom:     SiS_Pr->PanelXRes = SiS_Pr->CP_MaxX;
     			    SiS_Pr->PanelYRes = SiS_Pr->CP_MaxY;
 			    SiS_Pr->PanelHT   = SiS_Pr->CHTotal;
@@ -1757,132 +1849,162 @@ SiS_GetLCDResInfo(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
 			       }
 			    }
 			    break;
-     case Panel_Barco1366:  SiS_Pr->PanelXRes = 1360; SiS_Pr->PanelYRes = 1024;
-     			    SiS_Pr->PanelHT   = 1688; SiS_Pr->PanelVT   = 1066;
-     			    break;
-     case Panel_848x480:    SiS_Pr->PanelXRes =  848; SiS_Pr->PanelYRes =  480;
-     			    SiS_Pr->PanelHT   = 1088; SiS_Pr->PanelVT   =  525;
-     			    break;
      default:		    SiS_Pr->PanelXRes = 1024; SiS_Pr->PanelYRes =  768;
      			    SiS_Pr->PanelHT   = 1344; SiS_Pr->PanelVT   =  806;
 			    break;
-  }
-
-  temp = SiS_GetReg(SiS_Pr->SiS_P3d4,0x37);
-  SiS_Pr->SiS_LCDInfo = temp & ~0x000e;
-
-  if(!(SiS_Pr->UsePanelScaler))        SiS_Pr->SiS_LCDInfo &= ~DontExpandLCD;
-  else if(SiS_Pr->UsePanelScaler == 1) SiS_Pr->SiS_LCDInfo |= DontExpandLCD;
+  }  
   
-  if(SiS_Pr->SiS_LCDResInfo == Panel_1280x960) SiS_Pr->SiS_LCDInfo &= ~DontExpandLCD;
-
-#ifdef SIS315H
-  if(HwInfo->jChipType >= SIS_661) {
-     if(SiS_Pr->SiS_LCDInfo & DontExpandLCD) {
-        if(temp & 0x08) SiS_Pr->SiS_LCDInfo |= LCDPass11;
-     }
-     if(SiS_Pr->SiS_VBType & (VB_SIS302LV | VB_SIS302ELV)) {
-        if(SiS_Pr->SiS_ROMNew) {
-	   if(temp & 0x02) SiS_Pr->SiS_LCDInfo |= LCDDualLink;
-	} else if((myptr = GetLCDStructPtr661(SiS_Pr, HwInfo))) {
-           if(myptr[2] & 0x01) SiS_Pr->SiS_LCDInfo |= LCDDualLink;
-	}
-     }
-  } else if(HwInfo->jChipType >= SIS_315H) {
-     if(SiS_Pr->SiS_LCDInfo & DontExpandLCD) {
-        if(SiS_GetReg(SiS_Pr->SiS_P3d4,0x39) & 0x01) SiS_Pr->SiS_LCDInfo |= LCDPass11;
-     }
-     if((SiS_Pr->SiS_ROMNew) && (!(SiS_Pr->PanelSelfDetected))) {
-        SiS_Pr->SiS_LCDInfo &= ~(LCDRGB18Bit);
-	temp = SiS_GetReg(SiS_Pr->SiS_P3d4,0x35);
-        if(temp & 0x01) SiS_Pr->SiS_LCDInfo |= LCDRGB18Bit;
-	if(SiS_Pr->SiS_VBType & (VB_SIS302LV | VB_SIS302ELV)) {
-	   if(temp & 0x02) SiS_Pr->SiS_LCDInfo |= LCDDualLink;
-	}
-     }
-  }
-#endif
-
-  if((SiS_Pr->SiS_IF_DEF_LVDS == 1) || (SiS_Pr->SiS_VBType & VB_NoLCD)) {
-     /* Always center screen on LVDS (if scaling is disabled) */
-     SiS_Pr->SiS_LCDInfo &= ~LCDPass11;
-  } else if(SiS_Pr->SiS_VBType & VB_SISVB) {
-     if(SiS_Pr->SiS_VBType & VB_SIS301LV302LV) {
-        /* Always center screen on SiS LVDS (if scaling is disabled) */
-        SiS_Pr->SiS_LCDInfo &= ~LCDPass11;
-     } else {
-        /* By default, pass 1:1 on SiS TMDS (if scaling is disabled) */
-        SiS_Pr->SiS_LCDInfo |= LCDPass11;
-        if(SiS_Pr->CenterScreen == 1) SiS_Pr->SiS_LCDInfo &= ~LCDPass11;
-     }
+  /* Special cases */
+  if( (SiS_Pr->SiS_IF_DEF_FSTN)              ||
+      (SiS_Pr->SiS_IF_DEF_DSTN)              ||
+      (SiS_Pr->SiS_CustomT == CUT_BARCO1366) ||
+      (SiS_Pr->SiS_CustomT == CUT_BARCO1024) ||
+      (SiS_Pr->SiS_CustomT == CUT_PANEL848) ) {
+     SiS_Pr->PanelHRS = 999;
+     SiS_Pr->PanelHRE = 999;
   }
 
+  if( (SiS_Pr->SiS_CustomT == CUT_BARCO1366) ||
+      (SiS_Pr->SiS_CustomT == CUT_BARCO1024) ||
+      (SiS_Pr->SiS_CustomT == CUT_PANEL848) ) {
+     SiS_Pr->PanelVRS = 999;
+     SiS_Pr->PanelVRE = 999;
+  }
+
+  /* DontExpand overrule */
+  if((SiS_Pr->SiS_VBType & VB_SISVB) && (!(SiS_Pr->SiS_VBType & VB_NoLCD))) {
+  
+     if((SiS_Pr->SiS_VBInfo & SetCRT2ToLCD) && (modeflag & NoSupportLCDScale)) {
+	/* No scaling for this mode on any panel */
+	SiS_Pr->SiS_LCDInfo |= DontExpandLCD;
+     }
+     
+     switch(SiS_Pr->SiS_LCDResInfo) {
+     case Panel_Custom:
+     case Panel_1152x864:
+     case Panel_1280x768:	/* TMDS only */
+        SiS_Pr->SiS_LCDInfo |= DontExpandLCD;
+	break;
+     case Panel_800x600: {
+        static const UCHAR nonscalingmodes[] = {
+	   SIS_RI_720x480, SIS_RI_720x576, SIS_RI_768x576, SIS_RI_800x480, SIS_RI_848x480,
+	   SIS_RI_856x480, SIS_RI_960x540, 0xff
+	};
+	SiS_CheckScaling(SiS_Pr, resinfo, nonscalingmodes);
+	break;
+     }
+     case Panel_1024x768: {
+        static const UCHAR nonscalingmodes[] = {
+	   SIS_RI_720x480, SIS_RI_720x576, SIS_RI_768x576, SIS_RI_800x480, SIS_RI_848x480,
+	   SIS_RI_856x480, SIS_RI_960x540, SIS_RI_1024x576,SIS_RI_1024x600,0xff
+	};
+	SiS_CheckScaling(SiS_Pr, resinfo, nonscalingmodes);
+	break;
+     }
+     case Panel_1280x720: {
+        static const UCHAR nonscalingmodes[] = {
+	   SIS_RI_720x480, SIS_RI_720x576, SIS_RI_768x576, SIS_RI_800x480, SIS_RI_848x480,
+	   SIS_RI_856x480, SIS_RI_960x540, SIS_RI_1024x576,SIS_RI_1024x600,0xff
+	};
+	SiS_CheckScaling(SiS_Pr, resinfo, nonscalingmodes);
+	if(SiS_Pr->PanelHT == 1650) {
+	   SiS_Pr->SiS_LCDInfo |= DontExpandLCD;
+	}
+	break;
+     }
+     case Panel_1280x768_2:	/* LVDS only */
+     case Panel_1280x768_3: {
+        static const UCHAR nonscalingmodes[] = {
+	   SIS_RI_720x480, SIS_RI_720x576, SIS_RI_768x576, SIS_RI_800x480, SIS_RI_848x480,
+	   SIS_RI_856x480, SIS_RI_960x540, SIS_RI_1024x576,SIS_RI_1024x600,SIS_RI_1152x768,
+	   0xff
+	};
+	SiS_CheckScaling(SiS_Pr, resinfo, nonscalingmodes);
+	switch(resinfo) {
+	case SIS_RI_1280x720:  if(SiS_Pr->UsePanelScaler == -1) {
+	      			  SiS_Pr->SiS_LCDInfo |= DontExpandLCD;
+	   		       }
+	   		       break;
+	}
+        break;
+     }
+     case Panel_1280x800: {
+        static const UCHAR nonscalingmodes[] = {
+	   SIS_RI_720x480, SIS_RI_720x576, SIS_RI_768x576, SIS_RI_800x480, SIS_RI_848x480,
+	   SIS_RI_856x480, SIS_RI_960x540, SIS_RI_1024x576,SIS_RI_1024x600,SIS_RI_1152x768,
+	   0xff
+	};
+	SiS_CheckScaling(SiS_Pr, resinfo, nonscalingmodes);
+	switch(resinfo) {
+	case SIS_RI_1280x720:
+	case SIS_RI_1280x768:  if(SiS_Pr->UsePanelScaler == -1) {
+	      			  SiS_Pr->SiS_LCDInfo |= DontExpandLCD;
+	   		       }
+	   		       break;
+	}
+        break;
+     }
+     case Panel_1280x960: {
+        static const UCHAR nonscalingmodes[] = {
+	   SIS_RI_720x480, SIS_RI_720x576, SIS_RI_768x576, SIS_RI_800x480, SIS_RI_848x480,
+	   SIS_RI_856x480, SIS_RI_960x540, SIS_RI_1024x576,SIS_RI_1024x600,SIS_RI_1152x768,
+	   SIS_RI_1152x864,SIS_RI_1280x720,SIS_RI_1280x768,SIS_RI_1280x800,0xff
+	};
+	SiS_CheckScaling(SiS_Pr, resinfo, nonscalingmodes);
+        break;
+     }
+     case Panel_1280x1024: {
+        static const UCHAR nonscalingmodes[] = {
+	   SIS_RI_720x480, SIS_RI_720x576, SIS_RI_768x576, SIS_RI_800x480, SIS_RI_848x480,
+	   SIS_RI_856x480, SIS_RI_960x540, SIS_RI_1024x576,SIS_RI_1024x600,SIS_RI_1152x768,
+	   SIS_RI_1152x864,SIS_RI_1280x720,SIS_RI_1280x768,SIS_RI_1280x800,SIS_RI_1280x960,
+	   0xff
+	};
+	SiS_CheckScaling(SiS_Pr, resinfo, nonscalingmodes);
+	break;
+     }
+     case Panel_1400x1050: {
+        static const UCHAR nonscalingmodes[] = {
+	     SIS_RI_720x480, SIS_RI_720x576, SIS_RI_768x576, SIS_RI_800x480, SIS_RI_848x480,
+	     SIS_RI_856x480, SIS_RI_960x540, SIS_RI_1024x576,SIS_RI_1024x600,SIS_RI_1152x768,
+	     SIS_RI_1152x864,SIS_RI_1280x768,SIS_RI_1280x800,SIS_RI_1280x960,0xff
+	};
+	SiS_CheckScaling(SiS_Pr, resinfo, nonscalingmodes);
+        switch(resinfo) {
+	case SIS_RI_1280x720:  if(SiS_Pr->UsePanelScaler == -1) {
+	      			  SiS_Pr->SiS_LCDInfo |= DontExpandLCD;
+	   		       }
+	   		       break;
+	case SIS_RI_1280x1024: SiS_Pr->SiS_LCDInfo |= DontExpandLCD;
+	      		       break;
+	}
+	break;
+     }
+     case Panel_1600x1200: {
+        static const UCHAR nonscalingmodes[] = {
+	     SIS_RI_720x480, SIS_RI_720x576, SIS_RI_768x576, SIS_RI_800x480, SIS_RI_848x480,
+	     SIS_RI_856x480, SIS_RI_960x540, SIS_RI_1024x576,SIS_RI_1024x600,SIS_RI_1152x768,
+	     SIS_RI_1152x864,SIS_RI_1280x720,SIS_RI_1280x768,SIS_RI_1280x800,SIS_RI_1280x960,
+	     SIS_RI_1360x768,SIS_RI_1360x1024,0xff
+	};
+	SiS_CheckScaling(SiS_Pr, resinfo, nonscalingmodes);
+        break;
+     }
+     case Panel_1680x1050: {
+        static const UCHAR nonscalingmodes[] = {
+	     SIS_RI_720x480, SIS_RI_720x576, SIS_RI_768x576, SIS_RI_800x480,  SIS_RI_848x480,     
+	     SIS_RI_856x480, SIS_RI_960x540, SIS_RI_1024x576,SIS_RI_1024x600, SIS_RI_1152x768,
+	     SIS_RI_1152x864,SIS_RI_1280x960,SIS_RI_1360x768,SIS_RI_1360x1024,0xff
+	};
+	SiS_CheckScaling(SiS_Pr, resinfo, nonscalingmodes);
+	break;
+     }
+     }
+  }
+  
   if(SiS_Pr->SiS_IF_DEF_LVDS == 1) {
      if(SiS_Pr->SiS_CustomT == CUT_PANEL848) {
         SiS_Pr->SiS_LCDInfo = 0x80 | 0x40 | 0x20;   /* neg h/v sync, RGB24(D0 = 0) */
-     }
-  }
-
-  if((SiS_Pr->SiS_VBType & VB_SISVB) && (!(SiS_Pr->SiS_VBType & VB_NoLCD))) {
-     if(SiS_Pr->SiS_VBInfo & (SetCRT2ToLCD | SetCRT2ToLCDA)) {
-        if(modeflag & NoSupportLCDScale) {
-	   /* No scaling for this mode on any panel */
-	   SiS_Pr->SiS_LCDInfo |= DontExpandLCD;
-	}
-        switch(SiS_Pr->SiS_LCDResInfo) {
-        case Panel_Custom:
-		/* For non-standard LCD resolution, we let the panel scale */
-           	SiS_Pr->SiS_LCDInfo |= DontExpandLCD;
-		break;
-	case Panel_1280x720:
-	      	if(SiS_Pr->PanelHT == 1650) {
-		   SiS_Pr->SiS_LCDInfo |= DontExpandLCD;
-		}
-	case Panel_1280x768:	/* TMDS only */
-		/* No idea about the timing and zoom factors */
-           	SiS_Pr->SiS_LCDInfo |= DontExpandLCD;
-		break;
-	case Panel_1280x1024:
-	        if(SiS_Pr->SiS_VBType & VB_SISTMDS) {
-		   if(ModeNo == 0x7c || ModeNo == 0x7d || ModeNo == 0x7e ||
-		      ModeNo == 0x79 || ModeNo == 0x75 || ModeNo == 0x78 ||
-		      ModeNo == 0x14 || ModeNo == 0x15 || ModeNo == 0x16) {
-	      	      /* We do not scale to 1280x720/800/960 (B/C bridges only) */
-                      SiS_Pr->SiS_LCDInfo |= DontExpandLCD;
-	           }
-	           if(((HwInfo->jChipType >= SIS_315H) &&
-		       (ModeNo == 0x23 || ModeNo == 0x24 || ModeNo == 0x25)) ||
-	              ((HwInfo->jChipType < SIS_315H)  &&
-		       (ModeNo == 0x55 || ModeNo == 0x5a || ModeNo == 0x5b))) {
-	              /* We do not scale to 1280x768 (B/C bridges only) */
-                      SiS_Pr->SiS_LCDInfo |= DontExpandLCD;
-	           }
-		}
-		break;
-	case Panel_1400x1050:
-	 	if(SiS_Pr->SiS_VBType & VB_SISTMDS) {
-	  	   if(ModeNo == 0x7c || ModeNo == 0x7d || ModeNo == 0x7e ||
-		      ModeNo == 0x79 || ModeNo == 0x75 || ModeNo == 0x78 ||
-		      ModeNo == 0x14 || ModeNo == 0x15 || ModeNo == 0x16 ||
-		      ModeNo == 0x23 || ModeNo == 0x24 || ModeNo == 0x25) {
-	      	      /* Do not scale to 1280x720/768/800/960 (B/C bridges only) */
-                      SiS_Pr->SiS_LCDInfo |= DontExpandLCD;
-	           }
-		}
-		if(SiS_Pr->SiS_VBType & VB_SIS301LV302LV) {
-		   if(ModeNo == 0x79 || ModeNo == 0x75 || ModeNo == 0x78) {
-		      if(SiS_Pr->UsePanelScaler == -1) {
-		         /* Do not scale to 1280x720 by default (LVDS bridges) */
-	      	         SiS_Pr->SiS_LCDInfo |= DontExpandLCD;
-		      }
-		   }
-		}
-		if(ModeNo == 0x3a || ModeNo == 0x4d || ModeNo == 0x65) {
-	      	   /* Do not scale to 1280x1024 (all bridges) */
-	      	   SiS_Pr->SiS_LCDInfo |= DontExpandLCD;
-	   	}
-		break;
-	}
      }
   }
 
@@ -1908,15 +2030,19 @@ SiS_GetLCDResInfo(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
   if(SiS_Pr->SiS_IF_DEF_TRUMPION) {
      SiS_Pr->SiS_LCDInfo |= (DontExpandLCD | LCDPass11);
   }
-
-  if(SiS_Pr->SiS_LCDResInfo == Panel_640x480) {
+  
+  switch(SiS_Pr->SiS_LCDResInfo) {
+  case Panel_640x480:
      SiS_Pr->SiS_LCDInfo |= LCDPass11;
-  } else if(SiS_Pr->SiS_LCDResInfo == Panel_1280x960) {
+     break;
+  case Panel_1280x960:
      SiS_Pr->SiS_LCDInfo &= ~LCDPass11;
-  } else if(SiS_Pr->SiS_LCDResInfo == Panel_Custom) {
+     break;
+  case Panel_Custom:
      if(!SiS_Pr->CP_PrefClock) {
         SiS_Pr->SiS_LCDInfo |= LCDPass11;
      }
+     break;
   }
   
   if(SiS_Pr->UseCustomMode) {
@@ -1928,46 +2054,7 @@ SiS_GetLCDResInfo(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
      SiS_Pr->SiS_LCDInfo &= ~LCDPass11;
   }
 
-  /* Special cases */
-  if( (SiS_Pr->SiS_IF_DEF_FSTN)              ||
-      (SiS_Pr->SiS_IF_DEF_DSTN)              ||
-      (SiS_Pr->SiS_CustomT == CUT_BARCO1366) ||
-      (SiS_Pr->SiS_CustomT == CUT_BARCO1024) ||
-      (SiS_Pr->SiS_CustomT == CUT_PANEL848) ) {
-     SiS_Pr->PanelHRS = 999;
-     SiS_Pr->PanelHRE = 999;
-  }
-
-  if( (SiS_Pr->SiS_CustomT == CUT_BARCO1366) ||
-      (SiS_Pr->SiS_CustomT == CUT_BARCO1024) ||
-      (SiS_Pr->SiS_CustomT == CUT_PANEL848) ) {
-     SiS_Pr->PanelVRS = 999;
-     SiS_Pr->PanelVRE = 999;
-  }
-
-#ifdef SIS315H
-  if((HwInfo->jChipType >= SIS_315H) && (HwInfo->jChipType < SIS_661)) {
-     if(!(SiS_Pr->SiS_ROMNew)) {
-        if(SiS_Pr->SiS_VBType & (VB_SIS302LV | VB_SIS302ELV)) {
-	   /* Enable 302LV/302ELV dual link mode.
-	    * For 661, this is done above.
-	    */
-           if((SiS_Pr->SiS_CustomT == CUT_CLEVO1024) &&
-	      (SiS_Pr->SiS_LCDResInfo == Panel_1024x768)) {
-	      /* (Sets this in SenseLCD; new paneltypes) */
-	      SiS_Pr->SiS_LCDInfo |= LCDDualLink;
-	   }
-           if((SiS_Pr->SiS_LCDResInfo == Panel_1280x1024) ||
-	      (SiS_Pr->SiS_LCDResInfo == Panel_1400x1050) ||
-              (SiS_Pr->SiS_LCDResInfo == Panel_1600x1200) ||
-	      (SiS_Pr->SiS_LCDResInfo == Panel_1680x1050)) {
-	      SiS_Pr->SiS_LCDInfo |= LCDDualLink;
-	   }
-        }
-     }
-  }
-#endif
-
+  /* LVDS DDA */
   if(!((HwInfo->jChipType < SIS_315H) && (SiS_Pr->SiS_SetFlag & SetDOSMode))) {
 
      if((SiS_Pr->SiS_IF_DEF_LVDS == 1) || (SiS_Pr->SiS_VBType & VB_NoLCD)) {
@@ -2006,6 +2093,7 @@ SiS_GetLCDResInfo(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
 
   }
 
+  /* VESA timing */
   if(SiS_Pr->SiS_VBInfo & SetInSlaveMode) {
      if(SiS_Pr->SiS_VBInfo & SetNotSimuMode) {
      	SiS_Pr->SiS_SetFlag |= LCDVESATiming;
@@ -2072,7 +2160,7 @@ SiS_GetVCLK2Ptr(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
 		 /* Only those whose IndexGEN doesn't match VBVCLK array: */
 		 case SIS_RI_1280x720: VCLKIndex = VCLK_1280x720; 
 		 		       if(SiS_Pr->SiS_LCDResInfo == Panel_1280x720) {
-		                          if(SiS_Pr->PanelHT == 1344) {
+		                          if(SiS_Pr->PanelHT != 1650) {
 					     VCLKIndex = VCLK_1280x720_2;
 					  }
 				       }
@@ -2844,6 +2932,8 @@ SiS_GetCRT2Ptr(SiS_Private *SiS_Pr,USHORT ModeNo,USHORT ModeIdIndex,
 	if(SiS_Pr->SiS_LCDResInfo == Panel_1680x1050) {
 	   if     (resinfo == SIS_RI_1280x800)  tempal =  9;
 	   else if(resinfo == SIS_RI_1400x1050) tempal = 11;
+	} else if(SiS_Pr->SiS_LCDResInfo == Panel_1280x800) {
+	   if     (resinfo == SIS_RI_1280x768)  tempal =  9;
 	}
 	
   	if(SiS_Pr->SiS_LCDInfo & DontExpandLCD) {  /* Pass 1:1 only (center-screen handled outside) */
@@ -2856,6 +2946,13 @@ SiS_GetCRT2Ptr(SiS_Private *SiS_Pr,USHORT ModeNo,USHORT ModeIdIndex,
 	         if(SiS_Pr->SiS_LCDResInfo == Panel_1280x768)        tempal = 0x08;
 		 else if(SiS_Pr->SiS_LCDResInfo == Panel_1280x768_2) tempal = 0x0f;
 		 else if(SiS_Pr->SiS_LCDResInfo == Panel_1280x768_3) tempal = 0x10;
+	      }
+	      /* Special for 1280x720 TMDS <> LVDS */
+	      if((SiS_Pr->SiS_RefIndex[RefreshRateTableIndex].XRes == 1280) &&
+	         (SiS_Pr->SiS_RefIndex[RefreshRateTableIndex].YRes ==  720)) {
+	         if(SiS_Pr->SiS_LCDResInfo == Panel_1280x720) {
+		    if(SiS_Pr->PanelHT != 1650) tempal = 0x12;
+		 }
 	      }
 	   }
 	}
@@ -2928,6 +3025,7 @@ SiS_GetCRT2Ptr(SiS_Private *SiS_Pr,USHORT ModeNo,USHORT ModeIdIndex,
 
      tempbx = 0;
      if((SiS_Pr->SiS_IF_DEF_CH70xx) && (SiS_Pr->SiS_VBInfo & SetCRT2ToTV)) {
+     
         tempbx = 10;
 	if(SiS_Pr->SiS_TVMode & TVSetCHOverScan) tempbx += 1;
         if(SiS_Pr->SiS_TVMode & TVSetPAL) {
@@ -2943,10 +3041,12 @@ SiS_GetCRT2Ptr(SiS_Private *SiS_Pr,USHORT ModeNo,USHORT ModeIdIndex,
 	      if(SiS_Pr->SiS_TVMode & TVSetCHOverScan) tempbx += 1;
 	   }
         }
+	
      } else {
+     
         switch(SiS_Pr->SiS_LCDResInfo) {
 	case Panel_640x480:   tempbx = 6;  break;
-	case Panel_640x480_2: tempbx = 30; break;
+	case Panel_640x480_2: 
 	case Panel_640x480_3: tempbx = 30; break;
 	case Panel_800x600:   tempbx = 0;  break;
 	case Panel_1024x600:  tempbx = 15; break;
@@ -2972,19 +3072,20 @@ SiS_GetCRT2Ptr(SiS_Private *SiS_Pr,USHORT ModeNo,USHORT ModeIdIndex,
 
 	if(SiS_Pr->SiS_CustomT == CUT_BARCO1024) {
 	   tempbx = 82;
-	   if(SiS_Pr->SiS_LCDInfo & DontExpandLCD)  tempbx++;
+	   if(SiS_Pr->SiS_LCDInfo & DontExpandLCD) tempbx++;
 	} else if(SiS_Pr->SiS_CustomT == CUT_PANEL848) {
 	   tempbx = 84;
-	   if(SiS_Pr->SiS_LCDInfo & DontExpandLCD)  tempbx++;
+	   if(SiS_Pr->SiS_LCDInfo & DontExpandLCD) tempbx++;
 	}
+	
+	if((SiS_Pr->SiS_CustomT != CUT_BARCO1366) && 
+           (SiS_Pr->SiS_CustomT != CUT_PANEL848)) {
+           if((SiS_Pr->SiS_LCDInfo & DontExpandLCD) && 
+	      (!(SiS_Pr->SiS_LCDInfo & LCDPass11))) {
+              tempal = 0;
+	   }
+        }
 
-     }
-
-     if(SiS_Pr->SiS_SetFlag & SetDOSMode) {
-        if(SiS_Pr->SiS_LCDResInfo != Panel_640x480) tempal = 7;
-  	if(HwInfo->jChipType < SIS_315H) {
-	   if(SiS_GetReg(SiS_Pr->SiS_P3c4,0x13) & 0x80) tempal++;
-	}
      }
 
      (*CRT2Index) = tempbx;
@@ -3094,7 +3195,7 @@ SiS_GetCRT2DataLVDS(SiS_Private *SiS_Pr,USHORT ModeNo,USHORT ModeIdIndex,
 		  if((SiS_Pr->SiS_RefIndex[RefreshRateTableIndex].XRes == 1280) &&
 	             (SiS_Pr->SiS_RefIndex[RefreshRateTableIndex].YRes ==  720)) {
 		     if(SiS_Pr->SiS_LCDResInfo == Panel_1280x720) {
-		        if(SiS_Pr->PanelHT == 1344) ResIndex = 0x12;
+		        if(SiS_Pr->PanelHT != 1650) ResIndex = 0x12;
 		     }
 	          }
 	       }
