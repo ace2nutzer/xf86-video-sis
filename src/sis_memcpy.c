@@ -529,8 +529,8 @@ static unsigned int SiS_ParseCPUFlags(char *cpuinfo, SISMCFuncData *MCFunctions)
    char **sflags;
    char *flagLoc;
    
-   if(!(cpuinfo = strstr(cpuinfo, "processor\t:"))) return FALSE;
-   if(!(flagLoc = strstr(cpuinfo, "flags\t\t:"))) return FALSE;
+   if(!(cpuinfo = strstr(cpuinfo, "processor\t:"))) return 0;
+   if(!(flagLoc = strstr(cpuinfo, "flags\t\t:"))) return 0;
    flagLoc += 8;
    flagIdx = flagEnd = (int)(flagLoc - cpuinfo);
    while((cpuinfo[flagEnd] != '\n') && (cpuinfo[flagEnd] != 0)) flagEnd++;
@@ -657,6 +657,7 @@ static vidCopyFunc SiSVidCopyInitGen(ScreenPtr pScreen, SISMCFuncData *MCFunctio
    
        /* Parse the CPU flags and convert them to our internal value */
        myCPUflags = SiS_ParseCPUFlags(buf, MCFunctions);
+       if(!myCPUflags) myCPUflags = FL_LIBC | FL_BI;
        
     } else {
     
