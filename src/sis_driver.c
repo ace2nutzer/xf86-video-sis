@@ -142,7 +142,6 @@ static void    SISBridgeRestore(ScrnInfoPtr pScrn);
 static void    SiSEnableTurboQueue(ScrnInfoPtr pScrn);
 unsigned char  SISSearchCRT1Rate(ScrnInfoPtr pScrn, DisplayModePtr mode);
 static void    SISWaitVBRetrace(ScrnInfoPtr pScrn);
-Bool           InRegion(int x, int y, region r);
 
 void           SISWaitRetraceCRT1(ScrnInfoPtr pScrn);
 void           SISWaitRetraceCRT2(ScrnInfoPtr pScrn);
@@ -387,6 +386,7 @@ static const char *driSymbols[] = {
     "DRIScreenInit",
     "DRIUnlock",
     "GlxSetVisualConfigs",
+    "DRICreatePCIBusID",
     NULL
 };
 #endif
@@ -6882,7 +6882,7 @@ SISSetStartAddressCRT2(SISPtr pSiS, unsigned long base)
 }
 
 #ifdef SISMERGED
-Bool
+static Bool
 InRegion(int x, int y, region r)
 {
     return (r.x0 <= x) && (x <= r.x1) && (r.y0 <= y) && (y <= r.y1);

@@ -48,7 +48,6 @@
 
 extern void    SISWaitRetraceCRT1(ScrnInfoPtr pScrn);
 extern void    SISWaitRetraceCRT2(ScrnInfoPtr pScrn);
-extern Bool    InRegion(int x, int y, region r);
 
 /* Helper function for Xabre to convert mono image to ARGB */
 /* The Xabre's cursor engine for CRT2 is buggy and can't

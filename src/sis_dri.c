@@ -67,9 +67,9 @@ static char SISClientDriverName[] = "sis";
 
 static Bool SISInitVisualConfigs(ScreenPtr pScreen);
 static Bool SISCreateContext(ScreenPtr pScreen, VisualPtr visual, 
-                   drmContext hwContext, void *pVisualConfigPriv,
+                   drm_context_t hwContext, void *pVisualConfigPriv,
                    DRIContextType contextStore);
-static void SISDestroyContext(ScreenPtr pScreen, drmContext hwContext,
+static void SISDestroyContext(ScreenPtr pScreen, drm_context_t hwContext,
                    DRIContextType contextStore);
 static void SISDRISwapContext(ScreenPtr pScreen, DRISyncType syncType, 
                    DRIContextType readContextType, 
@@ -132,18 +132,33 @@ SISInitVisualConfigs(ScreenPtr pScreen)
           pConfigs[i].vid = -1;
           pConfigs[i].class = -1;
           pConfigs[i].rgba = TRUE;
-          pConfigs[i].redSize = -1;
-          pConfigs[i].greenSize = -1;
-          pConfigs[i].blueSize = -1;
-          pConfigs[i].redMask = -1;
-          pConfigs[i].greenMask = -1;
-          pConfigs[i].blueMask = -1;
-          pConfigs[i].alphaMask = 0;
+	  if (pScrn->bitsPerPixel == 16) {
+	     pConfigs[i].redSize            = 5;
+	     pConfigs[i].greenSize          = 6;
+	     pConfigs[i].blueSize           = 5;
+	     pConfigs[i].alphaSize          = 0;
+	     pConfigs[i].redMask            = 0x0000F800;
+	     pConfigs[i].greenMask          = 0x000007E0;
+	     pConfigs[i].blueMask           = 0x0000001F;
+	     pConfigs[i].alphaMask          = 0x00000000;
+	  } else {
+	     pConfigs[i].redSize            = 8;
+	     pConfigs[i].greenSize          = 8;
+	     pConfigs[i].blueSize           = 8;
+	     pConfigs[i].alphaSize          = 8;
+	     pConfigs[i].redMask            = 0x00FF0000;
+	     pConfigs[i].greenMask          = 0x0000FF00;
+	     pConfigs[i].blueMask           = 0x000000FF;
+	     pConfigs[i].alphaMask          = 0xFF000000;
+	  }
           if(accum) {
             pConfigs[i].accumRedSize = 16;
             pConfigs[i].accumGreenSize = 16;
             pConfigs[i].accumBlueSize = 16;
-            pConfigs[i].accumAlphaSize = 16;
+            if (pConfigs[i].alphaMask == 0)
+              pConfigs[i].accumAlphaSize = 0;
+	    else
+              pConfigs[i].accumAlphaSize = 16;
           } else {
             pConfigs[i].accumRedSize = 0;
             pConfigs[i].accumGreenSize = 0;
@@ -174,8 +189,11 @@ SISInitVisualConfigs(ScreenPtr pScreen)
           }
           pConfigs[i].auxBuffers = 0;
           pConfigs[i].level = 0;
-          pConfigs[i].visualRating = GLX_NONE_EXT;
-          pConfigs[i].transparentPixel = 0;
+          if (pConfigs[i].accumRedSize != 0)
+            pConfigs[i].visualRating = GLX_SLOW_CONFIG;
+          else
+            pConfigs[i].visualRating = GLX_NONE_EXT;
+          pConfigs[i].transparentPixel = GLX_NONE;
           pConfigs[i].transparentRed = 0;
           pConfigs[i].transparentGreen = 0;
           pConfigs[i].transparentBlue = 0;
@@ -247,11 +265,15 @@ Bool SISDRIScreenInit(ScreenPtr pScreen)
 
   pDRIInfo->drmDriverName = SISKernelDriverName;
   pDRIInfo->clientDriverName = SISClientDriverName;
-  pDRIInfo->busIdString = xalloc(64);
-  sprintf(pDRIInfo->busIdString, "PCI:%d:%d:%d",
-      	((pciConfigPtr)pSIS->PciInfo->thisCard)->busnum,
-      	((pciConfigPtr)pSIS->PciInfo->thisCard)->devnum,
-      	((pciConfigPtr)pSIS->PciInfo->thisCard)->funcnum);
+  if (xf86LoaderCheckSymbol("DRICreatePCIBusID")) {
+    pDRIInfo->busIdString = DRICreatePCIBusID(pSIS->PciInfo);
+  } else {
+    pDRIInfo->busIdString = xalloc(64);
+    sprintf(pDRIInfo->busIdString, "PCI:%d:%d:%d",
+	    ((pciConfigPtr)pSIS->PciInfo->thisCard)->busnum,
+	    ((pciConfigPtr)pSIS->PciInfo->thisCard)->devnum,
+	    ((pciConfigPtr)pSIS->PciInfo->thisCard)->funcnum);
+  }
   /* Hack to keep old DRI working -- checked for major==1 and
    * minor==1.
    */
@@ -369,7 +391,7 @@ Bool SISDRIScreenInit(ScreenPtr pScreen)
 
   pSISDRI->regs.size = SISIOMAPSIZE;
   pSISDRI->regs.map = 0;
-  if(drmAddMap(pSIS->drmSubFD, (drmHandle)pSIS->IOAddress,
+  if(drmAddMap(pSIS->drmSubFD, (drm_handle_t)pSIS->IOAddress,
         	pSISDRI->regs.size, DRM_REGISTERS, 0,
         	&pSISDRI->regs.handle) < 0) {
      SISDRICloseScreen(pScreen);
@@ -429,7 +451,7 @@ Bool SISDRIScreenInit(ScreenPtr pScreen)
     /* pSIS->agpBase = */
 
     pSISDRI->agp.size = pSIS->agpSize;
-    if(drmAddMap(pSIS->drmSubFD, (drmHandle)0,
+    if(drmAddMap(pSIS->drmSubFD, (drm_handle_t)0,
                  pSISDRI->agp.size, DRM_AGP, 0,
                  &pSISDRI->agp.handle) < 0) {
        xf86DrvMsg(pScreen->myNum, X_ERROR,
@@ -537,14 +559,14 @@ SISDRICloseScreen(ScreenPtr pScreen)
  */
 static Bool
 SISCreateContext(ScreenPtr pScreen, VisualPtr visual, 
-          drmContext hwContext, void *pVisualConfigPriv,
+          drm_context_t hwContext, void *pVisualConfigPriv,
           DRIContextType contextStore)
 {
   return TRUE;
 }
 
 static void
-SISDestroyContext(ScreenPtr pScreen, drmContext hwContext, 
+SISDestroyContext(ScreenPtr pScreen, drm_context_t hwContext, 
            DRIContextType contextStore)
 {
 }
