@@ -1,4 +1,4 @@
-/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/sis/vgatypes.h,v 1.15 2003/11/19 00:49:06 twini Exp $ */
+/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/sis/vgatypes.h,v 1.17 2003/12/02 12:15:33 twini Exp $ */
 /*
  * General type definitions for universal mode switching modules
  *
@@ -237,8 +237,6 @@ struct _SIS_HW_INFO
  
     PSIS_QUERYSPACE  pQueryNorthBridgeSpace;/* Get/Set North Bridge  */
                                             /* space  */
-
-    UCHAR  pdc;			/* PanelDelayCompensation */
 };
 #endif
 
@@ -285,7 +283,10 @@ struct _SISFB_INFO {
 	int sisfb_scalelcd;
 	unsigned long sisfb_specialtiming;
 
-	char reserved[219]; 		/* for future use */
+	unsigned char sisfb_haveemi;
+	unsigned char sisfb_emi30,sisfb_emi31,sisfb_emi32,sisfb_emi33;
+
+	char reserved[214]; 		/* for future use */
 };
 #endif
 
