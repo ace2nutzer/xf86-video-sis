@@ -1,4 +1,4 @@
-/* $XFree86$ */
+/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/sis/sis.h,v 1.113 2004/03/06 13:21:24 twini Exp $ */
 /*
  * Main global data and definitions
  *
@@ -38,8 +38,8 @@
 #define UNLOCK_ALWAYS
 
 #define SISDRIVERVERSIONYEAR    4
-#define SISDRIVERVERSIONMONTH   2
-#define SISDRIVERVERSIONDAY     26
+#define SISDRIVERVERSIONMONTH   3
+#define SISDRIVERVERSIONDAY     6
 #define SISDRIVERREVISION       1
 
 #define SISDRIVERIVERSION (SISDRIVERVERSIONYEAR << 16) |  \

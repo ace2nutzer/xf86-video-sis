@@ -1,4 +1,4 @@
-/* $XFree86$ */
+/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/sis/init.c,v 1.54 2004/02/29 19:54:12 twini Exp $ */
 /*
  * Mode initializing code (CRT1 section) for
  * for SiS 300/305/540/630/730 and
@@ -995,14 +995,16 @@ SiS_GetModeID_TV(int VGAEngine, ULONG VBFlags, int HDisplay, int VDisplay, int D
 		   if((VBFlags & TV_YPBPR) || (VBFlags & (TV_NTSC | TV_PALM)))
                       ModeIndex = ModeIndex_720x480[Depth];
                 } else if(VDisplay == 576) {
-		   if((!(VBFlags & (TV_YPBPR | TV_PALM))) && (VBFlags & TV_PAL))
+		   if( ((VBFlags & TV_YPBPR) && (VBFlags & TV_YPBPR750P)) ||
+		       ((!(VBFlags & (TV_YPBPR | TV_PALM))) && (VBFlags & TV_PAL)) )
                       ModeIndex = ModeIndex_720x576[Depth];
                 }
 	     }
              break;
 	case 768:
 	     if((!(VBFlags & TV_HIVISION)) && (!((VBFlags & TV_YPBPR) && (VBFlags & TV_YPBPR1080I)))) {
-	        if((!(VBFlags & (TV_YPBPR | TV_PALM))) && (VBFlags & TV_PAL)) {
+	        if( ((VBFlags & TV_YPBPR) && (VBFlags & TV_YPBPR750P)) ||
+		    ((!(VBFlags & (TV_YPBPR | TV_PALM))) && (VBFlags & TV_PAL)) ) {
           	   if(VDisplay == 576) ModeIndex = ModeIndex_768x576[Depth];
 		}
              }

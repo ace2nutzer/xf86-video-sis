@@ -1,4 +1,4 @@
-/* $XFree86$ */
+/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/sis/sis_driver.c,v 1.187 2004/03/06 16:29:05 twini Exp $ */
 /*
  * SiS driver main code
  *
@@ -2835,6 +2835,8 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 
     /*
      * The first thing we should figure out is the depth, bpp, etc.
+     * Set SupportConvert... flags since we use the fb layer which
+     * supports this conversion. (24to32 seems not implemented though)
      * Additionally, determine the size of the HWCursor memory area.
      */
     switch(pSiS->VGAEngine) {
@@ -2848,12 +2850,15 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	break;
       case SIS_530_VGA:
         pSiS->CursorSize = 2048;
-    	pix24flags = Support32bppFb |
-	             Support24bppFb;
+    	pix24flags = Support32bppFb 	  |
+	             Support24bppFb 	  |
+		     SupportConvert32to24;
         break;
       default:
         pSiS->CursorSize = 2048;
-        pix24flags = Support24bppFb;
+        pix24flags = Support24bppFb 	  |
+		     SupportConvert32to24 |
+		     PreferConvert32to24;
 	break;
     }
 
