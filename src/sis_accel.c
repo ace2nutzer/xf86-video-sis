@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/sis_accel.c,v 1.3 2004/06/17 13:20:13 twini Exp $ */
+/* $XdotOrg$ */
 /*
  * 2D acceleration for SiS5597/5598 and 6326
  *
@@ -93,6 +93,9 @@ static void SiSSubsequentScanlineCPUToScreenColorExpandFill(ScrnInfoPtr pScrn,
                                 int skipleft);
 static void SiSSubsequentColorExpandScanline(ScrnInfoPtr pScrn, int bufno);
 #endif
+
+extern unsigned char SiSGetCopyROP(int rop);
+extern unsigned char SiSGetPatternROP(int rop);
 
 Bool
 SiSAccelInit(ScreenPtr pScreen)
@@ -272,7 +275,7 @@ SiSSetupForScreenToScreenCopy(ScrnInfoPtr pScrn, int xdir, int ydir,
     sisBLTSync;
     sisSETPITCH(pSiS->scrnOffset, pSiS->scrnOffset);
 
-    sisSETROP(XAAGetCopyROP(rop));
+    sisSETROP(SiSGetCopyROP(rop));
     pSiS->Xdirection = xdir;
     pSiS->Ydirection = ydir;
 }
@@ -329,8 +332,8 @@ SiSSetupForFillRectSolid(ScrnInfoPtr pScrn, int color, int rop,
     SISPtr pSiS = SISPTR(pScrn);
 
     sisBLTSync;
-    sisSETBGROPCOL(XAAGetCopyROP(rop), color);
-    sisSETFGROPCOL(XAAGetCopyROP(rop), color);
+    sisSETBGROPCOL(SiSGetCopyROP(rop), color);
+    sisSETFGROPCOL(SiSGetCopyROP(rop), color);
     sisSETPITCH(pSiS->scrnOffset, pSiS->scrnOffset);
 }
 
@@ -436,8 +439,8 @@ static void SiSSetupForSolidLine(ScrnInfoPtr pScrn,
     SISPtr pSiS = SISPTR(pScrn);
 
     sisBLTSync;
-    sisSETBGROPCOL(XAAGetCopyROP(rop), 0);
-    sisSETFGROPCOL(XAAGetCopyROP(rop), color);
+    sisSETBGROPCOL(SiSGetCopyROP(rop), 0);
+    sisSETFGROPCOL(SiSGetCopyROP(rop), color);
 }
 
 static void SiSSubsequentSolidTwoPointLine(ScrnInfoPtr pScrn,
@@ -539,11 +542,11 @@ SiSSetupForScanlineCPUToScreenColorExpandFill(ScrnInfoPtr pScrn,
         sisSETROPBG(0xAA);             /* dst = dst (=noop) */
 	pSiS->CommandReg |= sisSRCFG;
     } else {
-        sisSETBGROPCOL(XAAGetPatternROP(rop), bg);
+        sisSETBGROPCOL(SiSGetPatternROP(rop), bg);
 	pSiS->CommandReg |= sisSRCFG | sisPATBG;
     }
 
-    sisSETFGROPCOL(XAAGetCopyROP(rop), fg);
+    sisSETFGROPCOL(SiSGetCopyROP(rop), fg);
 
     sisSETDSTPITCH(pSiS->scrnOffset);
 }

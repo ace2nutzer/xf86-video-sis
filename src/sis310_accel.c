@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/sis310_accel.c,v 1.4 2004/07/26 22:40:56 twini Exp $ */
+/* $XdotOrg$ */
 /*
  * 2D Acceleration for SiS 315 and 330 series
  *
@@ -84,10 +84,17 @@
 #define INCL_RENDER	/* Use/Don't use RENDER extension acceleration */
 
 #ifdef INCL_RENDER
-#ifdef RENDER
-#include "mipict.h"
-#include "dixstruct.h"
-#endif
+# ifdef RENDER
+#  include "mipict.h"
+#  include "dixstruct.h"
+#  undef SISNEWRENDER
+#  ifdef XORG_VERSION_CURRENT
+#   include "xorgVersion.h"
+#   if XORG_VERSION_CURRENT > XORG_VERSION_NUMERIC(6,7,0,0,0)
+#    define SISNEWRENDER
+#   endif
+#  endif
+# endif
 #endif
 
 /* Accelerator functions */
@@ -169,33 +176,49 @@ static void SiSSubsequentColorExpandScanline(ScrnInfoPtr pScrn, int bufno);
 #endif
 #ifdef INCL_RENDER
 #ifdef RENDER
-extern Bool SiSSetupForCPUToScreenAlphaTexture(ScrnInfoPtr pScrn,
+static Bool SiSSetupForCPUToScreenAlphaTexture(ScrnInfoPtr pScrn,
 				int op, CARD16 red, CARD16 green,
-				CARD16 blue, CARD16 alpha,
-				int alphaType, CARD8 *alphaPtr,
+				CARD16 blue, CARD16 alpha,				
+#ifdef SISNEWRENDER
+				CARD32 alphaType, CARD32 dstType,
+#else
+				int alphaType, 
+#endif				
+				CARD8 *alphaPtr,
 				int alphaPitch, int width,
 				int height, int	flags);
 
-extern Bool SiSSetupForCPUToScreenTexture( ScrnInfoPtr pScrn,
-				int op, int texType, CARD8 *texPtr,
+static Bool SiSSetupForCPUToScreenTexture( ScrnInfoPtr pScrn,
+				int op, 
+#ifdef SISNEWRENDER
+				CARD32 texType, CARD32 dstType,
+#else				
+				int texType, 
+#endif				
+				CARD8 *texPtr,
 				int texPitch, int width,
 				int height, int	flags);
 
-extern void SiSSubsequentCPUToScreenTexture(ScrnInfoPtr	pScrn,
+static void SiSSubsequentCPUToScreenTexture(ScrnInfoPtr	pScrn,
 				int dstx, int dsty,
 				int srcx, int srcy,
 				int width, int height);
 
-extern CARD32 SiSAlphaTextureFormats[2];
-extern CARD32 SiSTextureFormats[2];
-CARD32 SiSAlphaTextureFormats[2] = { PICT_a8      , 0 };
-CARD32 SiSTextureFormats[2]      = { PICT_a8r8g8b8, 0 };
+static CARD32 SiSAlphaTextureFormats[2] = { PICT_a8      , 0 };
+static CARD32 SiSTextureFormats[2]      = { PICT_a8r8g8b8, 0 };
+#ifdef SISNEWRENDER
+static CARD32 SiSDstTextureFormats16[2] = { PICT_r5g6b5  , 0 };
+static CARD32 SiSDstTextureFormats32[2] = { PICT_x8r8g8b8, 0 };
+#endif
 #endif
 #endif
 
 #ifdef SISDUALHEAD
 static void SiSRestoreAccelState(ScrnInfoPtr pScrn);
 #endif
+
+extern unsigned char SiSGetCopyROP(int rop);
+extern unsigned char SiSGetPatternROP(int rop);
 
 CARD32 dummybuf;
 
@@ -416,15 +439,28 @@ SiS315AccelInit(ScreenPtr pScreen)
 	   if(pSiS->RenderAccelArray) {
 	      pSiS->AccelLinearScratch = NULL;
 
+#ifdef SISNEWRENDER
+	      infoPtr->SetupForCPUToScreenAlphaTexture2 = SiSSetupForCPUToScreenAlphaTexture;
+	      infoPtr->CPUToScreenAlphaTextureDstFormats = (pScrn->bitsPerPixel == 16) ?
+	      		SiSDstTextureFormats16 : SiSDstTextureFormats32;
+#else	      
 	      infoPtr->SetupForCPUToScreenAlphaTexture = SiSSetupForCPUToScreenAlphaTexture;
+#endif	      
 	      infoPtr->SubsequentCPUToScreenAlphaTexture = SiSSubsequentCPUToScreenTexture;
 	      infoPtr->CPUToScreenAlphaTextureFormats = SiSAlphaTextureFormats;
 	      infoPtr->CPUToScreenAlphaTextureFlags = XAA_RENDER_NO_TILE;
 
+#ifdef SISNEWRENDER
+	      infoPtr->SetupForCPUToScreenTexture2 = SiSSetupForCPUToScreenTexture;
+	      infoPtr->CPUToScreenTextureDstFormats = (pScrn->bitsPerPixel == 16) ?
+	      		SiSDstTextureFormats16 : SiSDstTextureFormats32;
+#else	      
               infoPtr->SetupForCPUToScreenTexture = SiSSetupForCPUToScreenTexture;
-              infoPtr->SubsequentCPUToScreenTexture = SiSSubsequentCPUToScreenTexture;
+#endif	      
+	      infoPtr->SubsequentCPUToScreenTexture = SiSSubsequentCPUToScreenTexture;
               infoPtr->CPUToScreenTextureFormats = SiSTextureFormats;
 	      infoPtr->CPUToScreenTextureFlags = XAA_RENDER_NO_TILE;
+	      
 	      xf86DrvMsg(pScrn->scrnIndex, X_INFO, "RENDER acceleration enabled\n");
 	   }
 	}
@@ -554,7 +590,7 @@ static void SiSSetupForScreenToScreenCopy(ScrnInfoPtr pScrn,
 	   SiSSetupSRCTrans(trans_color)
 	   SiSSetupCMDFlag(TRANSPARENT_BITBLT)
 	} else {
-	   SiSSetupROP(XAAGetCopyROP(rop))
+	   SiSSetupROP(SiSGetCopyROP(rop))
 	   /* Set command - not needed, both 0 */
 	   /* SiSSetupCMDFlag(BITBLT | SRCVIDEO) */
 	}
@@ -677,14 +713,14 @@ SiSSetupForSolidFill(ScrnInfoPtr pScrn, int color,
 	SiSSetupDSTColorDepth(pSiS->SiS310_AccelDepth);
 	SiSCheckQueue(16 * 1);
 	SiSSetupPATFGDSTRect(color, pSiS->scrnOffset, -1)
-	SiSSetupROP(XAAGetPatternROP(rop))
+	SiSSetupROP(SiSGetPatternROP(rop))
 	SiSSetupCMDFlag(PATFG)
         SiSSyncWP
 #else
   	SiSSetupPATFG(color)
 	SiSSetupDSTRect(pSiS->scrnOffset, -1)
 	SiSSetupDSTColorDepth(pSiS->DstColor);
-	SiSSetupROP(XAAGetPatternROP(rop))
+	SiSSetupROP(SiSGetPatternROP(rop))
 	SiSSetupCMDFlag(PATFG | pSiS->SiS310_AccelDepth)
 #endif
 }
@@ -822,7 +858,7 @@ SiSSetupForSolidLine(ScrnInfoPtr pScrn, int color, int rop,
 	SiSCheckQueue(16 * 3);
         SiSSetupLineCountPeriod(1, 1)
 	SiSSetupPATFGDSTRect(color, pSiS->scrnOffset, -1)
-	SiSSetupROP(XAAGetPatternROP(rop))
+	SiSSetupROP(SiSGetPatternROP(rop))
 	SiSSetupCMDFlag(PATFG | LINE)
         SiSSyncWP
 #else
@@ -830,7 +866,7 @@ SiSSetupForSolidLine(ScrnInfoPtr pScrn, int color, int rop,
 	SiSSetupPATFG(color)
 	SiSSetupDSTRect(pSiS->scrnOffset, -1)
 	SiSSetupDSTColorDepth(pSiS->DstColor)
-	SiSSetupROP(XAAGetPatternROP(rop))
+	SiSSetupROP(SiSGetPatternROP(rop))
 	SiSSetupCMDFlag(PATFG | LINE | pSiS->SiS310_AccelDepth)
 #endif
 }
@@ -942,7 +978,7 @@ SiSSetupForDashedLine(ScrnInfoPtr pScrn,
 	SiSSetupPATFG(fg)
 #endif
 
-	SiSSetupROP(XAAGetPatternROP(rop))
+	SiSSetupROP(SiSGetPatternROP(rop))
 
 	SiSSetupCMDFlag(LINE | LINE_STYLE)
 
@@ -1022,7 +1058,7 @@ SiSSetupForMonoPatternFill(ScrnInfoPtr pScrn,
 
 	SiSSetupMONOPAT(patx,paty)
 
-	SiSSetupROP(XAAGetPatternROP(rop))
+	SiSSetupROP(SiSGetPatternROP(rop))
 
 #ifdef SISVRAMQ
         SiSSetupCMDFlag(PATMONO)
@@ -1181,7 +1217,7 @@ SiSSetupForColor8x8PatternFill(ScrnInfoPtr pScrn, int patternx, int patterny,
 	   patadr += 16;  /* = 64 due to (CARD32 *) */
 	}
 
-	SiSSetupROP(XAAGetPatternROP(rop))
+	SiSSetupROP(SiSGetPatternROP(rop))
 
 	SiSSetupCMDFlag(PATPATREG)
 
@@ -1240,7 +1276,7 @@ SiSSetupForCPUToScreenColorExpandFill(ScrnInfoPtr pScrn,
 
 #ifdef SISVRAMQ
         SiSSetupDSTColorDepth(pSiS->SiS310_AccelDepth);
-	SiSSetupROP(XAAGetCopyROP(rop));
+	SiSSetupROP(SiSGetCopyROP(rop));
 	SiSSetupSRCFGDSTRect(fg, pSiS->scrnOffset, -1)
 	if(bg == -1) {
 	   SiSSetupCMDFlag(TRANSPARENT | ENCOLOREXP | SRCVIDEO);
@@ -1251,7 +1287,7 @@ SiSSetupForCPUToScreenColorExpandFill(ScrnInfoPtr pScrn,
         SiSSyncWP
 #else
 	SiSSetupSRCXY(0,0);
-	SiSSetupROP(XAAGetCopyROP(rop));
+	SiSSetupROP(SiSGetCopyROP(rop));
 	SiSSetupSRCFG(fg);
 	SiSSetupDSTRect(pSiS->scrnOffset, -1);
 	SiSSetupDSTColorDepth(pSiS->DstColor);
@@ -1352,7 +1388,7 @@ SiSSetupForScanlineCPUToScreenColorExpandFill(ScrnInfoPtr pScrn,
 #endif
 	SiSSetupSRCXY(0,0);
 
-	SiSSetupROP(XAAGetCopyROP(rop));
+	SiSSetupROP(SiSGetCopyROP(rop));
 	SiSSetupSRCFG(fg);
 	SiSSetupDSTRect(pSiS->scrnOffset, -1);
 #ifndef SISVRAMQ
@@ -1480,7 +1516,7 @@ SiSSetupForScreenToScreenColorExpand(ScrnInfoPtr pScrn,
 	SiSSetupDSTColorDepth(pSiS->DstColor)
 #endif
 	SiSSetupDSTRect(pSiS->scrnOffset, -1)
-	SiSSetupROP(XAAGetCopyROP(rop))
+	SiSSetupROP(SiSGetCopyROP(rop))
 	SiSSetupSRCFG(fg)
 	/* SiSSetupSRCXY(0,0) */
 
@@ -1694,7 +1730,12 @@ Bool
 SiSSetupForCPUToScreenAlphaTexture(ScrnInfoPtr pScrn,
    			int op, CARD16 red, CARD16 green,
    			CARD16 blue, CARD16 alpha,
-   			int alphaType, CARD8 *alphaPtr,
+#ifdef SISNEWRENDER
+			CARD32 alphaType, CARD32 dstType,
+#else			
+   			int alphaType, 
+#endif			
+			CARD8 *alphaPtr,
    			int alphaPitch, int width,
    			int height, int	flags)
 {
@@ -1788,7 +1829,13 @@ SiSSetupForCPUToScreenAlphaTexture(ScrnInfoPtr pScrn,
 
 Bool
 SiSSetupForCPUToScreenTexture(ScrnInfoPtr pScrn,
-   			int op, int texType, CARD8 *texPtr,
+   			int op, 
+#ifdef SISNEWRENDER
+			CARD32 texType, CARD32 dstType,
+#else			
+			int texType, 
+#endif			
+			CARD8 *texPtr,
    			int texPitch, int width,
    			int height, int	flags)
 {

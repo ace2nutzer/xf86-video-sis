@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/sis300_accel.c,v 1.4 2004/07/26 22:40:56 twini Exp $ */
+/* $XdotOrg$ */
 /*
  * 2D Acceleration for SiS 530, 620, 300, 540, 630, 730.
  *
@@ -138,6 +138,9 @@ static void SiSSubsequentColorExpandScanline(ScrnInfoPtr pScrn, int bufno);
 #ifdef SISDUALHEAD
 static void SiSRestoreAccelState(ScrnInfoPtr pScrn);
 #endif
+
+extern unsigned char SiSGetCopyROP(int rop);
+extern unsigned char SiSGetPatternROP(int rop);
 
 static void
 SiSInitializeAccelerator(ScrnInfoPtr pScrn)
@@ -389,7 +392,7 @@ static void SiSSetupForScreenToScreenCopy(ScrnInfoPtr pScrn,
 	   SiSSetupSRCTrans(trans_color)
 	   SiSSetupCMDFlag(TRANSPARENT_BITBLT)
 	} else {
-	   SiSSetupROP(XAAGetCopyROP(rop))
+	   SiSSetupROP(SiSGetCopyROP(rop))
 	}
 	if(xdir > 0) {
 	   SiSSetupCMDFlag(X_INC)
@@ -459,7 +462,7 @@ SiSSetupForSolidFill(ScrnInfoPtr pScrn,
 	SiSSetupPATFG(color)
 	SiSSetupDSTRect(pSiS->scrnOffset, -1)
 	SiSSetupDSTColorDepth(pSiS->DstColor);
-	SiSSetupROP(XAAGetPatternROP(rop))
+	SiSSetupROP(SiSGetPatternROP(rop))
 	/* SiSSetupCMDFlag(PATFG) - is zero */
 }
 
@@ -617,7 +620,7 @@ SiSSetupForSolidLine(ScrnInfoPtr pScrn,
 	SiSSetupPATFG(color)
 	SiSSetupDSTRect(pSiS->scrnOffset, -1)
 	SiSSetupDSTColorDepth(pSiS->DstColor);
-	SiSSetupROP(XAAGetPatternROP(rop))
+	SiSSetupROP(SiSGetPatternROP(rop))
 	SiSSetupCMDFlag(PATFG | LINE)
 }
 
@@ -707,7 +710,7 @@ SiSSetupForDashedLine(ScrnInfoPtr pScrn,
 	SiSSetupStyleLow(*pattern)
 	SiSSetupStyleHigh(*(pattern+4))
 	SiSSetupStylePeriod(length-1);
-	SiSSetupROP(XAAGetPatternROP(rop))
+	SiSSetupROP(SiSGetPatternROP(rop))
 	SiSSetupPATFG(fg)
 	SiSSetupCMDFlag(LINE | LINE_STYLE)
 	if(bg != -1) {
@@ -768,7 +771,7 @@ SiSSetupForMonoPatternFill(ScrnInfoPtr pScrn,
 	SiSSetupDSTColorDepth(pSiS->DstColor);
 	SiSSetupMONOPAT(patx,paty)
 	SiSSetupPATFG(fg)
-	SiSSetupROP(XAAGetPatternROP(rop))
+	SiSSetupROP(SiSGetPatternROP(rop))
 	SiSSetupCMDFlag(PATMONO)
 	if(bg != -1) {
 	   SiSSetupPATBG(bg)
@@ -902,7 +905,7 @@ SiSSetupForCPUToScreenColorExpand(ScrnInfoPtr pScrn,
 	SiSSetupDSTColorDepth(pSiS->DstColor);
 	SiSSetupSRCXY(0,0)
 	SiSSetupSRCFG(fg)
-	SiSSetupROP(XAAGetPatternROP(rop))
+	SiSSetupROP(SiSGetPatternROP(rop))
 	SiSSetupCMDFlag(X_INC | Y_INC | COLOREXP)
 	if(bg == -1) {
 	   SiSSetupCMDFlag(TRANSPARENT)
@@ -954,7 +957,7 @@ SiSSetupForScreenToScreenColorExpand(ScrnInfoPtr pScrn,
 
 	SiSSetupDSTColorDepth(pSiS->DstColor)
 	SiSSetupDSTRect(pSiS->scrnOffset, -1)
-	SiSSetupROP(XAAGetCopyROP(rop))
+	SiSSetupROP(SiSGetCopyROP(rop))
 	SiSSetupSRCFG(fg)
 	/* SiSSetupSRCXY(0,0) */
 
@@ -1120,7 +1123,7 @@ SiSSetupForScanlineCPUToScreenColorExpandFill(ScrnInfoPtr pScrn,
 	while((MMIO_IN16(pSiS->IOBase, 0x8242) & 0x1F00) != 0) {} /* WDR: == 0x10 */
 
 	SiSSetupSRCXY(0,0);
-	SiSSetupROP(XAAGetCopyROP(rop));
+	SiSSetupROP(SiSGetCopyROP(rop));
 	SiSSetupSRCFG(fg);
 	SiSSetupDSTRect(pSiS->scrnOffset, -1);
 	SiSSetupDSTColorDepth(pSiS->DstColor);

@@ -49,24 +49,19 @@
 
 #include "sis.h"
 
-#undef SISHAVECOMPATLAYER
-#ifdef XORG_VERSION_CURRENT
-#define SISHAVECOMPATLAYER
-#define SISHAVECREATEBUSID
-#else
-# if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,4,99,7,0)
-# define SISHAVECOMPATLAYER
-# endif
-# if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,4,99,99,0)
-# undef SISHAVECREATEBUSID  /* Waiting, waiting, waiting... */
+#ifndef SISHAVEDRMWRITE
+# if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,2,99,0,0)
+extern Bool drmSiSAgpInit(int driSubFD, int offset, int size);
+# else
+#  include "xf86drmCompat.h"
 # endif
 #endif
 
-#if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,2,99,0,0)
-extern Bool drmSiSAgpInit(int driSubFD, int offset, int size);
+#ifdef XORG_VERSION_CURRENT
+#define SISHAVECREATEBUSID
 #else
-# ifdef SISHAVECOMPATLAYER
-#  include "xf86drmCompat.h"
+# if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,4,99,99,0)
+# undef SISHAVECREATEBUSID  /* Waiting, waiting, waiting... */
 # endif
 #endif
 
@@ -542,7 +537,7 @@ Bool SISDRIScreenInit(ScreenPtr pScreen)
        pSISDRI->AGPVtxBufOffset = pSIS->agpVtxBufAddr - pSIS->agpAddr;
        pSISDRI->AGPVtxBufSize = pSIS->agpVtxBufSize;
 
-#ifdef SISHAVECOMPATLAYER
+#ifndef SISHAVEDRMWRITE
        drmSiSAgpInit(pSIS->drmSubFD, AGP_VTXBUF_SIZE,(pSIS->agpSize - AGP_VTXBUF_SIZE));
 #else
        {
@@ -564,7 +559,7 @@ Bool SISDRIScreenInit(ScreenPtr pScreen)
        pSISDRI->AGPCmdBufOffset = pSIS->agpCmdBufAddr - pSIS->agpAddr;
        pSISDRI->AGPCmdBufSize = pSIS->agpCmdBufSize;
 
-#ifdef SISHAVECOMPATLAYER
+#ifndef SISHAVEDRMWRITE
        drmSiSAgpInit(pSIS->drmSubFD, AGP_CMDBUF_SIZE,(pSIS->agpSize - AGP_CMDBUF_SIZE));
 #else
        {

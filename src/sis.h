@@ -39,8 +39,8 @@
 #define UNLOCK_ALWAYS
 
 #define SISDRIVERVERSIONYEAR    4
-#define SISDRIVERVERSIONMONTH   7
-#define SISDRIVERVERSIONDAY     27
+#define SISDRIVERVERSIONMONTH   8
+#define SISDRIVERVERSIONDAY     4
 #define SISDRIVERREVISION       1
 
 #define SISDRIVERIVERSION (SISDRIVERVERSIONYEAR << 16) |  \
@@ -77,8 +77,12 @@
 #define SISMYSERVERNAME "XFree86"
 #endif
 
-#ifdef XF86DRI
+#undef SISHAVEDRMWRITE
 #undef SISNEWDRI
+#ifdef XF86DRI
+#if XF86_VERSION_CURRENT >= XF86_VERSION_NUMERIC(4,2,99,3,0)
+#define SISHAVEDRMWRITE
+#endif
 #if XF86_VERSION_CURRENT >= XF86_VERSION_NUMERIC(4,3,99,14,0)
 #define SISNEWDRI
 #endif
@@ -89,7 +93,7 @@
 #include "dri.h"
 #include "GL/glxint.h"
 #include "sis_dri.h"
-#endif
+#endif /* XF86DRI */
 
 #if 1
 #define SISDUALHEAD  		/* Include Dual Head code  */

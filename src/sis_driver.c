@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/sis_driver.c,v 1.10 2004/07/26 22:40:56 twini Exp $ */
+/* $XdotOrg$ */
 /*
  * SiS driver main code
  *
@@ -178,8 +178,6 @@ static PciChipsets SISPciChipsets[] = {
 };
 
 static const char *xaaSymbols[] = {
-    "XAAGetCopyROP",
-    "XAAGetPatternROP",
     "XAACreateInfoRec",
     "XAADestroyInfoRec",
     "XAAHelpPatternROP",
@@ -268,12 +266,15 @@ static const char *drmSymbols[] = {
     "drmAgpRelease",
     "drmCtlInstHandler",
     "drmGetInterruptFromBusID",
+#ifndef SISHAVEDRMWRITE    
     "drmSiSAgpInit",
+#else    
+    "drmCommandWrite",
+#endif    
 #if XF86_VERSION_CURRENT >= XF86_VERSION_NUMERIC(4,3,0,0,0)
     "drmGetVersion",
     "drmFreeVersion",
-    "drmCommandWrite",
-#endif    
+#endif
     NULL
 };
 
