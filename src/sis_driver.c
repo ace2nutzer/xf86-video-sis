@@ -6913,11 +6913,10 @@ SISRestore(ScrnInfoPtr pScrn)
 	      }
 	      SiSSetMode(pSiS->SiS_Pr, &pSiS->sishw_ext, pScrn, mymode, FALSE);
 	      if(changedmode) {
-	   	 mymode = 0x03;
 		 outSISIDXREG(SISCR,0x34,0x03);
 	      }
 	      SISSpecialRestore(pScrn);
-	      SiS_GetSetModeID(pScrn,pSiS->OldMode); /* NOT mymode! */
+	      SiS_GetSetModeID(pScrn, pSiS->OldMode); /* NOT mymode! */
 	      pSiS->SiS_Pr->UsePanelScaler = backupscaler;
 	      pSiS->SiS_Pr->CenterScreen = backupcenter;
 	      pSiS->SiS_Pr->SiS_CustomT = backupspecialtiming;
