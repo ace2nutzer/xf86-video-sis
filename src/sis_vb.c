@@ -1064,7 +1064,7 @@ Bool SISRedetectCRT2Type(ScrnInfoPtr pScrn)
     
     /* At first, re-do the sensing for TV and VGA2 */
     if(pSiS->VBFlags & VB_SISBRIDGE) {
-       SISSense30x(pScrn, FALSE);
+       SISSense30x(pScrn, TRUE);
     } else if(pSiS->VBFlags & VB_CHRONTEL) {
        SiS_SetChrontelGPIO(pSiS->SiS_Pr, 0x9c);
        SISSenseChrontel(pScrn, TRUE);

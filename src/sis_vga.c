@@ -1135,7 +1135,7 @@ void SISVGAPreInit(ScrnInfoPtr pScrn)
 	xf86DrvMsg(pScrn->scrnIndex, X_PROBED, detectvb, SiSVBTypeStr[sistypeidx], 
 		   		(pSiS->VBFlags2 & VB_SISUMC) ? "UMC" : "Charter", 1, temp1);
 
-	SISSense30x(pScrn, TRUE); 
+	SISSense30x(pScrn, FALSE); 
 
     } else if(temp == 2) {
 
@@ -1243,7 +1243,7 @@ void SISVGAPreInit(ScrnInfoPtr pScrn)
 		/* Sense connected TV's */
 		SISSenseChrontel(pScrn, FALSE);
 	    
-	    } else if(temp1==0) {
+	    } else if(temp1 == 0) {
 	        /* This indicates a communication problem, but it only occures if there
 		 * is no TV attached. So we don't use TV in this case.
 		 */
