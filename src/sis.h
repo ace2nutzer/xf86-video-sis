@@ -36,8 +36,8 @@
 #define _SIS_H_
 
 #define SISDRIVERVERSIONYEAR    5
-#define SISDRIVERVERSIONMONTH   1
-#define SISDRIVERVERSIONDAY     19
+#define SISDRIVERVERSIONMONTH   2
+#define SISDRIVERVERSIONDAY     1
 #define SISDRIVERREVISION       1
 
 #define SISDRIVERIVERSION ((SISDRIVERVERSIONYEAR << 16) |  \
@@ -62,7 +62,7 @@
 #define SIS_MINOR_VERSION       7
 #define SIS_PATCHLEVEL          0
 #define SIS_CURRENT_VERSION     ((SIS_MAJOR_VERSION << 16) | \
-                                 (SIS_MINOR_VERSION << 8) | SIS_PATCHLEVEL )			  
+                                 (SIS_MINOR_VERSION << 8) | SIS_PATCHLEVEL )
 
 #if 0
 #define TWDEBUG    /* for debugging */
@@ -92,7 +92,7 @@
 #ifndef XF86_VERSION_NUMERIC
 #define XF86_VERSION_NUMERIC(major,minor,patch,snap,dummy) \
 	(((major) * 10000000) + ((minor) * 100000) + ((patch) * 1000) + snap)
-#define XF86_VERSION_CURRENT XF86_VERSION_NUMERIC(4,3,99,902)	
+#define XF86_VERSION_CURRENT XF86_VERSION_NUMERIC(4,3,99,902)
 #endif
 #else
 #include "xf86Version.h"
@@ -115,7 +115,7 @@
 
 /* SIS_USE_BIOS_SCRATCH: Save/restore mode number in BIOS scratch area? */
 #undef SIS_USE_BIOS_SCRATCH
-#if (defined(i386) || defined(__i386) || defined(__i386__) || defined(__AMD64__))
+#if defined(i386) || defined(__i386) || defined(__i386__) || defined(__AMD64__) || defined(__amd64__)
 #define SIS_USE_BIOS_SCRATCH
 #endif
 
@@ -124,7 +124,7 @@
 /* This is BROKEN, see comment in sis_driver.c */
 #undef SIS_NEED_MAP_IOP
 #if 0
-#if defined(__arm32__) || defined(__mips__) 
+#if defined(__arm32__) || defined(__mips__)
 #define SIS_NEED_MAP_IOP
 #endif
 #endif
@@ -135,8 +135,8 @@
 #undef SISUSEDEVPORT
 #if defined(SIS_LINUX) && (defined(__arm32__) || defined(__mips__))
 #ifndef SIS_NEED_MAP_IOP
-#define SISUSEDEVPORT	
-#endif	
+#define SISUSEDEVPORT
+#endif
 #endif
 
 /* Our #includes: Require the arch/platform dependent #defines above */
@@ -187,7 +187,7 @@
 #define INCL_YUV_BLIT_ADAPTOR	/* Include support for YUV->RGB blit adaptors (VRAM queue mode only) */
 #endif
 
-#if 0				
+#if 0
 #define SISDEINT		/* Include Xv deinterlacer code (not functional yet!) */
 #endif
 
@@ -196,10 +196,10 @@
 #define UNLOCK_ALWAYS		/* Always unlock the registers (should be set!) */
 
 #if defined(SISMERGED) && defined(SISXINERAMA)
-#define NEED_REPLIES  		/* ? */
+#define NEED_REPLIES		/* ? */
 #define EXTENSION_PROC_ARGS void *
-#include "extnsionst.h"  	/* required */
-#include "panoramiXproto.h"  	/* required */
+#include "extnsionst.h" 	/* required */
+#include "panoramiXproto.h" 	/* required */
 #endif
 
 #undef SISCHECKOSSSE
@@ -238,99 +238,99 @@
 #define PCI_CHIP_SIS550		0x5315	/* 550_VGA */
 #endif
 #ifndef PCI_CHIP_SIS650
-#define PCI_CHIP_SIS650 	0x6325  /* 650_VGA and 740_VGA */
+#define PCI_CHIP_SIS650		0x6325  /* 650_VGA and 740_VGA */
 #endif
 #ifndef PCI_CHIP_SIS330
-#define PCI_CHIP_SIS330 	0x0330
+#define PCI_CHIP_SIS330		0x0330
 #endif
 #ifndef PCI_CHIP_SIS660
-#define PCI_CHIP_SIS660 	0x6330	/* 661_VGA, 741_VGA, 760_VGA */
+#define PCI_CHIP_SIS660		0x6330	/* 661_VGA, 741_VGA, 760_VGA */
 #endif
 #ifndef PCI_CHIP_SIS340
-#define PCI_CHIP_SIS340 	0x0340
+#define PCI_CHIP_SIS340		0x0340
 #endif
 #ifndef PCI_CHIP_SIS761
-#define PCI_CHIP_SIS761 	0x6340  /* ? */
+#define PCI_CHIP_SIS761		0x6340  /* ? */
 #endif
 
 /* pSiS->Flags (old series only) */
-#define SYNCDRAM                0x00000001
-#define RAMFLAG                 0x00000002
-#define ESS137xPRESENT          0x00000004
-#define SECRETFLAG              0x00000008
-#define A6326REVAB              0x00000010
-#define MMIOMODE                0x00010000
-#define LFBQMODE                0x00020000
-#define AGPQMODE                0x00040000
-#define UMA                     0x80000000
+#define SYNCDRAM		0x00000001
+#define RAMFLAG			0x00000002
+#define ESS137xPRESENT		0x00000004
+#define SECRETFLAG		0x00000008
+#define A6326REVAB		0x00000010
+#define MMIOMODE		0x00010000
+#define LFBQMODE		0x00020000
+#define AGPQMODE		0x00040000
+#define UMA			0x80000000
 
-#define BIOS_BASE               0xC0000
-#define BIOS_SIZE               0x10000
+#define BIOS_BASE		0xC0000
+#define BIOS_SIZE		0x10000
 
 #define SIS_VBFlagsVersion	1
 
 /* pSiS->VBFlags - if anything is changed here, increase VBFlagsVersion! */
-#define CRT2_DEFAULT            0x00000001
-#define CRT2_LCD                0x00000002  /* Never change the order of the CRT2_XXX entries */
-#define CRT2_TV                 0x00000004  
-#define CRT2_VGA                0x00000008
-#define TV_NTSC                 0x00000010
-#define TV_PAL                  0x00000020
-#define TV_HIVISION             0x00000040
-#define TV_YPBPR                0x00000080
-#define TV_AVIDEO               0x00000100
-#define TV_SVIDEO               0x00000200
-#define TV_SCART                0x00000400
+#define CRT2_DEFAULT		0x00000001
+#define CRT2_LCD		0x00000002  /* Never change the order of the CRT2_XXX entries */
+#define CRT2_TV			0x00000004
+#define CRT2_VGA		0x00000008
+#define TV_NTSC			0x00000010
+#define TV_PAL			0x00000020
+#define TV_HIVISION		0x00000040
+#define TV_YPBPR		0x00000080
+#define TV_AVIDEO		0x00000100
+#define TV_SVIDEO		0x00000200
+#define TV_SCART		0x00000400
 #define VB_CONEXANT		0x00000800   /* 661 series only */
 #define VB_TRUMPION		VB_CONEXANT  /* 300 series only */
-#define TV_PALM                 0x00001000
-#define TV_PALN                 0x00002000
+#define TV_PALM			0x00001000
+#define TV_PALN			0x00002000
 #define TV_NTSCJ		0x00001000
 #define VB_302ELV		0x00004000
-#define TV_CHSCART              0x00008000
-#define TV_CHYPBPR525I          0x00010000
+#define TV_CHSCART		0x00008000
+#define TV_CHYPBPR525I		0x00010000
 #define CRT1_VGA		0x00000000
 #define CRT1_LCDA		0x00020000
-#define VGA2_CONNECTED          0x00040000
+#define VGA2_CONNECTED		0x00040000
 #define DISPTYPE_CRT1		0x00080000  	/* CRT1 connected and used */
-#define VB_301                  0x00100000	/* Video bridge type */
-#define VB_301B                 0x00200000
-#define VB_302B                 0x00400000
+#define VB_301			0x00100000	/* Video bridge type */
+#define VB_301B			0x00200000
+#define VB_302B			0x00400000
 #define VB_30xBDH		0x00800000      /* 30xB DH version (w/o LCD support) */
-#define VB_LVDS                 0x01000000
-#define VB_CHRONTEL             0x02000000
-#define VB_301LV                0x04000000
-#define VB_302LV                0x08000000
+#define VB_LVDS			0x01000000
+#define VB_CHRONTEL		0x02000000
+#define VB_301LV		0x04000000
+#define VB_302LV		0x08000000
 #define VB_301C			0x10000000
-#define SINGLE_MODE             0x20000000   	/* CRT1 or CRT2; determined by DISPTYPE_CRTx */
+#define SINGLE_MODE		0x20000000   	/* CRT1 or CRT2; determined by DISPTYPE_CRTx */
 #define MIRROR_MODE		0x40000000   	/* CRT1 + CRT2 identical (mirror mode) */
 #define DUALVIEW_MODE		0x80000000   	/* CRT1 + CRT2 independent (dual head mode) */
 
 /* Aliases: */
 #define CRT2_ENABLE		(CRT2_LCD | CRT2_TV | CRT2_VGA)
-#define TV_STANDARD             (TV_NTSC | TV_PAL | TV_PALM | TV_PALN | TV_NTSCJ)
-#define TV_INTERFACE            (TV_AVIDEO|TV_SVIDEO|TV_SCART|TV_HIVISION|TV_YPBPR)
+#define TV_STANDARD		(TV_NTSC | TV_PAL | TV_PALM | TV_PALN | TV_NTSCJ)
+#define TV_INTERFACE		(TV_AVIDEO|TV_SVIDEO|TV_SCART|TV_HIVISION|TV_YPBPR)
 
 /* Only if TV_YPBPR is set: */
 #define TV_YPBPR525I		TV_NTSC
 #define TV_YPBPR525P		TV_PAL
 #define TV_YPBPR750P		TV_PALM
-#define TV_YPBPR1080I	        TV_PALN
+#define TV_YPBPR1080I		TV_PALN
 #define TV_YPBPRALL 		(TV_YPBPR525I | TV_YPBPR525P | TV_YPBPR750P | TV_YPBPR1080I)
 
 #define TV_YPBPR43LB		TV_CHSCART
 #define TV_YPBPR43		TV_CHYPBPR525I
 #define TV_YPBPR169 		(TV_CHSCART | TV_CHYPBPR525I)
-#define TV_YPBPRAR              (TV_CHSCART | TV_CHYPBPR525I)
+#define TV_YPBPRAR		(TV_CHSCART | TV_CHYPBPR525I)
 
-#define VB_SISBRIDGE            (VB_301|VB_301B|VB_301C|VB_302B|VB_301LV|VB_302LV|VB_302ELV)
-#define VB_SISTVBRIDGE          (VB_301|VB_301B|VB_301C|VB_302B|VB_301LV|VB_302LV)
+#define VB_SISBRIDGE		(VB_301|VB_301B|VB_301C|VB_302B|VB_301LV|VB_302LV|VB_302ELV)
+#define VB_SISTVBRIDGE		(VB_301|VB_301B|VB_301C|VB_302B|VB_301LV|VB_302LV)
 #define VB_VIDEOBRIDGE		(VB_SISBRIDGE | VB_LVDS | VB_CHRONTEL | VB_CONEXANT)
-#define VB_SISLVDSBRIDGE        (VB_301LV|VB_302LV|VB_302ELV)
+#define VB_SISLVDSBRIDGE	(VB_301LV|VB_302LV|VB_302ELV)
 #define VB_SISTMDSBRIDGE	(VB_301|VB_301B|VB_301C|VB_302B)
 #define VB_SISTMDSLCDABRIDGE	(VB_301C)
-#define VB_SISVGA2BRIDGE  	(VB_301|VB_301B|VB_301C|VB_302B)
-#define VB_SISLCDABRIDGE 	(VB_301C|VB_302B|VB_301LV|VB_302LV|VB_302ELV)
+#define VB_SISVGA2BRIDGE	(VB_301|VB_301B|VB_301C|VB_302B)
+#define VB_SISLCDABRIDGE	(VB_301C|VB_302B|VB_301LV|VB_302LV|VB_302ELV)
 #define VB_SISHIVISIONBRIDGE	(VB_301|VB_301B|VB_302B)
 #define VB_SISYPBPRBRIDGE	(VB_301C|VB_301LV|VB_302LV|VB_302ELV)
 #define VB_SISYPBPRARBRIDGE	(VB_301C)
@@ -341,46 +341,46 @@
 #define VB_DISPMODE_SINGLE	SINGLE_MODE  	/* alias */
 #define VB_DISPMODE_MIRROR	MIRROR_MODE  	/* alias */
 #define VB_DISPMODE_DUAL	DUALVIEW_MODE 	/* alias */
-#define DISPLAY_MODE            (SINGLE_MODE | MIRROR_MODE | DUALVIEW_MODE)
+#define DISPLAY_MODE		(SINGLE_MODE | MIRROR_MODE | DUALVIEW_MODE)
 
 /* pSiS->VBFlags2 (static stuff only!) */
 #define VB_SISUMC		0x00000001
 
 /* pSiS->VBLCDFlags */
 #define VB_LCD_320x480		0x00000001	/* DSTN/FSTN for 550 */
-#define VB_LCD_640x480          0x00000002
-#define VB_LCD_800x600          0x00000004
-#define VB_LCD_1024x768         0x00000008
-#define VB_LCD_1280x1024        0x00000010
-#define VB_LCD_1280x960    	0x00000020
+#define VB_LCD_640x480		0x00000002
+#define VB_LCD_800x600		0x00000004
+#define VB_LCD_1024x768		0x00000008
+#define VB_LCD_1280x1024	0x00000010
+#define VB_LCD_1280x960		0x00000020
 #define VB_LCD_1600x1200	0x00000040
 #define VB_LCD_2048x1536	0x00000080
-#define VB_LCD_1400x1050        0x00000100
-#define VB_LCD_1152x864         0x00000200
-#define VB_LCD_1152x768         0x00000400
-#define VB_LCD_1280x768         0x00000800
-#define VB_LCD_1024x600         0x00001000
+#define VB_LCD_1400x1050	0x00000100
+#define VB_LCD_1152x864		0x00000200
+#define VB_LCD_1152x768		0x00000400
+#define VB_LCD_1280x768		0x00000800
+#define VB_LCD_1024x600		0x00001000
 #define VB_LCD_640x480_2	0x00002000  	/* DSTN/FSTN */
 #define VB_LCD_640x480_3	0x00004000  	/* DSTN/FSTN */
 #define VB_LCD_848x480		0x00008000	/* LVDS only, otherwise handled as custom */
 #define VB_LCD_1280x800		0x00010000
 #define VB_LCD_1680x1050	0x00020000
-#define VB_LCD_1280x720         0x00040000
-#define VB_LCD_UNKNOWN          0x10000000
-#define VB_LCD_BARCO1366        0x20000000
-#define VB_LCD_CUSTOM  		0x40000000
+#define VB_LCD_1280x720		0x00040000
+#define VB_LCD_UNKNOWN		0x10000000
+#define VB_LCD_BARCO1366	0x20000000
+#define VB_LCD_CUSTOM		0x40000000
 #define VB_LCD_EXPANDING	0x80000000
 
 #define VB_FORBID_CRT2LCD_OVER_1600		/* CRT2/LCD supports only up to 1600 pixels */
 
 /* PresetMode argument */
-#define SIS_MODE_SIMU 		0
-#define SIS_MODE_CRT1 		1
-#define SIS_MODE_CRT2 		2
+#define SIS_MODE_SIMU		0
+#define SIS_MODE_CRT1		1
+#define SIS_MODE_CRT2		2
 
 /* pSiS->MiscFlags */
 #define MISC_CRT1OVERLAY	0x00000001  /* Current display mode supports overlay (CRT1) */
-#define MISC_PANELLINKSCALER    0x00000002  /* Panel link is currently scaling */
+#define MISC_PANELLINKSCALER	0x00000002  /* Panel link is currently scaling */
 #define MISC_CRT1OVERLAYGAMMA	0x00000004  /* Current display mode supports overlay gamma corr on CRT1 */
 #define MISC_TVNTSC1024		0x00000008  /* Current display mode is TV NTSC/PALM/YPBPR525I 1024x768  */
 #define MISC_CRT2OVERLAY	0x00000010  /* Current display mode supports overlay (CRT2) */
@@ -388,10 +388,10 @@
 /* pSiS->SiS6326Flags */
 #define SIS6326_HASTV		0x00000001
 #define SIS6326_TVSVIDEO        0x00000002
-#define SIS6326_TVCVBS          0x00000004
+#define SIS6326_TVCVBS		0x00000004
 #define SIS6326_TVPAL		0x00000008
-#define SIS6326_TVDETECTED      0x00000010
-#define SIS6326_TVON            0x80000000
+#define SIS6326_TVDETECTED	0x00000010
+#define SIS6326_TVON		0x80000000
 
 #define HW_DEVICE_EXTENSION	SIS_HW_INFO
 
@@ -401,17 +401,17 @@
 #define PDEBUG(p)
 #endif
 
-#define BITMASK(h,l)    	(((unsigned)(1U << ((h) - (l) + 1)) - 1) << (l))
-#define GENMASK(mask)   	BITMASK(1 ? mask, 0 ? mask)
+#define BITMASK(h,l)		(((unsigned)(1U << ((h) - (l) + 1)) - 1) << (l))
+#define GENMASK(mask)		BITMASK(1 ? mask, 0 ? mask)
 
-#define GETBITS(var,mask)   	(((var) & GENMASK(mask)) >> (0 ? mask))
-#define SETBITS(val,mask)   	((val) << (0 ? mask))
-#define SETBIT(n)       	(1 << (n))
+#define GETBITS(var,mask)	(((var) & GENMASK(mask)) >> (0 ? mask))
+#define SETBITS(val,mask)	((val) << (0 ? mask))
+#define SETBIT(n)		(1 << (n))
 
 #define GETBITSTR(val,from,to)       ((GETBITS(val, from)) << (0 ? to))
 #define SETVARBITS(var,val,from,to)  (((var) & (~(GENMASK(to)))) | GETBITSTR(val,from,to))
-#define GETVAR8(var)            ((var) & 0xFF)
-#define SETVAR8(var,val)        (var) =  GETVAR8(val)
+#define GETVAR8(var)		((var) & 0xFF)
+#define SETVAR8(var,val)	(var) =  GETVAR8(val)
 
 typedef unsigned long  ULong;
 typedef unsigned short UShort;
@@ -465,7 +465,7 @@ typedef unsigned char  UChar;
 #define SiSCF_XabreCore     0x00040000  /* 3D: Real Xabre */
 #define SiSCF_Ultra256Core  0x00080000  /* 3D: aka "Mirage 2"; similar to Xabre, no T&L?, no P:Shader? (760) */
 #define SiSCF_MMIOPalette   0x00100000  /* HW supports MMIO palette writing/reading */
-#define SiSCF_UseLCDA       0x01000000  
+#define SiSCF_UseLCDA       0x01000000
 #define SiSCF_760LFB        0x08000000  /* 760: LFB active (if not set, UMA only) */
 #define SiSCF_760UMA        0x10000000  /* 760: UMA active (if not set, LFB only) */
 #define SiSCF_CRT2HWCKaputt 0x20000000  /* CRT2 Mono HWCursor engine buggy (SiS 330) */
@@ -506,7 +506,7 @@ typedef unsigned char  UChar;
 #define SiS_SD_SUPPORTSGRCRT2  0x40000000   /* Separate CRT2 gamma correction supported */
 #define SiS_SD_CANSETGAMMA     0x80000000   /* Driver can set gamma ramp; otherwise: App needs to reset palette */
 					    /* after disabling sep CRT2 gamma corr */
-					    
+
 #define SiS_SD2_LCDTMDS	       0x00000001   /* SiS Bridge supports TMDS (DVI-D) */
 #define SiS_SD2_LCDLVDS	       0x00000002   /* SiS Bridge supports LVDS */
 #define SiS_SD2_SUPPORTLCD     0x00000004   /* Bridge supports LCD (LVDS or TMDS, SiS+3rd party) */
@@ -521,7 +521,8 @@ typedef unsigned char  UChar;
 #define SiS_SD2_THIRDPARTYLVDS 0x00000800   /* Third party LVDS (non-SiS) */
 #define SiS_SD2_ADDLFLAGS      0x00001000   /* Following flags valid */
 /* ... */
-					    
+#define SiS_SD2_NOOVERLAY      0x80000000   /* No video overlay */
+
 #define SIS_DIRECTKEY          0x03145792
 
 /* SiSCtrl: Check mode for CRT2 */
@@ -625,27 +626,27 @@ typedef void (*vidCopyFunc)(UChar *, const UChar *, int);
 /* Dual head private entity structure */
 #ifdef SISDUALHEAD
 typedef struct {
-    ScrnInfoPtr         pScrn_1;
-    ScrnInfoPtr         pScrn_2;
-    UChar 		*BIOS;
-    SiS_Private   	*SiS_Pr;
-    ULong 		agpHandle;
+    ScrnInfoPtr		pScrn_1;
+    ScrnInfoPtr		pScrn_2;
+    UChar		*BIOS;
+    SiS_Private		*SiS_Pr;
+    ULong		agpHandle;
     ULong		agpAddr;
-    UChar 		*agpBase;
-    unsigned int 	agpSize;
-    unsigned int        agpWantedSize;
-    unsigned int        agpWantedPages;
+    UChar		*agpBase;
+    unsigned int	agpSize;
+    unsigned int	agpWantedSize;
+    unsigned int	agpWantedPages;
     ULong		agpCmdBufAddr;  /* 300 series */
-    UChar 		*agpCmdBufBase;
-    unsigned int 	agpCmdBufSize;
-    unsigned int 	agpCmdBufFree;
-    ULong		agpVtxBufAddr;	/* 315 series */
+    UChar		*agpCmdBufBase;
+    unsigned int	agpCmdBufSize;
+    unsigned int	agpCmdBufFree;
+    ULong		agpVtxBufAddr;		/* 315 series */
     UChar       	*agpVtxBufBase;
-    unsigned int        agpVtxBufSize;
-    unsigned int        agpVtxBufFree;  
+    unsigned int	agpVtxBufSize;
+    unsigned int	agpVtxBufFree;
 #ifdef XF86DRI
-    sisRegion 		agp;
-    int 		drmSubFD;
+    sisRegion		agp;
+    int			drmSubFD;
 #endif
     Bool		AGPInitOK;
     int			CRT1ModeNo;		/* Current display mode for CRT1 */
@@ -656,36 +657,36 @@ typedef struct {
     Bool		CRT2IsCustom;
     UChar		CRT2CR30, CRT2CR31, CRT2CR35, CRT2CR38;
     int			refCount;
-    int 		lastInstance;		/* number of entities */
+    int			lastInstance;		/* number of entities */
     Bool		DisableDual;		/* Emergency flag */
     Bool		ErrorAfterFirst;	/* Emergency flag: Error after first init -> Abort second */
     Bool		HWCursor;		/* Backup master settings for use on slave */
-    Bool                TurboQueue;
-    int                 ForceCRT1Type;
-    int                 ForceCRT2Type;
-    int                 OptTVStand;
-    int                 OptTVOver;
+    Bool		TurboQueue;
+    int			ForceCRT1Type;
+    int			ForceCRT2Type;
+    int			OptTVStand;
+    int			OptTVOver;
     int			OptTVSOver;
-    int                 OptROMUsage;
+    int			OptROMUsage;
     int			OptUseOEM;
-    Bool                NoAccel;
+    Bool		NoAccel;
     int			forceCRT1;
     int			DSTN, FSTN;
     Bool		XvOnCRT2;
-    int                 maxUsedClock;  		/* Max used pixelclock on master head */
-    ULong       	masterFbAddress;	/* Framebuffer addresses and sizes */
+    int			maxUsedClock;		/* Max used pixelclock on master head */
+    ULong		masterFbAddress;	/* Framebuffer addresses and sizes */
     ULong		masterFbSize;
-    ULong       	slaveFbAddress;
+    ULong		slaveFbAddress;
     ULong		slaveFbSize;
-    UChar 		*FbBase;         	/* VRAM linear address */
-    UChar 		*IOBase;         	/* MMIO linear address */
-    UShort      	MapCountIOBase;		/* map/unmap queue counter */
-    UShort      	MapCountFbBase;		/* map/unmap queue counter */
-    Bool 		forceUnmapIOBase;	/* ignore counter and unmap */
+    UChar		*FbBase;         	/* VRAM linear address */
+    UChar		*IOBase;         	/* MMIO linear address */
+    UShort		MapCountIOBase;		/* map/unmap queue counter */
+    UShort		MapCountFbBase;		/* map/unmap queue counter */
+    Bool		forceUnmapIOBase;	/* ignore counter and unmap */
     Bool		forceUnmapFbBase;	/* ignore counter and unmap */
 #ifdef __alpha__
-    UChar 		*IOBaseDense;    	/* MMIO for Alpha platform */
-    UShort      	MapCountIOBaseDense;
+    UChar		*IOBaseDense;    	/* MMIO for Alpha platform */
+    UShort		MapCountIOBaseDense;
     Bool		forceUnmapIOBaseDense;  /* ignore counter and unmap */
 #endif
     int			chtvlumabandwidthcvbs;  /* TV settings for Chrontel TV encoder */
@@ -699,24 +700,24 @@ typedef struct {
     int			sistvedgeenhance;	/* TV settings for SiS bridge */
     int			sistvantiflicker;
     int			sistvsaturation;
-    int       		sistvcolcalibc;
-    int       		sistvcolcalibf;
+    int			sistvcolcalibc;
+    int			sistvcolcalibf;
     int			sistvcfilter;
     int			sistvyfilter;
     int			tvxpos, tvypos;
-    int		      	tvxscale, tvyscale;
+    int			tvxscale, tvyscale;
     int			ForceTVType, SenseYPbPr;
     ULong		ForceYPbPrType, ForceYPbPrAR;
     int			chtvtype;
-    int                 NonDefaultPAL, NonDefaultNTSC;
+    int			NonDefaultPAL, NonDefaultNTSC;
     UShort		tvx, tvy;
     UChar		p2_01, p2_02, p2_1f, p2_20, p2_43, p2_42, p2_2b;
     UChar		p2_44, p2_45, p2_46;
-    ULong       	sistvccbase;
-    UChar       	p2_35, p2_36, p2_37, p2_38, p2_48, p2_49, p2_4a;
+    ULong		sistvccbase;
+    UChar		p2_35, p2_36, p2_37, p2_38, p2_48, p2_49, p2_4a;
     UChar		p2_0a, p2_2f, p2_30, p2_47;
-    UChar       	scalingp1[9], scalingp4[9], scalingp2[64];
-    UShort      	cursorBufferNum;
+    UChar		scalingp1[9], scalingp4[9], scalingp2[64];
+    UShort		cursorBufferNum;
     Bool		restorebyset;
     Bool		CRT1gamma, CRT1gammaGiven, CRT2gamma, XvGamma, XvGammaGiven, XvDefAdaptorBlit;
     int			XvGammaRed, XvGammaGreen, XvGammaBlue;
@@ -727,23 +728,23 @@ typedef struct {
     int			AllowHotkey;
     Bool		enablesisctrl;
     ULong		cmdQ_SharedWritePort_2D;
-    UChar       	*RenderAccelArray;
-    UChar 		*FbBase1;
+    UChar		*RenderAccelArray;
+    UChar		*FbBase1;
     ULong		OnScreenSize1;
-    UChar       	OldMode;
+    UChar		OldMode;
     int			HWCursorMBufNum, HWCursorCBufNum;
     Bool		ROM661New;
     Bool		XvUseMemcpy;
     Bool		BenchMemCpy;
     Bool		HaveFastVidCpy;
-    vidCopyFunc 	SiSFastVidCopy, SiSFastMemCopy;
+    vidCopyFunc		SiSFastVidCopy, SiSFastMemCopy;
     unsigned int	CPUFlags;
-#ifdef SIS_NEED_MAP_IOP   
-    CARD32              IOPAddress;      	/* I/O port physical address */
-    UChar 		*IOPBase;         	/* I/O port linear address */
-    UShort      	MapCountIOPBase;	/* map/unmap queue counter */
-    Bool 		forceUnmapIOPBase;	/* ignore counter and unmap */   
-#endif    
+#ifdef SIS_NEED_MAP_IOP
+    CARD32		IOPAddress;      	/* I/O port physical address */
+    UChar		*IOPBase;         	/* I/O port linear address */
+    UShort		MapCountIOPBase;	/* map/unmap queue counter */
+    Bool		forceUnmapIOPBase;	/* ignore counter and unmap */
+#endif
 #ifdef SIS_CP
     SIS_CP_H_ENT
 #endif
@@ -763,237 +764,237 @@ typedef enum {
 } SiSScrn2Rel;
 
 typedef struct {
-    ScrnInfoPtr         pScrn;		/* -------------- DON'T INSERT ANYTHING HERE --------------- */
-    pciVideoPtr         PciInfo;	/* -------- OTHERWISE sis_dri.so MUST BE RECOMPILED -------- */
-    PCITAG              PciTag;
-    EntityInfoPtr       pEnt;
-    int                 Chipset;
-    int                 ChipRev;
-    int			VGAEngine;      /* see above */
-    int	                hasTwoOverlays; /* Chipset supports two video overlays? */
-    HW_DEVICE_EXTENSION sishw_ext;      /* For new mode switching code */
-    SiS_Private   	*SiS_Pr;         /* For new mode switching code */
-    int			DSTN; 		/* For 550 FSTN/DSTN; set by option, no detection */
-    ULong       	FbAddress;      /* VRAM physical address (in DHM: for each Fb!) */
-    ULong       	realFbAddress;  /* For DHM/PCI mem mapping: store global FBAddress */
-    UChar 		*FbBase;         /* VRAM virtual linear address */
-    CARD32              IOAddress;      /* MMIO physical address */
-    UChar 		*IOBase;         /* MMIO linear address */
-    IOADDRESS           IODBase;        /* Base of PIO memory area */
+    ScrnInfoPtr		pScrn;		/* -------------- DON'T INSERT ANYTHING HERE --------------- */
+    pciVideoPtr		PciInfo;	/* -------- OTHERWISE sis_dri.so MUST BE RECOMPILED -------- */
+    PCITAG		PciTag;
+    EntityInfoPtr	pEnt;
+    int			Chipset;
+    int			ChipRev;
+    int			VGAEngine;	/* see above */
+    int			hasTwoOverlays;	/* Chipset supports two video overlays? */
+    HW_DEVICE_EXTENSION	sishw_ext;	/* For new mode switching code */
+    SiS_Private		*SiS_Pr;	/* For new mode switching code */
+    int			DSTN;		/* For 550 FSTN/DSTN; set by option, no detection */
+    ULong		FbAddress;	/* VRAM physical address (in DHM: for each Fb!) */
+    ULong		realFbAddress;	/* For DHM/PCI mem mapping: store global FBAddress */
+    UChar 		*FbBase;	/* VRAM virtual linear address */
+    CARD32		IOAddress;	/* MMIO physical address */
+    UChar		*IOBase;	/* MMIO linear address */
+    IOADDRESS		IODBase;	/* Base of PIO memory area */
 #ifdef __alpha__
-    UChar 		*IOBaseDense;    /* MMIO for Alpha platform */
+    UChar		*IOBaseDense;	/* MMIO for Alpha platform */
 #endif
-    SISIOADDRESS        RelIO;          /* Relocated IO Ports baseaddress */
-    UChar 		*BIOS;
-    int                 MemClock;
-    int                 BusWidth;
-    int                 MinClock;
-    int                 MaxClock;
-    int                 Flags;          /* HW config flags */
-    long                FbMapSize;	/* Used for Mem Mapping - DON'T CHANGE THIS */
-    long                availMem;       /* Really available Fb mem (minus TQ, HWCursor) */
-    ULong		maxxfbmem;      /* limit fb memory X is to use to this (KB) */
-    ULong       	sisfbMem;       /* heapstart of sisfb (if running) */
+    SISIOADDRESS        RelIO;		/* Relocated IO Ports baseaddress */
+    UChar		*BIOS;
+    int			MemClock;
+    int			BusWidth;
+    int			MinClock;
+    int			MaxClock;
+    int			Flags;		/* HW config flags */
+    long		FbMapSize;	/* Used for Mem Mapping - DON'T CHANGE THIS */
+    long		availMem;	/* Really available Fb mem (minus TQ, HWCursor) */
+    ULong		maxxfbmem;	/* limit fb memory X is to use to this (KB) */
+    ULong		sisfbMem;	/* heapstart of sisfb (if running) */
 #ifdef SISDUALHEAD
     ULong		dhmOffset;	/* Offset to memory for each head (0 or ..) */
 #endif
-    DGAModePtr          DGAModes;
-    int                 numDGAModes;
-    Bool                DGAactive;
-    int                 DGAViewportStatus;
-    UChar       	OldMode;        /* Back old modeNo (if available) */
-    Bool                NoAccel;
-    Bool                NoXvideo;
-    Bool		XvOnCRT2;       /* see sis_opt.c */
-    Bool                HWCursor;
-    Bool                UsePCIRetry;
-    Bool                TurboQueue;
+    DGAModePtr		DGAModes;
+    int			numDGAModes;
+    Bool		DGAactive;
+    int			DGAViewportStatus;
+    UChar       	OldMode;	/* Back old modeNo (if available) */
+    Bool		NoAccel;
+    Bool		NoXvideo;
+    Bool		XvOnCRT2;	/* see sis_opt.c */
+    Bool		HWCursor;
+    Bool		UsePCIRetry;
+    Bool		TurboQueue;
     int			VESA;
-    int                 ForceCRT1Type;
-    int                 ForceCRT2Type;
-    int                 OptTVStand;
-    int                 OptTVOver;
-    int                 OptROMUsage;
-    int                 UseCHOverScan;
-    Bool                ValidWidth;
-    Bool                FastVram;		/* now unused */
+    int			ForceCRT1Type;
+    int			ForceCRT2Type;
+    int			OptTVStand;
+    int			OptTVOver;
+    int			OptROMUsage;
+    int			UseCHOverScan;
+    Bool		ValidWidth;
+    Bool		FastVram;		/* now unused */
     int			forceCRT1;
     Bool		CRT1changed;
-    UChar       	oldCR17, oldCR63, oldSR1F;
-    UChar       	oldCR32, oldCR36, oldCR37;
-    UChar       	myCR32, myCR36, myCR37, myCR63;
-    UChar       	newCR32;
-    ULong   		VBFlags;		/* Video bridge configuration */
+    UChar		oldCR17, oldCR63, oldSR1F;
+    UChar		oldCR32, oldCR36, oldCR37;
+    UChar		myCR32, myCR36, myCR37, myCR63;
+    UChar		newCR32;
+    ULong		VBFlags;		/* Video bridge configuration */
     ULong		VBFlags2;		/* Video bridge configuration 2 (static flags only) */
-    ULong       	VBFlags_backup;         /* Backup for SlaveMode-modes */
-    ULong		VBLCDFlags;             /* Moved LCD panel size bits here */
-    int                 ChrontelType;           /* CHRONTEL_700x or CHRONTEL_701x */
-    unsigned int        PDC, PDCA;		/* PanelDelayCompensation */
-    short               scrnOffset;		/* Screen pitch (data) */
-    short               scrnPitch;		/* Screen pitch (display; regarding interlace) */
-    short               DstColor;
-    int                 xcurrent;               /* for temp use in accel */
-    int                 ycurrent;               /* for temp use in accel */
-    long		SiS310_AccelDepth; 	/* used in accel for 315 series */
-    int                 Xdirection;  		/* for temp use in accel */
-    int                 Ydirection;  		/* for temp use in accel */
-    int                 sisPatternReg[4];
-    int                 ROPReg;
-    int                 CommandReg;
-    int                 MaxCMDQueueLen;
-    int                 CurCMDQueueLen;
-    int                 MinCMDQueueLen;
-    CARD16		CursorSize;  		/* Size of HWCursor area (bytes) */
+    ULong		VBFlags_backup;		/* Backup for SlaveMode-modes */
+    ULong		VBLCDFlags;		/* Moved LCD panel size bits here */
+    int			ChrontelType;		/* CHRONTEL_700x or CHRONTEL_701x */
+    unsigned int	PDC, PDCA;		/* PanelDelayCompensation */
+    short		scrnOffset;		/* Screen pitch (data) */
+    short		scrnPitch;		/* Screen pitch (display; regarding interlace) */
+    short		DstColor;
+    int			xcurrent;		/* for temp use in accel */
+    int			ycurrent;		/* for temp use in accel */
+    long		SiS310_AccelDepth;	/* used in accel for 315 series */
+    int			Xdirection;		/* for temp use in accel */
+    int			Ydirection;		/* for temp use in accel */
+    int			sisPatternReg[4];
+    int			ROPReg;
+    int			CommandReg;
+    int			MaxCMDQueueLen;
+    int			CurCMDQueueLen;
+    int			MinCMDQueueLen;
+    CARD16		CursorSize;		/* Size of HWCursor area (bytes) */
     CARD32		cursorOffset;		/* see sis_driver.c and sis_cursor.c */
-    int                 DstX;
-    int                 DstY;
+    int			DstX;
+    int			DstY;
     UChar 		*XAAScanlineColorExpandBuffers[2];
-    CARD32              AccelFlags;
-    Bool                ClipEnabled;
-    Bool                DoColorExpand;
-    Bool                ColorExpandBusy;
-    Bool                alphaBlitBusy;
-    SISRegRec           SavedReg;
-    SISRegRec           ModeReg;
-    xf86CursorInfoPtr   CursorInfoPtr;
-    XAAInfoRecPtr       AccelInfoPtr;
-    CloseScreenProcPtr  CloseScreen;
-    Bool        	(*ModeInit)(ScrnInfoPtr pScrn, DisplayModePtr mode);
-    void        	(*SiSSave)(ScrnInfoPtr pScrn, SISRegPtr sisreg);
-    void        	(*SiSRestore)(ScrnInfoPtr pScrn, SISRegPtr sisreg);
-    int       		cmdQueueLen;		/* Current cmdQueueLength (for 2D and 3D) */
+    CARD32		AccelFlags;
+    Bool		ClipEnabled;
+    Bool		DoColorExpand;
+    Bool		ColorExpandBusy;
+    Bool		alphaBlitBusy;
+    SISRegRec		SavedReg;
+    SISRegRec		ModeReg;
+    xf86CursorInfoPtr	CursorInfoPtr;
+    XAAInfoRecPtr	AccelInfoPtr;
+    CloseScreenProcPtr	CloseScreen;
+    Bool		(*ModeInit)(ScrnInfoPtr pScrn, DisplayModePtr mode);
+    void		(*SiSSave)(ScrnInfoPtr pScrn, SISRegPtr sisreg);
+    void		(*SiSRestore)(ScrnInfoPtr pScrn, SISRegPtr sisreg);
+    int			cmdQueueLen;		/* Current cmdQueueLength (for 2D and 3D) */
     ULong		cmdQueueLenMax;
     ULong		cmdQueueLenMin;
     ULong		*cmdQueueBase;
     int			*cmdQueueLenPtr;	/* Ptr to variable holding the current queue length */
     int			*cmdQueueLenPtrBackup;	/* Backup for DRI init/restore */
-    unsigned int        cmdQueueOffset;
-    unsigned int        cmdQueueSize;
+    unsigned int	cmdQueueOffset;
+    unsigned int	cmdQueueSize;
     ULong       	cmdQueueSizeMask;
     ULong		cmdQ_SharedWritePort_2D;
     ULong		*cmdQ_SharedWritePort;
     ULong		*cmdQ_SharedWritePortBackup;
-    unsigned int        cmdQueueSize_div2;
-    unsigned int        cmdQueueSize_div4;
-    unsigned int        cmdQueueSize_4_3;
+    unsigned int	cmdQueueSize_div2;
+    unsigned int	cmdQueueSize_div4;
+    unsigned int	cmdQueueSize_4_3;
     ULong 		agpHandle;
     ULong		agpAddr;
     UChar 		*agpBase;
-    unsigned int 	agpSize;
-    unsigned int        agpWantedSize;
-    unsigned int        agpWantedPages;
-    ULong		agpCmdBufAddr;  /* 300 series */
-    UChar 		*agpCmdBufBase;
-    unsigned int 	agpCmdBufSize;
-    unsigned int 	agpCmdBufFree;
+    unsigned int	agpSize;
+    unsigned int	agpWantedSize;
+    unsigned int	agpWantedPages;
+    ULong		agpCmdBufAddr;	/* 300 series */
+    UChar		*agpCmdBufBase;
+    unsigned int	agpCmdBufSize;
+    unsigned int	agpCmdBufFree;
     ULong		agpVtxBufAddr;	/* 315 series */
-    UChar       	*agpVtxBufBase;
-    unsigned int        agpVtxBufSize;
-    unsigned int        agpVtxBufFree;
+    UChar		*agpVtxBufBase;
+    unsigned int	agpVtxBufSize;
+    unsigned int	agpVtxBufFree;
 #ifdef XF86DRI
-    sisRegion 		agp;
+    sisRegion		agp;
 #endif
     Bool		AGPInitOK;
-    Bool 		irqEnabled;
-    int 		irq;
+    Bool		irqEnabled;
+    int			irq;
     Bool		IsAGPCard;
     ULong		DRIheapstart, DRIheapend;
-    Bool		NeedFlush;  /* Need to flush cmd buf mem (760) */
+    Bool		NeedFlush;	/* Need to flush cmd buf mem (760) */
 
     void		(*RenderCallback)(ScrnInfoPtr);
     Time		RenderTime;
-    UChar       	*RenderAccelArray;
+    UChar		*RenderAccelArray;
     Bool		doRender;
 
-    int 		ColorExpandRingHead;
-    int 		ColorExpandRingTail;
-    int 		PerColorExpandBufferSize;
-    int 		ColorExpandBufferNumber;
-    int 		ColorExpandBufferCountMask;
-    UChar 		*ColorExpandBufferAddr[32];
-    CARD32 		ColorExpandBufferScreenOffset[32];
-    CARD32     		ColorExpandBase;
-    int 		ImageWriteBufferSize;
-    UChar 		*ImageWriteBufferAddr;
+    int			ColorExpandRingHead;
+    int			ColorExpandRingTail;
+    int			PerColorExpandBufferSize;
+    int			ColorExpandBufferNumber;
+    int			ColorExpandBufferCountMask;
+    UChar		*ColorExpandBufferAddr[32];
+    CARD32		ColorExpandBufferScreenOffset[32];
+    CARD32		ColorExpandBase;
+    int			ImageWriteBufferSize;
+    UChar		*ImageWriteBufferAddr;
 
-    int 		Rotate;
+    int			Rotate;
     Bool		RotateMouse;
-    void        	(*PointerMoved)(int index, int x, int y);
+    void		(*PointerMoved)(int index, int x, int y);
 
     /* ShadowFB support */
-    Bool 		ShadowFB;
-    UChar 		*ShadowPtr;
-    int  		ShadowPitch;
-    
+    Bool		ShadowFB;
+    UChar		*ShadowPtr;
+    int			ShadowPitch;
+
 #ifdef SISUSEDEVPORT
     Bool		sisdevportopen;
 #endif
 
     /* DRI */
-    Bool		loadDRI;  
+    Bool		loadDRI;
 #ifdef XF86DRI
     Bool 		directRenderingEnabled;
     DRIInfoPtr 		pDRIInfo;
-    int 		drmSubFD;
-    int 		numVisualConfigs;
-    __GLXvisualConfig* 	pVisualConfigs;
-    SISConfigPrivPtr 	pVisualConfigsPriv;
-    SISRegRec 		DRContextRegs;
+    int			drmSubFD;
+    int			numVisualConfigs;
+    __GLXvisualConfig*	pVisualConfigs;
+    SISConfigPrivPtr	pVisualConfigsPriv;
+    SISRegRec		DRContextRegs;
 #endif
 
     /* Xv */
     XF86VideoAdaptorPtr adaptor;
     XF86VideoAdaptorPtr blitadaptor;
-    void *              blitPriv;
+    void		*blitPriv;
     ScreenBlockHandlerProcPtr BlockHandler;
-    void                (*VideoTimerCallback)(ScrnInfoPtr, Time);
+    void		(*VideoTimerCallback)(ScrnInfoPtr, Time);
     void		(*ResetXv)(ScrnInfoPtr);
     void		(*ResetXvGamma)(ScrnInfoPtr);
 
     /* misc */
-    OptionInfoPtr 	Options;
-    UChar 		LCDon;
+    OptionInfoPtr	Options;
+    UChar		LCDon;
 #ifdef SISDUALHEAD
     Bool		BlankCRT1, BlankCRT2;
 #endif
-    Bool 		Blank;
-    UChar 		BIOSModeSave;
-    int 		CRT1off;		/* 1=CRT1 off, 0=CRT1 on */
-    CARD16 		LCDheight;		/* Vertical resolution of LCD panel */
-    CARD16 		LCDwidth;		/* Horizontal resolution of LCD panel */
+    Bool		Blank;
+    UChar		BIOSModeSave;
+    int			CRT1off;		/* 1=CRT1 off, 0=CRT1 on */
+    CARD16		LCDheight;		/* Vertical resolution of LCD panel */
+    CARD16		LCDwidth;		/* Horizontal resolution of LCD panel */
     vbeInfoPtr 		pVbe;			/* For VESA mode switching */
-    CARD16 		vesamajor;
-    CARD16 		vesaminor;
-    int 		UseVESA;
+    CARD16		vesamajor;
+    CARD16		vesaminor;
+    int			UseVESA;
     sisModeInfoPtr      SISVESAModeList;
-    xf86MonPtr 		monitor;
-    CARD16 		maxBytesPerScanline;
-    CARD32 		*pal, *savedPal;
-    int 		mapPhys, mapOff, mapSize;
-    int 		statePage, stateSize, stateMode;
-    CARD8 		*fonts;
-    CARD8 		*state, *pstate;
-    void 		*base, *VGAbase;
+    xf86MonPtr		monitor;
+    CARD16		maxBytesPerScanline;
+    CARD32		*pal, *savedPal;
+    int			mapPhys, mapOff, mapSize;
+    int			statePage, stateSize, stateMode;
+    CARD8		*fonts;
+    CARD8		*state, *pstate;
+    void		*base, *VGAbase;
 #ifdef SISDUALHEAD
-    Bool 		DualHeadMode;		/* TRUE if we use dual head mode */
-    Bool 		SecondHead;		/* TRUE is this is the second head */
-    SISEntPtr 		entityPrivate;		/* Ptr to private entity (see above) */
+    Bool		DualHeadMode;		/* TRUE if we use dual head mode */
+    Bool		SecondHead;		/* TRUE is this is the second head */
+    SISEntPtr		entityPrivate;		/* Ptr to private entity (see above) */
     Bool		SiSXinerama;		/* Do we use Xinerama mode? */
 #endif
-    SISFBLayout         CurrentLayout;		/* Current framebuffer layout */
-    UShort              SiS_DDC2_Index;
-    UShort              SiS_DDC2_Data;
-    UShort              SiS_DDC2_Clk;
+    SISFBLayout		CurrentLayout;		/* Current framebuffer layout */
+    UShort		SiS_DDC2_Index;
+    UShort		SiS_DDC2_Data;
+    UShort		SiS_DDC2_Clk;
     Bool		Primary;		/* Display adapter is primary */
-    xf86Int10InfoPtr    pInt;			/* Our int10 */
-    int                 oldChipset;		/* Type of old chipset */
-    int              	RealVideoRam;		/* 6326 can only address 4MB, but TQ can be above */
-    CARD32              CmdQueLenMask;		/* Mask of queue length in MMIO register */
-    CARD32              CmdQueLenFix;           /* Fix value to subtract from QueLen (530/620) */
-    CARD32              CmdQueMaxLen;           /* (6326/5597/5598) Amount of cmds the queue can hold */
-    CARD32              TurboQueueLen;		/* For future use */
-    CARD32              detectedCRT2Devices;	/* detected CRT2 devices before mask-out */
-    Bool                NoHostBus;		/* Enable/disable 5597/5598 host bus */
+    xf86Int10InfoPtr	pInt;			/* Our int10 */
+    int			oldChipset;		/* Type of old chipset */
+    int			RealVideoRam;		/* 6326 can only address 4MB, but TQ can be above */
+    CARD32		CmdQueLenMask;		/* Mask of queue length in MMIO register */
+    CARD32		CmdQueLenFix;           /* Fix value to subtract from QueLen (530/620) */
+    CARD32		CmdQueMaxLen;           /* (6326/5597/5598) Amount of cmds the queue can hold */
+    CARD32		TurboQueueLen;		/* For future use */
+    CARD32		detectedCRT2Devices;	/* detected CRT2 devices before mask-out */
+    Bool		NoHostBus;		/* Enable/disable 5597/5598 host bus */
     Bool		noInternalModes;	/* Use our own default modes? */
     int			OptUseOEM;		/* Use internal OEM data? */
     int			chtvlumabandwidthcvbs;  /* TV settings for Chrontel TV encoder */
@@ -1007,13 +1008,13 @@ typedef struct {
     int			sistvedgeenhance;	/* TV settings for SiS bridges */
     int			sistvantiflicker;
     int			sistvsaturation;
-    int       		sistvcolcalibc;
-    int       		sistvcolcalibf;
+    int			sistvcolcalibc;
+    int			sistvcolcalibf;
     int			sistvcfilter;
     int			sistvyfilter;
     int			OptTVSOver;		/* Chrontel 7005: Superoverscan */
     int			tvxpos, tvypos;
-    int		      	tvxscale, tvyscale;
+    int			tvxscale, tvyscale;
     int			SiS6326Flags;		/* SiS6326 TV settings */
     int			sis6326enableyfilter;
     int			sis6326yfilterstrong;
@@ -1027,7 +1028,7 @@ typedef struct {
     ULong		sisfbspecialtiming;
     Bool		sisfb_haveemi, sisfb_haveemilcd, sisfb_tvposvalid, sisfb_havelock;
     UChar		sisfb_emi30,sisfb_emi31,sisfb_emi32,sisfb_emi33;
-    int 		sisfb_tvxpos, sisfb_tvypos;
+    int			sisfb_tvxpos, sisfb_tvypos;
     char		sisfbdevname[16];
     int			EMI;
     int			PRGB;
@@ -1035,17 +1036,17 @@ typedef struct {
     UChar       	postVBCR32;
     int			newFastVram;		/* Replaces FastVram */
     int			ForceTVType, SenseYPbPr;
-    int                 NonDefaultPAL, NonDefaultNTSC;
+    int			NonDefaultPAL, NonDefaultNTSC;
     ULong		ForceYPbPrType, ForceYPbPrAR;
-    ULong       	lockcalls;		/* Count unlock calls for debug */
+    ULong		lockcalls;		/* Count unlock calls for debug */
     UShort		tvx, tvy;		/* Backup TV position registers */
     UChar		p2_01, p2_02, p2_1f, p2_20, p2_43, p2_42, p2_2b; /* Backup TV position registers */
-    UShort      	tvx1, tvx2, tvx3, tvy1; /* Backup TV position registers */
+    UShort      	tvx1, tvx2, tvx3, tvy1;	/* Backup TV position registers */
     UChar		p2_44, p2_45, p2_46;
-    ULong       	sistvccbase;
-    UChar       	p2_35, p2_36, p2_37, p2_38, p2_48, p2_49, p2_4a;
+    ULong		sistvccbase;
+    UChar		p2_35, p2_36, p2_37, p2_38, p2_48, p2_49, p2_4a;
     UChar		p2_0a, p2_2f, p2_30, p2_47;
-    UChar       	scalingp1[9], scalingp4[9], scalingp2[64];
+    UChar		scalingp1[9], scalingp4[9], scalingp2[64];
     Bool		ForceCursorOff;
     Bool		HaveCustomModes;
     Bool		IsCustom;
@@ -1056,33 +1057,33 @@ typedef struct {
     Atom		xvDisableGfx, xvDisableGfxLR, xvTVXPosition, xvTVYPosition;
     Atom		xvDisableColorkey, xvUseChromakey, xvChromaMin, xvChromaMax;
     Atom		xvInsideChromakey, xvYUVChromakey, xvVSync;
-#ifdef SISDEINT    
+#ifdef SISDEINT
     Atom		xvdeintmeth;
-#endif    
+#endif
     Atom		xvGammaRed, xvGammaGreen, xvGammaBlue;
     Atom		xv_QVF, xv_QVV, xv_USD, xv_SVF, xv_QDD, xv_TAF, xv_TSA, xv_TEE, xv_GSF;
     Atom		xv_TTE, xv_TCO, xv_TCC, xv_TCF, xv_TLF, xv_CMD, xv_CMDR, xv_CT1, xv_SGA;
     Atom		xv_GDV, xv_GHI, xv_OVR, xv_GBI, xv_TXS, xv_TYS, xv_CFI, xv_COC, xv_COF;
     Atom		xv_YFI, xv_GSS, xv_BRR, xv_BRG, xv_BRB, xv_PBR, xv_PBG, xv_PBB, xv_SHC;
     Atom		xv_BRR2, xv_BRG2, xv_BRB2, xv_PBR2, xv_PBG2, xv_PBB2, xv_PMD, xv_RDT;
-    Atom 		xv_GARC2,xv_GAGC2,xv_GABC2, xv_GSF2;
+    Atom		xv_GARC2,xv_GAGC2,xv_GABC2, xv_GSF2;
     Atom		xv_BRRC2, xv_BRGC2, xv_BRBC2, xv_PBRC2, xv_PBGC2, xv_PBBC2;
 #ifdef TWDEBUG
     Atom		xv_STR;
-#endif        
+#endif
     int			xv_sisdirectunlocked;
     ULong		xv_sd_result;
     int			CRT1isoff;
 #ifdef SIS_CP
     SIS_CP_H
 #endif
-    ULong       	ChipFlags;
-    ULong       	SiS_SD_Flags, SiS_SD2_Flags;
+    ULong		ChipFlags;
+    ULong		SiS_SD_Flags, SiS_SD2_Flags;
     Bool		UseHWARGBCursor;
     int			OptUseColorCursor;
     int			OptUseColorCursorBlend;
     CARD32		OptColorCursorBlendThreshold;
-    UShort      	cursorBufferNum;
+    UShort		cursorBufferNum;
     int			vb;
     Bool		restorebyset;
     Bool		nocrt2ddcdetection;
@@ -1112,8 +1113,8 @@ typedef struct {
     Bool		AddedPlasmaModes;
     short		scrnPitch2;
     CARD32		CurFGCol, CurBGCol;
-    UChar *		CurMonoSrc;
-    CARD32 *		CurARGBDest;
+    UChar		*CurMonoSrc;
+    CARD32		*CurARGBDest;
     int			GammaBriR, GammaBriG, GammaBriB;
     int			GammaPBriR, GammaPBriG, GammaPBriB;
     Bool		HideHWCursor;  /* Custom application */
@@ -1127,15 +1128,15 @@ typedef struct {
     ULong		VBFlagsInit;
     DisplayModePtr	currentModeLast;
     IOADDRESS		MyPIOOffset;
-    Bool		OverruleRanges;  
+    Bool		OverruleRanges;
     Bool		BenchMemCpy;
     Bool		NeedCopyFastVidCpy;
-    Bool 		SiSFastVidCopyDone;
-    vidCopyFunc 	SiSFastVidCopy, SiSFastMemCopy;
+    Bool		SiSFastVidCopyDone;
+    vidCopyFunc		SiSFastVidCopy, SiSFastMemCopy;
     unsigned int	CPUFlags;
-#ifndef SISCHECKOSSSE    
+#ifndef SISCHECKOSSSE
     Bool		XvSSEMemcpy;
-#endif    
+#endif
     char		messagebuffer[64];
     unsigned int	VGAMapSize;		/* SiSVGA stuff */
     ULong		VGAMapPhys;
@@ -1150,16 +1151,16 @@ typedef struct {
     int			GammaR2i, GammaG2i, GammaB2i;
     int			GammaBriR2, GammaBriG2, GammaBriB2;
     int			GammaPBriR2, GammaPBriG2, GammaPBriB2;
-#ifdef SIS_NEED_MAP_IOP   
+#ifdef SIS_NEED_MAP_IOP
     CARD32		IOPAddress;      	/* I/O port physical address */
-    UChar 		*IOPBase;         	/* I/O port linear address */   
-#endif    
+    UChar 		*IOPBase;         	/* I/O port linear address */
+#endif
 #ifdef SISMERGED
     Bool		MergedFB, MergedFBAuto;
     SiSScrn2Rel		CRT2Position;
-    char 		*CRT2HSync;
-    char 		*CRT2VRefresh;
-    char 		*MetaModes;
+    char		*CRT2HSync;
+    char		*CRT2VRefresh;
+    char		*MetaModes;
     ScrnInfoPtr		CRT2pScrn;
     DisplayModePtr	CRT1Modes;
     DisplayModePtr	CRT1CurrentMode;
@@ -1169,7 +1170,7 @@ typedef struct {
     int			CRT1frameY1;
     Bool		CheckForCRT2;
     Bool		IsCustomCRT2;
-    Bool 		HaveCustomModes2;
+    Bool		HaveCustomModes2;
     int			maxCRT1_X1, maxCRT1_X2, maxCRT1_Y1, maxCRT1_Y2;
     int			maxCRT2_X1, maxCRT2_X2, maxCRT2_Y1, maxCRT2_Y2;
     int			maxClone_X1, maxClone_X2, maxClone_Y1, maxClone_Y2;

@@ -231,8 +231,8 @@ SiSCalcClock(ScrnInfoPtr pScrn, int clock, int max_VLD, unsigned int *vclk)
      *  N       = DeNumerator [1:32]
      *  VLD     = Divider (Vco Loop Divider) : divide by 1, 2
      *  P       = Post Scaler : divide by 1, 2, 3, 4
-     *  PSN     = Pre Scaler (Reference Divisor Select) 
-     * 
+     *  PSN     = Pre Scaler (Reference Divisor Select)
+     *
      * result in vclk[]
      */
 #define Midx    0
@@ -241,14 +241,14 @@ SiSCalcClock(ScrnInfoPtr pScrn, int clock, int max_VLD, unsigned int *vclk)
 #define Pidx    3
 #define PSNidx  4
 #define Fref 14318180
-/* stability constraints for internal VCO -- MAX_VCO also determines 
+/* stability constraints for internal VCO -- MAX_VCO also determines
  * the maximum Video pixel clock */
 #define MIN_VCO      Fref
 #define MAX_VCO      135000000
 #define MAX_VCO_5597 353000000
 #define MAX_PSN      0          /* no pre scaler for this chip */
 #define TOLERANCE    0.01       /* search smallest M and N in this tolerance */
-  
+
   int M_min = 2;
   int M_max = 128;
 
@@ -292,7 +292,7 @@ SiSCalcClock(ScrnInfoPtr pScrn, int clock, int max_VLD, unsigned int *vclk)
             bestN = N;
             bestP = P;
             bestPSN = PSN;
-            bestVLD = VLD;	    
+            bestVLD = VLD;
          }
      }
 
@@ -387,7 +387,7 @@ SiSSave(ScrnInfoPtr pScrn, SISRegPtr sisReg)
            break;
         case PCI_CHIP_SIS6326:
         case PCI_CHIP_SIS530:
-           max=0x3F; 
+           max=0x3F;
            break;
         default:
            max=0x37;
@@ -537,10 +537,10 @@ SiS300Save(ScrnInfoPtr pScrn, SISRegPtr sisReg)
 		"CR%02X Contents - %02X \n", i,sisReg->sisRegs3D4[i]);
 #endif
     }
-    
+
     /* Save Misc register */
-    sisReg->sisRegs3C2 = inSISREG(SISMISCR);	 
-    
+    sisReg->sisRegs3C2 = inSISREG(SISMISCR);
+
     /* Save FQBQ and GUI timer settings */
     if(pSiS->Chipset == PCI_CHIP_SIS630) {
        sisReg->sisRegsPCI50 = pciReadLong(0x00000000, 0x50);
@@ -549,8 +549,8 @@ SiS300Save(ScrnInfoPtr pScrn, SISRegPtr sisReg)
        xf86DrvMsg(pScrn->scrnIndex, X_INFO,
        		"PCI Config 50 = %lx\n", sisReg->sisRegsPCI50);
        xf86DrvMsg(pScrn->scrnIndex, X_INFO,
-       		"PCI Config A0 = %lx\n", sisReg->sisRegsPCIA0);		
-#endif       
+       		"PCI Config A0 = %lx\n", sisReg->sisRegsPCIA0);
+#endif
     }
 
     /* Save panel link/video bridge registers */
@@ -569,11 +569,11 @@ SiS300Save(ScrnInfoPtr pScrn, SISRegPtr sisReg)
 
     /* Save Mode number */
     sisReg->BIOSModeSave = SiS_GetSetModeID(pScrn,0xFF);
-	
-#ifdef TWDEBUG	
+
+#ifdef TWDEBUG
     xf86DrvMsg(pScrn->scrnIndex, X_INFO,
     	"BIOS mode ds:449 = 0x%x\n", sisReg->BIOSModeSave);
-#endif	
+#endif
 }
 
 /* Restore SiS300 series register contents */
@@ -778,7 +778,7 @@ SiS315Save(ScrnInfoPtr pScrn, SISRegPtr sisReg)
 
     /* Save Misc register */
     sisReg->sisRegs3C2 = inSISREG(SISMISCR);
- 
+
     /* Save panel link/video bridge registers */
 #ifndef TWDEBUG
     if(!pSiS->UseVESA) {
@@ -847,7 +847,7 @@ SiS315Restore(ScrnInfoPtr pScrn, SISRegPtr sisReg)
        sisReg->sisRegs3C4[0x20] |= 0x20;
        outSISIDXREG(SISSR, 0x20, sisReg->sisRegs3C4[0x20]);
     }
-    
+
     if(pSiS->sishw_ext.jChipType >= SIS_661) {
        sisReg->sisRegs3C4[0x11] &= 0x0f;
     }
@@ -863,7 +863,7 @@ SiS315Restore(ScrnInfoPtr pScrn, SISRegPtr sisReg)
           outSISIDXREG(SISSR, i, sisReg->sisRegs3C4[i]);
        }
     }
-    
+
     /* Restore VCLK and ECLK */
     andSISIDXREG(SISSR,0x31,0xcf);
     if(pSiS->VBFlags & VB_LVDS) {
@@ -903,8 +903,8 @@ SiS315Restore(ScrnInfoPtr pScrn, SISRegPtr sisReg)
     SIS_MMIO_OUT32(pSiS->IOBase, 0x85C0, sisReg->sisMMIO85C0);
 
     /* Restore Misc register */
-    outSISREG(SISMISCW, sisReg->sisRegs3C2);   
- 
+    outSISREG(SISMISCW, sisReg->sisRegs3C2);
+
     /* Restore panel link/video bridge registers */
     if(!(pSiS->UseVESA)) {
        if(pSiS->VBFlags & (VB_LVDS|VB_CHRONTEL))
@@ -990,7 +990,7 @@ SiS301Restore(ScrnInfoPtr pScrn, SISRegPtr sisReg)
     Part2max = 0x45;
     Part3max = 0x3e;
     Part4max = 0x1b;
-    
+
     SiSRegInit(pSiS->SiS_Pr, pSiS->RelIO + 0x30);
     SiSSetLVDSetc(pSiS->SiS_Pr, &pSiS->sishw_ext, 0);
     SiS_GetVBType(pSiS->SiS_Pr, &pSiS->sishw_ext);
@@ -1196,7 +1196,7 @@ SiSLVDSChrontelRestore(ScrnInfoPtr pScrn, SISRegPtr sisReg)
     SISPtr  pSiS = SISPTR(pScrn);
     int i;
     USHORT wtemp;
-    
+
     SiSRegInit(pSiS->SiS_Pr, pSiS->RelIO + 0x30);
     SiSSetLVDSetc(pSiS->SiS_Pr, &pSiS->sishw_ext, 0);
     SiS_GetVBType(pSiS->SiS_Pr, &pSiS->sishw_ext);
@@ -1306,7 +1306,7 @@ SiSMclk(SISPtr pSiS)
     case PCI_CHIP_SIS330:
     case PCI_CHIP_SIS660:
     case PCI_CHIP_SIS340:
-    
+
         /* Numerator */
 	inSISIDXREG(SISSR, 0x28, Num);
         mclk = 14318 * ((Num & 0x7f) + 1);
@@ -1352,7 +1352,7 @@ SiSMclk(SISPtr pSiS)
            if ((Denum & 0x60) == 0x40)  mclk /= 6;
            if ((Denum & 0x60) == 0x60)  mclk /= 8;
         }
-        break;	
+        break;
     }
 
     return(mclk);
@@ -1384,11 +1384,11 @@ SiSEstimateCRT2Clock(ScrnInfoPtr pScrn, Bool IsForMergedFBCRT2)
 	      return 81000;
 	   } else if(pSiS->VBLCDFlags & VB_LCD_1280x800) {
 	      return 83000; /* Use this any way; BIOS timing seems wrong */
-#if 0	   
+#if 0
 	      /* Must fake clock; built-in mode shows 83 for VGA, but uses only 70 for LCD */
 	      if(IsForMergedFBCRT2) return 83000;
 	      else                  return 70000;
-#endif	      
+#endif
 	   } else if(pSiS->VBLCDFlags & VB_LCD_1400x1050) {
 	      /* Must fake clock; built-in mode shows 122 for VGA, but uses only 108 for LCD */
 	      if(IsForMergedFBCRT2) return 123000;
@@ -1438,7 +1438,7 @@ int SiSMemBandWidth(ScrnInfoPtr pScrn, Bool IsForCRT2)
         int          mclk = pSiS->MemClock;
 	int          bpp = pSiS->CurrentLayout.bitsPerPixel;
 	int	     max = 0;
-	float        magic = 0.0, total;	
+	float        magic = 0.0, total;
 	int          bytesperpixel = (bpp + 7) / 8;
 	float  	     crt2used, maxcrt2;
 	int	     crt2clock;
@@ -1453,7 +1453,7 @@ int SiSMemBandWidth(ScrnInfoPtr pScrn, Bool IsForCRT2)
 #endif
 
         switch(pSiS->Chipset) {
-	
+
         case PCI_CHIP_SIS5597:
 	        total = ((mclk * (bus / 8)) * 0.7) / bytesperpixel;
 		if(total > 135000) total = 135000;
@@ -1535,7 +1535,7 @@ int SiSMemBandWidth(ScrnInfoPtr pScrn, Bool IsForCRT2)
 
                 xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
 			"Memory bandwidth at %d bpp is %g MHz\n", bpp, total/1000);
-		
+
                 if((pSiS->VBFlags & CRT2_ENABLE) && (!pSiS->CRT1off)) {
 
 		    maxcrt2 = 135000;
@@ -1583,7 +1583,7 @@ int SiSMemBandWidth(ScrnInfoPtr pScrn, Bool IsForCRT2)
 				 * calculation below.
 				*/
 			        total = crt2used * magic;
-				
+
 			     } else {
 			        /*  We don't know about the second head's
 				 *  depth yet. So we assume it uses the
@@ -1598,9 +1598,9 @@ int SiSMemBandWidth(ScrnInfoPtr pScrn, Bool IsForCRT2)
 				    total /= 2;
 				    crt2used = total;
 				}
-				
+
                              }
-			     
+
 			     xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
 		       	           "Bandwidth reserved for CRT2 is %g Mhz\n",
 				      crt2used/1000);
@@ -1640,10 +1640,10 @@ int SiSMemBandWidth(ScrnInfoPtr pScrn, Bool IsForCRT2)
                             if((total / 2) > (maxcrt2 + 2000)) {
 			    	total -= (maxcrt2 + 2000);
 				crt2used = maxcrt2 + 2000;
-			    } else {  
+			    } else {
 			    	total /= 2;
 				crt2used = total;
-			    }		   
+			    }
 			}
 			xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
 		       	  "Bandwidth reserved for CRT2 is %g Mhz\n", crt2used/1000);
@@ -1654,7 +1654,7 @@ int SiSMemBandWidth(ScrnInfoPtr pScrn, Bool IsForCRT2)
                     }
 
                 }
-		
+
 		total /= magic;
 		if(total > (max / 2)) total = max / 2;
                 return(int)(total);
@@ -1671,7 +1671,7 @@ int SiSMemBandWidth(ScrnInfoPtr pScrn, Bool IsForCRT2)
  * Gamma correction for CRT2 is only supported on SiS video bridges.
  * There are there 6-bit-RGB values submitted even if bpp is 16 and
  * weight is 565, because SetWeight() sets rgbBits to the maximum
- * (which is 6 in the 565 case). 
+ * (which is 6 in the 565 case).
  */
 void
 SISLoadPalette(ScrnInfoPtr pScrn, int numColors, int *indices, LOCO *colors,
@@ -1818,8 +1818,8 @@ SISLoadPalette(ScrnInfoPtr pScrn, int numColors, int *indices, LOCO *colors,
 	   }
 	}
 
-#ifdef SISDUALHEAD		
-    }	
+#ifdef SISDUALHEAD
+    }
 #endif
 
 #ifdef SISDUALHEAD
@@ -1839,7 +1839,7 @@ SISLoadPalette(ScrnInfoPtr pScrn, int numColors, int *indices, LOCO *colors,
 	     }
           }
        }
-#ifdef SISDUALHEAD		
+#ifdef SISDUALHEAD
     }
 #endif
 
@@ -1849,13 +1849,13 @@ void
 SiS_UpdateGammaCRT2(ScrnInfoPtr pScrn)
 {
     SISPtr  pSiS = SISPTR(pScrn);
-    
+
     if((!pSiS->CRT2SepGamma) || (!pSiS->crt2cindices) || (!pSiS->crt2gcolortable)) return;
-    
-#ifdef SISDUALHEAD		
+
+#ifdef SISDUALHEAD
     if(pSiS->DualHeadMode) return;
-#endif        
-    
+#endif
+
     SISCalculateGammaRampCRT2(pScrn);
     SiS301LoadPalette(pScrn, pSiS->CRT2ColNum, pSiS->crt2cindices, pSiS->crt2colors, (8 - pScrn->rgbBits));
 }
@@ -1874,7 +1874,7 @@ SiS301LoadPalette(ScrnInfoPtr pScrn, int numColors, int *indices, LOCO *colors, 
 
 	/* 301B-DH does not support a color palette for LCD */
 	if((pSiS->VBFlags & VB_30xBDH) && (pSiS->VBFlags & CRT2_LCD)) return;
-	
+
 	switch(pSiS->CurrentLayout.depth) {
           case 15:
 	     if(dogamma2) {
@@ -1944,7 +1944,7 @@ void
 SISDACPreInit(ScrnInfoPtr pScrn)
 {
     SISPtr pSiS = SISPTR(pScrn);
-    
+
     pSiS->MaxClock = SiSMemBandWidth(pScrn, FALSE);
 
     switch (pSiS->Chipset) {
@@ -1958,7 +1958,7 @@ SISDACPreInit(ScrnInfoPtr pScrn)
       case PCI_CHIP_SIS340:
         pSiS->SiSSave     = SiS315Save;
         pSiS->SiSRestore  = SiS315Restore;
-        break;	
+        break;
       case PCI_CHIP_SIS300:
       case PCI_CHIP_SIS540:
       case PCI_CHIP_SIS630:
@@ -2047,12 +2047,12 @@ UChar SiSGetCopyROP(int rop)
        0x77,       /* dest = ~src|~dest;   DSan,   GXnand,         0xE */
        0xFF,       /* dest = 0xFF;         1,      GXset,          0xF */
     };
-   
+
     return(sisALUConv[rop]);
 }
 
 UChar SiSGetPatternROP(int rop)
-{ 
+{
     const UChar sisPatALUConv[] =
     {
        0x00,       /* dest = 0;            0,      GXclear,        0 */
@@ -2072,6 +2072,6 @@ UChar SiSGetPatternROP(int rop)
        0x5F,       /* dest = ~src|~dest;   DPan,   GXnand,         0xE */
        0xFF,       /* dest = 0xFF;         1,      GXset,          0xF */
     };
-   
+
     return(sisPatALUConv[rop]);
 }
