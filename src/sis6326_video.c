@@ -3,7 +3,7 @@
 /*
  * Xv driver for SiS 5597/5598, 6236 and 530/620.
  *
- * Copyright (C) 2001-2004 by Thomas Winischhofer, Vienna, Austria.
+ * Copyright (C) 2001-2005 by Thomas Winischhofer, Vienna, Austria.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,10 +37,13 @@
 #include "xf86xv.h"
 #include "regionstr.h"
 #include "Xv.h"
-#include "xaa.h"
 #include "dixstruct.h"
 #include "fourcc.h"
 
+#define SIS_NEED_inSISREG
+#define SIS_NEED_outSISREG
+#define SIS_NEED_inSISIDXREG
+#define SIS_NEED_outSISIDXREG
 #include "sis_regs.h"
 
 #define OFF_DELAY   	200  /* milliseconds */
@@ -147,19 +150,15 @@ static CARD32 get_scanline_CRT1(SISPtr pSiS)
 void SIS6326InitVideo(ScreenPtr pScreen)
 {
     ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum];
-    SISPtr pSiS = SISPTR(pScrn);
     XF86VideoAdaptorPtr *adaptors, *newAdaptors = NULL;
     XF86VideoAdaptorPtr newAdaptor = NULL;
     int num_adaptors;
-    
-    if(!pSiS->SiSFastVidCopy) {
-       pSiS->SiSFastVidCopy = SiSVidCopyInit(pScreen);
-    }
 
     newAdaptor = SIS6326SetupImageVideo(pScreen);
-    if(newAdaptor)
+    if(newAdaptor) {
         SIS6326InitOffscreenImages(pScreen);
-
+    }
+    
     num_adaptors = xf86XVListGenericAdaptors(pScrn, &adaptors);
 
     if(newAdaptor) {
@@ -1338,11 +1337,7 @@ SIS6326PutImage(
 
    /* copy data */
    if((pSiS->XvUseMemcpy) || (totalSize < 16)) {
-      if((totalSize < 64) || (!pSiS->SiSFastVidCopy)) {
-         memcpy(pSiS->FbBase + pPriv->bufAddr[pPriv->currentBuf], buf, totalSize);
-      } else {
-         (*pSiS->SiSFastVidCopy)(pSiS->FbBase + pPriv->bufAddr[pPriv->currentBuf], buf, totalSize);
-      }
+      SiSMemCopyToVideoRam(pSiS, pSiS->FbBase + pPriv->bufAddr[pPriv->currentBuf], buf, totalSize);
    } else {
       dest = (CARD32 *)(pSiS->FbBase + pPriv->bufAddr[pPriv->currentBuf]);
       src  = (CARD32 *)buf;
@@ -1445,7 +1440,7 @@ SIS6326QueryImageAttributes(
 }
 
 static void
-SIS6326VideoTimerCallback (ScrnInfoPtr pScrn, Time now)
+SIS6326VideoTimerCallback(ScrnInfoPtr pScrn, Time now)
 {
     SISPtr         pSiS = SISPTR(pScrn);
     SISPortPrivPtr pPriv = NULL;
@@ -1676,5 +1671,7 @@ SIS6326InitOffscreenImages(ScreenPtr pScrn)
 {
     xf86XVRegisterOffscreenImages(pScrn, SIS6326OffscreenImages, 2);
 }
+
+
 
 

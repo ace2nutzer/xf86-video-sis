@@ -2,8 +2,8 @@
 .\" $XdotOrg$
 .\" shorthand for double quote that works everywhere.
 .ds q \N'34'
-#ifdef __servername__
-#define __myservername__ __servername__
+#ifdef __xservername__
+#define __myservername__ __xservername__
 #else
 #define __myservername__ XFree86
 #endif
@@ -43,7 +43,7 @@ driver supports PCI and AGP video cards based on the following chipsets:
 .B SiS550/551/552
 .B SiS650/651/M650/661FX/M661FX/M661MX/740/741/741GX/M741
 .B SiS330 (Xabre)
-.B SiS760/M760
+.B SiS760/760GX/M760
 .PP
 In the following text, the following terms are used:
 .PP
@@ -54,7 +54,7 @@ for SiS5597/5598, 530/620 and 6326/AGP/DVD
 for SiS300/305, 540 and 630/730
 .PP
 .B 315/330 series
-for SiS315, 55x and (M)65x/(M)661xX/74x(GX), 330, 760
+for SiS315, 55x and (M)65x/(M)661xX/74x(GX), 330, (M)760(GX)
 .PP
 .SH CONFIGURATION DETAILS
 Please refer to __myxconfigfile__(__filemansuffix__) for general configuration
@@ -436,5 +436,6 @@ XFree86(1), XF86Config(__filemansuffix__), xf86config(1), Xserver(1), X(__miscma
 .B "http://www.winischhofer.net/linuxsisvga.shtml"
 for more information and updates
 .SH AUTHORS
-Authors include: Alan Hourihane, Mike Chapman, Juanjo Santamarta, Mitani
-Hiroshi, David Thomas, Sung-Ching Lin, Ademar Reis, Thomas Winischhofer
+Author: Thomas Winischhofer. Formerly based on code by Alan Hourihane, 
+Mike Chapman, Juanjo Santamarta, Mitani Hiroshi, David Thomas, Sung-Ching Lin, 
+Ademar Reis.

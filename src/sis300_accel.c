@@ -3,7 +3,7 @@
 /*
  * 2D Acceleration for SiS 530, 620, 300, 540, 630, 730.
  *
- * Copyright (C) 2001-2004 by Thomas Winischhofer, Vienna, Austria
+ * Copyright (C) 2001-2005 by Thomas Winischhofer, Vienna, Austria
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,9 +37,9 @@
 #endif
 
 #include "sis.h"
+#include "sis_regs.h"
 
 #include "xaarop.h"
-
 #include "sis300_accel.h"
 
 #ifdef SISDUALHEAD
@@ -139,7 +139,7 @@ extern UChar SiSGetPatternROP(int rop);
 static void
 SiSInitializeAccelerator(ScrnInfoPtr pScrn)
 {
-	SISPtr  pSiS = SISPTR(pScrn);
+	SISPtr pSiS = SISPTR(pScrn);
 
 	pSiS->DoColorExpand = FALSE;
 }
@@ -352,9 +352,8 @@ SiS300AccelInit(ScreenPtr pScreen)
 	   return TRUE;
 	} else {
 	   return(XAAInit(pScreen, infoPtr));
-	}
+	}		
 }
-
 
 static void 
 SiSSync(ScrnInfoPtr pScrn)
@@ -1132,7 +1131,7 @@ SiSSetupForScanlineCPUToScreenColorExpandFill(ScrnInfoPtr pScrn,
         /* TW: Make sure that current CPU-driven BitBlt buffer stage is 0
 	 *     This is required!!! (Otherwise -> drawing errors)
 	 */
-	while((MMIO_IN16(pSiS->IOBase, 0x8242) & 0x1F00) != 0) {} /* WDR: == 0x10 */
+	while((SIS_MMIO_IN16(pSiS->IOBase, 0x8242) & 0x1F00) != 0) {} /* WDR: == 0x10 */
 
 	SiSSetupSRCXY(0,0);
 	SiSSetupROP(SiSGetCopyROP(rop));
@@ -1181,8 +1180,8 @@ SiSSubsequentScanlineCPUToScreenColorExpandFill(
 	 * action, this bit never gets cleared again. So do
 	 * SiSIdle instead.
 	 */
-	if((MMIO_IN16(pSiS->IOBase, 0x8242) & 0xe000) != 0xe000) {
-           /* while ((MMIO_IN16(pSiS->IOBase, 0x8242) & 0x0080) != 0) {} */
+	if((SIS_MMIO_IN16(pSiS->IOBase, 0x8242) & 0xe000) != 0xe000) {
+           /* while ((SIS_MMIO_IN16(pSiS->IOBase, 0x8242) & 0x0080) != 0) {} */
 	   SiSIdle
 	}
 
@@ -1230,8 +1229,8 @@ SiSSubsequentColorExpandScanline(ScrnInfoPtr pScrn, int bufno)
 	 * action, this bit never gets cleared again. So do
 	 * SiSIdle instead.
 	 */
-	if((MMIO_IN16(pSiS->IOBase, 0x8242) & 0xe000) != 0xe000) {
-	   /* while ((MMIO_IN16(pSiS->IOBase, 0x8242) & 0x0080) != 0) {} */
+	if((SIS_MMIO_IN16(pSiS->IOBase, 0x8242) & 0xe000) != 0xe000) {
+	   /* while ((SIS_MMIO_IN16(pSiS->IOBase, 0x8242) & 0x0080) != 0) {} */
 	   SiSIdle
 	}
 
@@ -1244,9 +1243,7 @@ SiSSubsequentColorExpandScanline(ScrnInfoPtr pScrn, int bufno)
 	pSiS->ycurrent++;
 
 	if(pSiS->VGAEngine == SIS_530_VGA) {
-	   while(MMIO_IN8(pSiS->IOBase, 0x8242) & 0x80) {}
+	   while(SIS_MMIO_IN8(pSiS->IOBase, 0x8242) & 0x80) {}
 	}
 }
-
-
 

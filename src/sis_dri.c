@@ -3,7 +3,7 @@
 /*
  * DRI wrapper for 300 and 315 series
  *
- * Copyright (C) 2001-2004 by Thomas Winischhofer, Vienna, Austria
+ * Copyright (C) 2001-2005 by Thomas Winischhofer, Vienna, Austria
  *
  * Preliminary 315/330 support by Thomas Winischhofer
  * Portions of Mesa 4/5 changes by Eric Anholt
@@ -37,11 +37,10 @@
  */
 
 #include "sis.h"
+#include "sis_regs.h"
 
 #include "fb.h"
-
 #include "GL/glxtokens.h"
-
 
 #ifndef SISHAVEDRMWRITE
 # if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,2,99,0,0)
@@ -69,16 +68,16 @@ extern char *DRICreatePCIBusID(pciVideoPtr PciInfo);
 /* Idle function for 300 series */
 #define BR(x)   (0x8200 | (x) << 2)
 #define SiSIdle \
-  while((MMIO_IN16(pSiS->IOBase, BR(16)+2) & 0xE000) != 0xE000){}; \
-  while((MMIO_IN16(pSiS->IOBase, BR(16)+2) & 0xE000) != 0xE000){}; \
-  MMIO_IN16(pSiS->IOBase, 0x8240);
+  while((SIS_MMIO_IN16(pSiS->IOBase, BR(16)+2) & 0xE000) != 0xE000){}; \
+  while((SIS_MMIO_IN16(pSiS->IOBase, BR(16)+2) & 0xE000) != 0xE000){}; \
+  SIS_MMIO_IN16(pSiS->IOBase, 0x8240);
 
 /* Idle function for 315/330 series */
 #define Q_STATUS 0x85CC
 #define SiS315Idle \
   { \
-  while( (MMIO_IN16(pSiS->IOBase, Q_STATUS+2) & 0x8000) != 0x8000){}; \
-  while( (MMIO_IN16(pSiS->IOBase, Q_STATUS+2) & 0x8000) != 0x8000){}; \
+  while( (SIS_MMIO_IN16(pSiS->IOBase, Q_STATUS+2) & 0x8000) != 0x8000){}; \
+  while( (SIS_MMIO_IN16(pSiS->IOBase, Q_STATUS+2) & 0x8000) != 0x8000){}; \
   }
 
 extern void GlxSetVisualConfigs(
@@ -104,7 +103,7 @@ static void SISDRISwapContext(ScreenPtr pScreen, DRISyncType syncType,
 static void SISDRIInitBuffers(WindowPtr pWin, RegionPtr prgn, CARD32 index);
 static void SISDRIMoveBuffers(WindowPtr pParent, DDXPointRec ptOldOrg, 
                    RegionPtr prgnSrc, CARD32 index);
-		   
+			   	   
 static Bool
 SISInitVisualConfigs(ScreenPtr pScreen)
 {
@@ -240,7 +239,8 @@ SISInitVisualConfigs(ScreenPtr pScreen)
   return TRUE;
 }
 
-Bool SISDRIScreenInit(ScreenPtr pScreen)
+Bool 
+SISDRIScreenInit(ScreenPtr pScreen)
 {
   ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum];
   SISPtr pSIS = SISPTR(pScrn);
@@ -593,7 +593,7 @@ Bool SISDRIScreenInit(ScreenPtr pScreen)
 
   xf86DrvMsg(pScrn->scrnIndex, X_INFO, "[dri] Visual configs initialized.\n" );
 
-  return TRUE;
+  return TRUE;   
 }
 
 void
@@ -633,7 +633,7 @@ SISDRICloseScreen(ScreenPtr pScreen)
      drmAgpFree(pSIS->drmSubFD, pSIS->agpHandle);
      xf86DrvMsg(pScreen->myNum, X_INFO, "[drm] Releasing AGP module\n");
      drmAgpRelease(pSIS->drmSubFD);
-  }
+  } 
 }
 
 /* TODO: xserver receives driver's swapping event and do something
@@ -711,7 +711,7 @@ SISDRIFinishScreenInit(ScreenPtr pScreen)
     }
   }
 
-  return DRIFinishScreenInit(pScreen);
+  return DRIFinishScreenInit(pScreen);  
 }
 
 static void
@@ -790,3 +790,6 @@ void SISSwapContextPrivate(ScreenPtr pScreen)
 {
 }
 #endif
+
+
+

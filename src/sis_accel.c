@@ -4,7 +4,7 @@
  * 2D acceleration for SiS5597/5598 and 6326
  *
  * Copyright (C) 1998, 1999 by Alan Hourihane, Wigan, England.
- * Parts Copyright (C) 2001-2004 Thomas Winischhofer, Vienna, Austria.
+ * Parts Copyright (C) 2001-2005 Thomas Winischhofer, Vienna, Austria.
  *
  * Licensed under the following terms:
  *
@@ -34,13 +34,15 @@
  *	     Thomas Winischhofer <thomas@winischhofer.net>.
  */
 
+#include "sis.h"
+#include "sis_regs.h"
+
+#include "xaarop.h"
+#include "sis_accel.h"
+
 #if 0
 #define CTSCE		/* Include enhanced color expansion code */
 #endif			/* This produces drawing errors sometimes */
-
-#include "sis.h"
-#include "xaarop.h"
-#include "sis_accel.h"
 
 static void SiSSync(ScrnInfoPtr pScrn);
 static void SiSSetupForFillRectSolid(ScrnInfoPtr pScrn, int color,
@@ -234,7 +236,7 @@ SiSAccelInit(ScreenPtr pScreen)
        return TRUE;
     } else {
        return(XAAInit(pScreen, infoPtr));
-    }
+    }  
 }
 
 /* sync */
@@ -245,7 +247,8 @@ SiSSync(ScrnInfoPtr pScrn) {
 }
 
 /* Clipping */
-static void SiSSetClippingRectangle( ScrnInfoPtr pScrn,
+static void 
+SiSSetClippingRectangle( ScrnInfoPtr pScrn,
                 int left, int top, int right, int bottom)
 {
     SISPtr pSiS = SISPTR(pScrn);
@@ -256,7 +259,8 @@ static void SiSSetClippingRectangle( ScrnInfoPtr pScrn,
     pSiS->ClipEnabled = TRUE;
 }
 
-static void SiSDisableClipping(ScrnInfoPtr pScrn)
+static void 
+SiSDisableClipping(ScrnInfoPtr pScrn)
 {
     SISPtr pSiS = SISPTR(pScrn);
     pSiS->ClipEnabled = FALSE;
@@ -431,7 +435,8 @@ SiSSubsequentMono8x8PatternFillRect(ScrnInfoPtr pScrn, int patternx,
 }
 
 /* Line */
-static void SiSSetupForSolidLine(ScrnInfoPtr pScrn, 
+static void 
+SiSSetupForSolidLine(ScrnInfoPtr pScrn, 
                 int color, int rop, unsigned int planemask)
 {
     SISPtr pSiS = SISPTR(pScrn);
@@ -441,7 +446,8 @@ static void SiSSetupForSolidLine(ScrnInfoPtr pScrn,
     sisSETFGROPCOL(SiSGetCopyROP(rop), color);
 }
 
-static void SiSSubsequentSolidTwoPointLine(ScrnInfoPtr pScrn,
+static void 
+SiSSubsequentSolidTwoPointLine(ScrnInfoPtr pScrn,
             int x1, int y1, int x2, int y2, int flags)
 
 {
@@ -486,7 +492,8 @@ static void SiSSubsequentSolidTwoPointLine(ScrnInfoPtr pScrn,
     sisSETCMD(op);
 }
 
-static void SiSSubsequentSolidHorVertLine(ScrnInfoPtr pScrn,
+static void 
+SiSSubsequentSolidHorVertLine(ScrnInfoPtr pScrn,
                                 int x, int y, int len, int dir)
 {
     SISPtr pSiS = SISPTR(pScrn);
@@ -516,7 +523,7 @@ static void SiSSubsequentSolidHorVertLine(ScrnInfoPtr pScrn,
 }
 
 #ifdef CTSCE
-/* TW: ----- CPU To Screen Color Expand (scanline-wise) ------ */
+/* ----- CPU To Screen Color Expand (scanline-wise) ------ */
 static void
 SiSSetupForScanlineCPUToScreenColorExpandFill(ScrnInfoPtr pScrn,
 		int fg, int bg, int rop, unsigned int planemask)
@@ -606,7 +613,7 @@ SiSSubsequentColorExpandScanline(ScrnInfoPtr pScrn, int bufno)
     /* (needs to be done, otherwise the data in the buffer may
      *  be overwritten while accessed by the hardware)
      */
-    while((MMIO_IN32(pSiS->IOBase, 0x8284) & 0x80000000)) {}
+    while((SIS_MMIO_IN32(pSiS->IOBase, 0x8284) & 0x80000000)) {}
 
     sisBLTSync;
 }

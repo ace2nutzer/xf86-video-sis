@@ -4,7 +4,7 @@
  * SiS DGA handling
  *
  * Copyright (C) 2000 by Alan Hourihane, Sychdyn, North Wales, UK.
- * Copyright (C) 2001-2004 by Thomas Winischhofer, Vienna, Austria
+ * Copyright (C) 2001-2005 by Thomas Winischhofer, Vienna, Austria
  *
  * Portions from radeon_dga.c which is
  *          Copyright 2000 ATI Technologies Inc., Markham, Ontario, and
@@ -35,14 +35,18 @@
  */
 
 #include "sis.h"
-
 #include "xaa.h"
 #include "dgaproc.h"
 
 #include "sis_regs.h"
 
+#ifndef NEW_DGAOPENFRAMEBUFFER
 static Bool SIS_OpenFramebuffer(ScrnInfoPtr, char **, UChar **, 
                     int *, int *, int *);
+#else
+static Bool SIS_OpenFramebuffer(ScrnInfoPtr, char **, unsigned int *,
+		    unsigned int *, unsigned int *, unsigned int *);
+#endif		    		    
 static Bool SIS_SetMode(ScrnInfoPtr, DGAModePtr);
 static void SIS_Sync(ScrnInfoPtr);
 static int  SIS_GetViewport(ScrnInfoPtr);
@@ -196,7 +200,6 @@ SECOND_PASS:
     return modes;
 }
 
-
 Bool
 SISDGAInit(ScreenPtr pScreen)
 {
@@ -261,9 +264,8 @@ SISDGAInit(ScreenPtr pScreen)
      return DGAInit(pScreen, &SISDGAFuncs3xx, modes, num);
    } else {
      return DGAInit(pScreen, &SISDGAFuncs, modes, num);
-   }
+   }   
 }
-
 
 static Bool
 SIS_SetMode(
@@ -406,18 +408,34 @@ static Bool
 SIS_OpenFramebuffer(
    ScrnInfoPtr pScrn,
    char **name,
+#ifndef NEW_DGAOPENFRAMEBUFFER   
    UChar **mem,
    int *size,
    int *offset,
    int *flags
+#else
+   unsigned int *mem,
+   unsigned int *size,
+   unsigned int *offset,
+   unsigned int *flags
+#endif   
 ){
     SISPtr pSiS = SISPTR(pScrn);
 
     *name = NULL;       /* no special device */
+#ifndef NEW_DGAOPENFRAMEBUFFER    
     *mem = (UChar *)pSiS->FbAddress;
+#else
+    *mem = pSiS->FbAddress;
+#endif    
     *size = pSiS->maxxfbmem;
     *offset = 0;
+#ifndef NEW_DGAOPENFRAMEBUFFER    
     *flags = DGA_NEED_ROOT;
+#else
+    *flags = 0;
+#endif        
 
     return TRUE;
 }
+

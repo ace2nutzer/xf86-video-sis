@@ -3,7 +3,7 @@
 /*
  * OS depending defines
  *
- * Copyright (C) 2001-2004 by Thomas Winischhofer, Vienna, Austria
+ * Copyright (C) 2001-2005 by Thomas Winischhofer, Vienna, Austria
  *
  * If distributed as part of the Linux kernel, the following license terms
  * apply:
@@ -87,6 +87,7 @@
 /**********************************************************************/
 
 #ifdef LINUX_KERNEL
+
 #include <linux/config.h>
 
 #ifdef CONFIG_FB_SIS_300
@@ -109,6 +110,7 @@
 #define InPortWord(p)    inw((IOADDRESS)(p))
 #define InPortLong(p)    inl((IOADDRESS)(p))
 #define SiS_SetMemory(MemoryAddress,MemorySize,value) memset_io(MemoryAddress, value, MemorySize)
+
 #endif
 
 /**********************************************************************/
@@ -116,6 +118,7 @@
 /**********************************************************************/
 
 #ifdef LINUX_XF86
+
 #define SIS300
 #define SIS315H
 
@@ -126,6 +129,7 @@
 #define InPortWord(p)    inSISREGW((IOADDRESS)(p))
 #define InPortLong(p)    inSISREGL((IOADDRESS)(p))
 #define SiS_SetMemory(MemoryAddress,MemorySize,value) memset(MemoryAddress, value, MemorySize)
-#endif
+
+#endif /* XF86 */
 
 #endif  /* _OSDEF_H_ */

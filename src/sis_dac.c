@@ -3,7 +3,7 @@
 /*
  * DAC helper functions (Save/Restore, MemClk, etc)
  *
- * Copyright (C) 2001-2004 by Thomas Winischhofer, Vienna, Austria.
+ * Copyright (C) 2001-2005 by Thomas Winischhofer, Vienna, Austria.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -64,19 +64,29 @@
  */
 
 #include "sis.h"
+#define SIS_NEED_inSISREG
+#define SIS_NEED_inSISREGW
+#define SIS_NEED_inSISREGL
+#define SIS_NEED_outSISREG
+#define SIS_NEED_outSISREGW
+#define SIS_NEED_outSISREGL
+#define SIS_NEED_inSISIDXREG
+#define SIS_NEED_outSISIDXREG
+#define SIS_NEED_orSISIDXREG
+#define SIS_NEED_andSISIDXREG
+#define SIS_NEED_MYMMIO
 #include "sis_regs.h"
 #include "sis_dac.h"
 
 static void SiSSave(ScrnInfoPtr pScrn, SISRegPtr sisReg);
 static void SiSRestore(ScrnInfoPtr pScrn, SISRegPtr sisReg);
-
 static void SiS300Save(ScrnInfoPtr pScrn, SISRegPtr sisReg);
+static void SiS300Restore(ScrnInfoPtr pScrn, SISRegPtr sisReg);
 static void SiS315Save(ScrnInfoPtr pScrn, SISRegPtr sisReg);
+static void SiS315Restore(ScrnInfoPtr pScrn, SISRegPtr sisReg);
 static void SiS301Save(ScrnInfoPtr pScrn, SISRegPtr sisReg);
 static void SiS301BSave(ScrnInfoPtr pScrn, SISRegPtr sisReg);
 static void SiSLVDSChrontelSave(ScrnInfoPtr pScrn, SISRegPtr sisReg);
-static void SiS300Restore(ScrnInfoPtr pScrn, SISRegPtr sisReg);
-static void SiS315Restore(ScrnInfoPtr pScrn, SISRegPtr sisReg);
 static void SiS301Restore(ScrnInfoPtr pScrn, SISRegPtr sisReg);
 static void SiS301BRestore(ScrnInfoPtr pScrn, SISRegPtr sisReg);
 static void SiSLVDSChrontelRestore(ScrnInfoPtr pScrn, SISRegPtr sisReg);
@@ -203,7 +213,6 @@ int SiS_compute_vclk(
     return 1;
 }
 
-
 void
 SiSCalcClock(ScrnInfoPtr pScrn, int clock, int max_VLD, unsigned int *vclk)
 {
@@ -214,9 +223,6 @@ SiSCalcClock(ScrnInfoPtr pScrn, int clock, int max_VLD, unsigned int *vclk)
     double target;
     double Fvco, Fout;
     double error, aerror;
-#ifdef DEBUG
-    double bestFout;
-#endif
 
     /*
      *  fd = fref*(Numerator/Denumerator)*(Divider/PostScaler)
@@ -286,10 +292,7 @@ SiSCalcClock(ScrnInfoPtr pScrn, int clock, int max_VLD, unsigned int *vclk)
             bestN = N;
             bestP = P;
             bestPSN = PSN;
-            bestVLD = VLD;
-#ifdef DEBUG
-            bestFout = Fout;
-#endif	    
+            bestVLD = VLD;	    
          }
      }
 
@@ -344,9 +347,6 @@ SiSCalcClock(ScrnInfoPtr pScrn, int clock, int max_VLD, unsigned int *vclk)
                        bestP = P;
                        bestPSN = PSN;
                        bestVLD = VLD;
-#ifdef DEBUG
-                       bestFout = Fout;
-#endif
                     }
 #ifdef TWDEBUG
                     xf86DrvMsgVerb(pScrn->scrnIndex, X_INFO,3,
@@ -367,17 +367,7 @@ SiSCalcClock(ScrnInfoPtr pScrn, int clock, int max_VLD, unsigned int *vclk)
   vclk[VLDidx] = bestVLD;
   vclk[Pidx]   = bestP;
   vclk[PSNidx] = bestPSN;
-
-  PDEBUG(xf86DrvMsgVerb(pScrn->scrnIndex, X_INFO, 3,
-                "Freq. selected: %.2f MHz, M=%d, N=%d, VLD=%d, P=%d, PSN=%d\n",
-                (float)(clock / 1000.), vclk[Midx], vclk[Nidx], vclk[VLDidx],
-                vclk[Pidx], vclk[PSNidx]));
-  PDEBUG(xf86DrvMsgVerb(pScrn->scrnIndex, X_INFO, 3,
-                "Freq. set: %.2f MHz\n", bestFout / 1.0e6));
-  PDEBUG(xf86DrvMsgVerb(pScrn->scrnIndex, X_INFO, 3,
-                "VCO Freq.: %.2f MHz\n", bestFout*bestP / 1.0e6));
 }
-
 
 static void
 SiSSave(ScrnInfoPtr pScrn, SISRegPtr sisReg)
@@ -603,9 +593,9 @@ SiS300Restore(ScrnInfoPtr pScrn, SISRegPtr sisReg)
     /* Wait for accelerator to finish on-going drawing operations. */
     inSISIDXREG(SISSR, 0x1E, temp);
     if(temp & (0x40|0x10|0x02))  {
-       while ( (MMIO_IN16(pSiS->IOBase, 0x8242) & 0xE000) != 0xE000){};
-       while ( (MMIO_IN16(pSiS->IOBase, 0x8242) & 0xE000) != 0xE000){};
-       while ( (MMIO_IN16(pSiS->IOBase, 0x8242) & 0xE000) != 0xE000){};
+       while ( (SIS_MMIO_IN16(pSiS->IOBase, 0x8242) & 0xE000) != 0xE000){};
+       while ( (SIS_MMIO_IN16(pSiS->IOBase, 0x8242) & 0xE000) != 0xE000){};
+       while ( (SIS_MMIO_IN16(pSiS->IOBase, 0x8242) & 0xE000) != 0xE000){};
     }
 
     if(!(pSiS->UseVESA)) {
@@ -757,7 +747,7 @@ SiS315Save(ScrnInfoPtr pScrn, SISRegPtr sisReg)
     }
 
     /* Save command queue location */
-    sisReg->sisMMIO85C0 = MMIO_IN32(pSiS->IOBase, 0x85C0);
+    sisReg->sisMMIO85C0 = SIS_MMIO_IN32(pSiS->IOBase, 0x85C0);
 
     /* Save CR registers */
     for(i = 0x00; i <= 0x7c; i++)  {
@@ -788,7 +778,7 @@ SiS315Save(ScrnInfoPtr pScrn, SISRegPtr sisReg)
 
     /* Save Misc register */
     sisReg->sisRegs3C2 = inSISREG(SISMISCR);
-
+ 
     /* Save panel link/video bridge registers */
 #ifndef TWDEBUG
     if(!pSiS->UseVESA) {
@@ -828,9 +818,9 @@ SiS315Restore(ScrnInfoPtr pScrn, SISRegPtr sisReg)
     /* Wait for accelerator to finish on-going drawing operations. */
     inSISIDXREG(SISSR, 0x1E, temp);
     if(temp & (0x40|0x10|0x02))  {	/* 0x40 = 2D, 0x10 = 3D enabled*/
-       while ( (MMIO_IN32(pSiS->IOBase, 0x85CC) & 0x80000000) != 0x80000000){};
-       while ( (MMIO_IN32(pSiS->IOBase, 0x85CC) & 0x80000000) != 0x80000000){};
-       while ( (MMIO_IN32(pSiS->IOBase, 0x85CC) & 0x80000000) != 0x80000000){};
+       while ( (SIS_MMIO_IN32(pSiS->IOBase, 0x85CC) & 0x80000000) != 0x80000000){};
+       while ( (SIS_MMIO_IN32(pSiS->IOBase, 0x85CC) & 0x80000000) != 0x80000000){};
+       while ( (SIS_MMIO_IN32(pSiS->IOBase, 0x85CC) & 0x80000000) != 0x80000000){};
     }
 
     /* We reset the command queue before restoring.
@@ -907,14 +897,14 @@ SiS315Restore(ScrnInfoPtr pScrn, SISRegPtr sisReg)
 
 #ifndef SISVRAMQ
     /* Initialize read/write pointer for command queue */
-    MMIO_OUT32(pSiS->IOBase, 0x85C4, MMIO_IN32(pSiS->IOBase, 0x85C8));
+    SIS_MMIO_OUT32(pSiS->IOBase, 0x85C4, SIS_MMIO_IN32(pSiS->IOBase, 0x85C8));
 #endif
     /* Restore queue location */
-    MMIO_OUT32(pSiS->IOBase, 0x85C0, sisReg->sisMMIO85C0);
+    SIS_MMIO_OUT32(pSiS->IOBase, 0x85C0, sisReg->sisMMIO85C0);
 
     /* Restore Misc register */
     outSISREG(SISMISCW, sisReg->sisRegs3C2);   
-
+ 
     /* Restore panel link/video bridge registers */
     if(!(pSiS->UseVESA)) {
        if(pSiS->VBFlags & (VB_LVDS|VB_CHRONTEL))
@@ -1300,7 +1290,7 @@ SiSRestoreBridge(ScrnInfoPtr pScrn, SISRegPtr sisReg)
 int
 SiSMclk(SISPtr pSiS)
 {
-    int mclk;
+    int mclk=0;
     UChar Num, Denum, Base;
 
     switch (pSiS->Chipset)  {
@@ -1316,6 +1306,7 @@ SiSMclk(SISPtr pSiS)
     case PCI_CHIP_SIS330:
     case PCI_CHIP_SIS660:
     case PCI_CHIP_SIS340:
+    
         /* Numerator */
 	inSISIDXREG(SISSR, 0x28, Num);
         mclk = 14318 * ((Num & 0x7f) + 1);
@@ -1361,7 +1352,7 @@ SiSMclk(SISPtr pSiS)
            if ((Denum & 0x60) == 0x40)  mclk /= 6;
            if ((Denum & 0x60) == 0x60)  mclk /= 8;
         }
-        break;
+        break;	
     }
 
     return(mclk);
@@ -1443,13 +1434,15 @@ int SiSMemBandWidth(ScrnInfoPtr pScrn, Bool IsForCRT2)
 #ifdef SISDUALHEAD
         SISEntPtr pSiSEnt = pSiS->entityPrivate;
 #endif
-
         int          bus = pSiS->BusWidth;
         int          mclk = pSiS->MemClock;
-        int          bpp = pSiS->CurrentLayout.bitsPerPixel;
+	int          bpp = pSiS->CurrentLayout.bitsPerPixel;
+	int	     max = 0;
+	float        magic = 0.0, total;	
 	int          bytesperpixel = (bpp + 7) / 8;
-        float        magic=0.0, total, crt2used, maxcrt2;
-	int	     crt2clock, max=0;
+	float  	     crt2used, maxcrt2;
+	int	     crt2clock;
+	Bool	     DHM, GetForCRT1;
 #ifdef __SUNPRO_C
 #define const
 #endif
@@ -1458,10 +1451,9 @@ int SiSMemBandWidth(ScrnInfoPtr pScrn, Bool IsForCRT2)
 #ifdef __SUNPRO_C
 #undef const
 #endif
-	Bool	     DHM, GetForCRT1;
 
         switch(pSiS->Chipset) {
-
+	
         case PCI_CHIP_SIS5597:
 	        total = ((mclk * (bus / 8)) * 0.7) / bytesperpixel;
 		if(total > 135000) total = 135000;
@@ -1543,7 +1535,7 @@ int SiSMemBandWidth(ScrnInfoPtr pScrn, Bool IsForCRT2)
 
                 xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
 			"Memory bandwidth at %d bpp is %g MHz\n", bpp, total/1000);
-
+		
                 if((pSiS->VBFlags & CRT2_ENABLE) && (!pSiS->CRT1off)) {
 
 		    maxcrt2 = 135000;
@@ -1662,6 +1654,7 @@ int SiSMemBandWidth(ScrnInfoPtr pScrn, Bool IsForCRT2)
                     }
 
                 }
+		
 		total /= magic;
 		if(total > (max / 2)) total = max / 2;
                 return(int)(total);
@@ -1740,11 +1733,11 @@ SISLoadPalette(ScrnInfoPtr pScrn, int numColors, int *indices, LOCO *colors,
                       index = indices[i];
 		      if(index < 64) {  /* Paranoia */
 		         for(j=0; j<4; j++) {
-			    MMIO_OUT32(pSiS->IOBase, 0x8570,
-			    		(colors[index].green     << (myshift + 8))  |
-                            		(colors[index >> 1].blue << (myshift + 16)) |
-                            		(colors[index >> 1].red  << myshift)        |
-					(((index << 2) + j)      << 24));
+			    SIS_MMIO_OUT32(pSiS->IOBase, 0x8570,
+			    		   (colors[index].green     << (myshift + 8))  |
+                            		   (colors[index >> 1].blue << (myshift + 16)) |
+                            		   (colors[index >> 1].red  << myshift)        |
+					   (((index << 2) + j)      << 24));
 		         }
 		      }
                    }
@@ -1772,8 +1765,8 @@ SISLoadPalette(ScrnInfoPtr pScrn, int numColors, int *indices, LOCO *colors,
 		   for(i=0; i<numColors; i++)  {
                       index = indices[i];
 		      if(index < 256) {   /* Paranoia */
-		         MMIO_OUT32(pSiS->IOBase, 0x8570,
-			 		(colors[index].blue  << 16) |
+		         SIS_MMIO_OUT32(pSiS->IOBase, 0x8570,
+			 	        (colors[index].blue  << 16) |
 					(colors[index].green <<  8) |
 					(colors[index].red)         |
 			 		(index               << 24));
@@ -1799,11 +1792,11 @@ SISLoadPalette(ScrnInfoPtr pScrn, int numColors, int *indices, LOCO *colors,
 	     if(pSiS->ChipFlags & SiSCF_MMIOPalette) {
 	        for(i=0; i<numColors; i++)  {
                    index = indices[i];
-		   MMIO_OUT32(pSiS->IOBase, 0x8570,
-		   		((colors[index].blue)  << 16) |
-				((colors[index].green) <<  8) |
-				(colors[index].red)           |
-				(index                 << 24));
+		   SIS_MMIO_OUT32(pSiS->IOBase, 0x8570,
+		   		  ((colors[index].blue)  << 16) |
+				  ((colors[index].green) <<  8) |
+				  (colors[index].red)           |
+				  (index                 << 24));
 		}
 	     } else {
                 for(i=0; i<numColors; i++) {
@@ -1827,10 +1820,11 @@ SISLoadPalette(ScrnInfoPtr pScrn, int numColors, int *indices, LOCO *colors,
 
 #ifdef SISDUALHEAD		
     }	
-
-    if((!pSiS->DualHeadMode) || (!pSiS->SecondHead)) {
 #endif
 
+#ifdef SISDUALHEAD
+    if((!pSiS->DualHeadMode) || (!pSiS->SecondHead)) {
+#endif
        switch(pSiS->VGAEngine) {
        case SIS_300_VGA:
        case SIS_315_VGA:
@@ -1845,7 +1839,6 @@ SISLoadPalette(ScrnInfoPtr pScrn, int numColors, int *indices, LOCO *colors,
 	     }
           }
        }
-	
 #ifdef SISDUALHEAD		
     }
 #endif
@@ -1965,7 +1958,7 @@ SISDACPreInit(ScrnInfoPtr pScrn)
       case PCI_CHIP_SIS340:
         pSiS->SiSSave     = SiS315Save;
         pSiS->SiSRestore  = SiS315Restore;
-        break;
+        break;	
       case PCI_CHIP_SIS300:
       case PCI_CHIP_SIS540:
       case PCI_CHIP_SIS630:

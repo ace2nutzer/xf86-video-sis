@@ -30,7 +30,13 @@
 
 #include "sis.h"
 #include "servermd.h"
-#include "sis_shadow.h"
+
+void SISPointerMoved(int index, int x, int y);
+void SISRefreshArea(ScrnInfoPtr pScrn, int num, BoxPtr pbox);
+void SISRefreshArea8(ScrnInfoPtr pScrn, int num, BoxPtr pbox);
+void SISRefreshArea16(ScrnInfoPtr pScrn, int num, BoxPtr pbox);
+void SISRefreshArea24(ScrnInfoPtr pScrn, int num, BoxPtr pbox);
+void SISRefreshArea32(ScrnInfoPtr pScrn, int num, BoxPtr pbox);
 
 void
 SISPointerMoved(int index, int x, int y)
@@ -54,15 +60,16 @@ SISRefreshArea(ScrnInfoPtr pScrn, int num, BoxPtr pbox)
    
     Bpp = pScrn->bitsPerPixel >> 3;
     FBPitch = BitmapBytePad(pScrn->displayWidth * pScrn->bitsPerPixel);
-
+    
     while(num--) {
+    
        width = (pbox->x2 - pbox->x1) * Bpp;
        height = pbox->y2 - pbox->y1;
        src = pSiS->ShadowPtr + (pbox->y1 * pSiS->ShadowPitch) +  (pbox->x1 * Bpp);
        dst = pSiS->FbBase + (pbox->y1 * FBPitch) + (pbox->x1 * Bpp);
 
        while(height--) {
-	  (*pSiS->SiSFastVidCopy)(dst, src, width);
+          SiSMemCopyToVideoRam(pSiS, dst, src, width);
 	  dst += FBPitch;
 	  src += pSiS->ShadowPitch;
        }

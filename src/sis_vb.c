@@ -3,7 +3,7 @@
 /*
  * Video bridge detection and configuration for 300, 315 and 330 series
  *
- * Copyright (C) 2001-2004 by Thomas Winischhofer, Vienna, Austria
+ * Copyright (C) 2001-2005 by Thomas Winischhofer, Vienna, Austria
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,9 +32,23 @@
  */
 
 #include "sis.h"
+#define SIS_NEED_inSISREG
+#define SIS_NEED_inSISIDXREG
+#define SIS_NEED_outSISIDXREG
+#define SIS_NEED_orSISIDXREG
+#define SIS_NEED_andSISIDXREG
+#define SIS_NEED_setSISIDXREG
 #include "sis_regs.h"
-#include "sis_vb.h"
 #include "sis_dac.h"
+
+void SISCRT1PreInit(ScrnInfoPtr pScrn);
+void SISLCDPreInit(ScrnInfoPtr pScrn, Bool quiet);
+void SISTVPreInit(ScrnInfoPtr pScrn, Bool quiet);
+void SISCRT2PreInit(ScrnInfoPtr pScrn, Bool quiet);
+Bool SISRedetectCRT2Type(ScrnInfoPtr pScrn);
+void SISSense30x(ScrnInfoPtr pScrn, Bool quiet);
+void SISSenseChrontel(ScrnInfoPtr pScrn, Bool quiet);
+void SiSSetupPseudoPanel(ScrnInfoPtr pScrn);
 
 extern void   SISDetermineLCDACap(ScrnInfoPtr pScrn);
 extern void   SISSaveDetectedDevices(ScrnInfoPtr pScrn);
@@ -46,6 +60,12 @@ extern BOOLEAN SiS_GetPanelID(SiS_Private *SiS_Pr, PSIS_HW_INFO HwDeviceExtensio
 extern USHORT  SiS_SenseLCDDDC(SiS_Private *SiS_Pr, SISPtr pSiS);
 extern USHORT  SiS_SenseVGA2DDC(SiS_Private *SiS_Pr, SISPtr pSiS);
 
+typedef struct _SiS_LCD_StStruct
+{
+	ULong VBLCD_lcdflag;
+	UShort LCDwidth;
+	UShort LCDheight;
+} SiS_LCD_StStruct;
 
 static const SiS_LCD_StStruct SiS300_LCD_Type[]=
 {
@@ -292,12 +312,16 @@ void SISLCDPreInit(ScrnInfoPtr pScrn, Bool quiet)
      * and VGA2 share the same DDC channel and might be misdetected
      * as the wrong type (especially if the LCD panel only supports
      * EDID Version 1).
+     * Addendum: For DVI-I connected panels, this is not ideal. 
+     * Therefore, we disregard an eventually detected secondary
+     * VGA if the user forced CRT2 type to LCD.
      *
      * By default, CRT2 redetection is forced since 12/09/2003, as
      * I encountered numerous panels which deliver more or less
      * bogus DDC data confusing the BIOS. Since our DDC detection
      * is waaaay better, we prefer it instead of the primitive
      * and buggy BIOS method.
+     *
      */
 #ifdef SISDUALHEAD
     if((!pSiS->DualHeadMode) || (!pSiS->SecondHead)) {
@@ -313,12 +337,14 @@ void SISLCDPreInit(ScrnInfoPtr pScrn, Bool quiet)
           }
 
           if(!(pSiS->nocrt2ddcdetection)) {
-             if((!(pSiS->VBFlags & CRT2_LCD)) && (!(CR32 & 0x10))) {
+             if((!(pSiS->VBFlags & CRT2_LCD)) && 
+	     		( (!(CR32 & 0x10)) ||
+			  (pSiS->ForceCRT2Type == CRT2_LCD) ) ) {
 	        if(!quiet) {
 	           xf86DrvMsg(pScrn->scrnIndex, X_INFO,
 	              "%s LCD/plasma panel, sensing via DDC\n",
 		      pSiS->forcecrt2redetection ?
-		         "Forced re-detection of" : "BIOS detected no");
+		         "(Re)-detecting" : "BIOS detected no");
 		}
                 if(SiS_SenseLCDDDC(pSiS->SiS_Pr, pSiS)) {
     	           xf86DrvMsg(pScrn->scrnIndex, X_INFO,
@@ -347,6 +373,17 @@ void SISLCDPreInit(ScrnInfoPtr pScrn, Bool quiet)
 	  if(pSiS->VBFlags & VB_301) {
 	     if((CR36 & 0x0f) < 0x0f) CR36 &= 0xf7;          
 	  }
+       }
+       if(pSiS->PRGB != -1) {
+	  tmp = 0x37;
+	  if((pSiS->VGAEngine == SIS_315_VGA)      &&
+	     (pSiS->sishw_ext.jChipType < SIS_661) &&
+	     (pSiS->ROM661New)                     &&
+	     (!(pSiS->SiS_Pr->PanelSelfDetected))) {
+	     tmp = 0x35;
+	  }
+	  if(pSiS->PRGB == 18)      orSISIDXREG(SISCR, tmp, 0x01);
+	  else if(pSiS->PRGB == 24) andSISIDXREG(SISCR, tmp, 0xfe);
        }
        inSISIDXREG(SISCR, 0x37, CR37);
        if(pSiS->sishw_ext.jChipType < SIS_661) {
@@ -444,7 +481,31 @@ void SISLCDPreInit(ScrnInfoPtr pScrn, Bool quiet)
 	  }
        }
     }
+}
 
+void SiSSetupPseudoPanel(ScrnInfoPtr pScrn)
+{	 
+    SISPtr pSiS = SISPTR(pScrn);    
+    int i;
+    
+    xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
+	"No LCD detected, but forced to enable digital output\n");
+    xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
+    	"Will not be able to properly filter display modes!\n");
+	
+    pSiS->VBFlags |= CRT2_LCD;
+    pSiS->SiS_Pr->SiS_CustomT = CUT_UNKNOWNLCD;
+    pSiS->SiS_Pr->CP_PrefClock = 0;
+    pSiS->SiS_Pr->CP_PreferredIndex = -1;
+    pSiS->VBLCDFlags |= (VB_LCD_UNKNOWN | VB_LCD_EXPANDING);
+    pSiS->LCDwidth = pSiS->SiS_Pr->CP_MaxX = 2048;
+    pSiS->LCDheight = pSiS->SiS_Pr->CP_MaxY = 2048;
+    for(i=0; i<7; i++) pSiS->SiS_Pr->CP_DataValid[i] = FALSE;
+    pSiS->SiS_Pr->CP_HaveCustomData = FALSE;
+    pSiS->SiS_Pr->PanelSelfDetected = TRUE;
+    outSISIDXREG(SISCR,0x36,0x0f);
+    setSISIDXREG(SISCR,0x37,0x0e,0x10);
+    orSISIDXREG(SISCR,0x32,0x08);
 }
 
 /* Detect CRT2-TV connector type and PAL/NTSC flag */
@@ -606,7 +667,7 @@ void SISTVPreInit(ScrnInfoPtr pScrn, Bool quiet)
          (pSiS->VBFlags & TV_YPBPR525I) ? "480i" :
 	     ((pSiS->VBFlags & TV_YPBPR525P) ? "480p" :
 	        ((pSiS->VBFlags & TV_YPBPR750P) ? "720p" : "1080i")));
-    }
+    }   
 }
 
 /* Detect CRT2-VGA */
@@ -1084,7 +1145,8 @@ Bool SISRedetectCRT2Type(ScrnInfoPtr pScrn)
     if((pSiS->VGAEngine == SIS_315_VGA) &&
        (pSiS->VBFlags & VB_SISTMDSBRIDGE) &&
        (!(pSiS->VBFlags & VB_30xBDH)) &&
-       (pSiS->VESA != 1)) {
+       (pSiS->VESA != 1) &&
+       (pSiS->SiS_Pr->SiS_CustomT != CUT_UNKNOWNLCD)) {
        SISLCDPreInit(pScrn, TRUE);
     } else {
        pSiS->VBFlags |= (pSiS->detectedCRT2Devices & CRT2_LCD);
@@ -1125,7 +1187,7 @@ Bool SISRedetectCRT2Type(ScrnInfoPtr pScrn)
     inSISIDXREG(SISCR,0x36,pSiS->myCR36);
     inSISIDXREG(SISCR,0x37,pSiS->myCR37);
     
-    return TRUE;
+    return TRUE;       
 }
 
 

@@ -3,7 +3,7 @@
 /*
  * Data and prototypes for init301.c
  *
- * Copyright (C) 2001-2004 by Thomas Winischhofer, Vienna, Austria
+ * Copyright (C) 2001-2005 by Thomas Winischhofer, Vienna, Austria
  *
  * If distributed as part of the Linux kernel, the following license terms
  * apply:
@@ -400,7 +400,9 @@ extern USHORT   SiS_GetOffset(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdI
                       	USHORT RefreshRateTableIndex, PSIS_HW_INFO HwInfo);
 extern void     SiS_LoadDAC(SiS_Private *SiS_Pr, PSIS_HW_INFO, USHORT ModeNo,
                         USHORT ModeIdIndex);
-extern void	SiS_CalcLCDACRT1Timing(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex);
+extern void	SiS_CalcLCDACRT1Timing(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
+			PSIS_HW_INFO HwInfo);
+extern void     SiS_CalcCRRegisters(SiS_Private *SiS_Pr, int depth);
 #ifdef LINUX_XF86
 extern void     SiS_MakeClockRegs(ScrnInfoPtr pScrn, int clock, UCHAR *p2b, UCHAR *p2c);
 extern int 	SiS_FindPanelFromDB(SISPtr pSiS, USHORT panelvendor, USHORT panelproduct, 

@@ -4,7 +4,7 @@
  * 2D Acceleration for SiS 315 and Xabre series
  * Definitions for the SIS engine communication.
  *
- * Copyright (C) 2001-2004 by Thomas Winischhofer, Vienna, Austria
+ * Copyright (C) 2001-2005 by Thomas Winischhofer, Vienna, Austria
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -211,8 +211,8 @@
 
 #define SiSQEmpty \
   { \
-     while( (MMIO_IN16(pSiS->IOBase, Q_STATUS+2) & 0x0400) != 0x0400) {}; \
-     while( (MMIO_IN16(pSiS->IOBase, Q_STATUS+2) & 0x0400) != 0x0400) {}; \
+     while( (SIS_MMIO_IN16(pSiS->IOBase, Q_STATUS+2) & 0x0400) != 0x0400) {}; \
+     while( (SIS_MMIO_IN16(pSiS->IOBase, Q_STATUS+2) & 0x0400) != 0x0400) {}; \
   }
 
 #define SiSResetCmd   		pSiS->CommandReg = 0;
@@ -222,22 +222,22 @@
 /* --- VRAM mode --- */
 
 #define SiSGetSwWP() (CARD32)(*(pSiS->cmdQ_SharedWritePort))
-#define SiSGetHwRP() (CARD32)(MMIO_IN32(pSiS->IOBase, Q_READ_PTR))
+#define SiSGetHwRP() (CARD32)(SIS_MMIO_IN32(pSiS->IOBase, Q_READ_PTR))
 
 #define SiSFlushCmdBuf  \
   if(pSiS->NeedFlush) { \
      CARD32 ttt = ((SiSGetSwWP()) - 4) & pSiS->cmdQueueSizeMask; 	\
      pointer tt = (char *)pSiS->cmdQueueBase + ttt; 			\
-     dummybuf = ((volatile CARD32 *)(tt))[0];				\
+     dummybuf = SIS_RQINDEX(0);						\
   }  
 
 #define SiSSyncWP    \
   SiSFlushCmdBuf;    \
-  MMIO_OUT32(pSiS->IOBase, Q_WRITE_PTR, (CARD32)(*(pSiS->cmdQ_SharedWritePort))); 
+  SIS_MMIO_OUT32(pSiS->IOBase, Q_WRITE_PTR, (CARD32)(*(pSiS->cmdQ_SharedWritePort))); 
     
 #define SiSSetHwWP(p) \
   *(pSiS->cmdQ_SharedWritePort) = (p);   	\
-  MMIO_OUT32(pSiS->IOBase, Q_WRITE_PTR, (p)); 
+  SIS_MMIO_OUT32(pSiS->IOBase, Q_WRITE_PTR, (p)); 
 
 #define SiSSetSwWP(p) *(pSiS->cmdQ_SharedWritePort) = (p);
 
@@ -248,12 +248,12 @@
 	CARD32 mcurrent, i=0, ttt = SiSGetSwWP(); \
 	if((ttt + amount) >= pSiS->cmdQueueSize) { \
 	   do { \
-	      mcurrent = MMIO_IN32(pSiS->IOBase, Q_READ_PTR); \
+	      mcurrent = SIS_MMIO_IN32(pSiS->IOBase, Q_READ_PTR); \
 	      i++; \
 	   } while((mcurrent > ttt) || (mcurrent < ((ttt + amount) & pSiS->cmdQueueSizeMask))); \
 	} else { \
 	   do { \
-	      mcurrent = MMIO_IN32(pSiS->IOBase, Q_READ_PTR); \
+	      mcurrent = SIS_MMIO_IN32(pSiS->IOBase, Q_READ_PTR); \
 	      i++; \
 	   } while((mcurrent > ttt) && (mcurrent < (ttt + amount))); \
 	} \
@@ -261,28 +261,29 @@
 #endif
 
 #define SiSUpdateQueue \
+      SiSWriteQueue(tt); \
       ttt += 16; \
       ttt &= pSiS->cmdQueueSizeMask; \
       if(!ttt) { \
-         while(MMIO_IN32(pSiS->IOBase, Q_READ_PTR) < pSiS->cmdQueueSize_div4) {} \
+         while(SIS_MMIO_IN32(pSiS->IOBase, Q_READ_PTR) < pSiS->cmdQueueSize_div4) {} \
       } else if(ttt == pSiS->cmdQueueSize_div4) { \
          CARD32 temppp; \
 	 do { \
-	    temppp = MMIO_IN32(pSiS->IOBase, Q_READ_PTR); \
+	    temppp = SIS_MMIO_IN32(pSiS->IOBase, Q_READ_PTR); \
 	 } while(temppp >= ttt && temppp <= pSiS->cmdQueueSize_div2); \
       } else if(ttt == pSiS->cmdQueueSize_div2) { \
          CARD32 temppp; \
 	 do { \
-	    temppp = MMIO_IN32(pSiS->IOBase, Q_READ_PTR); \
+	    temppp = SIS_MMIO_IN32(pSiS->IOBase, Q_READ_PTR); \
 	 } while(temppp >= ttt && temppp <= pSiS->cmdQueueSize_4_3); \
       } else if(ttt == pSiS->cmdQueueSize_4_3) { \
-         while(MMIO_IN32(pSiS->IOBase, Q_READ_PTR) > ttt) {} \
+         while(SIS_MMIO_IN32(pSiS->IOBase, Q_READ_PTR) > ttt) {} \
       }
 
 /* Write-updates MUST be 128bit aligned. */
 #define SiSNILandUpdateSWQueue \
-      ((CARD32 *)(tt))[2] = (CARD32)(SIS_NIL_CMD); \
-      ((CARD32 *)(tt))[3] = (CARD32)(SIS_NIL_CMD); \
+      SIS_WQINDEX(2) = (CARD32)(SIS_NIL_CMD); \
+      SIS_WQINDEX(3) = (CARD32)(SIS_NIL_CMD); \
       SiSUpdateQueue; \
       SiSSetSwWP(ttt);
 
@@ -290,18 +291,18 @@
 
 #define SiSIdle \
   { \
-     while( (MMIO_IN16(pSiS->IOBase, Q_STATUS+2) & 0x8000) != 0x8000) {}; \
-     while( (MMIO_IN16(pSiS->IOBase, Q_STATUS+2) & 0x8000) != 0x8000) {}; \
+     while( (SIS_MMIO_IN16(pSiS->IOBase, Q_STATUS+2) & 0x8000) != 0x8000) {}; \
+     while( (SIS_MMIO_IN16(pSiS->IOBase, Q_STATUS+2) & 0x8000) != 0x8000) {}; \
   }
 
 #define SiSSetupSRCDSTBase(srcbase,dstbase) \
       { \
          CARD32 ttt = SiSGetSwWP(); \
 	 pointer tt = (char *)pSiS->cmdQueueBase + ttt; \
-         ((CARD32 *)(tt))[0] = (CARD32)(SIS_SPKC_HEADER + SRC_ADDR); 	\
-         ((CARD32 *)(tt))[1] = (CARD32)(srcbase); 			\
-	 ((CARD32 *)(tt))[2] = (CARD32)(SIS_SPKC_HEADER + DST_ADDR); 	\
-         ((CARD32 *)(tt))[3] = (CARD32)(dstbase); 			\
+         SIS_WQINDEX(0) = (CARD32)(SIS_SPKC_HEADER + SRC_ADDR); \
+         SIS_WQINDEX(1) = (CARD32)(srcbase); 			\
+	 SIS_WQINDEX(2) = (CARD32)(SIS_SPKC_HEADER + DST_ADDR); \
+         SIS_WQINDEX(3) = (CARD32)(dstbase); 			\
          SiSUpdateQueue \
 	 SiSSetSwWP(ttt); \
       }
@@ -310,10 +311,10 @@
       { \
          CARD32 ttt = SiSGetSwWP(); \
 	 pointer tt = (char *)pSiS->cmdQueueBase + ttt; \
-         ((CARD32 *)(tt))[0] = (CARD32)(SIS_SPKC_HEADER + SRC_Y); 	\
-         ((CARD32 *)(tt))[1] = (CARD32)(((sx)<<16) | (sy));		\
-	 ((CARD32 *)(tt))[2] = (CARD32)(SIS_SPKC_HEADER + DST_Y); 	\
-         ((CARD32 *)(tt))[3] = (CARD32)(((dx)<<16) | (dy)); 		\
+         SIS_WQINDEX(0) = (CARD32)(SIS_SPKC_HEADER + SRC_Y); 	\
+         SIS_WQINDEX(1) = (CARD32)(((sx)<<16) | (sy));		\
+	 SIS_WQINDEX(2) = (CARD32)(SIS_SPKC_HEADER + DST_Y); 	\
+         SIS_WQINDEX(3) = (CARD32)(((dx)<<16) | (dy)); 		\
 	 SiSUpdateQueue \
 	 SiSSetSwWP(ttt); \
       }
@@ -322,10 +323,10 @@
       { \
          CARD32 ttt = SiSGetSwWP(); \
 	 pointer tt = (char *)pSiS->cmdQueueBase + ttt; \
-         ((CARD32 *)(tt))[0] = (CARD32)(SIS_SPKC_HEADER + DST_Y); 	\
-         ((CARD32 *)(tt))[1] = (CARD32)(((x)<<16) | (y));	 	\
-	 ((CARD32 *)(tt))[2] = (CARD32)(SIS_SPKC_HEADER + RECT_WIDTH); 	\
-         ((CARD32 *)(tt))[3] = (CARD32)(((h)<<16) | (w));		\
+         SIS_WQINDEX(0) = (CARD32)(SIS_SPKC_HEADER + DST_Y); 		\
+         SIS_WQINDEX(1) = (CARD32)(((x)<<16) | (y));	 		\
+	 SIS_WQINDEX(2) = (CARD32)(SIS_SPKC_HEADER + RECT_WIDTH); 	\
+         SIS_WQINDEX(3) = (CARD32)(((h)<<16) | (w));			\
          SiSUpdateQueue \
 	 SiSSetSwWP(ttt); \
       }
@@ -334,10 +335,10 @@
       { \
          CARD32 ttt = SiSGetSwWP(); \
 	 pointer tt = (char *)pSiS->cmdQueueBase + ttt; \
-         ((CARD32 *)(tt))[0] = (CARD32)(SIS_SPKC_HEADER + SRC_PITCH); 	\
-         ((CARD32 *)(tt))[1] = (CARD32)(pitch);				\
-	 ((CARD32 *)(tt))[2] = (CARD32)(SIS_SPKC_HEADER + DST_PITCH); 	\
-         ((CARD32 *)(tt))[3] = (CARD32)(((y)<<16) | (x));		\
+         SIS_WQINDEX(0) = (CARD32)(SIS_SPKC_HEADER + SRC_PITCH); 	\
+         SIS_WQINDEX(1) = (CARD32)(pitch);				\
+	 SIS_WQINDEX(2) = (CARD32)(SIS_SPKC_HEADER + DST_PITCH); 	\
+         SIS_WQINDEX(3) = (CARD32)(((y)<<16) | (x));			\
 	 SiSUpdateQueue \
 	 SiSSetSwWP(ttt); \
       }
@@ -346,8 +347,8 @@
       { \
          CARD32 ttt = SiSGetSwWP(); \
 	 pointer tt = (char *)pSiS->cmdQueueBase + ttt; \
-         ((CARD32 *)(tt))[0] = (CARD32)(SIS_SPKC_HEADER + SRC_ADDR); 	\
-         ((CARD32 *)(tt))[1] = (CARD32)(base); 				\
+         SIS_WQINDEX(0) = (CARD32)(SIS_SPKC_HEADER + SRC_ADDR); 	\
+         SIS_WQINDEX(1) = (CARD32)(base); 				\
          SiSNILandUpdateSWQueue \
       }
 
@@ -355,8 +356,8 @@
       { \
          CARD32 ttt = SiSGetSwWP(); \
 	 pointer tt = (char *)pSiS->cmdQueueBase + ttt; \
-         ((CARD32 *)(tt))[0] = (CARD32)(SIS_SPKC_HEADER + SRC_PITCH); 	\
-         ((CARD32 *)(tt))[1] = (CARD32)(pitch);				\
+         SIS_WQINDEX(0) = (CARD32)(SIS_SPKC_HEADER + SRC_PITCH); 	\
+         SIS_WQINDEX(1) = (CARD32)(pitch);				\
          SiSNILandUpdateSWQueue \
       }
 
@@ -364,8 +365,8 @@
       { \
          CARD32 ttt = SiSGetSwWP(); \
 	 pointer tt = (char *)pSiS->cmdQueueBase + ttt; \
-         ((CARD32 *)(tt))[0] = (CARD32)(SIS_SPKC_HEADER + SRC_Y); 	\
-         ((CARD32 *)(tt))[1] = (CARD32)(((x)<<16) | (y));		\
+         SIS_WQINDEX(0) = (CARD32)(SIS_SPKC_HEADER + SRC_Y); 	\
+         SIS_WQINDEX(1) = (CARD32)(((x)<<16) | (y));		\
          SiSNILandUpdateSWQueue \
       }
 
@@ -373,8 +374,8 @@
       { \
          CARD32 ttt = SiSGetSwWP(); \
 	 pointer tt = (char *)pSiS->cmdQueueBase + ttt; \
-         ((CARD32 *)(tt))[0] = (CARD32)(SIS_SPKC_HEADER + DST_ADDR); 	\
-         ((CARD32 *)(tt))[1] = (CARD32)(base);				\
+         SIS_WQINDEX(0) = (CARD32)(SIS_SPKC_HEADER + DST_ADDR); 	\
+         SIS_WQINDEX(1) = (CARD32)(base);				\
          SiSNILandUpdateSWQueue \
       }
 
@@ -382,8 +383,8 @@
       { \
          CARD32 ttt = SiSGetSwWP(); \
 	 pointer tt = (char *)pSiS->cmdQueueBase + ttt; \
-         ((CARD32 *)(tt))[0] = (CARD32)(SIS_SPKC_HEADER + DST_Y); 	\
-         ((CARD32 *)(tt))[1] = (CARD32)(((x)<<16) | (y));	 	\
+         SIS_WQINDEX(0) = (CARD32)(SIS_SPKC_HEADER + DST_Y); 	\
+         SIS_WQINDEX(1) = (CARD32)(((x)<<16) | (y));	 	\
          SiSNILandUpdateSWQueue \
       }
 
@@ -391,8 +392,8 @@
       { \
          CARD32 ttt = SiSGetSwWP(); \
 	 pointer tt = (char *)pSiS->cmdQueueBase + ttt; \
-         ((CARD32 *)(tt))[0] = (CARD32)(SIS_SPKC_HEADER + DST_PITCH); 	\
-         ((CARD32 *)(tt))[1] = (CARD32)(((y)<<16) | (x));		\
+         SIS_WQINDEX(0) = (CARD32)(SIS_SPKC_HEADER + DST_PITCH); 	\
+         SIS_WQINDEX(1) = (CARD32)(((y)<<16) | (x));		\
          SiSNILandUpdateSWQueue \
       }
 
@@ -400,10 +401,10 @@
       { \
          CARD32 ttt = SiSGetSwWP(); \
 	 pointer tt = (char *)pSiS->cmdQueueBase + ttt; \
-	 ((CARD32 *)(tt))[0] = (CARD32)(SIS_SPKC_HEADER + DST_PITCH); 	\
-         ((CARD32 *)(tt))[1] = (CARD32)(((y)<<16) | (x));		\
-	 ((CARD32 *)(tt))[2] = (CARD32)(SIS_BURST_HEADER0 + reg); 	\
-	 ((CARD32 *)(tt))[3] = (CARD32)(SIS_BURST_HEADER1 + num); 	\
+	 SIS_WQINDEX(0) = (CARD32)(SIS_SPKC_HEADER + DST_PITCH);	\
+         SIS_WQINDEX(1) = (CARD32)(((y)<<16) | (x));			\
+	 SIS_WQINDEX(2) = (CARD32)(SIS_BURST_HEADER0 + reg); 		\
+	 SIS_WQINDEX(3) = (CARD32)(SIS_BURST_HEADER1 + num); 		\
          SiSUpdateQueue \
 	 SiSSetSwWP(ttt); \
       }
@@ -415,10 +416,10 @@
       { \
          CARD32 ttt = SiSGetSwWP(); \
 	 pointer tt = (char *)pSiS->cmdQueueBase + ttt; \
-         ((CARD32 *)(tt))[0] = (CARD32)(SIS_SPKC_HEADER + PAT_FGCOLOR); \
-         ((CARD32 *)(tt))[1] = (CARD32)(color);	 			\
-	 ((CARD32 *)(tt))[2] = (CARD32)(SIS_SPKC_HEADER + DST_PITCH); 	\
-         ((CARD32 *)(tt))[3] = (CARD32)(((y)<<16) | (x));		\
+         SIS_WQINDEX(0) = (CARD32)(SIS_SPKC_HEADER + PAT_FGCOLOR); 	\
+         SIS_WQINDEX(1) = (CARD32)(color);	 			\
+	 SIS_WQINDEX(2) = (CARD32)(SIS_SPKC_HEADER + DST_PITCH); 	\
+         SIS_WQINDEX(3) = (CARD32)(((y)<<16) | (x));			\
          SiSUpdateQueue \
 	 SiSSetSwWP(ttt); \
       }
@@ -427,10 +428,10 @@
       { \
          CARD32 ttt = SiSGetSwWP(); \
 	 pointer tt = (char *)pSiS->cmdQueueBase + ttt; \
-         ((CARD32 *)(tt))[0] = (CARD32)(SIS_SPKC_HEADER + SRC_FGCOLOR); \
-         ((CARD32 *)(tt))[1] = (CARD32)(color);	 			\
-	 ((CARD32 *)(tt))[2] = (CARD32)(SIS_SPKC_HEADER + DST_PITCH); 	\
-         ((CARD32 *)(tt))[3] = (CARD32)(((y)<<16) | (x));		\
+         SIS_WQINDEX(0) = (CARD32)(SIS_SPKC_HEADER + SRC_FGCOLOR); 	\
+         SIS_WQINDEX(1) = (CARD32)(color);	 			\
+	 SIS_WQINDEX(2) = (CARD32)(SIS_SPKC_HEADER + DST_PITCH); 	\
+         SIS_WQINDEX(3) = (CARD32)(((y)<<16) | (x));			\
          SiSUpdateQueue \
 	 SiSSetSwWP(ttt); \
       }
@@ -439,10 +440,10 @@
       { \
          CARD32 ttt = SiSGetSwWP(); \
 	 pointer tt = (char *)pSiS->cmdQueueBase + ttt; \
-         ((CARD32 *)(tt))[0] = (CARD32)(SIS_SPKC_HEADER + RECT_WIDTH); 	\
-         ((CARD32 *)(tt))[1] = (CARD32)(((h)<<16) | (w));		\
-	 ((CARD32 *)(tt))[2] = (CARD32)(SIS_SPKC_HEADER + SRC_PITCH); 	\
-         ((CARD32 *)(tt))[3] = (CARD32)(pitch);				\
+         SIS_WQINDEX(0) = (CARD32)(SIS_SPKC_HEADER + RECT_WIDTH); 	\
+         SIS_WQINDEX(1) = (CARD32)(((h)<<16) | (w));			\
+	 SIS_WQINDEX(2) = (CARD32)(SIS_SPKC_HEADER + SRC_PITCH); 	\
+         SIS_WQINDEX(3) = (CARD32)(pitch);				\
          SiSUpdateQueue \
 	 SiSSetSwWP(ttt); \
       }
@@ -451,8 +452,8 @@
       { \
          CARD32 ttt = SiSGetSwWP(); \
 	 pointer tt = (char *)pSiS->cmdQueueBase + ttt; \
-         ((CARD32 *)(tt))[0] = (CARD32)(SIS_SPKC_HEADER + RECT_WIDTH); 	\
-         ((CARD32 *)(tt))[1] = (CARD32)(((h)<<16) | (w));		\
+         SIS_WQINDEX(0) = (CARD32)(SIS_SPKC_HEADER + RECT_WIDTH); 	\
+         SIS_WQINDEX(1) = (CARD32)(((h)<<16) | (w));			\
          SiSNILandUpdateSWQueue \
       }
 
@@ -460,8 +461,8 @@
       { \
          CARD32 ttt = SiSGetSwWP(); \
 	 pointer tt = (char *)pSiS->cmdQueueBase + ttt; \
-         ((CARD32 *)(tt))[0] = (CARD32)(SIS_SPKC_HEADER + PAT_FGCOLOR); \
-         ((CARD32 *)(tt))[1] = (CARD32)(color);	 			\
+         SIS_WQINDEX(0) = (CARD32)(SIS_SPKC_HEADER + PAT_FGCOLOR); 	\
+         SIS_WQINDEX(1) = (CARD32)(color);	 			\
          SiSNILandUpdateSWQueue \
       }
 
@@ -469,8 +470,8 @@
       { \
          CARD32 ttt = SiSGetSwWP(); \
 	 pointer tt = (char *)pSiS->cmdQueueBase + ttt; \
-         ((CARD32 *)(tt))[0] = (CARD32)(SIS_SPKC_HEADER + PAT_BGCOLOR);	\
-         ((CARD32 *)(tt))[1] = (CARD32)(color);	 			\
+         SIS_WQINDEX(0) = (CARD32)(SIS_SPKC_HEADER + PAT_BGCOLOR);	\
+         SIS_WQINDEX(1) = (CARD32)(color);	 			\
          SiSNILandUpdateSWQueue \
       }
 
@@ -478,8 +479,8 @@
       { \
          CARD32 ttt = SiSGetSwWP(); \
 	 pointer tt = (char *)pSiS->cmdQueueBase + ttt; \
-         ((CARD32 *)(tt))[0] = (CARD32)(SIS_SPKC_HEADER + SRC_FGCOLOR);	\
-         ((CARD32 *)(tt))[1] = (CARD32)(color);	 			\
+         SIS_WQINDEX(0) = (CARD32)(SIS_SPKC_HEADER + SRC_FGCOLOR);	\
+         SIS_WQINDEX(1) = (CARD32)(color);	 			\
          SiSNILandUpdateSWQueue \
       }
 
@@ -487,8 +488,8 @@
       { \
          CARD32 ttt = SiSGetSwWP(); \
 	 pointer tt = (char *)pSiS->cmdQueueBase + ttt; \
-         ((CARD32 *)(tt))[0] = (CARD32)(SIS_SPKC_HEADER + SRC_BGCOLOR);	\
-         ((CARD32 *)(tt))[1] = (CARD32)(color);	 			\
+         SIS_WQINDEX(0) = (CARD32)(SIS_SPKC_HEADER + SRC_BGCOLOR);	\
+         SIS_WQINDEX(1) = (CARD32)(color);	 			\
          SiSNILandUpdateSWQueue \
       }
 
@@ -496,10 +497,10 @@
       { \
          CARD32 ttt = SiSGetSwWP(); \
 	 pointer tt = (char *)pSiS->cmdQueueBase + ttt; \
-         ((CARD32 *)(tt))[0] = (CARD32)(SIS_SPKC_HEADER + TRANS_SRC_KEY_HIGH);	\
-         ((CARD32 *)(tt))[1] = (CARD32)(color);	 				\
-	 ((CARD32 *)(tt))[2] = (CARD32)(SIS_SPKC_HEADER + TRANS_SRC_KEY_LOW);	\
-         ((CARD32 *)(tt))[3] = (CARD32)(color);					\
+         SIS_WQINDEX(0) = (CARD32)(SIS_SPKC_HEADER + TRANS_SRC_KEY_HIGH);	\
+         SIS_WQINDEX(1) = (CARD32)(color);	 				\
+	 SIS_WQINDEX(2) = (CARD32)(SIS_SPKC_HEADER + TRANS_SRC_KEY_LOW);	\
+         SIS_WQINDEX(3) = (CARD32)(color);					\
          SiSUpdateQueue \
 	 SiSSetSwWP(ttt); \
       }
@@ -508,10 +509,10 @@
       { \
          CARD32 ttt = SiSGetSwWP(); \
 	 pointer tt = (char *)pSiS->cmdQueueBase + ttt; \
-         ((CARD32 *)(tt))[0] = (CARD32)(SIS_SPKC_HEADER + TRANS_DST_KEY_HIGH);	\
-         ((CARD32 *)(tt))[1] = (CARD32)(color);	 				\
-	 ((CARD32 *)(tt))[2] = (CARD32)(SIS_SPKC_HEADER + TRANS_DST_KEY_LOW);	\
-         ((CARD32 *)(tt))[3] = (CARD32)(color);					\
+         SIS_WQINDEX(0) = (CARD32)(SIS_SPKC_HEADER + TRANS_DST_KEY_HIGH);	\
+         SIS_WQINDEX(1) = (CARD32)(color);	 				\
+	 SIS_WQINDEX(2) = (CARD32)(SIS_SPKC_HEADER + TRANS_DST_KEY_LOW);	\
+         SIS_WQINDEX(3) = (CARD32)(color);					\
          SiSUpdateQueue \
 	 SiSSetSwWP(ttt); \
       }
@@ -520,10 +521,10 @@
       { \
          CARD32 ttt = SiSGetSwWP(); \
 	 pointer tt = (char *)pSiS->cmdQueueBase + ttt; \
-         ((CARD32 *)(tt))[0] = (CARD32)(SIS_SPKC_HEADER + MONO_MASK);		\
-         ((CARD32 *)(tt))[1] = (CARD32)(p0);	 				\
-	 ((CARD32 *)(tt))[2] = (CARD32)(SIS_SPKC_HEADER + MONO_MASK + 4);	\
-         ((CARD32 *)(tt))[3] = (CARD32)(p1);					\
+         SIS_WQINDEX(0) = (CARD32)(SIS_SPKC_HEADER + MONO_MASK);		\
+         SIS_WQINDEX(1) = (CARD32)(p0);	 				\
+	 SIS_WQINDEX(2) = (CARD32)(SIS_SPKC_HEADER + MONO_MASK + 4);	\
+         SIS_WQINDEX(3) = (CARD32)(p1);					\
          SiSUpdateQueue \
 	 SiSSetSwWP(ttt); \
       }
@@ -532,10 +533,10 @@
       { \
          CARD32 ttt = SiSGetSwWP(); \
 	 pointer tt = (char *)pSiS->cmdQueueBase + ttt; \
-         ((CARD32 *)(tt))[0] = (CARD32)(SIS_SPKC_HEADER + LEFT_CLIP);	    \
-         ((CARD32 *)(tt))[1] = (CARD32)(((left) & 0xFFFF) | ((top)<<16));   \
-	 ((CARD32 *)(tt))[2] = (CARD32)(SIS_SPKC_HEADER + RIGHT_CLIP);	    \
-         ((CARD32 *)(tt))[3] = (CARD32)(((right) & 0xFFFF)|((bottom)<<16)); \
+         SIS_WQINDEX(0) = (CARD32)(SIS_SPKC_HEADER + LEFT_CLIP);	\
+         SIS_WQINDEX(1) = (CARD32)(((left) & 0xFFFF) | ((top)<<16));   	\
+	 SIS_WQINDEX(2) = (CARD32)(SIS_SPKC_HEADER + RIGHT_CLIP);	\
+         SIS_WQINDEX(3) = (CARD32)(((right) & 0xFFFF)|((bottom)<<16)); 	\
          SiSUpdateQueue \
 	 SiSSetSwWP(ttt); \
       }
@@ -544,11 +545,11 @@
       { \
          CARD32 ttt = SiSGetSwWP(); \
 	 pointer tt = (char *)pSiS->cmdQueueBase + ttt; \
-	 ((CARD32 *)(tt))[0] = (CARD32)(SIS_SPKC_HEADER + DST_ADDR); 		\
-         ((CARD32 *)(tt))[1] = (CARD32)(base);					\
-         ((CARD32 *)(tt))[2] = (CARD32)(SIS_SPKC_HEADER + COMMAND_READY);	\
-         ((CARD32 *)(tt))[3] = (CARD32)(pSiS->CommandReg); 			\
-	 if(pSiS->NeedFlush) dummybuf = ((volatile CARD32 *)(tt))[3];  \
+	 SIS_WQINDEX(0) = (CARD32)(SIS_SPKC_HEADER + DST_ADDR); 	\
+         SIS_WQINDEX(1) = (CARD32)(base);				\
+         SIS_WQINDEX(2) = (CARD32)(SIS_SPKC_HEADER + COMMAND_READY);	\
+         SIS_WQINDEX(3) = (CARD32)(pSiS->CommandReg); 			\
+	 if(pSiS->NeedFlush) dummybuf = SIS_RQINDEX(3);   		\
 	 SiSUpdateQueue \
 	 SiSSetHwWP(ttt); \
       }
@@ -557,11 +558,11 @@
       { \
          CARD32 ttt = SiSGetSwWP(); \
 	 pointer tt = (char *)pSiS->cmdQueueBase + ttt; \
-	 ((CARD32 *)(tt))[0] = (CARD32)(SIS_SPKC_HEADER + RECT_WIDTH); 		\
-         ((CARD32 *)(tt))[1] = (CARD32)(((h)<<16) | (w));	 		\
-         ((CARD32 *)(tt))[2] = (CARD32)(SIS_SPKC_HEADER + COMMAND_READY);	\
-         ((CARD32 *)(tt))[3] = (CARD32)(pSiS->CommandReg); 			\
-	 if(pSiS->NeedFlush) dummybuf = ((volatile CARD32 *)(tt))[3];  \
+	 SIS_WQINDEX(0) = (CARD32)(SIS_SPKC_HEADER + RECT_WIDTH); 	\
+         SIS_WQINDEX(1) = (CARD32)(((h)<<16) | (w));	 		\
+         SIS_WQINDEX(2) = (CARD32)(SIS_SPKC_HEADER + COMMAND_READY);	\
+         SIS_WQINDEX(3) = (CARD32)(pSiS->CommandReg); 			\
+	 if(pSiS->NeedFlush) dummybuf = SIS_RQINDEX(3);  		\
 	 SiSUpdateQueue 	\
 	 SiSSetHwWP(ttt); 	\
       }
@@ -573,11 +574,11 @@
       { \
          CARD32 ttt = SiSGetSwWP(); \
 	 pointer tt = (char *)pSiS->cmdQueueBase + ttt; \
-         ((CARD32 *)(tt))[0] = (CARD32)(SIS_SPKC_HEADER + COMMAND_READY);	\
-         ((CARD32 *)(tt))[1] = (CARD32)(pSiS->CommandReg); 			\
-	 ((CARD32 *)(tt))[2] = (CARD32)(SIS_NIL_CMD); 				\
-         ((CARD32 *)(tt))[3] = (CARD32)(SIS_NIL_CMD); 				\
-	 if(pSiS->NeedFlush) dummybuf = ((volatile CARD32 *)(tt))[3];  \
+         SIS_WQINDEX(0) = (CARD32)(SIS_SPKC_HEADER + COMMAND_READY);	\
+         SIS_WQINDEX(1) = (CARD32)(pSiS->CommandReg); 			\
+	 SIS_WQINDEX(2) = (CARD32)(SIS_NIL_CMD); 			\
+         SIS_WQINDEX(3) = (CARD32)(SIS_NIL_CMD); 			\
+	 if(pSiS->NeedFlush) dummybuf = SIS_RQINDEX(3);  		\
 	 SiSUpdateQueue \
 	 SiSSetHwWP(ttt); \
       }
@@ -588,10 +589,10 @@
       { \
          CARD32 ttt = SiSGetSwWP(); \
 	 pointer tt = (char *)pSiS->cmdQueueBase + ttt; \
-         ((CARD32 *)(tt))[0] = (CARD32)(SIS_SPKC_HEADER + LINE_X0);	\
-         ((CARD32 *)(tt))[1] = (CARD32)(((y1)<<16) | (x1)); 		\
-	 ((CARD32 *)(tt))[2] = (CARD32)(SIS_SPKC_HEADER + LINE_X1);	\
-         ((CARD32 *)(tt))[3] = (CARD32)(((y2)<<16) | (x2)); 		\
+         SIS_WQINDEX(0) = (CARD32)(SIS_SPKC_HEADER + LINE_X0);	\
+         SIS_WQINDEX(1) = (CARD32)(((y1)<<16) | (x1)); 		\
+	 SIS_WQINDEX(2) = (CARD32)(SIS_SPKC_HEADER + LINE_X1);	\
+         SIS_WQINDEX(3) = (CARD32)(((y2)<<16) | (x2)); 		\
          SiSUpdateQueue \
 	 SiSSetSwWP(ttt); \
       }
@@ -600,8 +601,8 @@
       { \
          CARD32 ttt = SiSGetSwWP(); \
 	 pointer tt = (char *)pSiS->cmdQueueBase + ttt; \
-         ((CARD32 *)(tt))[0] = (CARD32)(SIS_SPKC_HEADER + LINE_X0);	\
-         ((CARD32 *)(tt))[1] = (CARD32)(((y)<<16) | (x)); 		\
+         SIS_WQINDEX(0) = (CARD32)(SIS_SPKC_HEADER + LINE_X0);	\
+         SIS_WQINDEX(1) = (CARD32)(((y)<<16) | (x)); 		\
          SiSNILandUpdateSWQueue \
       }
 
@@ -609,8 +610,8 @@
       { \
          CARD32 ttt = SiSGetSwWP(); \
 	 pointer tt = (char *)pSiS->cmdQueueBase + ttt; \
-         ((CARD32 *)(tt))[0] = (CARD32)(SIS_SPKC_HEADER + LINE_X1);	\
-         ((CARD32 *)(tt))[1] = (CARD32)(((y)<<16) | (x)); 		\
+         SIS_WQINDEX(0) = (CARD32)(SIS_SPKC_HEADER + LINE_X1);	\
+         SIS_WQINDEX(1) = (CARD32)(((y)<<16) | (x)); 		\
          SiSNILandUpdateSWQueue \
       }
 
@@ -618,8 +619,8 @@
       { \
          CARD32 ttt = SiSGetSwWP(); \
 	 pointer tt = (char *)pSiS->cmdQueueBase + ttt; \
-         ((CARD32 *)(tt))[0] = (CARD32)(SIS_SPKC_HEADER + LINE_COUNT);	\
-         ((CARD32 *)(tt))[1] = (CARD32)(((p) << 16) | (c)); 		\
+         SIS_WQINDEX(0) = (CARD32)(SIS_SPKC_HEADER + LINE_COUNT);	\
+         SIS_WQINDEX(1) = (CARD32)(((p) << 16) | (c)); 			\
          SiSNILandUpdateSWQueue \
       }
 
@@ -627,10 +628,10 @@
       { \
          CARD32 ttt = SiSGetSwWP(); \
 	 pointer tt = (char *)pSiS->cmdQueueBase + ttt; \
-         ((CARD32 *)(tt))[0] = (CARD32)(SIS_SPKC_HEADER + LINE_STYLE_0);	\
-         ((CARD32 *)(tt))[1] = (CARD32)(ls);					\
-	 ((CARD32 *)(tt))[2] = (CARD32)(SIS_SPKC_HEADER + LINE_STYLE_1);	\
-         ((CARD32 *)(tt))[3] = (CARD32)(hs); 			\
+         SIS_WQINDEX(0) = (CARD32)(SIS_SPKC_HEADER + LINE_STYLE_0);	\
+         SIS_WQINDEX(1) = (CARD32)(ls);					\
+	 SIS_WQINDEX(2) = (CARD32)(SIS_SPKC_HEADER + LINE_STYLE_1);	\
+         SIS_WQINDEX(3) = (CARD32)(hs); 				\
          SiSUpdateQueue \
 	 SiSSetSwWP(ttt); \
       }
@@ -641,10 +642,10 @@
       { \
          CARD32 ttt = SiSGetSwWP(); \
 	 pointer tt = (char *)pSiS->cmdQueueBase + ttt; \
-         ((CARD32 *)(tt))[0] = (CARD32)(SIS_SPKC_HEADER + TRAP_YH);	\
-         ((CARD32 *)(tt))[1] = (CARD32)(((y)<<16) | (h)); 		\
-	 ((CARD32 *)(tt))[2] = (CARD32)(SIS_SPKC_HEADER + TRAP_LR);	\
-         ((CARD32 *)(tt))[3] = (CARD32)(((right)<<16) | (left));	\
+         SIS_WQINDEX(0) = (CARD32)(SIS_SPKC_HEADER + TRAP_YH);	\
+         SIS_WQINDEX(1) = (CARD32)(((y)<<16) | (h)); 		\
+	 SIS_WQINDEX(2) = (CARD32)(SIS_SPKC_HEADER + TRAP_LR);	\
+         SIS_WQINDEX(3) = (CARD32)(((right)<<16) | (left));	\
          SiSUpdateQueue \
 	 SiSSetSwWP(ttt); \
       }
@@ -654,10 +655,10 @@
       { \
          CARD32 ttt = SiSGetSwWP(); \
 	 pointer tt = (char *)pSiS->cmdQueueBase + ttt; \
-         ((CARD32 *)(tt))[0] = (CARD32)(SIS_SPKC_HEADER + TRAP_DL);	\
-         ((CARD32 *)(tt))[1] = (CARD32)(((dyL)<<16) | (dxL)); 		\
-	 ((CARD32 *)(tt))[2] = (CARD32)(SIS_SPKC_HEADER + TRAP_DR);	\
-         ((CARD32 *)(tt))[3] = (CARD32)(((dyR)<<16) | (dxR)); 		\
+         SIS_WQINDEX(0) = (CARD32)(SIS_SPKC_HEADER + TRAP_DL);	\
+         SIS_WQINDEX(1) = (CARD32)(((dyL)<<16) | (dxL)); 	\
+	 SIS_WQINDEX(2) = (CARD32)(SIS_SPKC_HEADER + TRAP_DR);	\
+         SIS_WQINDEX(3) = (CARD32)(((dyR)<<16) | (dxR)); 	\
          SiSUpdateQueue \
 	 SiSSetSwWP(ttt); \
       }
@@ -666,10 +667,10 @@
       { \
          CARD32 ttt = SiSGetSwWP(); \
 	 pointer tt = (char *)pSiS->cmdQueueBase + ttt; \
-         ((CARD32 *)(tt))[0] = (CARD32)(SIS_SPKC_HEADER + TRAP_EL);	\
-         ((CARD32 *)(tt))[1] = (CARD32)(eL);	 			\
-	 ((CARD32 *)(tt))[2] = (CARD32)(SIS_SPKC_HEADER + TRAP_ER);	\
-         ((CARD32 *)(tt))[3] = (CARD32)(eR); 				\
+         SIS_WQINDEX(0) = (CARD32)(SIS_SPKC_HEADER + TRAP_EL);	\
+         SIS_WQINDEX(1) = (CARD32)(eL);	 			\
+	 SIS_WQINDEX(2) = (CARD32)(SIS_SPKC_HEADER + TRAP_ER);	\
+         SIS_WQINDEX(3) = (CARD32)(eR); 			\
          SiSUpdateQueue \
 	 SiSSetSwWP(ttt); \
       }
@@ -680,8 +681,8 @@
       { \
          CARD32 ttt = SiSGetSwWP(); \
 	 pointer tt = (char *)pSiS->cmdQueueBase + ttt; \
-         ((CARD32 *)(tt))[0] = (CARD32)(SIS_SPKC_HEADER + ALPHA_ALPHA);	\
-         ((CARD32 *)(tt))[1] = (CARD32)(alpha);	 			\
+         SIS_WQINDEX(0) = (CARD32)(SIS_SPKC_HEADER + ALPHA_ALPHA);	\
+         SIS_WQINDEX(1) = (CARD32)(alpha);	 			\
          SiSNILandUpdateSWQueue \
       }
 
@@ -689,8 +690,8 @@
       { \
          CARD32 ttt = SiSGetSwWP(); \
 	 pointer tt = (char *)pSiS->cmdQueueBase + ttt; \
-         ((CARD32 *)(tt))[0] = (CARD32)(SIS_SPKC_HEADER + (PATTERN_REG + (num * 4)));	\
-         ((CARD32 *)(tt))[1] = (CARD32)(value); 					\
+         SIS_WQINDEX(0) = (CARD32)(SIS_SPKC_HEADER + (PATTERN_REG + (num * 4)));	\
+         SIS_WQINDEX(1) = (CARD32)(value); 						\
          SiSNILandUpdateSWQueue \
       }
 
@@ -698,10 +699,10 @@
       { \
          CARD32 ttt = SiSGetSwWP(); \
 	 pointer tt = (char *)pSiS->cmdQueueBase + ttt; \
-         ((CARD32 *)(tt))[0] = (CARD32)(pat1);	\
-         ((CARD32 *)(tt))[1] = (CARD32)(pat2);	\
-	 ((CARD32 *)(tt))[2] = (CARD32)(pat3);	\
-         ((CARD32 *)(tt))[3] = (CARD32)(pat4);	\
+         SIS_WQINDEX(0) = (CARD32)(pat1);		\
+         SIS_WQINDEX(1) = (CARD32)(pat2);		\
+	 SIS_WQINDEX(2) = (CARD32)(pat3);		\
+         SIS_WQINDEX(3) = (CARD32)(pat4);		\
          SiSUpdateQueue \
 	 SiSSetSwWP(ttt); \
       }
@@ -741,10 +742,10 @@ typedef struct _SiS_Packet12_YUV {
       { \
          CARD32 ttt = SiSGetSwWP(); \
 	 pointer tt = (char *)pSiS->cmdQueueBase + ttt; \
-         ((CARD32 *)(tt))[0] = (CARD32)(part1);	\
-         ((CARD32 *)(tt))[1] = (CARD32)(part2);	\
-	 ((CARD32 *)(tt))[2] = (CARD32)(part3);	\
-         ((CARD32 *)(tt))[3] = (CARD32)(part4);	\
+         SIS_WQINDEX(0) = (CARD32)(part1);	\
+         SIS_WQINDEX(1) = (CARD32)(part2);	\
+	 SIS_WQINDEX(2) = (CARD32)(part3);	\
+         SIS_WQINDEX(3) = (CARD32)(part4);	\
          SiSUpdateQueue \
 	 SiSSetSwWP(ttt); \
       }
@@ -773,96 +774,96 @@ typedef struct _SiS_Packet12_YUV {
      } else { \
 	CmdQueLen = ((512 * 1024) / 4) - 64; \
      } \
-     while( (MMIO_IN16(pSiS->IOBase, Q_STATUS+2) & 0x8000) != 0x8000) {}; \
-     while( (MMIO_IN16(pSiS->IOBase, Q_STATUS+2) & 0x8000) != 0x8000) {}; \
+     while( (SIS_MMIO_IN16(pSiS->IOBase, Q_STATUS+2) & 0x8000) != 0x8000) {}; \
+     while( (SIS_MMIO_IN16(pSiS->IOBase, Q_STATUS+2) & 0x8000) != 0x8000) {}; \
   }
 
 #define SiSSetupSRCBase(base) \
       if (CmdQueLen <= 0)  SiSIdle; \
-      MMIO_OUT32(pSiS->IOBase, SRC_ADDR, base); \
+      SIS_MMIO_OUT32(pSiS->IOBase, SRC_ADDR, base); \
       CmdQueLen--;
 
 #define SiSSetupSRCPitch(pitch) \
       if (CmdQueLen <= 0)  SiSIdle; \
-      MMIO_OUT16(pSiS->IOBase, SRC_PITCH, pitch); \
+      SIS_MMIO_OUT16(pSiS->IOBase, SRC_PITCH, pitch); \
       CmdQueLen--;
 
 #define SiSSetupSRCXY(x,y) \
       if (CmdQueLen <= 0)  SiSIdle;\
-      MMIO_OUT32(pSiS->IOBase, SRC_Y, (x)<<16 | (y) );\
+      SIS_MMIO_OUT32(pSiS->IOBase, SRC_Y, (x)<<16 | (y) );\
       CmdQueLen--;
 
 #define SiSSetupDSTBase(base) \
       if (CmdQueLen <= 0)  SiSIdle;\
-      MMIO_OUT32(pSiS->IOBase, DST_ADDR, base);\
+      SIS_MMIO_OUT32(pSiS->IOBase, DST_ADDR, base);\
       CmdQueLen--;
 
 #define SiSSetupDSTXY(x,y) \
       if (CmdQueLen <= 0)  SiSIdle;\
-      MMIO_OUT32(pSiS->IOBase, DST_Y, (x)<<16 | (y) );\
+      SIS_MMIO_OUT32(pSiS->IOBase, DST_Y, (x)<<16 | (y) );\
       CmdQueLen--;
 
 #define SiSSetupDSTRect(x,y) \
       if (CmdQueLen <= 0)  SiSIdle;\
-      MMIO_OUT32(pSiS->IOBase, DST_PITCH, (y)<<16 | (x) );\
+      SIS_MMIO_OUT32(pSiS->IOBase, DST_PITCH, (y)<<16 | (x) );\
       CmdQueLen--;
 
 #define SiSSetupDSTColorDepth(bpp) \
       if (CmdQueLen <= 0)  SiSIdle;\
-      MMIO_OUT16(pSiS->IOBase, AGP_BASE, bpp);\
+      SIS_MMIO_OUT16(pSiS->IOBase, AGP_BASE, bpp);\
       CmdQueLen--;
 
 #define SiSSetupRect(w,h) \
       if(CmdQueLen <= 0)  SiSIdle;\
-      MMIO_OUT32(pSiS->IOBase, RECT_WIDTH, (h)<<16 | (w) );\
+      SIS_MMIO_OUT32(pSiS->IOBase, RECT_WIDTH, (h)<<16 | (w) );\
       CmdQueLen--;
 
 #define SiSSetupPATFG(color) \
       if(CmdQueLen <= 0)  SiSIdle;\
-      MMIO_OUT32(pSiS->IOBase, PAT_FGCOLOR, color);\
+      SIS_MMIO_OUT32(pSiS->IOBase, PAT_FGCOLOR, color);\
       CmdQueLen--;
 
 #define SiSSetupPATBG(color) \
       if(CmdQueLen <= 0)  SiSIdle;\
-      MMIO_OUT32(pSiS->IOBase, PAT_BGCOLOR, color);\
+      SIS_MMIO_OUT32(pSiS->IOBase, PAT_BGCOLOR, color);\
       CmdQueLen--;
 
 #define SiSSetupSRCFG(color) \
       if(CmdQueLen <= 0)  SiSIdle;\
-      MMIO_OUT32(pSiS->IOBase, SRC_FGCOLOR, color);\
+      SIS_MMIO_OUT32(pSiS->IOBase, SRC_FGCOLOR, color);\
       CmdQueLen--;
 
 #define SiSSetupSRCBG(color) \
       if(CmdQueLen <= 0)  SiSIdle; \
-      MMIO_OUT32(pSiS->IOBase, SRC_BGCOLOR, color); \
+      SIS_MMIO_OUT32(pSiS->IOBase, SRC_BGCOLOR, color); \
       CmdQueLen--;
 
 #define SiSSetupSRCTrans(color) \
       if(CmdQueLen <= 1)  SiSIdle;\
-      MMIO_OUT32(pSiS->IOBase, TRANS_SRC_KEY_HIGH, color);\
-      MMIO_OUT32(pSiS->IOBase, TRANS_SRC_KEY_LOW, color);\
+      SIS_MMIO_OUT32(pSiS->IOBase, TRANS_SRC_KEY_HIGH, color);\
+      SIS_MMIO_OUT32(pSiS->IOBase, TRANS_SRC_KEY_LOW, color);\
       CmdQueLen -= 2;
 
 #define SiSSetupDSTTrans(color) \
       if(CmdQueLen <= 1)  SiSIdle;\
-      MMIO_OUT32(pSiS->IOBase, TRANS_DST_KEY_HIGH, color); \
-      MMIO_OUT32(pSiS->IOBase, TRANS_DST_KEY_LOW, color); \
+      SIS_MMIO_OUT32(pSiS->IOBase, TRANS_DST_KEY_HIGH, color); \
+      SIS_MMIO_OUT32(pSiS->IOBase, TRANS_DST_KEY_LOW, color); \
       CmdQueLen -= 2;
 
 #define SiSSetupMONOPAT(p0,p1) \
       if(CmdQueLen <= 1)  SiSIdle;\
-      MMIO_OUT32(pSiS->IOBase, MONO_MASK, p0);\
-      MMIO_OUT32(pSiS->IOBase, MONO_MASK+4, p1);\
+      SIS_MMIO_OUT32(pSiS->IOBase, MONO_MASK, p0);\
+      SIS_MMIO_OUT32(pSiS->IOBase, MONO_MASK+4, p1);\
       CmdQueLen=CmdQueLen-2;
 
 #define SiSSetupClipLT(left,top) \
       if(CmdQueLen <= 0)  SiSIdle;\
-      MMIO_OUT32(pSiS->IOBase, LEFT_CLIP, ((left) & 0xFFFF) | (top)<<16); \
+      SIS_MMIO_OUT32(pSiS->IOBase, LEFT_CLIP, ((left) & 0xFFFF) | (top)<<16); \
       CmdQueLen--;
 
 #define SiSSetupClipRB(right,bottom) \
       if(CmdQueLen <= 0) SiSIdle; \
-      MMIO_OUT32(pSiS->IOBase, RIGHT_CLIP, ((right) & 0xFFFF) | (bottom)<<16); \
+      SIS_MMIO_OUT32(pSiS->IOBase, RIGHT_CLIP, ((right) & 0xFFFF) | (bottom)<<16); \
       CmdQueLen--;
 
 #define SiSSetupROP(rop) \
@@ -870,86 +871,86 @@ typedef struct _SiS_Packet12_YUV {
 
 #define SiSDoCMD \
       if (CmdQueLen <= 1)  SiSIdle;\
-      MMIO_OUT32(pSiS->IOBase, COMMAND_READY, pSiS->CommandReg); \
-      MMIO_OUT32(pSiS->IOBase, FIRE_TRIGGER, 0); \
+      SIS_MMIO_OUT32(pSiS->IOBase, COMMAND_READY, pSiS->CommandReg); \
+      SIS_MMIO_OUT32(pSiS->IOBase, FIRE_TRIGGER, 0); \
       CmdQueLen -= 2;
 
 /* Line */
 
 #define SiSSetupX0Y0(x,y) \
       if (CmdQueLen <= 0)  SiSIdle;\
-      MMIO_OUT32(pSiS->IOBase, LINE_X0, (y)<<16 | (x) );\
+      SIS_MMIO_OUT32(pSiS->IOBase, LINE_X0, (y)<<16 | (x) );\
       CmdQueLen--;
 
 #define SiSSetupX1Y1(x,y) \
       if (CmdQueLen <= 0)  SiSIdle;\
-      MMIO_OUT32(pSiS->IOBase, LINE_X1, (y)<<16 | (x) );\
+      SIS_MMIO_OUT32(pSiS->IOBase, LINE_X1, (y)<<16 | (x) );\
       CmdQueLen--;
 
 #define SiSSetupLineCount(c) \
       if (CmdQueLen <= 0)  SiSIdle;\
-      MMIO_OUT16(pSiS->IOBase, LINE_COUNT, c);\
+      SIS_MMIO_OUT16(pSiS->IOBase, LINE_COUNT, c);\
       CmdQueLen--;
 
 #define SiSSetupStylePeriod(p) \
       if (CmdQueLen <= 0)  SiSIdle;\
-      MMIO_OUT16(pSiS->IOBase, LINE_STYLE_PERIOD, p);\
+      SIS_MMIO_OUT16(pSiS->IOBase, LINE_STYLE_PERIOD, p);\
       CmdQueLen--;
 
 #define SiSSetupStyleLow(ls) \
       if (CmdQueLen <= 0)  SiSIdle;\
-      MMIO_OUT32(pSiS->IOBase, LINE_STYLE_0, ls);\
+      SIS_MMIO_OUT32(pSiS->IOBase, LINE_STYLE_0, ls);\
       CmdQueLen--;
 
 #define SiSSetupStyleHigh(ls) \
       if (CmdQueLen <= 0)  SiSIdle;\
-      MMIO_OUT32(pSiS->IOBase, LINE_STYLE_1, ls);\
+      SIS_MMIO_OUT32(pSiS->IOBase, LINE_STYLE_1, ls);\
       CmdQueLen--;
 
 /* Trapezoid */
 
 #define SiSSetupYH(y,h) \
       if (CmdQueLen <= 0)  SiSIdle;\
-      MMIO_OUT32(pSiS->IOBase, TRAP_YH, (y)<<16 | (h) );\
+      SIS_MMIO_OUT32(pSiS->IOBase, TRAP_YH, (y)<<16 | (h) );\
       CmdQueLen--;
 
 #define SiSSetupLR(left,right) \
       if (CmdQueLen <= 0)  SiSIdle;\
-      MMIO_OUT32(pSiS->IOBase, TRAP_LR, (right)<<16 | (left) );\
+      SIS_MMIO_OUT32(pSiS->IOBase, TRAP_LR, (right)<<16 | (left) );\
       CmdQueLen--;
 
 #define SiSSetupdL(dxL,dyL) \
       if (CmdQueLen <= 0)  SiSIdle;\
-      MMIO_OUT32(pSiS->IOBase, TRAP_DL, (dyL)<<16 | (dxL) );\
+      SIS_MMIO_OUT32(pSiS->IOBase, TRAP_DL, (dyL)<<16 | (dxL) );\
       CmdQueLen--;
 
 #define SiSSetupdR(dxR,dyR) \
       if (CmdQueLen <= 0)  SiSIdle;\
-      MMIO_OUT32(pSiS->IOBase, TRAP_DR, (dyR)<<16 | (dxR) );\
+      SIS_MMIO_OUT32(pSiS->IOBase, TRAP_DR, (dyR)<<16 | (dxR) );\
       CmdQueLen--;
 
 #define SiSSetupEL(eL) \
       if (CmdQueLen <= 0)  SiSIdle;\
-      MMIO_OUT32(pSiS->IOBase, TRAP_EL, eL);\
+      SIS_MMIO_OUT32(pSiS->IOBase, TRAP_EL, eL);\
       CmdQueLen--;
 
 #define SiSSetupER(eR) \
       if (CmdQueLen <= 0)  SiSIdle;\
-      MMIO_OUT32(pSiS->IOBase, TRAP_ER, eR);\
+      SIS_MMIO_OUT32(pSiS->IOBase, TRAP_ER, eR);\
       CmdQueLen--;
 
 /* (Constant) alpha blended BitBlt (alpha = 8 bit) */
 
 #define SiSSetupAlpha(alpha) \
       if (CmdQueLen <= 0)  SiSIdle;\
-      MMIO_OUT32(pSiS->IOBase, ALPHA_ALPHA, alpha);\
+      SIS_MMIO_OUT32(pSiS->IOBase, ALPHA_ALPHA, alpha);\
       CmdQueLen--;
 
 /* Set Pattern register */
 
 #define SiSSetPattern(num, value) \
       if (CmdQueLen <= 0)  SiSIdle; \
-      MMIO_OUT32(pSiS->IOBase, (PATTERN_REG + (num * 4)), value); \
+      SIS_MMIO_OUT32(pSiS->IOBase, (PATTERN_REG + (num * 4)), value); \
       CmdQueLen--;
 
 #endif  /* MMIO mode */

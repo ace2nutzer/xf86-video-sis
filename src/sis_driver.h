@@ -3,7 +3,7 @@
 /*
  * Global data and definitions
  *
- * Copyright (C) 2001-2004 by Thomas Winischhofer, Vienna, Austria
+ * Copyright (C) 2001-2005 by Thomas Winischhofer, Vienna, Austria
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -130,7 +130,7 @@ static const chswtable mychswtable[] = {
 };
 
 /*     These machines require special timing/handling
- */
+ */ 
 const customttable mycustomttable[] = {
         { SIS_630, "2.00.07", "09/27/2002-13:38:25",
 	  0x3240A8,
@@ -656,7 +656,7 @@ static DisplayModeRec SiS6326SIS1600x1200_60Mode = {
 };
 
 /*     TV filters for SiS video bridges
- */
+ */ 
 static const struct _SiSTVFilter301 {
 	UChar filter[7][4];
 } SiSTVFilter301[] = {
@@ -780,7 +780,7 @@ static const struct _SiSTVFilter301B {
 };
 
 /*     TV scaling data for SiS video bridges
- */
+ */ 
 typedef struct _SiSTVVScale {
         UShort ScaleVDE;
 	int sindex;
@@ -1266,7 +1266,6 @@ static const UChar SiS301CScaling[] = {
     0x7D,0x0C,0x16,0x01,0x7D,0x0A,0x17,0x02,0x7D,0x09,0x17,0x03,0x7D,0x07,0x17,0x05
 };
 
-
 /* Mandatory functions */
 static void SISIdentify(int flags);
 static Bool SISProbe(DriverPtr drv, int flags);
@@ -1280,6 +1279,14 @@ static Bool SISSwitchMode(int scrnIndex, DisplayModePtr mode, int flags);
 static void SISAdjustFrame(int scrnIndex, int x, int y, int flags);
 #ifdef SISDUALHEAD
 static Bool SISSaveScreenDH(ScreenPtr pScreen, int mode);
+#endif
+#ifdef X_XF86MiscPassMessage
+static int  SISHandleMessage(int scrnIndex, const char *msgtype, 
+		      const char *msgval, char **retmsg);
+static int  SISCheckModeTimingForCRT2Type(ScrnInfoPtr pScrn, UShort cond, UShort hdisplay, 
+		      UShort vdisplay, UShort htotal, UShort vtotal, 
+		      UShort hsyncstart, UShort hsyncend, UShort vsyncstart,
+		      UShort vsyncend, int clock, Bool quiet);		      
 #endif
 
 /* Optional functions */
@@ -1296,18 +1303,19 @@ static Bool    SISUnmapIOPMem(ScrnInfoPtr pScrn);
 #endif
 static void    SISSave(ScrnInfoPtr pScrn);
 static void    SISRestore(ScrnInfoPtr pScrn);
-static void    SISVESARestore(ScrnInfoPtr pScrn);
 static Bool    SISModeInit(ScrnInfoPtr pScrn, DisplayModePtr mode);
 static void    SISModifyModeInfo(DisplayModePtr mode);
 static void    SiSPreSetMode(ScrnInfoPtr pScrn, DisplayModePtr mode, int viewmode);
 static void    SiSPostSetMode(ScrnInfoPtr pScrn, SISRegPtr sisReg);
 static void    SiS6326PostSetMode(ScrnInfoPtr pScrn, SISRegPtr sisReg);
 static Bool    SiSSetVESAMode(ScrnInfoPtr pScrn, DisplayModePtr pMode);
+static void    SISVESARestore(ScrnInfoPtr pScrn);
 static void    SiSBuildVesaModeList(ScrnInfoPtr pScrn, vbeInfoPtr pVbe, VbeInfoBlock *vbe);
 static UShort  SiSCalcVESAModeIndex(ScrnInfoPtr pScrn, DisplayModePtr mode);
 static void    SISVESASaveRestore(ScrnInfoPtr pScrn, vbeSaveRestoreFunction function);
 static void    SISBridgeRestore(ScrnInfoPtr pScrn);
 static void    SiSEnableTurboQueue(ScrnInfoPtr pScrn);
+static void    SiSRestoreQueueMode(SISPtr pSiS, SISRegPtr sisReg);
 UChar  	       SISSearchCRT1Rate(ScrnInfoPtr pScrn, DisplayModePtr mode);
 static void    SISWaitVBRetrace(ScrnInfoPtr pScrn);
 void           SISWaitRetraceCRT1(ScrnInfoPtr pScrn);
@@ -1315,7 +1323,8 @@ void           SISWaitRetraceCRT2(ScrnInfoPtr pScrn);
 static UShort  SiS_CheckModeCRT1(ScrnInfoPtr pScrn, DisplayModePtr mode,
 				 ULong VBFlags, Bool hcm);
 static UShort  SiS_CheckModeCRT2(ScrnInfoPtr pScrn, DisplayModePtr mode,
-				 ULong VBFlags, Bool hcm);				 
+				 ULong VBFlags, Bool hcm);
+			      
 #ifdef SISMERGED
 static Bool    InRegion(int x, int y, region r);
 static void    SISMergePointerMoved(int scrnIndex, int x, int y);
@@ -1340,6 +1349,24 @@ extern void 	SiSVGAProtect(ScrnInfoPtr pScrn, Bool on);
 extern Bool 	SiSVGAMapMem(ScrnInfoPtr pScrn);
 extern void 	SiSVGAUnmapMem(ScrnInfoPtr pScrn);
 extern Bool 	SiSVGASaveScreen(ScreenPtr pScreen, int mode);
+
+/* shadow */
+extern void 	SISPointerMoved(int index, int x, int y);
+extern void 	SISRefreshArea(ScrnInfoPtr pScrn, int num, BoxPtr pbox);
+extern void 	SISRefreshArea8(ScrnInfoPtr pScrn, int num, BoxPtr pbox);
+extern void 	SISRefreshArea16(ScrnInfoPtr pScrn, int num, BoxPtr pbox);
+extern void 	SISRefreshArea24(ScrnInfoPtr pScrn, int num, BoxPtr pbox);
+extern void 	SISRefreshArea32(ScrnInfoPtr pScrn, int num, BoxPtr pbox);
+
+/* vb */
+extern void 	SISCRT1PreInit(ScrnInfoPtr pScrn);
+extern void 	SISLCDPreInit(ScrnInfoPtr pScrn, Bool quiet);
+extern void 	SISTVPreInit(ScrnInfoPtr pScrn, Bool quiet);
+extern void 	SISCRT2PreInit(ScrnInfoPtr pScrn, Bool quiet);
+extern void 	SISSense30x(ScrnInfoPtr pScrn, Bool quiet);
+extern void 	SISSenseChrontel(ScrnInfoPtr pScrn, Bool quiet);
+extern Bool 	SISRedetectCRT2Type(ScrnInfoPtr pScrn);
+extern void     SiSSetupPseudoPanel(ScrnInfoPtr pScrn);
 
 /* init.c, init301.c ----- (use their data types!) */
 extern USHORT   SiS_GetModeID(int VGAEngine, ULONG VBFlags, int HDisplay, int VDisplay,

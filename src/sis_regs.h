@@ -3,7 +3,7 @@
 /*
  * Register access macros and register definitions 
  *
- * Copyright (C) 2001-2004 by Thomas Winischhofer, Vienna, Austria
+ * Copyright (C) 2001-2005 by Thomas Winischhofer, Vienna, Austria
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,7 +31,56 @@
 
 #ifndef _SIS_REGS_H_
 #define _SIS_REGS_H_
+
+/*
+#define SIS_NEED_inSISREG
+#define SIS_NEED_inSISREGW
+#define SIS_NEED_inSISREGL
+#define SIS_NEED_outSISREG
+#define SIS_NEED_outSISREGW
+#define SIS_NEED_outSISREGL
+#define SIS_NEED_orSISREG
+#define SIS_NEED_andSISREG
+#define SIS_NEED_inSISIDXREG
+#define SIS_NEED_outSISIDXREG
+#define SIS_NEED_orSISIDXREG
+#define SIS_NEED_andSISIDXREG
+#define SIS_NEED_setSISIDXREG
+#define SIS_NEED_setSISIDXREGmask
+*/
  
+/* Video RAM access macros */
+
+/* (Currently, these are use on all platforms; USB2VGA is handled
+ * entirely different in a dedicated driver)
+ */
+
+/* dest is video RAM, src is system RAM */
+#define sisfbwritel(dest, data)        	*(dest)     = (data)
+#define sisfbwritelinc(dest, data)     	*((dest)++) = (data)
+#define sisfbwritelp(dest, dataptr)    	*(dest)     = *(dataptr)
+#define sisfbwritelpinc(dest, dataptr) 	*((dest)++) = *((dataptr)++)
+
+#define sisfbwritew(dest, data)        	*(dest)     = (data)
+#define sisfbwritewinc(dest, data)     	*((dest)++) = (data)
+#define sisfbwritewp(dest, dataptr)    	*(dest)     = *(dataptr)
+#define sisfbwritewpinc(dest, dataptr) 	*((dest)++) = *((dataptr)++)
+
+#define sisfbwriteb(dest, data)        	*(dest)     = (data)
+#define sisfbwritebinc(dest, data)     	*((dest)++) = (data)
+#define sisfbwritebp(dest, dataptr)    	*(dest)     = *(dataptr)
+#define sisfbwritebpinc(dest, dataptr) 	*((dest)++) = *((dataptr)++)
+
+/* Source is video RAM */
+#define sisfbreadl(src)        		*(src)
+#define sisfbreadlinc(src)        	*((src)++)
+
+#define sisfbreadw(src)        		*(src)
+#define sisfbreadwinc(src)        	*((src)++)
+
+#define sisfbreadb(src)        		*(src)
+#define sisfbreadbinc(src)        	*((src)++)
+
 /* Register access macros  --------------- */
 
 #ifndef SISUSEDEVPORT
@@ -101,12 +150,13 @@
 		      outSISREG((base)+1, __Temp);		\
 		    } while(0)		    
 		    
-#else
+#else /* USEDEVPORT */
 
 extern int sisdevport;
 
 /* Note to self: SEEK_SET is faster than SEEK_CUR */
 
+#ifdef SIS_NEED_inSISREG
 static UChar inSISREG(ULong base)
 {
     UChar tmp;
@@ -114,7 +164,9 @@ static UChar inSISREG(ULong base)
     read(sisdevport, &tmp, 1);
     return tmp;
 }
+#endif
 
+#ifdef SIS_NEED_inSISREGW
 static __inline UShort inSISREGW(ULong base)
 {
     UShort tmp;
@@ -122,7 +174,9 @@ static __inline UShort inSISREGW(ULong base)
     read(sisdevport, &tmp, 2);
     return tmp;
 }
+#endif
 
+#ifdef SIS_NEED_inSISREGL
 static __inline unsigned int inSISREGL(ULong base)
 {
     ULong tmp;
@@ -130,35 +184,45 @@ static __inline unsigned int inSISREGL(ULong base)
     read(sisdevport, &tmp, 4);
     return tmp;
 }
+#endif
 
+#ifdef SIS_NEED_outSISREG
 static void outSISREG(ULong base, UChar val)
 {
     lseek(sisdevport, base, SEEK_SET);
     write(sisdevport, &val, 1);
 }
+#endif
 
+#ifdef SIS_NEED_outSISREGW
 static __inline void outSISREGW(ULong base, UShort val)
 {
     lseek(sisdevport, base, SEEK_SET);
     write(sisdevport, &val, 2);
 }
+#endif
 
+#ifdef SIS_NEED_outSISREGL
 static __inline void outSISREGL(ULong base, unsigned int val)
 {
     lseek(sisdevport, base, SEEK_SET);
     write(sisdevport, &val, 4);
 }
+#endif
 
+#ifdef SIS_NEED_orSISREG
 static void orSISREG(ULong base, UChar val)
 {
     UChar tmp;
     lseek(sisdevport, base, SEEK_SET);
     read(sisdevport, &tmp, 1);
     tmp |= val;
-    lseek(sisdevport, -1, SEEK_CUR);		     
+    lseek(sisdevport, base, SEEK_SET);		     
     write(sisdevport, &tmp, 1);
 }
+#endif
 
+#ifdef SIS_NEED_andSISREG
 static void andSISREG(ULong base, UChar val)
 {
     UChar tmp;
@@ -168,16 +232,20 @@ static void andSISREG(ULong base, UChar val)
     lseek(sisdevport, base, SEEK_SET);		     
     write(sisdevport, &tmp, 1);
 }
+#endif
 
+#ifdef SIS_NEED_outSISIDXREG
 static void outSISIDXREG(ULong base, UChar idx, UChar val)
 {
     UChar value[2];
-    value[0] = idx;
+    value[0] = idx;	/* sic! reads/writes bytewise! */
     value[1] = val;
     lseek(sisdevport, base, SEEK_SET);
     write(sisdevport, &value[0], 2);
 }
+#endif
 
+#ifdef SIS_NEED_inSISIDXREG
 static UChar __inSISIDXREG(ULong base, UChar idx)
 {
     UChar tmp;
@@ -186,9 +254,10 @@ static UChar __inSISIDXREG(ULong base, UChar idx)
     read(sisdevport, &tmp, 1);
     return tmp;
 }
-
 #define inSISIDXREG(base,idx,var)  var = __inSISIDXREG(base, idx);
+#endif
 	    
+#ifdef SIS_NEED_orSISIDXREG
 static void orSISIDXREG(ULong base, UChar idx, UChar val)
 {
     UChar tmp;
@@ -199,7 +268,9 @@ static void orSISIDXREG(ULong base, UChar idx, UChar val)
     lseek(sisdevport, base + 1, SEEK_SET);		     
     write(sisdevport, &tmp, 1);
 }
+#endif
 
+#ifdef SIS_NEED_andSISIDXREG
 static void andSISIDXREG(ULong base, UChar idx, UChar val)
 {
     UChar tmp;
@@ -210,7 +281,9 @@ static void andSISIDXREG(ULong base, UChar idx, UChar val)
     lseek(sisdevport, base + 1, SEEK_SET);		     		     
     write(sisdevport, &tmp, 1);
 }
+#endif
 
+#ifdef SIS_NEED_setSISIDXREG
 static void setSISIDXREG(ULong base, UChar idx,
 			 UChar myand, UChar myor)
 {
@@ -223,7 +296,9 @@ static void setSISIDXREG(ULong base, UChar idx,
     lseek(sisdevport, base + 1, SEEK_SET);		     		     
     write(sisdevport, &tmp, 1);
 }			 
+#endif
 	    
+#ifdef SIS_NEED_setSISIDXREGmask
 static void setSISIDXREGmask(ULong base, UChar idx, 
                              UChar data, UChar mask)
 {
@@ -236,8 +311,30 @@ static void setSISIDXREGmask(ULong base, UChar idx,
     lseek(sisdevport, base + 1, SEEK_SET);		     		     
     write(sisdevport, &tmp, 1);
 }
+#endif
 
 #endif  /* SISUSEDEVPORT */
+
+/* Video RAM and MMIO access macros ----- */
+
+#define sisclearvram(where, howmuch) 	bzero(where, howmuch)
+
+/* MMIO */
+#define SIS_MMIO_OUT8   MMIO_OUT8
+#define SIS_MMIO_OUT16  MMIO_OUT16
+#define SIS_MMIO_OUT32  MMIO_OUT32
+
+#define SIS_MMIO_IN8	MMIO_IN8
+#define SIS_MMIO_IN16	MMIO_IN16
+#define SIS_MMIO_IN32	MMIO_IN32
+
+/* VRAM queue acceleration */
+
+#define SiSWriteQueue(tt)
+
+#define SIS_WQINDEX(i)  ((CARD32 *)(tt))[(i)]
+
+#define SIS_RQINDEX(i)  ((volatile CARD32 *)(tt))[(i)]
 
 /* Port offsets  --------------- */
 
@@ -607,7 +704,7 @@ static void setSISIDXREGmask(ULong base, UChar idx,
 #define  VI6326_Misc4_CPUVideoFormatYUV422      0x01
 #define  VI6326_Misc4_CPUVideoFormatRGB565      0x02
 #define  VI6326_Misc4_EnableYUV420		0x04  /* 1 = enable, 0 = disable */
-/** #define WHATISTHIS                          0x40  */
+/* #define WHATISTHIS                           0x40  */
 
 /* Bits for Index_VI6326_Control_Misc5 (all 530/620 only) */
 #define  VI6326_Misc5_LineBufferMerge           0x10  /* 0 = disable, 1=enable */

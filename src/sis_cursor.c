@@ -3,7 +3,7 @@
 /*
  * SiS hardware cursor handling
  *
- * Copyright (C) 2001-2004 by Thomas Winischhofer, Vienna, Austria.
+ * Copyright (C) 2001-2005 by Thomas Winischhofer, Vienna, Austria.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,14 +37,16 @@
 
 #include "cursorstr.h"
 
+#define SIS_NEED_inSISREG
+#define SIS_NEED_outSISREG
+#define SIS_NEED_inSISIDXREG
+#define SIS_NEED_outSISIDXREG
+#define SIS_NEED_orSISIDXREG
+#define SIS_NEED_andSISIDXREG
+#define SIS_NEED_MYMMIO
+#define SIS_NEED_MYFBACCESS
 #include "sis_regs.h"
 #include "sis_cursor.h"
-
-#if 0
-#define SIS300_USE_ARGB16
-#else
-#undef  SIS300_USE_ARGB16
-#endif
 
 extern void    SISWaitRetraceCRT1(ScrnInfoPtr pScrn);
 extern void    SISWaitRetraceCRT2(ScrnInfoPtr pScrn);
@@ -68,11 +70,12 @@ SiSXConvertMono2ARGB(SISPtr pSiS)
 
    for(i = 0; i < 64; i++) {
       for(j = 0; j < 8; j++) {
-         chunk = *(src + 8); mask = *src++;
+         chunk = sisfbreadb(src + 8); /* *(src + 8);  */
+	 mask = sisfbreadbinc(src);   /* *src++; */
 	 for(k = 128; k != 0; k >>= 1) {
-	    if(mask & k)       *dest++ = 0x00000000;
-	    else if(chunk & k) *dest++ = fg;
-	    else               *dest++ = bg;
+	    if(mask & k)       sisfbwritelinc(dest, 0x00000000);  /* *dest++ = 0x00000000; */
+	    else if(chunk & k) sisfbwritelinc(dest, fg);          /* *dest++ = fg; */
+	    else               sisfbwritelinc(dest, bg);          /* *dest++ = bg; */
 	 }
       }
       src += 8;
@@ -186,22 +189,14 @@ SiS300ShowCursor(ScrnInfoPtr pScrn)
        if(pSiS->SecondHead) {
 	  /* Head 2 is always CRT1 */
 	  if(pSiS->UseHWARGBCursor) {
-#ifdef SIS300_USE_ARGB16
-	     sis300EnableHWARGB16Cursor()
-#else
 	     sis300EnableHWARGBCursor()
-#endif
 	  } else {
 	     sis300EnableHWCursor()
 	  }
        } else {
 	  /* Head 1 is always CRT2 */
 	  if(pSiS->UseHWARGBCursor) {
-#ifdef SIS300_USE_ARGB16
-	     sis301EnableHWARGB16Cursor()
-#else
 	     sis301EnableHWARGBCursor()
-#endif
 	  } else {
 	     sis301EnableHWCursor()
 	  }
@@ -209,17 +204,9 @@ SiS300ShowCursor(ScrnInfoPtr pScrn)
     } else {
 #endif
        if(pSiS->UseHWARGBCursor) {
-#ifdef SIS300_USE_ARGB16
-	  sis300EnableHWARGB16Cursor()
-#else
 	  sis300EnableHWARGBCursor()
-#endif
     	  if(pSiS->VBFlags & CRT2_ENABLE)  {
-#ifdef SIS300_USE_ARGB16
-             sis301EnableHWARGB16Cursor()
-#else
 	     sis301EnableHWARGBCursor()
-#endif
  	  }
        } else {
     	  sis300EnableHWCursor()
@@ -510,7 +497,6 @@ SiS310SetCursorPosition(ScrnInfoPtr pScrn, int x, int y)
 #endif
 }
 
-
 static void
 SiSSetCursorColors(ScrnInfoPtr pScrn, int bg, int fg)
 {
@@ -605,7 +591,7 @@ SiS310SetCursorColors(ScrnInfoPtr pScrn, int bg, int fg)
        sis310SetCursorFGColor(fg)
 
        if(pSiS->VBFlags & CRT2_ENABLE)  {
-	  if(pSiS->ChipFlags & SiSCF_CRT2HWCKaputt) {
+	  if(pSiS->ChipFlags & SiSCF_CRT2HWCKaputt) {  
 	     if((fg != pSiS->CurFGCol) || (bg != pSiS->CurBGCol)) {
 	        pSiS->CurFGCol = fg;
                 pSiS->CurBGCol = bg;
@@ -638,15 +624,15 @@ SiSLoadCursorImage(ScrnInfoPtr pScrn, UChar *src)
 
     cursor_addr = pScrn->videoRam - 1;
     if(mode->Flags & V_DBLSCAN) {
-      int i;
-      for(i = 0; i < 32; i++) {
-         memcpy((UChar *)pSiS->FbBase + (cursor_addr * 1024) + (32 * i),
-	            src + (16 * i), 16);
-         memcpy((UChar *)pSiS->FbBase + (cursor_addr * 1024) + (32 * i) + 16,
-	 	    src + (16 * i), 16);
-      }
+       int i;
+       for(i = 0; i < 32; i++) {
+          SiSMemCopyToVideoRam(pSiS, (UChar *)pSiS->FbBase + (cursor_addr * 1024) + (32 * i), 
+	 			src + (16 * i), 16);
+	  SiSMemCopyToVideoRam(pSiS, (UChar *)pSiS->FbBase + (cursor_addr * 1024) + (32 * i) + 16, 
+	 			src + (16 * i), 16);
+       }
     } else {
-      memcpy((UChar *)pSiS->FbBase + (cursor_addr * 1024), src, 1024);
+       SiSMemCopyToVideoRam(pSiS, (UChar *)pSiS->FbBase + (cursor_addr * 1024), src, 1024);
     }
 
     /* copy bits [21:18] into the top bits of SR38 */
@@ -698,20 +684,20 @@ SiS300LoadCursorImage(ScrnInfoPtr pScrn, UChar *src)
     cursor_addr = pScrn->videoRam - pSiS->cursorOffset - (pSiS->CursorSize/1024);  /* 1K boundary */
 
 #ifdef SISDUALHEAD
-    /* TW: Use the global (real) FbBase in DHM */
+    /* Use the global (real) FbBase in DHM */
     if(pSiS->DualHeadMode) dest = pSiSEnt->FbBase;
 #endif
 
     if(sizedouble) {
        int i;
        for(i = 0; i < 32; i++) {
-          memcpy((UChar *)dest + (cursor_addr * 1024) + (32 * i),
+          SiSMemCopyToVideoRam(pSiS, (UChar *)dest + (cursor_addr * 1024) + (32 * i),
 	           src + (16 * i), 16);
-          memcpy((UChar *)dest + (cursor_addr * 1024) + (32 * i) + 16,
+          SiSMemCopyToVideoRam(pSiS, (UChar *)dest + (cursor_addr * 1024) + (32 * i) + 16,
 	           src + (16 * i), 16);
        }
     } else {
-       memcpy((UChar *)dest + (cursor_addr * 1024), src, 1024);
+       SiSMemCopyToVideoRam(pSiS, (UChar *)dest + (cursor_addr * 1024), src, 1024);
     }
 
     if(pSiS->UseHWARGBCursor) {
@@ -795,19 +781,18 @@ SiS310LoadCursorImage(ScrnInfoPtr pScrn, UChar *src)
     if(sizedouble) {
        int i;
        for(i = 0; i < 32; i++) {
-          memcpy((UChar *)dest + (cursor_addr * 1024) + (32 * i),
+          SiSMemCopyToVideoRam(pSiS, (UChar *)dest + (cursor_addr * 1024) + (32 * i),
 	           src + (16 * i), 16);
-          memcpy((UChar *)dest + (cursor_addr * 1024) + (32 * i) + 16,
+          SiSMemCopyToVideoRam(pSiS, (UChar *)dest + (cursor_addr * 1024) + (32 * i) + 16,
 	           src + (16 * i), 16);
        }
     } else {
-       memcpy((UChar *)dest + (cursor_addr * 1024), src, 1024);
+       SiSMemCopyToVideoRam(pSiS, (UChar *)dest + (cursor_addr * 1024), src, 1024);
     }
 
     if(pSiS->ChipFlags & SiSCF_CRT2HWCKaputt) {
 
        /* Convert Mono image to color image */
-
        cursor_addr2 = pScrn->videoRam - pSiS->cursorOffset - ((pSiS->CursorSize/1024) * 2);
 
        pSiS->CurMonoSrc = (UChar *)dest + (cursor_addr * 1024);
@@ -900,23 +885,24 @@ SiS300UseHWCursor(ScreenPtr pScreen, CursorPtr pCurs)
     }
 #endif
 
-    switch (pSiS->Chipset)  {
+    switch (pSiS->Chipset)  { 
       case PCI_CHIP_SIS300:
       case PCI_CHIP_SIS630:
       case PCI_CHIP_SIS540:
-        if(mode->Flags & V_INTERLACE)
-           return FALSE;
-	if((mode->Flags & V_DBLSCAN) && (pCurs->bits->height > 32))
-	   return FALSE;
+         if(mode->Flags & V_INTERLACE)
+            return FALSE;
+	 if((mode->Flags & V_DBLSCAN) && (pCurs->bits->height > 32))
+	    return FALSE;
 #ifdef SISMERGED
-        if(pSiS->MergedFB) {
-	   if(mode2->Flags & V_INTERLACE)
-              return FALSE;
-	   if((mode2->Flags & V_DBLSCAN) && (pCurs->bits->height > 32))
-	      return FALSE;
-	}
+         if(pSiS->MergedFB) {
+	    if(mode2->Flags & V_INTERLACE)
+               return FALSE;
+	    if((mode2->Flags & V_DBLSCAN) && (pCurs->bits->height > 32))
+	       return FALSE;
+	 }
 #endif
-        break;
+         break;
+
       case PCI_CHIP_SIS315:
       case PCI_CHIP_SIS315H:
       case PCI_CHIP_SIS315PRO:
@@ -925,25 +911,26 @@ SiS300UseHWCursor(ScreenPtr pScreen, CursorPtr pCurs)
       case PCI_CHIP_SIS330:
       case PCI_CHIP_SIS660:
       case PCI_CHIP_SIS340:
-        if(mode->Flags & V_INTERLACE)
-           return FALSE;
-	if((mode->Flags & V_DBLSCAN) && (pCurs->bits->height > 32))
-	   return FALSE;
+         if(mode->Flags & V_INTERLACE)
+            return FALSE;
+	 if((mode->Flags & V_DBLSCAN) && (pCurs->bits->height > 32))
+	    return FALSE;
 #ifdef SISMERGED
-        if(pSiS->MergedFB) {
-	   if(mode2->Flags & V_INTERLACE)
-              return FALSE;
-	   if((mode2->Flags & V_DBLSCAN) && (pCurs->bits->height > 32))
-	      return FALSE;
-	}
+         if(pSiS->MergedFB) {
+	    if(mode2->Flags & V_INTERLACE)
+               return FALSE;
+	    if((mode2->Flags & V_DBLSCAN) && (pCurs->bits->height > 32))
+	       return FALSE;
+	 }
 #endif
-        break;
+         break;
+	 	
       default:
-        if(mode->Flags & V_INTERLACE)
-           return FALSE;
-        if((mode->Flags & V_DBLSCAN) && (pCurs->bits->height > 32))
-	   return FALSE;
-	break;
+         if(mode->Flags & V_INTERLACE)
+            return FALSE;
+         if((mode->Flags & V_DBLSCAN) && (pCurs->bits->height > 32))
+	    return FALSE;
+	 break;
     }
     return TRUE;
 }
@@ -966,25 +953,26 @@ SiSUseHWCursorARGB(ScreenPtr pScreen, CursorPtr pCurs)
     }
 #endif
 
-    switch (pSiS->Chipset)  {
+    switch (pSiS->Chipset)  {   
       case PCI_CHIP_SIS300:
       case PCI_CHIP_SIS630:
       case PCI_CHIP_SIS540:
-        if(mode->Flags & V_INTERLACE)
-           return FALSE;
-	if((pCurs->bits->height > 32) || (pCurs->bits->width > 32))
-	   return FALSE;
-	if((mode->Flags & V_DBLSCAN) && (pCurs->bits->height > 16))
-	   return FALSE;
+         if(mode->Flags & V_INTERLACE)
+            return FALSE;
+	 if((pCurs->bits->height > 32) || (pCurs->bits->width > 32))
+	    return FALSE;
+	 if((mode->Flags & V_DBLSCAN) && (pCurs->bits->height > 16))
+	    return FALSE;
 #ifdef SISMERGED
-        if(pSiS->MergedFB) {
-	   if(mode2->Flags & V_INTERLACE)
-              return FALSE;
-	   if((mode2->Flags & V_DBLSCAN) && (pCurs->bits->height > 16))
-	      return FALSE;
-	}
+         if(pSiS->MergedFB) {
+	    if(mode2->Flags & V_INTERLACE)
+               return FALSE;
+	    if((mode2->Flags & V_DBLSCAN) && (pCurs->bits->height > 16))
+	       return FALSE;
+	 }
 #endif
-        break;
+         break;
+
       case PCI_CHIP_SIS550:
       case PCI_CHIP_SIS650:
       case PCI_CHIP_SIS315:
@@ -993,42 +981,39 @@ SiSUseHWCursorARGB(ScreenPtr pScreen, CursorPtr pCurs)
       case PCI_CHIP_SIS330:
       case PCI_CHIP_SIS660:
       case PCI_CHIP_SIS340:
-        if(mode->Flags & V_INTERLACE)
-           return FALSE;
-	if((pCurs->bits->height > 64) || (pCurs->bits->width > 64))
-	   return FALSE;
-	if((mode->Flags & V_DBLSCAN) && (pCurs->bits->height > 32))
-	   return FALSE;
-	if((pSiS->CurrentLayout.bitsPerPixel == 8) && (pSiS->VBFlags & CRT2_ENABLE))
-	   return FALSE;
+         if(mode->Flags & V_INTERLACE)
+            return FALSE;
+	 if((pCurs->bits->height > 64) || (pCurs->bits->width > 64))
+	    return FALSE;
+	 if((mode->Flags & V_DBLSCAN) && (pCurs->bits->height > 32))
+	    return FALSE;
+	 if((pSiS->CurrentLayout.bitsPerPixel == 8) && (pSiS->VBFlags & CRT2_ENABLE))
+	    return FALSE;
 #ifdef SISMERGED
-        if(pSiS->MergedFB) {
-	   if(mode2->Flags & V_INTERLACE)
-              return FALSE;
-	   if((mode->Flags & V_DBLSCAN) && (pCurs->bits->height > 32))
-	      return FALSE;
-	}
+         if(pSiS->MergedFB) {
+	    if(mode2->Flags & V_INTERLACE)
+               return FALSE;
+	    if((mode->Flags & V_DBLSCAN) && (pCurs->bits->height > 32))
+	       return FALSE;
+	 }
 #endif
-        break;
+         break;
+		
       default:
-        return FALSE;
+         return FALSE;
+
     }
     return TRUE;
 }
 
-static void SiS300LoadCursorImageARGB(ScrnInfoPtr pScrn, CursorPtr pCurs)
+static void 
+SiS300LoadCursorImageARGB(ScrnInfoPtr pScrn, CursorPtr pCurs)
 {
     SISPtr pSiS = SISPTR(pScrn);
     int cursor_addr, i, j, maxheight = 32;
-    CARD32 *src = pCurs->bits->argb, *p;
-#ifdef SIS300_USE_ARGB16    
-    CARD16 *dest, *pb;
-    CARD16 temp1;
-#define MYSISPTRTYPE CARD16    
-#else    
+    CARD32 *src = pCurs->bits->argb, *p;    
     CARD32 *pb, *dest;
 #define MYSISPTRTYPE CARD32    
-#endif    
     int srcwidth = pCurs->bits->width;
     int srcheight = pCurs->bits->height;
     CARD32 temp, status1 = 0, status2 = 0;
@@ -1066,44 +1051,12 @@ static void SiS300LoadCursorImageARGB(ScrnInfoPtr pScrn, CursorPtr pCurs)
        maxheight = 16;
     }
 
-#ifdef SIS300_USE_ARGB16  /* Use 16 Bit RGB pointer */
     for(i = 0; i < srcheight; i++) {
 	    p = src;
 	    pb = dest;
 	    src += pCurs->bits->width;
 	    for(j = 0; j < srcwidth; j++) {
 	       temp = *p++;
-	       if(temp & 0xffffff) {
-	          temp1 = ((temp & 0xff) >> 3) |
-	                  ((((temp & 0xff00) >> (8 + 3)) << 5) & 0x03e0) |
-		          ((((temp & 0xff0000) >> (16 + 3)) << 10) & 0x7c00);
-	       } else temp1 = 0x8000;
-	       *dest++ = temp1;
-	    }
-	    if(srcwidth < 32) {
-	      for(; j < 32; j++) {
-	        *dest++ = 0x8000; 
-	      }
-	    }
-    }	    
-    if(srcheight < maxheight) {
-	for(; i < maxheight; i++)
-	   for(j = 0; j < 32; j++) {
-	      *dest++ = 0x8000;
-	   }
-	   if(sizedouble) {
-	      for(j = 0; j < 32; j++) 
-	      	*dest++ = 0x0000;
-	   }
-    }	    
-#else    /* Use 32bit RGB pointer - preferred, saves us from the conversion */	       
-    for(i = 0; i < srcheight; i++) {
-	    p = src;
-	    pb = dest;
-	    src += pCurs->bits->width;
-	    for(j = 0; j < srcwidth; j++) {
-	       temp = *p++;
-/*	       *dest1++ = ((temp ^ 0xff000000) << 4) | (((temp ^ 0xff000000) & 0xf0000000) >> 28);  */
 	       if(pSiS->OptUseColorCursorBlend) {
 	          if(temp & 0xffffff) {
 	             if((temp & 0xff000000) > pSiS->OptColorCursorBlendThreshold) {
@@ -1116,16 +1069,16 @@ static void SiS300LoadCursorImageARGB(ScrnInfoPtr pScrn, CursorPtr pCurs)
 	           if(temp & 0xffffff) temp &= 0x00ffffff;
 	           else temp = 0xff000000;
 	       }
-	       *dest++ = temp;
+	       sisfbwritelinc(dest, temp); /* *dest++ = temp; */
 	    }
 	    if(srcwidth < 32) {
 	       for(; j < 32; j++) {
-	          *dest++ = 0xff000000;
+	          sisfbwritelinc(dest, 0xff000000); /* *dest++ = 0xff000000; */
 	       }
 	    }
 	    if(sizedouble) {
 	       for(j = 0; j < 32; j++) {
-	          *dest++ = *pb++;
+	          sisfbwritelinc(dest, sisfbreadlinc(pb)); /* *dest++ = *pb++; */
 	       }
 	    }
    
@@ -1133,16 +1086,15 @@ static void SiS300LoadCursorImageARGB(ScrnInfoPtr pScrn, CursorPtr pCurs)
     if(srcheight < maxheight) {
 	for(; i < maxheight; i++) {
 	   for(j = 0; j < 32; j++) {
-	      *dest++ = 0xff000000;
+	      sisfbwritelinc(dest, 0xff000000); /* *dest++ = 0xff000000; */
 	   }
 	   if(sizedouble) {
 	      for(j = 0; j < 32; j++) {
-	      	*dest++ = 0xff000000;
+	      	sisfbwritelinc(dest, 0xff000000); /* *dest++ = 0xff000000; */
 	      }
 	   }
 	}
     }
-#endif
 
     if(!pSiS->UseHWARGBCursor) {
        if(pSiS->VBFlags & DISPTYPE_CRT1) {
@@ -1223,7 +1175,7 @@ static void SiS310LoadCursorImageARGB(ScrnInfoPtr pScrn, CursorPtr pCurs)
 
     if(srcwidth > 64)  srcwidth = 64;
     if(srcheight > 64) srcheight = 64;
-
+   
 #ifdef SISDUALHEAD
     if(pSiS->DualHeadMode)
        /* Use the global (real) FbBase in DHM */
@@ -1241,27 +1193,26 @@ static void SiS310LoadCursorImageARGB(ScrnInfoPtr pScrn, CursorPtr pCurs)
        p = src;
        pb = dest;
        src += pCurs->bits->width;
-       for(j = 0; j < srcwidth; j++)  *dest++ = *p++;
+       for(j = 0; j < srcwidth; j++) sisfbwritelpinc(dest, p); /* *dest++ = *p++; */
        if(srcwidth < 64) {
-          for(; j < 64; j++) *dest++ = 0;
+          for(; j < 64; j++) sisfbwritelinc(dest, 0);  /* *dest++ = 0; */
        }
        if(sizedouble) {
           for(j = 0; j < 64; j++) {
-             *dest++ = *pb++;
+             sisfbwritelinc(dest, sisfbreadlinc(pb)); /* *dest++ = *pb++; */
           }
        }
     }
     if(srcheight < maxheight) {
        for(; i < maxheight; i++) {
-	  for(j = 0; j < 64; j++) *dest++ = 0;
+	  for(j = 0; j < 64; j++) sisfbwritelinc(dest, 0); /* *dest++ = 0; */
 	  if(sizedouble) {
-	     for(j = 0; j < 64; j++) *dest++ = 0;
+	     for(j = 0; j < 64; j++) sisfbwritelinc(dest, 0); /* *dest++ = 0; */
 	  }
        }
     }
-
+    
     if(pSiS->ChipFlags & SiSCF_CRT2HWCKaputt) {
-
        if(!pSiS->UseHWARGBCursor) {
           if(pSiS->VBFlags & DISPTYPE_CRT1) {
 	     status1 = sis310GetCursorStatus;
@@ -1270,7 +1221,6 @@ static void SiS310LoadCursorImageARGB(ScrnInfoPtr pScrn, CursorPtr pCurs)
 	  SISWaitRetraceCRT1(pScrn);
 	  sis310SwitchToRGBCursor();
        }
-
     } else {
 
        if(!pSiS->UseHWARGBCursor) {
@@ -1328,8 +1278,7 @@ SiSHWCursorInit(ScreenPtr pScreen)
     pSiS->CursorInfoPtr = infoPtr;
     pSiS->UseHWARGBCursor = FALSE;
 
-    switch (pSiS->Chipset)  {
-    
+    switch (pSiS->Chipset)  {  
       case PCI_CHIP_SIS300:
       case PCI_CHIP_SIS630:
       case PCI_CHIP_SIS540:

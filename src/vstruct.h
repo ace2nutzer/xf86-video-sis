@@ -3,7 +3,7 @@
 /*
  * General structure definitions for universal mode switching modules
  *
- * Copyright (C) 2001-2004 by Thomas Winischhofer, Vienna, Austria
+ * Copyright (C) 2001-2005 by Thomas Winischhofer, Vienna, Austria
  *
  * If distributed as part of the Linux kernel, the following license terms
  * apply:
@@ -79,6 +79,7 @@ typedef struct _SiS_TVDataStruct
 	USHORT RVBHRS;
 	UCHAR  FlickerMode;
 	USHORT HALFRVBHRS;
+	USHORT RVBHRS2;
 	UCHAR  RY1COE;
 	UCHAR  RY2COE;
 	UCHAR  RY3COE;
@@ -103,11 +104,6 @@ typedef struct _SiS_LVDSCRT1DataStruct
 {
 	UCHAR  CR[15];
 } SiS_LVDSCRT1DataStruct;
-
-typedef struct _SiS_LCDACRT1DataStruct
-{
-	UCHAR  CR[17];
-} SiS_LCDACRT1DataStruct;
 
 typedef struct _SiS_CHTVRegDataStruct
 {
@@ -223,8 +219,6 @@ typedef struct _SiS_ModeResInfoStruct
 	UCHAR  YChar;
 } SiS_ModeResInfoStruct;
 
-
-
 typedef UCHAR DRAM4Type[4];
 
 /* Defines for SiS_CustomT */
@@ -248,6 +242,7 @@ typedef UCHAR DRAM4Type[4];
 #define CUT_COMPAL1400_2  16
 #define CUT_ASUSA2H_1     17
 #define CUT_ASUSA2H_2     18
+#define CUT_UNKNOWNLCD	  19
 
 typedef struct _SiS_Private
 {
@@ -323,6 +318,7 @@ typedef struct _SiS_Private
 	USHORT SiS_RVBHCFACT;
 	USHORT SiS_RVBHCMAX;
 	USHORT SiS_RVBHRS;
+	USHORT SiS_RVBHRS2;
 	USHORT SiS_VGAVT;
 	USHORT SiS_VGAHT;
 	USHORT SiS_VT;
@@ -454,40 +450,20 @@ typedef struct _SiS_Private
 #endif
 
 	const SiS_Part2PortTblStruct *SiS_CRT2Part2_1024x768_1;
-	const SiS_Part2PortTblStruct *SiS_CRT2Part2_1280x1024_1;
 	const SiS_Part2PortTblStruct *SiS_CRT2Part2_1024x768_2;
-	const SiS_Part2PortTblStruct *SiS_CRT2Part2_1280x1024_2;
 	const SiS_Part2PortTblStruct *SiS_CRT2Part2_1024x768_3;
-	const SiS_Part2PortTblStruct *SiS_CRT2Part2_1280x1024_3;
 
 	/* LVDS, Chrontel */
 
-	const SiS_LVDSDataStruct  *SiS_LVDS800x600Data_1;
-	const SiS_LVDSDataStruct  *SiS_LVDS800x600Data_2;
-	const SiS_LVDSDataStruct  *SiS_LVDS1024x768Data_1;
-	const SiS_LVDSDataStruct  *SiS_LVDS1024x768Data_2;
-	const SiS_LVDSDataStruct  *SiS_LVDS1280x1024Data_1;
-	const SiS_LVDSDataStruct  *SiS_LVDS1280x1024Data_2;
-	const SiS_LVDSDataStruct  *SiS_LVDS1280x960Data_1;
-	const SiS_LVDSDataStruct  *SiS_LVDS1280x960Data_2;
-	const SiS_LVDSDataStruct  *SiS_LVDS1400x1050Data_1;
-	const SiS_LVDSDataStruct  *SiS_LVDS1400x1050Data_2;
-	const SiS_LVDSDataStruct  *SiS_LVDS1600x1200Data_1;
-	const SiS_LVDSDataStruct  *SiS_LVDS1600x1200Data_2;
-	const SiS_LVDSDataStruct  *SiS_LVDS1280x768Data_1;
-	const SiS_LVDSDataStruct  *SiS_LVDS1280x768Data_2;
-	const SiS_LVDSDataStruct  *SiS_LVDS1024x600Data_1;
-	const SiS_LVDSDataStruct  *SiS_LVDS1024x600Data_2;
-	const SiS_LVDSDataStruct  *SiS_LVDS1152x768Data_1;
-	const SiS_LVDSDataStruct  *SiS_LVDS1152x768Data_2;
+	const SiS_LVDSDataStruct  *SiS_LVDS320x480Data_1;
 	const SiS_LVDSDataStruct  *SiS_LVDS640x480Data_1;
 	const SiS_LVDSDataStruct  *SiS_LVDS640x480Data_2;
-	const SiS_LVDSDataStruct  *SiS_LVDS320x480Data_1;
-	const SiS_LVDSDataStruct  *SiS_LVDSXXXxXXXData_1;
+	const SiS_LVDSDataStruct  *SiS_LVDS800x600Data_1;
+	const SiS_LVDSDataStruct  *SiS_LVDS1024x600Data_1;
+	const SiS_LVDSDataStruct  *SiS_LVDS1024x768Data_1;
 	const SiS_LVDSDataStruct  *SiS_LVDSBARCO1366Data_1;
 	const SiS_LVDSDataStruct  *SiS_LVDSBARCO1366Data_2;
 	const SiS_LVDSDataStruct  *SiS_LVDSBARCO1024Data_1;
-	const SiS_LVDSDataStruct  *SiS_LVDSBARCO1024Data_2;
 	const SiS_LVDSDataStruct  *SiS_LVDS848x480Data_1;
 	const SiS_LVDSDataStruct  *SiS_LVDS848x480Data_2;
 	const SiS_LVDSDataStruct  *SiS_CHTVUNTSCData;
@@ -499,87 +475,25 @@ typedef struct _SiS_Private
 	const SiS_LVDSDataStruct  *SiS_CHTVUPALNData;
 	const SiS_LVDSDataStruct  *SiS_CHTVOPALNData;
 	const SiS_LVDSDataStruct  *SiS_CHTVSOPALData;
-
-	const SiS_LVDSDesStruct  *SiS_PanelType00_1;
-	const SiS_LVDSDesStruct  *SiS_PanelType01_1;
-	const SiS_LVDSDesStruct  *SiS_PanelType02_1;
-	const SiS_LVDSDesStruct  *SiS_PanelType03_1;
-	const SiS_LVDSDesStruct  *SiS_PanelType04_1;
-	const SiS_LVDSDesStruct  *SiS_PanelType05_1;
-	const SiS_LVDSDesStruct  *SiS_PanelType06_1;
-	const SiS_LVDSDesStruct  *SiS_PanelType07_1;
-	const SiS_LVDSDesStruct  *SiS_PanelType08_1;
-	const SiS_LVDSDesStruct  *SiS_PanelType09_1;
-	const SiS_LVDSDesStruct  *SiS_PanelType0a_1;
-	const SiS_LVDSDesStruct  *SiS_PanelType0b_1;
-	const SiS_LVDSDesStruct  *SiS_PanelType0c_1;
-	const SiS_LVDSDesStruct  *SiS_PanelType0d_1;
-	const SiS_LVDSDesStruct  *SiS_PanelType0e_1;
-	const SiS_LVDSDesStruct  *SiS_PanelType0f_1;
-	const SiS_LVDSDesStruct  *SiS_PanelTypeNS_1;
-	const SiS_LVDSDesStruct  *SiS_PanelType00_2;
-	const SiS_LVDSDesStruct  *SiS_PanelType01_2;
-	const SiS_LVDSDesStruct  *SiS_PanelType02_2;
-	const SiS_LVDSDesStruct  *SiS_PanelType03_2;
-	const SiS_LVDSDesStruct  *SiS_PanelType04_2;
-	const SiS_LVDSDesStruct  *SiS_PanelType05_2;
-	const SiS_LVDSDesStruct  *SiS_PanelType06_2;
-	const SiS_LVDSDesStruct  *SiS_PanelType07_2;
-	const SiS_LVDSDesStruct  *SiS_PanelType08_2;
-	const SiS_LVDSDesStruct  *SiS_PanelType09_2;
-	const SiS_LVDSDesStruct  *SiS_PanelType0a_2;
-	const SiS_LVDSDesStruct  *SiS_PanelType0b_2;
-	const SiS_LVDSDesStruct  *SiS_PanelType0c_2;
-	const SiS_LVDSDesStruct  *SiS_PanelType0d_2;
-	const SiS_LVDSDesStruct  *SiS_PanelType0e_2;
-	const SiS_LVDSDesStruct  *SiS_PanelType0f_2;
-	const SiS_LVDSDesStruct  *SiS_PanelTypeNS_2;
-	const SiS_LVDSDesStruct  *SiS_CHTVUNTSCDesData;
-	const SiS_LVDSDesStruct  *SiS_CHTVONTSCDesData;
-	const SiS_LVDSDesStruct  *SiS_CHTVUPALDesData;
-	const SiS_LVDSDesStruct  *SiS_CHTVOPALDesData;
-
-	const SiS_LVDSCRT1DataStruct  *SiS_LVDSCRT1800x600_1;
-	const SiS_LVDSCRT1DataStruct  *SiS_LVDSCRT11024x768_1;
-	const SiS_LVDSCRT1DataStruct  *SiS_LVDSCRT11280x1024_1;
-	const SiS_LVDSCRT1DataStruct  *SiS_LVDSCRT11400x1050_1;
-	const SiS_LVDSCRT1DataStruct  *SiS_LVDSCRT11280x768_1;
-	const SiS_LVDSCRT1DataStruct  *SiS_LVDSCRT11024x600_1;
-	const SiS_LVDSCRT1DataStruct  *SiS_LVDSCRT11152x768_1;
-	const SiS_LVDSCRT1DataStruct  *SiS_LVDSCRT11600x1200_1;
-	const SiS_LVDSCRT1DataStruct  *SiS_LVDSCRT1800x600_1_H;
-	const SiS_LVDSCRT1DataStruct  *SiS_LVDSCRT11024x768_1_H;
-	const SiS_LVDSCRT1DataStruct  *SiS_LVDSCRT11280x1024_1_H;
-	const SiS_LVDSCRT1DataStruct  *SiS_LVDSCRT11400x1050_1_H;
-	const SiS_LVDSCRT1DataStruct  *SiS_LVDSCRT11280x768_1_H;
-	const SiS_LVDSCRT1DataStruct  *SiS_LVDSCRT11024x600_1_H;
-	const SiS_LVDSCRT1DataStruct  *SiS_LVDSCRT11152x768_1_H;
-	const SiS_LVDSCRT1DataStruct  *SiS_LVDSCRT11600x1200_1_H;
-	const SiS_LVDSCRT1DataStruct  *SiS_LVDSCRT1800x600_2;
-	const SiS_LVDSCRT1DataStruct  *SiS_LVDSCRT11024x768_2;
-	const SiS_LVDSCRT1DataStruct  *SiS_LVDSCRT11280x1024_2;
-	const SiS_LVDSCRT1DataStruct  *SiS_LVDSCRT11400x1050_2;
-	const SiS_LVDSCRT1DataStruct  *SiS_LVDSCRT11280x768_2;
-	const SiS_LVDSCRT1DataStruct  *SiS_LVDSCRT11024x600_2;
-	const SiS_LVDSCRT1DataStruct  *SiS_LVDSCRT11152x768_2;
-	const SiS_LVDSCRT1DataStruct  *SiS_LVDSCRT11600x1200_2;
-	const SiS_LVDSCRT1DataStruct  *SiS_LVDSCRT1800x600_2_H;
-	const SiS_LVDSCRT1DataStruct  *SiS_LVDSCRT11024x768_2_H;
-	const SiS_LVDSCRT1DataStruct  *SiS_LVDSCRT11280x1024_2_H;
-	const SiS_LVDSCRT1DataStruct  *SiS_LVDSCRT11400x1050_2_H;
-	const SiS_LVDSCRT1DataStruct  *SiS_LVDSCRT11280x768_2_H;
-	const SiS_LVDSCRT1DataStruct  *SiS_LVDSCRT11024x600_2_H;
-	const SiS_LVDSCRT1DataStruct  *SiS_LVDSCRT11152x768_2_H;
-	const SiS_LVDSCRT1DataStruct  *SiS_LVDSCRT11600x1200_2_H;
-	const SiS_LVDSCRT1DataStruct  *SiS_LVDSCRT1XXXxXXX_1;
-	const SiS_LVDSCRT1DataStruct  *SiS_LVDSCRT1XXXxXXX_1_H;
+	
+	const SiS_LVDSDesStruct   *SiS_PanelType04_1a;
+	const SiS_LVDSDesStruct   *SiS_PanelType04_2a;
+	const SiS_LVDSDesStruct   *SiS_PanelType04_1b;
+	const SiS_LVDSDesStruct   *SiS_PanelType04_2b;
+	
+	const SiS_LVDSCRT1DataStruct  *SiS_LVDSCRT1320x480_1;
 	const SiS_LVDSCRT1DataStruct  *SiS_LVDSCRT1640x480_1;
 	const SiS_LVDSCRT1DataStruct  *SiS_LVDSCRT1640x480_1_H;
 	const SiS_LVDSCRT1DataStruct  *SiS_LVDSCRT1640x480_2;
 	const SiS_LVDSCRT1DataStruct  *SiS_LVDSCRT1640x480_2_H;
 	const SiS_LVDSCRT1DataStruct  *SiS_LVDSCRT1640x480_3;
 	const SiS_LVDSCRT1DataStruct  *SiS_LVDSCRT1640x480_3_H;
-	const SiS_LVDSCRT1DataStruct  *SiS_LVDSCRT1320x480_1;
+#if 0	
+	const SiS_LVDSCRT1DataStruct  *SiS_LVDSCRT11024x600_1;
+	const SiS_LVDSCRT1DataStruct  *SiS_LVDSCRT11024x600_1_H;
+	const SiS_LVDSCRT1DataStruct  *SiS_LVDSCRT11024x600_2;
+	const SiS_LVDSCRT1DataStruct  *SiS_LVDSCRT11024x600_2_H;
+#endif	
 	const SiS_LVDSCRT1DataStruct  *SiS_CHTVCRT1UNTSC;
 	const SiS_LVDSCRT1DataStruct  *SiS_CHTVCRT1ONTSC;
 	const SiS_LVDSCRT1DataStruct  *SiS_CHTVCRT1UPAL;
@@ -612,6 +526,7 @@ typedef struct _SiS_Private
   	USHORT 	PanelVRS,  PanelVRE;
 	USHORT  PanelVCLKIdx300;
 	USHORT  PanelVCLKIdx315;
+	BOOLEAN Alternate1600x1200;
 
 	BOOLEAN UseCustomMode;
 	BOOLEAN CRT1UsesCustomMode;

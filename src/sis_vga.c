@@ -3,7 +3,7 @@
 /*
  * Mode setup and basic video bridge detection
  *
- * Copyright (C) 2001-2004 by Thomas Winischhofer, Vienna, Austria.
+ * Copyright (C) 2001-2005 by Thomas Winischhofer, Vienna, Austria.
  *
  * The SISInit() function for old series (except TV and FIFO calculation)
  * was previously based on code which was Copyright (C) 1998,1999 by Alan
@@ -37,6 +37,12 @@
  */
 
 #include "sis.h"
+#define SIS_NEED_inSISREG
+#define SIS_NEED_outSISREG
+#define SIS_NEED_inSISIDXREG
+#define SIS_NEED_outSISIDXREG
+#define SIS_NEED_orSISIDXREG
+#define SIS_NEED_andSISIDXREG
 #include "sis_regs.h"
 #include "sis_dac.h"
 
@@ -45,7 +51,6 @@ static Bool  SIS300Init(ScrnInfoPtr pScrn, DisplayModePtr mode);
 static int   SIS6326DoSense(ScrnInfoPtr pScrn, int tempbh, int tempbl, int tempch, int tempcl);
 static void  SISSense6326(ScrnInfoPtr pScrn);
 static void  SiS6326TVDelay(ScrnInfoPtr pScrn, int delay);
-
 extern void  SISSense30x(ScrnInfoPtr pScrn, Bool quiet);
 extern void  SISSenseChrontel(ScrnInfoPtr pScrn, Bool quiet);
 
@@ -57,8 +62,10 @@ void SiSVGARestoreFonts(ScrnInfoPtr pScrn);
 void SISVGALock(SISPtr pSiS);
 void SiSVGAUnlock(SISPtr pSiS);
 void SiSVGAProtect(ScrnInfoPtr pScrn, Bool on);
+#ifdef SIS_PC_PLATFORM
 Bool SiSVGAMapMem(ScrnInfoPtr pScrn);
 void SiSVGAUnmapMem(ScrnInfoPtr pScrn);
+#endif
 Bool SiSVGASaveScreen(ScreenPtr pScreen, int mode);
 static Bool SiSVGAInit(ScrnInfoPtr pScrn, DisplayModePtr mode, int fixsync);
 
@@ -1002,12 +1009,11 @@ SISIsUMC(SISPtr pSiS)
 /* Detect video bridge and set VBFlags accordingly */
 void SISVGAPreInit(ScrnInfoPtr pScrn)
 {
-    SISPtr pSiS = SISPTR(pScrn);
+    SISPtr pSiS = SISPTR(pScrn);    
     int    temp,temp1,temp2,sistypeidx;
     int    upperlimitlvds, lowerlimitlvds;
     int    upperlimitch, lowerlimitch;
     int    chronteltype, chrontelidreg, upperlimitvb;
-    
     static const char *detectvb = "Detected SiS%s video bridge (%s, ID %d; Rev 0x%x)\n";
 #if 0
     UChar sr17=0;
@@ -1051,7 +1057,7 @@ void SISVGAPreInit(ScrnInfoPtr pScrn)
        default:
           pSiS->ModeInit = SISInit;
     }
-
+  
     if((pSiS->Chipset == PCI_CHIP_SIS6326) && (pSiS->SiS6326Flags & SIS6326_HASTV)) {
        UChar sr0d;
        inSISIDXREG(SISSR, 0x0d, sr0d);
@@ -1064,7 +1070,7 @@ void SISVGAPreInit(ScrnInfoPtr pScrn)
     pSiS->VBFlags = pSiS->VBFlags2 = 0; /* reset VBFlags */
     pSiS->SiS_Pr->SiS_UseLCDA = FALSE;
     pSiS->SiS_Pr->Backup = FALSE;
-
+    
     /* Videobridges only available for 300/315/330/340 series */
     if((pSiS->VGAEngine != SIS_300_VGA) && (pSiS->VGAEngine != SIS_315_VGA))
        return;
@@ -1348,7 +1354,7 @@ void SISVGAPreInit(ScrnInfoPtr pScrn)
 	     }
 	  }
        }
-    }
+    }  
 }
 
 static void
@@ -1503,7 +1509,7 @@ SiSVGASaveColormap(ScrnInfoPtr pScrn, SISRegPtr save)
     int i;
 
     if(pSiS->VGACMapSaved) return;
-
+    
     outSISREG(SISPEL, 0xff);			
     
     outSISREG(SISCOLIDXR, 0x00); 
@@ -1708,7 +1714,6 @@ SiSVGAMapMem(ScrnInfoPtr pScrn)
 				    
     return(pSiS->VGAMemBase != NULL);
 }
-
 
 void
 SiSVGAUnmapMem(ScrnInfoPtr pScrn)

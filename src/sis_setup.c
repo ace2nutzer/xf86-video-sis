@@ -3,7 +3,7 @@
 /*
  * Basic hardware and memory detection
  *
- * Copyright (C) 2001-2004 by Thomas Winischhofer, Vienna, Austria.
+ * Copyright (C) 2001-2005 by Thomas Winischhofer, Vienna, Austria.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,6 +34,12 @@
  */
  
 #include "sis.h"
+#define SIS_NEED_inSISREGW
+#define SIS_NEED_inSISREGL
+#define SIS_NEED_outSISREGW
+#define SIS_NEED_outSISREGL
+#define SIS_NEED_inSISIDXREG
+#define SIS_NEED_outSISIDXREG
 #include "sis_regs.h"
 
 extern int SiSMclk(SISPtr pSiS);
@@ -51,7 +57,7 @@ static const char *dramTypeStr[] = {
 	"VCM",	      /* for 630 */
 	"DDR2 SDRAM",
         "" };
-
+	
 /* MCLK tables for SiS6326 */
 static const int SiS6326MCLKIndex[4][8] = {
        { 10, 12, 14, 16, 17, 18, 19,  7 },  /* SGRAM */
@@ -332,7 +338,7 @@ sis300Setup(ScrnInfoPtr pScrn)
 	    pSiS->BusWidth);
 }
 
-/* For 315, 315H, 315PRO, 330, 340 */
+/* For 315, 315H, 315PRO/E, 330, 340 */
 static  void
 sis315Setup(ScrnInfoPtr pScrn)
 {
@@ -340,7 +346,7 @@ sis315Setup(ScrnInfoPtr pScrn)
     int     busSDR[4]  = {64, 64, 128, 128};
     int     busDDR[4]  = {32, 32,  64,  64};
     int     busDDRA[4] = {64+32, 64+32 , (64+32)*2, (64+32)*2};
-    unsigned int config, config1, config2, sr3a;
+    unsigned int config, config1, config2, sr3a, cr5f;
     char    *dramTypeStr315[] = {
         "Single channel 1 rank SDR SDRAM",
         "Single channel 1 rank SDR SGRAM",
@@ -395,10 +401,13 @@ sis315Setup(ScrnInfoPtr pScrn)
 
     inSISIDXREG(SISSR, 0x14, config);
     config1 = (config & 0x0C) >> 2;
-    inSISIDXREG(SISSR, 0x3A, sr3a);
+    
+    inSISIDXREG(SISSR, 0x3a, sr3a);
     config2 = sr3a & 0x03;
+    
+    inSISIDXREG(SISCR,0x5f,cr5f);
 
-    pScrn->videoRam = (1 << ((config & 0xF0) >> 4)) * 1024;
+    pScrn->videoRam = (1 << ((config & 0xf0) >> 4)) * 1024;
 
     if(pSiS->Chipset == PCI_CHIP_SIS340) {
      
@@ -426,9 +435,11 @@ sis315Setup(ScrnInfoPtr pScrn)
        xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
             "DRAM type: %s\n", dramTypeStr330[(config1 * 4) + (config2 & 0x02)]);
 
-    } else {
+    } else { /* 315, USB 315 */
 
        pSiS->IsAGPCard = ((sr3a & 0x30) == 0x30) ? FALSE : TRUE;
+       
+       if(cr5f & 0x10) pSiS->ChipFlags |= SiSCF_Is315E;
 
        /* If SINGLE_CHANNEL_2_RANK or DUAL_CHANNEL_1_RANK -> mem * 2 */
        if((config1 == 0x01) || (config1 == 0x03)) {
@@ -484,7 +495,7 @@ sis315Setup(ScrnInfoPtr pScrn)
 	  }
        }
        
-    } else {
+    } else {	/* 315 */
     
        if(config2 & 0x02) pSiS->MemClock *= 2;
        if(config1 == 0x02)
@@ -493,6 +504,11 @@ sis315Setup(ScrnInfoPtr pScrn)
           pSiS->BusWidth = busDDR[(config & 0x03)];
        else
           pSiS->BusWidth = busSDR[(config & 0x03)];
+
+       if(pSiS->ChipFlags & SiSCF_Is315E) {	  
+          inSISIDXREG(SISSR,0x15,config);
+          if(config & 0x10) pSiS->BusWidth = 32;
+       }  
 	  
     }
 
@@ -715,7 +731,7 @@ SiSSetup(ScrnInfoPtr pScrn)
     pSiS->Flags = 0;
     pSiS->VBFlags = 0;
 
-    switch (SISPTR(pScrn)->Chipset)  {
+    switch (SISPTR(pScrn)->Chipset) {
     case PCI_CHIP_SIS300:
     case PCI_CHIP_SIS630:  /* +730 */
     case PCI_CHIP_SIS540:

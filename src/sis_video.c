@@ -3,7 +3,7 @@
 /*
  * Xv driver for SiS 300, 315 and 330 series.
  *
- * Copyright (C) 2001-2004 by Thomas Winischhofer, Vienna, Austria.
+ * Copyright (C) 2001-2005 by Thomas Winischhofer, Vienna, Austria.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -102,6 +102,12 @@
 #include "dixstruct.h"
 #include "fourcc.h"
 
+#define SIS_NEED_inSISREG
+#define SIS_NEED_outSISREG
+#define SIS_NEED_inSISIDXREG
+#define SIS_NEED_outSISIDXREG
+#define SIS_NEED_setSISIDXREGmask
+#define SIS_NEED_MYMMIO
 #include "sis_regs.h"
 
 #ifdef INCL_YUV_BLIT_ADAPTOR
@@ -136,7 +142,8 @@ static int 	SISPutImageBlit( ScrnInfoPtr,
     			short, short, short, short, short, short, short, short,
     			int, UChar *, short, short, Bool, RegionPtr, ULong);
 static int 	SISQueryImageAttributesBlit(ScrnInfoPtr,
-    			int, UShort *, UShort *, int *, int *);			
+    			int, UShort *, UShort *, int *, int *);	
+extern void     SISWriteBlitPacket(SISPtr pSiS, CARD32 *packet);
 #endif
 
 #define OFF_DELAY   	200    /* milliseconds */
@@ -225,6 +232,7 @@ static char sisxvsdgethardwareinfo[]			= "XV_SD_GETHARDWAREINFO";
 static char sisxvsdgetbusid[] 				= "XV_SD_GETBUSID";
 static char sisxvsdqueryvbflagsversion[] 		= "XV_SD_QUERYVBFLAGSVERSION";
 static char sisxvsdgetsdflags[] 			= "XV_SD_GETSDFLAGS";
+static char sisxvsdgetsdflags2[] 			= "XV_SD_GETSDFLAGS2";
 static char sisxvsdunlocksisdirect[] 			= "XV_SD_UNLOCKSISDIRECT";
 static char sisxvsdsetvbflags[] 			= "XV_SD_SETVBFLAGS";
 static char sisxvsdquerydetecteddevices[] 		= "XV_SD_QUERYDETECTEDDEVICES";
@@ -297,18 +305,18 @@ static XF86VideoEncodingRec DummyEncoding =
 
 #ifndef SIS_CP
 #ifdef SISDEINT
+#define NUM_ATTRIBUTES_300 69
+#ifdef TWDEBUG
+#define NUM_ATTRIBUTES_315 76
+#else
+#define NUM_ATTRIBUTES_315 75
+#endif
+#else
 #define NUM_ATTRIBUTES_300 68
 #ifdef TWDEBUG
 #define NUM_ATTRIBUTES_315 75
 #else
 #define NUM_ATTRIBUTES_315 74
-#endif
-#else
-#define NUM_ATTRIBUTES_300 67
-#ifdef TWDEBUG
-#define NUM_ATTRIBUTES_315 74
-#else
-#define NUM_ATTRIBUTES_315 73
 #endif
 #endif
 #endif
@@ -339,6 +347,7 @@ static XF86AttributeRec SISAttributes_300[NUM_ATTRIBUTES_300] =
    {             XvGettable, 0, -1,    	       sisxvsdgetbusid},
    {             XvGettable, 0, -1,    	       sisxvsdqueryvbflagsversion},
    {             XvGettable, 0, -1,    	       sisxvsdgetsdflags},
+   {             XvGettable, 0, -1,    	       sisxvsdgetsdflags2},
    {XvSettable | XvGettable, 0, -1,    	       sisxvsdunlocksisdirect},
    {XvSettable             , 0, -1,    	       sisxvsdsetvbflags},
    {             XvGettable, 0, -1,    	       sisxvsdquerydetecteddevices},
@@ -420,6 +429,7 @@ static XF86AttributeRec SISAttributes_315[NUM_ATTRIBUTES_315] =
    {             XvGettable, 0, -1,    	       sisxvsdgetbusid},
    {             XvGettable, 0, -1,    	       sisxvsdqueryvbflagsversion},
    {             XvGettable, 0, -1,   	       sisxvsdgetsdflags},
+   {             XvGettable, 0, -1,   	       sisxvsdgetsdflags2},
    {XvSettable | XvGettable, 0, -1,   	       sisxvsdunlocksisdirect},
    {XvSettable             , 0, -1,   	       sisxvsdsetvbflags},
    {             XvGettable, 0, -1,    	       sisxvsdquerydetecteddevices},
@@ -953,7 +963,7 @@ SiSSetXvGamma(SISPtr pSiS)
     UChar backup = getsrreg(pSiS, 0x1f);
     setsrregmask(pSiS, 0x1f, 0x08, 0x18);
     for(i = 0; i <= 255; i++) {
-       MMIO_OUT32(pSiS->IOBase, 0x8570,
+       SIS_MMIO_OUT32(pSiS->IOBase, 0x8570,
        			(i << 24)     |
 			(pSiS->XvGammaRampBlue[i] << 16) |
 			(pSiS->XvGammaRampGreen[i] << 8) |
@@ -1580,6 +1590,7 @@ SISSetupImageVideo(ScreenPtr pScreen)
     pSiS->xv_GBI	      = MAKE_ATOM(sisxvsdgetbusid);
     pSiS->xv_QVV              = MAKE_ATOM(sisxvsdqueryvbflagsversion);
     pSiS->xv_GSF              = MAKE_ATOM(sisxvsdgetsdflags);
+    pSiS->xv_GSF2             = MAKE_ATOM(sisxvsdgetsdflags2);
     pSiS->xv_USD              = MAKE_ATOM(sisxvsdunlocksisdirect);
     pSiS->xv_SVF              = MAKE_ATOM(sisxvsdsetvbflags);
     pSiS->xv_QDD	      = MAKE_ATOM(sisxvsdquerydetecteddevices);
@@ -1748,7 +1759,7 @@ RegionsEqual(RegionPtr A, RegionPtr B)
 static int
 SISSetPortAttribute(ScrnInfoPtr pScrn, Atom attribute,
   		    INT32 value, pointer data)
-{
+{ 
   SISPortPrivPtr pPriv = (SISPortPrivPtr)data;
   SISPtr pSiS = SISPTR(pScrn);
 #ifdef SISDUALHEAD
@@ -2225,7 +2236,7 @@ SISSetPortAttribute(ScrnInfoPtr pScrn, Atom attribute,
        pSiS->XvGammaBlue = value;
        SiSUpdateXvGamma(pSiS, pPriv);
      } else return BadMatch;
-  } else return BadMatch;
+  } else return BadMatch;  
   return Success;
 }
 
@@ -2235,7 +2246,7 @@ SISGetPortAttribute(
   Atom attribute,
   INT32 *value, 
   pointer data
-){
+){ 
   SISPortPrivPtr pPriv = (SISPortPrivPtr)data;
   SISPtr pSiS = SISPTR(pScrn);
 #ifdef SISDUALHEAD
@@ -2290,6 +2301,8 @@ SISGetPortAttribute(
      *value = pSiS->CRT1isoff ? 0 : 1;
   } else if(attribute == pSiS->xv_GSF) {
      *value = pSiS->SiS_SD_Flags;
+  } else if(attribute == pSiS->xv_GSF2) {
+     *value = pSiS->SiS_SD2_Flags;     
   } else if(attribute == pSiS->xv_USD) {
      *value = pSiS->xv_sisdirectunlocked;
   } else if(attribute == pSiS->xv_TAF) {
@@ -2337,8 +2350,8 @@ SISGetPortAttribute(
 	if(pSiS->CRT2SepGamma) *value |= 0x08;
 #ifdef SISDUALHEAD
      }
+#endif     
      if(pSiS->XvGamma) *value |= 0x04;
-#endif
   } else if(attribute == pSiS->xv_TXS) {
      *value = SiS_GetTVxscale(pScrn);
   } else if(attribute == pSiS->xv_TYS) {
@@ -2449,7 +2462,7 @@ SISGetPortAttribute(
      } else if(attribute == pSiS->xvGammaBlue) {
         *value = pSiS->XvGammaBlue;
      } else return BadMatch;
-  } else return BadMatch;
+  } else return BadMatch;  
   return Success;
 }
 
@@ -3482,14 +3495,17 @@ SISDisplayVideo(ScrnInfoPtr pScrn, SISPortPrivPtr pPriv)
 #ifdef SISMERGED
    if(!pSiS->MergedFB) {
 #endif
-      if(pPriv->displayMode & (DISPMODE_SINGLE1 | DISPMODE_MIRROR)) {
-         if(!(pSiS->MiscFlags & MISC_CRT1OVERLAY)) {
-            if(pPriv->overlayStatus) {
-	       close_overlay(pSiS, pPriv);
-	    }
-	    pPriv->NoOverlay = TRUE;
-	    return;
-         }
+      if( ((pPriv->displayMode & DISPMODE_MIRROR) &&
+           ((pSiS->MiscFlags & (MISC_CRT1OVERLAY|MISC_CRT2OVERLAY)) != (MISC_CRT1OVERLAY|MISC_CRT2OVERLAY))) ||
+	  ((pPriv->displayMode & DISPMODE_SINGLE1) && 
+	   (!(pSiS->MiscFlags & MISC_CRT1OVERLAY))) ||
+	  ((pPriv->displayMode & DISPMODE_SINGLE2) && 
+	   (!(pSiS->MiscFlags & MISC_CRT2OVERLAY))) ) {
+         if(pPriv->overlayStatus) {
+	    close_overlay(pSiS, pPriv);
+	 }
+	 pPriv->NoOverlay = TRUE;
+	 return;
       }
 #ifdef SISMERGED
    }
@@ -3642,6 +3658,13 @@ SISDisplayVideo(ScrnInfoPtr pScrn, SISPortPrivPtr pPriv)
          (overlay.dstBox2.x1 >= screen2width - 2)       || 
          (overlay.dstBox2.y1 >= overlay.dstBox2.y2))
 	 overlay.DoSecond = FALSE;
+	 
+      /* Check if dotclock is within limits for CRT1 */
+      if(pPriv->displayMode & (DISPMODE_SINGLE2 | DISPMODE_MIRROR)) {
+         if(!(pSiS->MiscFlags & MISC_CRT2OVERLAY)) {
+            overlay.DoSecond = FALSE;
+         }
+      }
 
       /* If neither overlay is to be displayed, disable them if they are currently enabled */
       if((!overlay.DoFirst) && (!overlay.DoSecond)) {
@@ -4239,6 +4262,11 @@ SISPutImage(
 #endif
 
 #if 0
+   xf86DrvMsg(0, X_INFO, "PutImage: src %dx%d-%dx%d, drw %dx%d-%dx%d, id %x, w %d h %d, buf %p\n",
+   	src_x, src_y, src_w, src_h, drw_x, drw_y, drw_w, drw_h, id, width, height, buf);
+#endif   	
+
+#if 0
    if(id == SDC_ID) {
       return(SiSHandleSiSDirectCommand(pScrn, pPriv, (sisdirectcommand *)buf));
    }
@@ -4331,7 +4359,7 @@ SISPutImage(
          CARD8 *dest = (CARD8 *)(pSiS->FbBase + pPriv->bufAddr[pPriv->currentBuf]);      
          int i = height;
          while(i--) {
-            (*pSiS->SiSFastVidCopy)(dest, src, pPriv->srcPitch);
+	    SiSMemCopyToVideoRam(pSiS, dest, src, pPriv->srcPitch);
 	    src += pPriv->srcPitch;
 	    dest += (pPriv->srcPitch << 1);
          }
@@ -4343,7 +4371,7 @@ SISPutImage(
 
       /* copy data */
       if((pSiS->XvUseMemcpy) || (totalSize < 16)) {
-         (*pSiS->SiSFastVidCopy)(pSiS->FbBase + pPriv->bufAddr[pPriv->currentBuf], buf, totalSize);
+         SiSMemCopyToVideoRam(pSiS, pSiS->FbBase + pPriv->bufAddr[pPriv->currentBuf], buf, totalSize);
       } else {
          ULong i;
          CARD32 *src = (CARD32 *)buf;
@@ -4731,7 +4759,7 @@ SISInitOffscreenImages(ScreenPtr pScreen)
     if(pSiS->VGAEngine == SIS_300_VGA) 	num = NUMOFFSCRIMAGES_300;
     else 				num = NUMOFFSCRIMAGES_315;
 
-    for(i = 0; i <= num; i++) {
+    for(i = 0; i < num; i++) {
        SISOffscreenImages[i].max_width  = DummyEncoding.width;
        SISOffscreenImages[i].max_height = DummyEncoding.height;
        if(pSiS->VGAEngine == SIS_300_VGA) {
@@ -4739,9 +4767,9 @@ SISInitOffscreenImages(ScreenPtr pScreen)
 	  SISOffscreenImages[i].attributes = &SISAttributes_300[0];
        } else {
 	  if(pPriv->hasTwoOverlays) {
-	     SISOffscreenImages[i].num_attributes = NUM_ATTRIBUTES_315;
-	  } else {
 	     SISOffscreenImages[i].num_attributes = NUM_ATTRIBUTES_315 - 1;
+	  } else {
+	     SISOffscreenImages[i].num_attributes = NUM_ATTRIBUTES_315;
 	  }
 	  SISOffscreenImages[i].attributes = &SISAttributes_315[0];
        }
@@ -4908,19 +4936,7 @@ SISStopVideoBlit(ScrnInfoPtr pScrn, ULong index, Bool shutdown)
    } 
 }
 
-static void
-SISWriteBlitPacket(SISPtr pSiS, CARD32 *packet)
-{
-   CARD32 dummybuf;
-   
-   SiSWritePacketPart(packet[0], packet[1], packet[2], packet[3]);
-   SiSWritePacketPart(packet[4], packet[5], packet[6], packet[7]);
-   SiSWritePacketPart(packet[8], packet[9], packet[10], packet[11]);
-   SiSWritePacketPart(packet[12], packet[13], packet[14], packet[15]);
-   SiSWritePacketPart(packet[16], packet[17], packet[18], packet[19]);
-   SiSSyncWP;
-   (void)dummybuf; /* Suppress compiler warning */
-}
+
 
 static int
 SISPutImageBlit(
@@ -5053,7 +5069,7 @@ SISPutImageBlit(
    case PIXEL_FMT_I420:
       MyPacket.P12_Command = YUV_FORMAT_NV12;
       /* Copy y plane */
-      (*pSiS->SiSFastVidCopy)(ybased, ybases, bytesize);
+      SiSMemCopyToVideoRam(pSiS, ybased, ybases, bytesize);
       /* Copy u/v planes */
       wb = srcPitch >> 1;
       h = height >> 1;
@@ -5078,7 +5094,7 @@ SISPutImageBlit(
       }
       break;
    default:
-      (*pSiS->SiSFastVidCopy)(ybased, ybases, totalSize);
+      SiSMemCopyToVideoRam(pSiS, ybased, ybases, totalSize);
    }
 
 #ifdef SISDUALHEAD
@@ -5227,8 +5243,8 @@ mycont:
 #if 0   
    {
    int debug = 0;
-   while( (MMIO_IN16(pSiS->IOBase, Q_STATUS+2) & 0x8000) != 0x8000) { debug++; }; 
-   while( (MMIO_IN16(pSiS->IOBase, Q_STATUS+2) & 0x8000) != 0x8000) { debug++; }; 
+   while( (SIS_MMIO_IN16(pSiS->IOBase, Q_STATUS+2) & 0x8000) != 0x8000) { debug++; }; 
+   while( (SIS_MMIO_IN16(pSiS->IOBase, Q_STATUS+2) & 0x8000) != 0x8000) { debug++; }; 
    xf86DrvMsg(0, X_INFO, "vsync %d, debug %d\n", pPriv->vsync, debug);
    }
 #endif   

@@ -3,7 +3,7 @@
 /*
  * Global definitions for init.c and init301.c
  *
- * Copyright (C) 2001-2004 by Thomas Winischhofer, Vienna, Austria
+ * Copyright (C) 2001-2005 by Thomas Winischhofer, Vienna, Austria
  *
  * If distributed as part of the Linux kernel, the following license terms
  * apply:
@@ -91,6 +91,7 @@
 #define VB_SISLCDA		(VB_SIS302B|VB_SIS301C|VB_SIS301LV|VB_SIS302LV|VB_SIS302ELV)
 #define VB_SISYPBPR		(VB_SIS301C|VB_SIS301LV|VB_SIS302LV|VB_SIS302ELV)
 #define VB_SISHIVISION		(VB_SIS301|VB_SIS301B|VB_SIS302B)
+#define VB_SISTMDSLCDA		(VB_SIS301C)
 
 /* VBInfo */
 #define SetSimuScanMode         0x0001   /* CR 30 */
@@ -483,16 +484,17 @@
 #define VCLK34_300              0x3d   /* Index in VCLKData table (300) */
 #define VCLK_CUSTOM_300		0x47
 
-#define VCLK65_315              0x0b   /* Index in (VB)VCLKData table (315) */
-#define VCLK108_2_315           0x19   /* Index in (VB)VCLKData table (315) */
-#define VCLK81_315		0x5b   /* Index in (VB)VCLKData table (315) */
-#define VCLK162_315             0x5e   /* Index in (VB)VCLKData table (315) */
-#define VCLK108_3_315           0x45   /* Index in VBVCLKData table (315) */
-#define VCLK100_315             0x46   /* Index in VBVCLKData table (315) */
+#define VCLK65_315              0x0b   /* Indices in (VB)VCLKData table (315) */
+#define VCLK108_2_315           0x19   
+#define VCLK81_315		0x5b   
+#define VCLK162_315             0x5e   
+#define VCLK108_3_315           0x45   
+#define VCLK100_315             0x46   
 #define VCLK34_315              0x55
 #define VCLK68_315		0x0d
-#define VCLK_1280x800_315_2	0x5c   /* Index in VBVCLKData table (315) */
-#define VCLK121_315		0x5d   /* Index in VBVCLKData table (315) */
+#define VCLK_1280x800_315_2	0x5c   
+#define VCLK121_315		0x5d   
+#define VCLK130_315		0x72   
 #define VCLK_1280x720		0x5f
 #define VCLK_1280x768_2		0x60
 #define VCLK_1280x768_3		0x61   /* (unused?) */

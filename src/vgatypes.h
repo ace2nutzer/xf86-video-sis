@@ -3,7 +3,7 @@
 /*
  * General type definitions for universal mode switching modules
  *
- * Copyright (C) 2001-2004 by Thomas Winischhofer, Vienna, Austria
+ * Copyright (C) 2001-2005 by Thomas Winischhofer, Vienna, Austria
  *
  * If distributed as part of the Linux kernel, the following license terms
  * apply:
@@ -191,6 +191,11 @@ struct _SIS_HW_INFO
 /* lock sisfb from register access */
 #define SISFB_SET_LOCK		0x4004f306
 
+/* Magic value for USB device */
+#ifndef SISFB_USB_MAGIC
+#define SISFB_USB_MAGIC		0x55aa2011
+#endif
+
 /* Structure argument for SISFB_GET_INFO ioctl  */
 typedef struct _SISFB_INFO sisfb_info, *psisfb_info;
 
@@ -212,9 +217,9 @@ struct _SISFB_INFO {
 
 	CARD32 	sisfb_tqlen;		/* turbo queue length (in KB) */
 
-	CARD32 	sisfb_pcibus;      	/* The card's PCI ID */
-	CARD32 	sisfb_pcislot;
-	CARD32 	sisfb_pcifunc;
+	CARD32 	sisfb_pcibus;      	/* The card's PCI bus ID. For USB, bus = SISFB_USB_MAGIC */
+	CARD32 	sisfb_pcislot;		/* alias usbbus */
+	CARD32 	sisfb_pcifunc;		/* alias usbdev */
 
 	CARD8 	sisfb_lcdpdc;
 
@@ -236,7 +241,8 @@ struct _SISFB_INFO {
 
 	CARD8 reserved[208]; 			/* for future use */
 };
-#endif
+
+#endif /* LINUX_XF86 */
 
 #endif
 

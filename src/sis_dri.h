@@ -3,7 +3,7 @@
 /*
  * SiS DRI wrapper
  *
- * Copyright (C) 2001-2004 by Thomas Winischhofer, Vienna, Austria
+ * Copyright (C) 2001-2005 by Thomas Winischhofer, Vienna, Austria
  *
  * Licensed under the following terms:
  *

@@ -3,7 +3,7 @@
 /*
  * 2D Acceleration for SiS 315 and 330 series
  *
- * Copyright (C) 2001-2004 by Thomas Winischhofer, Vienna, Austria
+ * Copyright (C) 2001-2005 by Thomas Winischhofer, Vienna, Austria
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,9 +35,10 @@
  */
 
 #include "sis.h"
-
+#define SIS_NEED_MYMMIO
+#define SIS_NEED_ACCELBUF
+#include "sis_regs.h"
 #include "xaarop.h"
-
 #include "sis310_accel.h"
 
 #if 0
@@ -229,6 +230,10 @@ static CARD32 SiSDstTextureFormats32[3] = { PICT_x8r8g8b8, PICT_a8r8g8b8, 0 };
 
 #ifdef SISDUALHEAD
 static void SiSRestoreAccelState(ScrnInfoPtr pScrn);
+#endif
+
+#ifdef INCL_YUV_BLIT_ADAPTOR
+void        SISWriteBlitPacket(SISPtr pSiS, CARD32 *packet);
 #endif
 
 extern unsigned char SiSGetCopyROP(int rop);
@@ -1452,7 +1457,7 @@ SiSSubsequentScanlineCPUToScreenColorExpandFill(
 #endif
 
 #ifndef SISVRAMQ
-        if((MMIO_IN16(pSiS->IOBase, Q_STATUS+2) & 0x8000) != 0x8000) {
+        if((SIS_MMIO_IN16(pSiS->IOBase, Q_STATUS+2) & 0x8000) != 0x8000) {
 	   SiSIdle;
         }
 #endif
@@ -1493,7 +1498,7 @@ SiSSubsequentColorExpandScanline(ScrnInfoPtr pScrn, int bufno)
 #endif
 
 #ifndef SISVRAMQ
-	if((MMIO_IN16(pSiS->IOBase, Q_STATUS+2) & 0x8000) != 0x8000) {
+	if((SIS_MMIO_IN16(pSiS->IOBase, Q_STATUS+2) & 0x8000) != 0x8000) {
 	   SiSIdle;
         }
 #endif
@@ -2053,3 +2058,19 @@ SiSSubsequentCPUToScreenTexture(ScrnInfoPtr pScrn,
 #endif
 #endif
 
+/* Helper for xv video blitter */
+#ifdef INCL_YUV_BLIT_ADAPTOR
+void
+SISWriteBlitPacket(SISPtr pSiS, CARD32 *packet)
+{
+   CARD32 dummybuf;
+   
+   SiSWritePacketPart(packet[0], packet[1], packet[2], packet[3]);
+   SiSWritePacketPart(packet[4], packet[5], packet[6], packet[7]);
+   SiSWritePacketPart(packet[8], packet[9], packet[10], packet[11]);
+   SiSWritePacketPart(packet[12], packet[13], packet[14], packet[15]);
+   SiSWritePacketPart(packet[16], packet[17], packet[18], packet[19]);
+   SiSSyncWP;
+   (void)dummybuf; /* Suppress compiler warning */
+}
+#endif
