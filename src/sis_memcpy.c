@@ -27,6 +27,10 @@
 #include "compiler.h"
 #include "sis.h"
 
+#if 0			/* Debug */
+#define SISDGBMC	
+#endif
+
 extern FBLinearPtr SISAllocateOverlayMemory(ScrnInfoPtr pScrn, FBLinearPtr linear, int size);
 
 #define FL_LIBC  0x001
@@ -852,18 +856,32 @@ static Bool CheckOSforSSE(ScrnInfoPtr pScrn)
 {
     int signo;
     
+#ifdef SISDGBMC
+    xf86DrvMsg(pScrn->scrnIndex, X_INFO, "Checking OS SSE support\n");
+#endif                  
+    
+    /* The following does not work yet: If sig 4 is catched, that
+     * idiotic signal handler just "return"s, and causes an immediate
+     * second sig 4 since the "return" returns to the beginning of the
+     * illegal instruction. Need to find a way to install my own signal
+     * handler here, and use a setjmp/longjmp method...
+     */
     xf86InterceptSignals(&signo);
     
     __asm__ __volatile__ (" xorps %xmm0, %xmm0\n");
 		
     xf86InterceptSignals(NULL);
     
+#ifdef SISDGBMC
+    xf86DrvMsg(pScrn->scrnIndex, X_INFO, "OS SSE support signal %d\n", signo);
+#endif                      
+    
     if(signo == 4) {
        xf86DrvMsg(pScrn->scrnIndex, X_PROBED, 
-       		"OS does not support SSE/MMXEXT instructions\n");
+       		"OS does not support SSE instructions\n");
     } else if(signo >= 0) {
        xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
-       		"Checking SSE/MMXEXT instructions caused signal %d - this should not happen!\n",
+       		"Checking SSE instructions caused signal %d - this should not happen!\n",
 		signo);
     }
     
@@ -950,6 +968,9 @@ static vidCopyFunc SiSVidCopyInitGen(ScreenPtr pScreen, SISMCFuncData *MCFunctio
           
        /* Parse the CPU flags and convert them to our internal value */
        myCPUflags = SiS_ParseCPUFlags(buf, MCFunctions);
+#ifdef SISDGBMC
+       xf86DrvMsg(pScrn->scrnIndex, X_PROBED, "CPU flags from /proc: 0x%x\n", myCPUflags);
+#endif       
        
     }   
 #endif       
@@ -958,14 +979,17 @@ static vidCopyFunc SiSVidCopyInitGen(ScreenPtr pScreen, SISMCFuncData *MCFunctio
      
        /* If no /proc or parsing failed, get features from cpuid */
        myCPUflags = SiS_GetCpuFeatures() | Def_FL;
+#ifdef SISDGBMC
+       xf86DrvMsg(pScrn->scrnIndex, X_PROBED, "CPU flags from cpuid: 0x%x\n", myCPUflags);
+#endif              
     
     }
     
-    if(myCPUflags & (FL_SSE | FL_MMX2)) {
+    if(myCPUflags & FL_SSE) {
     
        /* Check if OS supports usage of SSE instructions */
        if(!(CheckOSforSSE(pScrn))) {
-          myCPUflags &= ~(FL_SSE | FL_MMX2);
+          myCPUflags &= ~(FL_SSE);
        }
        
     }
