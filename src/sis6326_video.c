@@ -76,6 +76,8 @@ static int 	SIS6326QueryImageAttributes(ScrnInfoPtr,
 static void 	SIS6326VideoTimerCallback(ScrnInfoPtr pScrn, Time now);
 static void     SIS6326InitOffscreenImages(ScreenPtr pScrn);
 
+extern FBLinearPtr SISAllocateOverlayMemory(ScrnInfoPtr pScrn, FBLinearPtr linear, int size);
+
 #define MAKE_ATOM(a) MakeAtom(a, sizeof(a) - 1, TRUE)
 
 static Atom xvBrightness, xvContrast, xvColorKey;
@@ -1208,49 +1210,6 @@ SIS6326DisplayVideo(ScrnInfoPtr pScrn, SISPortPrivPtr pPriv)
    pPriv->mustwait = 0;
 }
 
-static FBLinearPtr
-SIS6326AllocateOverlayMemory(
-  ScrnInfoPtr pScrn,
-  FBLinearPtr linear,
-  int size	/* in pixels */
-){
-   ScreenPtr pScreen;
-   FBLinearPtr new_linear;
-
-   if(linear) {
-	if(linear->size >= size)
-	   return linear;
-
-	if(xf86ResizeOffscreenLinear(linear, size))
-	   return linear;
-
-	xf86FreeOffscreenLinear(linear);
-   }
-
-   pScreen = screenInfo.screens[pScrn->scrnIndex];
-
-   new_linear = xf86AllocateOffscreenLinear(pScreen, size, 32,
-                                            NULL, NULL, NULL);
-
-   if(!new_linear) {
-        int max_size;
-
-        xf86QueryLargestOffscreenLinear(pScreen, &max_size, 32,
-				       PRIORITY_EXTREME);
-
-        if(max_size < size) return NULL;
-
-        xf86PurgeUnlockedOffscreenAreas(pScreen);
-        new_linear = xf86AllocateOffscreenLinear(pScreen, size, 32,
-                                                 NULL, NULL, NULL);
-   }
-   if (!new_linear)
-        xf86DrvMsg(pScrn->scrnIndex, X_INFO,
-	           "Xv: Failed to allocate %d pixels of linear video memory\n", size/1024);
-
-   return new_linear;
-}
-
 static void
 SIS6326FreeOverlayMemory(ScrnInfoPtr pScrn)
 {
@@ -1372,7 +1331,7 @@ SIS6326PutImage(
    pPriv->totalSize = totalSize;
 
    /* allocate memory (we do doublebuffering) - size is in pixels */
-   if(!(pPriv->linear = SIS6326AllocateOverlayMemory(pScrn, pPriv->linear,
+   if(!(pPriv->linear = SISAllocateOverlayMemory(pScrn, pPriv->linear,
 					((totalSize + depth - 1) / depth) << 1)))
       return BadAlloc;
 
@@ -1559,7 +1518,7 @@ SIS6326AllocSurface (
     w = (w + 1) & ~1;
     pPriv->pitch = ((w << 1) + 63) & ~63; /* Only packed pixel modes supported */
     size = h * pPriv->pitch;
-    pPriv->linear = SIS6326AllocateOverlayMemory(pScrn, pPriv->linear, ((size + depth - 1) / depth));
+    pPriv->linear = SISAllocateOverlayMemory(pScrn, pPriv->linear, ((size + depth - 1) / depth));
     if(!pPriv->linear)
     	return BadAlloc;
 

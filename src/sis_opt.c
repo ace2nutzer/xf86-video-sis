@@ -115,6 +115,7 @@ typedef enum {
     OPTION_XVDEFDISABLEGFX,
     OPTION_XVDEFDISABLEGFXLR,
     OPTION_XVMEMCPY,
+    OPTION_XVBENCHCPY,
     OPTION_XVUSECHROMAKEY,
     OPTION_XVCHROMAMIN,
     OPTION_XVCHROMAMAX,
@@ -236,6 +237,7 @@ static const OptionInfoRec SISOptions[] = {
     { OPTION_XVYUVCHROMAKEY,		"XvYUVChromaKey",         OPTV_BOOLEAN,   {0}, -1    },
     { OPTION_XVDISABLECOLORKEY,		"XvDisableColorKey",      OPTV_BOOLEAN,   {0}, -1    },
     { OPTION_XVMEMCPY,			"XvUseMemcpy",  	  OPTV_BOOLEAN,   {0}, -1    },
+    { OPTION_XVBENCHCPY,		"XvBenchmarkMemcpy",  	  OPTV_BOOLEAN,   {0}, -1    },
     { OPTION_XVDEFAULTADAPTOR,		"XvDefaultAdaptor",  	  OPTV_STRING,    {0}, -1    },
     { OPTION_SCALELCD,			"ScaleLCD",	   	  OPTV_BOOLEAN,   {0}, -1    },
     { OPTION_CENTERLCD,			"CenterLCD",	   	  OPTV_BOOLEAN,   {0}, -1    },
@@ -387,6 +389,7 @@ SiSOptions(ScrnInfoPtr pScrn)
     pSiS->HideHWCursor = FALSE;
     pSiS->HWCursorIsVisible = FALSE;
     pSiS->OverruleRanges = TRUE;
+    pSiS->BenchMemCpy = TRUE;
 #ifdef SISMERGED
     pSiS->MergedFB = pSiS->MergedFBAuto = FALSE;
     pSiS->CRT2Position = sisRightOf;
@@ -846,6 +849,12 @@ SiSOptions(ScrnInfoPtr pScrn)
        }
        if(xf86GetOptValString(pSiS->Options, OPTION_XVDEFAULTADAPTOR)) {
           xf86DrvMsg(pScrn->scrnIndex, X_WARNING, mystring, "XvDefaultAdaptor");
+       }
+       if(xf86GetOptValBool(pSiS->Options, OPTION_XVMEMCPY, &val)) {
+	  xf86DrvMsg(pScrn->scrnIndex, X_WARNING, mystring, "XvUseMemcpy");
+       }
+       if(xf86GetOptValBool(pSiS->Options, OPTION_XVBENCHCPY, &val)) {
+	  xf86DrvMsg(pScrn->scrnIndex, X_WARNING, mystring, "XvBenchmarkMemcpy");
        }
 #ifdef SIS_CP
        SIS_CP_OPT_DH_WARN
@@ -1556,6 +1565,24 @@ SiSOptions(ScrnInfoPtr pScrn)
 	     }    
 	  }
        } 
+       
+       {
+          Bool val;
+          if(xf86GetOptValBool(pSiS->Options, OPTION_XVMEMCPY, &val)) {
+	     pSiS->XvUseMemcpy = val ? TRUE : FALSE;
+	     xf86DrvMsg(pScrn->scrnIndex, X_CONFIG, "Xv will %suse memcpy()\n",
+	     	val ? "" : "not ");
+	  }
+	  
+	  if(pSiS->XvUseMemcpy) {
+	     if(xf86GetOptValBool(pSiS->Options, OPTION_XVBENCHCPY, &val)) {
+	        pSiS->BenchMemCpy = val ? TRUE : FALSE;
+	        xf86DrvMsg(pScrn->scrnIndex, X_CONFIG, 
+	   		"Xv: Will %sbenchmark memcpy() methods\n",
+			val ? "" : "not ");
+	     }
+	  } else pSiS->BenchMemCpy = FALSE;
+       }
 
 #ifdef SIS_CP
        SIS_CP_OPT_DOOPT
@@ -1824,11 +1851,6 @@ SiSOptions(ScrnInfoPtr pScrn)
                 else xf86DrvMsg(pScrn->scrnIndex, X_WARNING, ilrangestr,
        	                   "XvChromaMax", 0, 0xffffff);
              }
-          }
-	  if(xf86GetOptValBool(pSiS->Options, OPTION_XVMEMCPY, &val)) {
-	     pSiS->XvUseMemcpy = val ? TRUE : FALSE;
-	     xf86DrvMsg(pScrn->scrnIndex, X_CONFIG, "Xv will %suse memcpy()\n",
-	     	val ? "" : "not ");
           }
 	  
           if(pSiS->VGAEngine == SIS_315_VGA) {

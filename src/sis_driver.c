@@ -3129,6 +3129,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	     pSiSEnt->ROM661New = FALSE;
 	     pSiSEnt->SiS_Pr = NULL;
 	     pSiSEnt->RenderAccelArray = NULL;
+	     pSiSEnt->SiSFastVidCopy = NULL;
 	  } else {
 	     /* Second Head (always CRT1) */
 	     pSiS->SecondHead = TRUE;
@@ -3567,6 +3568,8 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	     pSiSEnt->enablesisctrl = pSiS->enablesisctrl;
 	     pSiSEnt->SenseYPbPr = pSiS->SenseYPbPr;
 	     pSiSEnt->XvDefAdaptorBlit = pSiS->XvDefAdaptorBlit;
+	     pSiSEnt->XvUseMemcpy = pSiS->XvUseMemcpy;
+	     pSiSEnt->BenchMemCpy = pSiS->BenchMemCpy;
 #ifdef SIS_CP
 	     SIS_CP_DRIVER_COPYOPTIONSENT
 #endif
@@ -3648,6 +3651,8 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	     pSiS->XvOnCRT2 = pSiSEnt->XvOnCRT2;
 	     pSiS->enablesisctrl = pSiSEnt->enablesisctrl;
 	     pSiS->XvDefAdaptorBlit = pSiSEnt->XvDefAdaptorBlit;
+	     pSiS->XvUseMemcpy = pSiSEnt->XvUseMemcpy;
+	     pSiS->BenchMemCpy = pSiSEnt->BenchMemCpy;
 	     /* Copy gamma brightness to Ent (sic!) for Xinerama */
 	     pSiSEnt->GammaBriR = pSiS->GammaBriR;
 	     pSiSEnt->GammaBriG = pSiS->GammaBriG;

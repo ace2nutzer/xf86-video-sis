@@ -40,7 +40,7 @@
 
 #define SISDRIVERVERSIONYEAR    4
 #define SISDRIVERVERSIONMONTH   10
-#define SISDRIVERVERSIONDAY     15
+#define SISDRIVERVERSIONDAY     22
 #define SISDRIVERREVISION       1
 
 #define SISDRIVERIVERSION (SISDRIVERVERSIONYEAR << 16) |  \
@@ -515,6 +515,9 @@ typedef struct {
     DisplayModePtr     mode;		/* = pScrn->currentMode */
 } SISFBLayout;
 
+/* For extended memcpy() */
+typedef void (*vidCopyFunc)(unsigned char *, const unsigned char *, int);
+
 /* Dual head private entity structure */
 #ifdef SISDUALHEAD
 typedef struct {
@@ -626,6 +629,9 @@ typedef struct {
     unsigned char       OldMode;
     int			HWCursorMBufNum, HWCursorCBufNum;
     BOOLEAN		ROM661New;
+    Bool		XvUseMemcpy;
+    Bool		BenchMemCpy;
+    vidCopyFunc 	SiSFastVidCopy;
 #ifdef SIS_NEED_MAP_IOP   
     CARD32              IOPAddress;      	/* I/O port physical address */
     unsigned char *     IOPBase;         	/* I/O port linear address */
@@ -1011,6 +1017,14 @@ typedef struct {
     BOOLEAN		skipswitchcheck;
     unsigned long	VBFlagsInit;
     DisplayModePtr	currentModeLast;
+    IOADDRESS		MyPIOOffset;
+    Bool		OverruleRanges;
+    Bool		BenchMemCpy;
+    vidCopyFunc 	SiSFastVidCopy;
+#ifdef SIS_NEED_MAP_IOP   
+    CARD32              IOPAddress;      	/* I/O port physical address */
+    unsigned char *     IOPBase;         	/* I/O port linear address */   
+#endif    
 #ifdef SISMERGED
     Bool		MergedFB, MergedFBAuto;
     SiSScrn2Rel		CRT2Position;
@@ -1031,12 +1045,6 @@ typedef struct {
     int			maxCRT2_X1, maxCRT2_X2, maxCRT2_Y1, maxCRT2_Y2;
     int			maxClone_X1, maxClone_X2, maxClone_Y1, maxClone_Y2;
     int			MergedFBXDPI, MergedFBYDPI;
-    IOADDRESS		MyPIOOffset;
-    Bool		OverruleRanges;
-#ifdef SIS_NEED_MAP_IOP   
-    CARD32              IOPAddress;      	/* I/O port physical address */
-    unsigned char *     IOPBase;         	/* I/O port linear address */   
-#endif    
 #ifdef SISXINERAMA
     Bool		UseSiSXinerama;
     Bool		CRT2IsScrn0;
@@ -1177,6 +1185,10 @@ extern Bool  SiSHWCursorInit(ScreenPtr pScreen);
 extern Bool  SISDGAInit(ScreenPtr pScreen);
 extern void  SISInitVideo(ScreenPtr pScreen);
 extern void  SIS6326InitVideo(ScreenPtr pScreen);
+
+/* For extended mempy() support */
+
+extern vidCopyFunc SiSVidCopyInit(ScreenPtr pScreen);
 
 extern void  SiS_SetCHTVlumabandwidthcvbs(ScrnInfoPtr pScrn, int val);
 extern void  SiS_SetCHTVlumabandwidthsvideo(ScrnInfoPtr pScrn, int val);

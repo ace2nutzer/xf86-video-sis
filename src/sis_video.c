@@ -128,6 +128,7 @@ static int 	SISQueryImageAttributes(ScrnInfoPtr,
     			int, unsigned short *, unsigned short *, int *, int *);
 static void 	SISVideoTimerCallback(ScrnInfoPtr pScrn, Time now);
 static void     SISInitOffscreenImages(ScreenPtr pScrn);
+FBLinearPtr     SISAllocateOverlayMemory(ScrnInfoPtr pScrn, FBLinearPtr linear, int size);
 extern BOOLEAN  SiSBridgeIsInSlaveMode(ScrnInfoPtr pScrn);
 
 #ifdef INCL_YUV_BLIT_ADAPTOR
@@ -955,13 +956,26 @@ SISResetXvGamma(ScrnInfoPtr pScrn)
 
 void SISInitVideo(ScreenPtr pScreen)
 {
-    ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum];
-#ifdef INCL_YUV_BLIT_ADAPTOR    
-    SISPtr pSiS = SISPTR(pScrn);
-#endif    
+    ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum];   
+    SISPtr pSiS = SISPTR(pScrn);    
     XF86VideoAdaptorPtr *adaptors, *newAdaptors = NULL;
     XF86VideoAdaptorPtr newAdaptor = NULL, newBlitAdaptor = NULL;
     int num_adaptors;
+    
+#ifdef SISDUALHEAD    
+    if(pSiS->DualHeadMode) {
+       pSiS->SiSFastVidCopy = pSiS->entityPrivate->SiSFastVidCopy;
+    }
+#endif
+    
+    if(!pSiS->SiSFastVidCopy) {
+       pSiS->SiSFastVidCopy = SiSVidCopyInit(pScreen);
+#ifdef SISDUALHEAD    
+       if(pSiS->DualHeadMode) {  
+          pSiS->entityPrivate->SiSFastVidCopy = pSiS->SiSFastVidCopy;     
+       }
+#endif       
+    }
 
     newAdaptor = SISSetupImageVideo(pScreen);
     if(newAdaptor) {
@@ -3948,7 +3962,7 @@ MIRROR:
    pPriv->overlayStatus = TRUE;
 }
 
-static FBLinearPtr
+FBLinearPtr
 SISAllocateOverlayMemory(
   ScrnInfoPtr pScrn,
   FBLinearPtr linear,
@@ -4139,8 +4153,12 @@ SISPutImage(
    pPriv->bufAddr[1] = pPriv->bufAddr[0] + totalSize;
 
    /* copy data */
-   if((pSiS->XvUseMemcpy) || (totalSize < 16)) {
-      memcpy(pSiS->FbBase + pPriv->bufAddr[pPriv->currentBuf], buf, totalSize);
+   if(pSiS->XvUseMemcpy) {
+      if((totalSize < 64) || (!pSiS->SiSFastVidCopy)) {
+         memcpy(pSiS->FbBase + pPriv->bufAddr[pPriv->currentBuf], buf, totalSize);
+      } else {
+         (*pSiS->SiSFastVidCopy)(pSiS->FbBase + pPriv->bufAddr[pPriv->currentBuf], buf, totalSize);
+      }
    } else {
       unsigned long i;
       CARD32 *src = (CARD32 *)buf;
@@ -4848,7 +4866,11 @@ SISPutImageBlit(
    case PIXEL_FMT_I420:
       MyPacket.P12_Command = YUV_FORMAT_NV12;
       /* Copy y plane */
-      memcpy(ybased, ybases, bytesize); 
+      if((bytesize < 64) || (!pSiS->SiSFastVidCopy)) {
+         memcpy(ybased, ybases, bytesize); 
+      } else {
+         (*pSiS->SiSFastVidCopy)(ybased, ybases, bytesize);
+      }      
       /* Copy u/v planes */
       wb = srcPitch >> 1;
       h = height >> 1;
@@ -4873,7 +4895,11 @@ SISPutImageBlit(
       }
       break;
    default:
-      memcpy(ybased, ybases, totalSize);
+      if((totalSize < 64) || (!pSiS->SiSFastVidCopy)) {
+         memcpy(ybased, ybases, totalSize); 
+      } else {
+         (*pSiS->SiSFastVidCopy)(ybased, ybases, totalSize);
+      }
    }
 
 #ifdef SISDUALHEAD
