@@ -1148,9 +1148,9 @@ SiSStrToRanges(range *r, char *s, int max)
    return rangenum;
 }
 
-/* Copy and link two modes form mergedfb mode
+/* Copy and link two modes (i, j) for mergedfb mode
  * (Code base taken from mga driver)
- * Copys mode i, links the result to dest, and returns it.
+ * Copys mode i, merges j to copy of i, links the result to dest and returns it.
  * Links i and j in Private record.
  * If dest is NULL, return value is copy of i linked to itself.
  * For mergedfb auto-config, we only check the dimension
@@ -1230,15 +1230,21 @@ SiSCopyModeNLink(ScrnInfoPtr pScrn, DisplayModePtr dest,
     mode->VSyncStart += dy;
     mode->VSyncEnd += dy;
     mode->VTotal += dy;
-    mode->Clock = 0;
+    
+    /* Provide a sophisticated fake DotClock in order to trick the vidmode 
+     * extension to allow selecting among a number of modes whose merged result
+     * looks identical but consists of different modes for CRT1 and CRT2
+     */
+    mode->Clock = (((i->Clock >> 3) + i->HTotal) << 16) | ((j->Clock >> 2) + j->HTotal);
+    mode->Clock ^= ((i->VTotal << 19) | (j->VTotal << 3));
 
     if( ((mode->HDisplay * ((pScrn->bitsPerPixel + 7) / 8) * mode->VDisplay) > pSiS->maxxfbmem) ||
         (mode->HDisplay > 4088) ||
 	(mode->VDisplay > 4096) ) {
 
        xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
-       		"Skipped %dx%d, not enough video RAM or beyond hardware specs\n",
-		mode->HDisplay, mode->VDisplay);
+       		"Skipped \"%s\" (%dx%d), not enough video RAM or beyond hardware specs\n",
+		mode->name, mode->HDisplay, mode->VDisplay);
        xfree(mode->Private);
        xfree(mode);
 
@@ -1252,8 +1258,8 @@ SiSCopyModeNLink(ScrnInfoPtr pScrn, DisplayModePtr dest,
 #endif
 
     xf86DrvMsg(pScrn->scrnIndex, X_INFO,
-    	"Merged %dx%d and %dx%d to %dx%d%s\n",
-	i->HDisplay, i->VDisplay, j->HDisplay, j->VDisplay,
+    	"Merged \"%s\" (%dx%d) and \"%s\" (%dx%d) to %dx%d%s\n",
+	i->name, i->HDisplay, i->VDisplay, j->name, j->HDisplay, j->VDisplay,
 	mode->HDisplay, mode->VDisplay, (srel == sisClone) ? " (Clone)" : "");
 
     mode->next = mode;
@@ -1359,11 +1365,12 @@ SiSGenerateModeListFromMetaModes(ScrnInfoPtr pScrn, char* str,
 #endif
     char* strmode = str;
     char modename[256];
-    Bool gotdash = FALSE;
+    Bool gotdash = FALSE, gotplus = FALSE;
     SiSScrn2Rel sr;
     DisplayModePtr mode1 = NULL;
     DisplayModePtr mode2 = NULL;
     DisplayModePtr result = NULL;
+    int myslen;
 
 #ifdef SISXINERAMA
     pSiS->AtLeastOneNonClone = FALSE;
@@ -1373,21 +1380,29 @@ SiSGenerateModeListFromMetaModes(ScrnInfoPtr pScrn, char* str,
         switch(*str) {
         case 0:
         case '-':
+	case '+':
         case ' ':
-           if((strmode != str)) {
-
-              strncpy(modename, strmode, str - strmode);
-              modename[str - strmode] = 0;
+           if(strmode != str) {
+      
+	      myslen = str - strmode;
+	      if(myslen > 255) myslen = 255;
+              strncpy(modename, strmode, myslen);
+              modename[myslen] = 0;
 
               if(gotdash) {
-                 if(mode1 == NULL) return NULL;
+                 if(mode1 == NULL) {
+		    xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
+		        "Error parsing MetaModes parameter\n");
+		    return NULL;
+		 }
                  mode2 = SiSGetModeFromName(modename, j);
                  if(!mode2) {
                     xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
                         "Mode \"%s\" is not a supported mode for CRT2\n", modename);
                     xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
-                        "Skipping metamode \"%s-%s\".\n", mode1->name, modename);
+                        "\t(Skipping metamode \"%s%s%s\")\n", mode1->name, gotplus ? "+" : "-", modename);
                     mode1 = NULL;
+		    gotplus = FALSE;
                  }
               } else {
                  mode1 = SiSGetModeFromName(modename, i);
@@ -1395,25 +1410,31 @@ SiSGenerateModeListFromMetaModes(ScrnInfoPtr pScrn, char* str,
                     char* tmps = str;
                     xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
                         "Mode \"%s\" is not a supported mode for CRT1\n", modename);
-                    gotdash = FALSE;
                     while(*tmps == ' ') tmps++;
-                    if(*tmps == '-') { 							/* skip the next mode */
+		    /* skip the next mode */
+                    if((*tmps == '-') || (*tmps == '+')) { 			
                        tmps++;
-                       while((*tmps == ' ') && (*tmps != 0)) tmps++; 			/* skip spaces */
-                       while((*tmps != ' ') && (*tmps != '-') && (*tmps != 0)) tmps++; 	/* skip modename */
-                       strncpy(modename,strmode,tmps - strmode);
-                       modename[tmps - strmode] = 0;
-                       str = tmps-1;
+		       /* skip spaces */
+                       while(*tmps == ' ') tmps++; 			
+		       /* skip modename */
+                       while((*tmps != ' ') && (*tmps != '-') && (*tmps != '+') && (*tmps != 0)) tmps++; 
+		       myslen = tmps - strmode;
+		       if(myslen > 255) myslen = 255;
+                       strncpy(modename,strmode,myslen);
+                       modename[myslen] = 0;
+                       str = tmps - 1;
                     }
                     xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
-                        "Skipping metamode \"%s\".\n", modename);
+                        "\t(Skipping metamode \"%s\")\n", modename);
                     mode1 = NULL;
+		    gotplus = FALSE;
                  }
               }
               gotdash = FALSE;
            }
            strmode = str + 1;
-           gotdash |= (*str == '-');
+           gotdash |= ((*str == '-') || (*str == '+'));
+	   gotplus |= (*str == '+');
 
            if(*str != 0) break;
 	   /* Fall through otherwise */
@@ -1421,21 +1442,23 @@ SiSGenerateModeListFromMetaModes(ScrnInfoPtr pScrn, char* str,
         default:
            if(!gotdash && mode1) {
               sr = srel;
+	      if(gotplus) sr = sisClone;
               if(!mode2) {
                  mode2 = SiSGetModeFromName(mode1->name, j);
                  sr = sisClone;
               }
               if(!mode2) {
                  xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
-                     "Mode: \"%s\" is not a supported mode for CRT2\n", mode1->name);
+                     "Mode \"%s\" is not a supported mode for CRT2\n", mode1->name);
                  xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
-                     "Skipping metamode \"%s\".\n", modename);
+                     "\t(Skipping metamode \"%s\")\n", modename);
                  mode1 = NULL;
               } else {
                  result = SiSCopyModeNLink(pScrn, result, mode1, mode2, sr);
                  mode1 = NULL;
                  mode2 = NULL;
               }
+	      gotplus = FALSE;
            }
            break;
 
