@@ -118,7 +118,7 @@
 #if 1				/* Include code for gamma correction */
 #define SISGAMMA
 #ifdef XORG_VERSION_CURRENT
-#if XORG_VERSION_CURRENT >= XORG_VERSION_NUMERIC(6,8,2,0,0)
+#if XORG_VERSION_CURRENT >= XORG_VERSION_NUMERIC(6,9,0,0,0)
 #define SISGAMMARAMP
 #endif
 #endif		
@@ -153,8 +153,10 @@
 #endif
 #endif
 
-#if XORG_VERSION_CURRENT >= XORG_VERSION_NUMERIC(6,8,2,0,0)
+#ifdef XORG_VERSION_CURRENT
+#if XORG_VERSION_CURRENT >= XORG_VERSION_NUMERIC(6,9,0,0,0)
 #define SISCHECKOSSSE		/* Check OS for SSE; requires SigIll facility */
+#endif
 #endif
 
 #undef SIS315DRI		/* define this if dri is adapted for 315/330 series */

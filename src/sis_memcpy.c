@@ -795,14 +795,14 @@ static Bool CheckOSforSSE(ScrnInfoPtr pScrn)
     SISPtr pSiS = SISPTR(pScrn);
     
     xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
-    	"Checking OS for SSE support is supported in X.org 6.8.2 and later.\n");
+    	"Checking OS for SSE support is not supported in this version of" SISMYSERVERNAME "\n");
     if(pSiS->XvSSEMemcpy) {
        xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
     	"If you get a signal 4 here, set the option \"XvSSEMemcpy\" to \"off\".\n");	
        return TRUE;
     } else {
        xf86DrvMsg(pScrn->scrnIndex, X_INFO,
-    	"If your OS supports SSE, you can set the option \"XvSSEMemcpy\" to \"on\".\n");
+    	"If your OS supports SSE, set the option \"XvSSEMemcpy\" to \"on\".\n");
        return FALSE;
     }
 #endif    
