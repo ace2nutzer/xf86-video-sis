@@ -1742,6 +1742,19 @@ SiS_GetLCDResInfo(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
 			       SiS_Pr->PanelHRE -= SiS_Pr->PanelHRS;
 			       SiS_Pr->PanelVRS -= SiS_Pr->PanelYRes;
 			       SiS_Pr->PanelVRE -= SiS_Pr->PanelVRS;
+			       if(SiS_Pr->CP_PrefClock) {
+			          int idx;
+			          SiS_Pr->PanelVCLKIdx315 = VCLK_CUSTOM_315;
+				  SiS_Pr->PanelVCLKIdx300 = VCLK_CUSTOM_300;
+				  if(HwInfo->jChipType < SIS_315H) idx = VCLK_CUSTOM_300;
+				  else				   idx = VCLK_CUSTOM_315;
+      			          SiS_Pr->SiS_VCLKData[idx].CLOCK = 
+	 		             SiS_Pr->SiS_VBVCLKData[idx].CLOCK = SiS_Pr->CP_PrefClock;
+      			          SiS_Pr->SiS_VCLKData[idx].SR2B =
+  	 			     SiS_Pr->SiS_VBVCLKData[idx].Part4_A = SiS_Pr->CP_PrefSR2B;
+      			          SiS_Pr->SiS_VCLKData[idx].SR2C =
+	 			     SiS_Pr->SiS_VBVCLKData[idx].Part4_B = SiS_Pr->CP_PrefSR2C;
+			       }
 			    }
 			    break;
      case Panel_Barco1366:  SiS_Pr->PanelXRes = 1360; SiS_Pr->PanelYRes = 1024;
@@ -1760,6 +1773,8 @@ SiS_GetLCDResInfo(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
 
   if(!(SiS_Pr->UsePanelScaler))        SiS_Pr->SiS_LCDInfo &= ~DontExpandLCD;
   else if(SiS_Pr->UsePanelScaler == 1) SiS_Pr->SiS_LCDInfo |= DontExpandLCD;
+  
+  if(SiS_Pr->SiS_LCDResInfo == Panel_1280x960) SiS_Pr->SiS_LCDInfo &= ~DontExpandLCD;
 
 #ifdef SIS315H
   if(HwInfo->jChipType >= SIS_661) {
@@ -1826,9 +1841,6 @@ SiS_GetLCDResInfo(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
 	case Panel_1280x768:	/* TMDS only */
 		/* No idea about the timing and zoom factors */
            	SiS_Pr->SiS_LCDInfo |= DontExpandLCD;
-		break;
-	case Panel_1280x960:
-	 	SiS_Pr->SiS_LCDInfo &= ~DontExpandLCD;
 		break;
 	case Panel_1280x1024:
 	        if(SiS_Pr->SiS_VBType & VB_SISTMDS) {
@@ -1899,6 +1911,12 @@ SiS_GetLCDResInfo(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
 
   if(SiS_Pr->SiS_LCDResInfo == Panel_640x480) {
      SiS_Pr->SiS_LCDInfo |= LCDPass11;
+  } else if(SiS_Pr->SiS_LCDResInfo == Panel_1280x960) {
+     SiS_Pr->SiS_LCDInfo &= ~LCDPass11;
+  } else if(SiS_Pr->SiS_LCDResInfo == Panel_Custom) {
+     if(!SiS_Pr->CP_PrefClock) {
+        SiS_Pr->SiS_LCDInfo |= LCDPass11;
+     }
   }
   
   if(SiS_Pr->UseCustomMode) {
@@ -2043,6 +2061,9 @@ SiS_GetVCLK2Ptr(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
 
            if(HwInfo->jChipType < SIS_315H) {
 	      VCLKIndex = SiS_Pr->PanelVCLKIdx300;
+	      if((SiS_Pr->SiS_LCDInfo & DontExpandLCD) && (SiS_Pr->SiS_LCDInfo & LCDPass11)) {
+	         VCLKIndex = VCLKIndexGEN;
+	      }
 	   } else {
 	      VCLKIndex = SiS_Pr->PanelVCLKIdx315;
 	      if((SiS_Pr->SiS_LCDInfo & DontExpandLCD) && (SiS_Pr->SiS_LCDInfo & LCDPass11)) {
@@ -4288,9 +4309,9 @@ SiS_EnableBridge(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo)
 		     if(romptr) {
 		        SiS_SetRegOR(SiS_Pr->SiS_Part4Port,0x30,0x20); /* Reset */
 			SiS_Pr->EMI_30 = 0;
-			SiS_Pr->EMI_31 = ROMAddr[romptr + 14];
-			SiS_Pr->EMI_32 = ROMAddr[romptr + 15];
-			SiS_Pr->EMI_33 = ROMAddr[romptr + 16];
+			SiS_Pr->EMI_31 = ROMAddr[romptr + SiS_Pr->SiS_EMIOffset + 0];
+			SiS_Pr->EMI_32 = ROMAddr[romptr + SiS_Pr->SiS_EMIOffset + 1];
+			SiS_Pr->EMI_33 = ROMAddr[romptr + SiS_Pr->SiS_EMIOffset + 2];
 			if(ROMAddr[romptr + 1] & 0x10) SiS_Pr->EMI_30 = 0x40;
 			/* emidelay = SISGETROMW((romptr + 0x22)); */
 			SiS_Pr->HaveEMI = SiS_Pr->HaveEMILCD = SiS_Pr->OverruleEMI = TRUE;
@@ -9569,6 +9590,7 @@ SiS_SenseLCDDDC(SiS_Private *SiS_Pr, SISPtr pSiS)
    SiS_Pr->CP_MaxX = SiS_Pr->CP_MaxY = SiS_Pr->CP_MaxClock = 0;
    SiS_Pr->CP_PreferredX = SiS_Pr->CP_PreferredY = 0;
    SiS_Pr->CP_PreferredIndex = -1;
+   SiS_Pr->CP_PrefClock = 0;
 
    if(!(pSiS->VBFlags & (VB_301|VB_301B|VB_301C|VB_302B))) return 0;
    if(pSiS->VBFlags & VB_30xBDH) return 0;
@@ -9865,6 +9887,8 @@ SiS_SenseLCDDDC(SiS_Private *SiS_Pr, SISPtr pSiS)
 
 		  if((SiS_Pr->CP_PreferredX == xres) && (SiS_Pr->CP_PreferredY == yres)) {
 	             SiS_Pr->CP_PreferredIndex = i;
+		     SiS_MakeClockRegs(pSiS->pScrn, SiS_Pr->CP_Clock[i], &SiS_Pr->CP_PrefSR2B, &SiS_Pr->CP_PrefSR2C);
+		     SiS_Pr->CP_PrefClock = (SiS_Pr->CP_Clock[i] / 1000) + 1;
 	          }
 
 	          /* Extract the sync polarisation information. This only works
@@ -9888,7 +9912,9 @@ SiS_SenseLCDDDC(SiS_Private *SiS_Pr, SISPtr pSiS)
 	    
 	       /* Maximum pixclock from Monitor Range Limits */
 	       if((buffer[base+3] == 0xfd) && (buffer[base+9] != 0xff)) {
-	          SiS_Pr->CP_MaxClock = buffer[base+9] * 10 * 1000;
+	          int maxclk = buffer[base+9] * 10;
+		  /* More than 170 is not supported anyway */
+		  if(maxclk <= 170) SiS_Pr->CP_MaxClock = maxclk * 1000;
 	       }
 	    
 	    }
@@ -10131,6 +10157,8 @@ SiS_SenseLCDDDC(SiS_Private *SiS_Pr, SISPtr pSiS)
 
 	       if((SiS_Pr->CP_PreferredX == xres) && (SiS_Pr->CP_PreferredY == yres)) {
 	          SiS_Pr->CP_PreferredIndex = i;
+		  SiS_MakeClockRegs(pSiS->pScrn, SiS_Pr->CP_Clock[i], &SiS_Pr->CP_PrefSR2B, &SiS_Pr->CP_PrefSR2C);
+		  SiS_Pr->CP_PrefClock = (SiS_Pr->CP_Clock[i] / 1000) + 1;
 		  if(!havesync) {
 	             cr37 |= ((((buffer[index + 17] & 0x06) ^ 0x06) << 5) | 0x20);
 		     havesync = TRUE;
@@ -11152,13 +11180,14 @@ static void
 SetDelayComp661(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo, USHORT ModeNo,
                 USHORT ModeIdIndex, USHORT RTI)
 {
-   USHORT delay = 0, romptr = 0, index;
+   USHORT delay = 0, romptr = 0, index, lcdpdcindex;
    UCHAR  *ROMAddr = HwInfo->pjVirtualRomBase;
 
    if(!(SiS_Pr->SiS_VBInfo & (SetCRT2ToTV | SetCRT2ToLCD | SetCRT2ToLCDA | SetCRT2ToRAMDAC)))
       return;
 
    /* 1. New ROM: VGA2 and LCD/LCDA-Pass1:1 */
+   /* (If a custom mode is used, Pass1:1 is always set; hence we do this:) */
 
    if(SiS_Pr->SiS_ROMNew) {
       if((SiS_Pr->SiS_VBInfo & SetCRT2ToRAMDAC) 			||
@@ -11176,7 +11205,7 @@ SetDelayComp661(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo, USHORT ModeNo,
          if((ROMAddr[0x5b] & 0x80) || (SiS_Pr->SiS_VBInfo & (SetCRT2ToRAMDAC | SetCRT2ToLCD))) {
 	    index++;
 	 }
-	 romptr = SISGETROMW(0x104);  /* 0x4ae */
+	 romptr = SISGETROMW(0x104); 
          delay = ROMAddr[romptr + index];
          if(SiS_Pr->SiS_VBInfo & (SetCRT2ToRAMDAC | SetCRT2ToLCD)) {
             SiS_SetRegANDOR(SiS_Pr->SiS_Part1Port,0x2d,0xf0,((delay >> 1) & 0x0f));
@@ -11202,10 +11231,12 @@ SetDelayComp661(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo, USHORT ModeNo,
 
       index = GetOEMTVPtr661(SiS_Pr);
       if(SiS_Pr->SiS_ROMNew) {
-         romptr = SISGETROMW(0x106);  /* 0x4ba */
+         romptr = SISGETROMW(0x106);  
+	 if(SiS_Pr->SiS_VBType & VB_UMC) romptr += 12;
          delay = ROMAddr[romptr + index];
       } else {
          delay = 0x04;
+	 if(index > 3) delay = 0;
       }
 
    } else if(SiS_Pr->SiS_VBInfo & (SetCRT2ToLCD | SetCRT2ToLCDA)) {
@@ -11215,22 +11246,39 @@ SetDelayComp661(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo, USHORT ModeNo,
       if( (SiS_Pr->SiS_LCDResInfo != Panel_Custom) &&
           ((romptr = GetLCDStructPtr661_2(SiS_Pr, HwInfo))) ) {
 
+	 lcdpdcindex = (SiS_Pr->SiS_VBType & VB_UMC) ? 14 : 12;
+	 
 	 /* For LV, the BIOS must know about the correct value */
-	 delay = ROMAddr[romptr + 0x0d];		/* LCD  */
-	 delay |= (ROMAddr[romptr + 0x0c] << 8);	/* LCDA */
+	 delay = ROMAddr[romptr + lcdpdcindex + 1];	/* LCD  */
+	 delay |= (ROMAddr[romptr + lcdpdcindex] << 8);	/* LCDA */
 
       } else {
 
-         /* TMDS: Set our own, since BIOS has no idea - TODO: Find out about values */
+         /* TMDS: Set our own, since BIOS has no idea */
+	 /* (This is done on >=661 only, since <661 is calling this only for LVDS) */
          if(!(SiS_Pr->SiS_LCDInfo & LCDPass11)) {
-            if((SiS_Pr->PanelXRes <= 1024) && (SiS_Pr->PanelYRes <= 768)) {
-	       delay = 0x0404;
-            } else if((SiS_Pr->PanelXRes <= 1280) && (SiS_Pr->PanelYRes <= 1024)) {
-	       delay = 0x0404;
-            } else if((SiS_Pr->PanelXRes <= 1400) && (SiS_Pr->PanelYRes <= 1050)) {
-	       delay = 0x1004;
-            } else
-	       delay = 0x0000;
+	    switch(SiS_Pr->SiS_LCDResInfo) {
+	    case Panel_1024x768:  delay = 0x0008; break;
+	    case Panel_1280x720:  delay = 0x0004; break;
+	    case Panel_1280x768:  delay = 0x0004; break;
+	    case Panel_1280x800:  delay = 0x0004; break;
+	    case Panel_1280x1024: delay = 0x1e04; break;
+	    case Panel_1400x1050: delay = 0x0004; break;
+	    case Panel_1600x1200: delay = 0x0400; break;
+	    case Panel_1680x1050: delay = 0x0e04; break;
+	    default:
+               if((SiS_Pr->PanelXRes <= 1024) && (SiS_Pr->PanelYRes <= 768)) {
+	          delay = 0x0008;
+	       } else if((SiS_Pr->PanelXRes == 1280) && (SiS_Pr->PanelYRes == 1024)) {
+	          delay = 0x1e04;
+               } else if((SiS_Pr->PanelXRes <= 1400) && (SiS_Pr->PanelYRes <= 1050)) {
+	          delay = 0x0004;
+	       } else if((SiS_Pr->PanelXRes <= 1600) && (SiS_Pr->PanelYRes <= 1200)) {
+	          delay = 0x0400;
+               } else
+	          delay = 0x0e04;
+	       break;
+	    }
          }
 	 
 	 /* Override by detected or user-set values */

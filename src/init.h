@@ -2431,6 +2431,7 @@ BOOLEAN	SiS_GetPanelID(SiS_Private *SiS_Pr, PSIS_HW_INFO);
 USHORT 	SiS_CheckBuildCustomMode(ScrnInfoPtr pScrn, DisplayModePtr mode, int VBFlags);
 DisplayModePtr SiSBuildBuiltInModeList(ScrnInfoPtr pScrn, BOOLEAN includelcdmodes, BOOLEAN isfordvi);
 int 	SiS_FindPanelFromDB(SISPtr pSiS, USHORT panelvendor, USHORT panelproduct, int *maxx, int *maxy);
+void    SiS_MakeClockRegs(ScrnInfoPtr pScrn, int clock, UCHAR *p2b, UCHAR *p2c);
 #else
 BOOLEAN	SiSSetMode(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo,USHORT ModeNo);
 #endif

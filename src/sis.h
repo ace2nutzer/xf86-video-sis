@@ -40,7 +40,7 @@
 
 #define SISDRIVERVERSIONYEAR    4
 #define SISDRIVERVERSIONMONTH   8
-#define SISDRIVERVERSIONDAY     5
+#define SISDRIVERVERSIONDAY     9
 #define SISDRIVERREVISION       1
 
 #define SISDRIVERIVERSION (SISDRIVERVERSIONYEAR << 16) |  \
@@ -272,6 +272,9 @@
 #define VB_DISPMODE_MIRROR	MIRROR_MODE  	/* alias */
 #define VB_DISPMODE_DUAL	DUALVIEW_MODE 	/* alias */
 #define DISPLAY_MODE            (SINGLE_MODE | MIRROR_MODE | DUALVIEW_MODE)
+
+/* pSiS->VBFlags2 (static stuff only!) */
+#define VB_SISUMC		0x00000001
 
 /* pSiS->VBLCDFlags */
 #define VB_LCD_320x480		0x00000001	/* DSTN/FSTN for 550 */
@@ -705,6 +708,7 @@ typedef struct {
     unsigned char       myCR32, myCR36, myCR37, myCR63;
     unsigned char       newCR32;
     unsigned long   	VBFlags;		/* Video bridge configuration */
+    unsigned long	VBFlags2;		/* Video bridge configuration 2 (static flags only) */
     unsigned long       VBFlags_backup;         /* Backup for SlaveMode-modes */
     unsigned long	VBLCDFlags;             /* Moved LCD panel size bits here */
     int                 ChrontelType;           /* CHRONTEL_700x or CHRONTEL_701x */

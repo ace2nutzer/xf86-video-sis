@@ -1588,14 +1588,21 @@ SiSDetermineROMUsage(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo)
          /* 315/330 series stick to the standard(s) */
 	 SiS_Pr->SiS_UseROM = TRUE;
 	 if((SiS_Pr->SiS_ROMNew = SiSDetermineROMLayout661(SiS_Pr, HwInfo))) {
+	    SiS_Pr->SiS_EMIOffset = 14;
+	    SiS_Pr->SiS661LCD2TableSize = 36;
 	    /* Find out about LCD data table entry size */
 	    if((romptr = SISGETROMW(0x0102))) {
 	       if(ROMAddr[romptr + (32 * 16)] == 0xff)
 	          SiS_Pr->SiS661LCD2TableSize = 32;
 	       else if(ROMAddr[romptr + (34 * 16)] == 0xff)
 	          SiS_Pr->SiS661LCD2TableSize = 34;
-	       else if(ROMAddr[romptr + (36 * 16)] == 0xff)
-	          SiS_Pr->SiS661LCD2TableSize = 36;  /* 0.94 final */
+	       else if(ROMAddr[romptr + (36 * 16)] == 0xff)	   /* 0.94 */
+	          SiS_Pr->SiS661LCD2TableSize = 36;  
+	       else if( (ROMAddr[romptr + (38 * 16)] == 0xff) ||   /* 2.00.00 - 2.02.00 */
+	       	 	(ROMAddr[0x6F] & 0x01) ) {		   /* 2.03.00+ */
+		  SiS_Pr->SiS661LCD2TableSize = 38;
+		  SiS_Pr->SiS_EMIOffset = 16;
+	       }
 	    }
 	 }
       }
@@ -1680,7 +1687,7 @@ SiS_ResetSegmentRegisters(SiS_Private *SiS_Pr,PSIS_HW_INFO HwInfo)
 void
 SiS_GetVBType(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo)
 {
-  USHORT flag=0, rev=0, nolcd=0;
+  USHORT flag=0, rev=0, nolcd=0, p4_0f, p4_25, p4_27;
 
   SiS_Pr->SiS_VBType = 0;
 
@@ -1715,6 +1722,20 @@ SiS_GetVBType(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo)
      } else if(rev >= 0xD0) {
 	SiS_Pr->SiS_VBType = VB_SIS301LV;
      }
+  }
+  if(SiS_Pr->SiS_VBType & (VB_301C | VB_301LV | VB_302LV | VB_302ELV)) {
+     p4_0f = SiS_GetReg(SiS_Pr->SiS_Part4Port,0x0f);
+     p4_25 = SiS_GetReg(SiS_Pr->SiS_Part4Port,0x25);
+     p4_27 = SiS_GetReg(SiS_Pr->SiS_Part4Port,0x27);
+     SiS_SetRegAND(SiS_Pr->SiS_Part4Port,0x0f,0x7f);
+     SiS_SetRegOR(SiS_Pr->SiS_Part4Port,0x25,0x08);
+     SiS_SetRegAND(SiS_Pr->SiS_Part4Port,0x27,0xfd);
+     if(SiS_GetReg(SiS_Pr->SiS_Part4Port,0x26) & 0x08) {
+        SiS_Pr->SiS_VBType |= VB_UMC;
+     }
+     SiS_SetReg(SiS_Pr->SiS_Part4Port,0x27,p4_27);
+     SiS_SetReg(SiS_Pr->SiS_Part4Port,0x25,p4_25);
+     SiS_SetReg(SiS_Pr->SiS_Part4Port,0x0f,p4_0f);
   }
 }
 
@@ -4286,25 +4307,59 @@ SiS_CalcLCDACRT1Timing(SiS_Private *SiS_Pr,USHORT ModeNo,USHORT ModeIdIndex)
 #endif
 }
 
-/* ================ XFREE86 ================= */
-
-/* Helper functions */
-
-#ifdef LINUX_XF86
-
-USHORT
-SiS_CheckBuildCustomMode(ScrnInfoPtr pScrn, DisplayModePtr mode, int VBFlags)
-{
-   SISPtr pSiS = SISPTR(pScrn);
-   int    out_n, out_dn, out_div, out_sbit, out_scale;
-   int    depth = pSiS->CurrentLayout.bitsPerPixel;
+void
+SiS_MakeClockRegs(ScrnInfoPtr pScrn, int clock, UCHAR *p2b, UCHAR *p2c)
+{  
+   int          out_n, out_dn, out_div, out_sbit, out_scale;
    unsigned int vclk[5];
-
+   
 #define Midx         0
 #define Nidx         1
 #define VLDidx       2
 #define Pidx         3
-#define PSNidx       4
+#define PSNidx       4   
+   
+   if(SiS_compute_vclk(clock, &out_n, &out_dn, &out_div, &out_sbit, &out_scale)) {
+      (*p2b) = (out_div == 2) ? 0x80 : 0x00;
+      (*p2b) |= ((out_n - 1) & 0x7f);
+      (*p2c) = (out_dn - 1) & 0x1f;
+      (*p2c) |= (((out_scale - 1) & 3) << 5);
+      (*p2c) |= ((out_sbit & 0x01) << 7);
+#ifdef TWDEBUG
+      xf86DrvMsg(pScrn->scrnIndex, X_INFO, "Clock %d: n %d dn %d div %d sb %d sc %d\n",
+        	 clock, out_n, out_dn, out_div, out_sbit, out_scale);
+#endif
+   } else {
+      SiSCalcClock(pScrn, clock, 2, vclk);
+      (*p2b) = (vclk[VLDidx] == 2) ? 0x80 : 0x00;
+      (*p2b) |= (vclk[Midx] - 1) & 0x7f;
+      (*p2c) = (vclk[Nidx] - 1) & 0x1f;
+      if(vclk[Pidx] <= 4) {
+         /* postscale 1,2,3,4 */
+         (*p2c) |= ((vclk[Pidx] - 1) & 3) << 5;
+      } else {
+         /* postscale 6,8 */
+         (*p2c) |= (((vclk[Pidx] / 2) - 1) & 3) << 5;
+	 (*p2c) |= 0x80;
+      }
+#ifdef TWDEBUG
+      xf86DrvMsg(pScrn->scrnIndex, X_INFO, "Clock %d: n %d dn %d div %d sc %d\n",
+        	 clock, vclk[Midx], vclk[Nidx], vclk[VLDidx], vclk[Pidx]);
+#endif
+   }
+}
+
+/* ================ XFREE86/X.ORG ================= */
+
+/* Helper functions */
+
+#ifdef LINUX_XF86
+   
+USHORT
+SiS_CheckBuildCustomMode(ScrnInfoPtr pScrn, DisplayModePtr mode, int VBFlags)
+{
+   SISPtr pSiS = SISPTR(pScrn);
+   int    depth = pSiS->CurrentLayout.bitsPerPixel;
 
    pSiS->SiS_Pr->CModeFlag = 0;
    
@@ -4340,35 +4395,8 @@ SiS_CheckBuildCustomMode(ScrnInfoPtr pScrn, DisplayModePtr mode, int VBFlags)
    pSiS->SiS_Pr->CHBlankEnd = pSiS->SiS_Pr->CHTotal;
    pSiS->SiS_Pr->CVBlankStart = pSiS->SiS_Pr->CVSyncStart - 1;
    pSiS->SiS_Pr->CVBlankEnd = pSiS->SiS_Pr->CVTotal;
-
-   if(SiS_compute_vclk(pSiS->SiS_Pr->CDClock, &out_n, &out_dn, &out_div, &out_sbit, &out_scale)) {
-      pSiS->SiS_Pr->CSR2B = (out_div == 2) ? 0x80 : 0x00;
-      pSiS->SiS_Pr->CSR2B |= ((out_n - 1) & 0x7f);
-      pSiS->SiS_Pr->CSR2C = (out_dn - 1) & 0x1f;
-      pSiS->SiS_Pr->CSR2C |= (((out_scale - 1) & 3) << 5);
-      pSiS->SiS_Pr->CSR2C |= ((out_sbit & 0x01) << 7);
-#ifdef TWDEBUG
-      xf86DrvMsg(pScrn->scrnIndex, X_INFO, "Clock %d: n %d dn %d div %d sb %d sc %d\n",
-        	pSiS->SiS_Pr->CDClock, out_n, out_dn, out_div, out_sbit, out_scale);
-#endif
-   } else {
-      SiSCalcClock(pScrn, pSiS->SiS_Pr->CDClock, 2, vclk);
-      pSiS->SiS_Pr->CSR2B = (vclk[VLDidx] == 2) ? 0x80 : 0x00;
-      pSiS->SiS_Pr->CSR2B |= (vclk[Midx] - 1) & 0x7f;
-      pSiS->SiS_Pr->CSR2C = (vclk[Nidx] - 1) & 0x1f;
-      if(vclk[Pidx] <= 4) {
-         /* postscale 1,2,3,4 */
-         pSiS->SiS_Pr->CSR2C |= ((vclk[Pidx] - 1) & 3) << 5;
-      } else {
-         /* postscale 6,8 */
-         pSiS->SiS_Pr->CSR2C |= (((vclk[Pidx] / 2) - 1) & 3) << 5;
-	 pSiS->SiS_Pr->CSR2C |= 0x80;
-      }
-#ifdef TWDEBUG
-      xf86DrvMsg(pScrn->scrnIndex, X_INFO, "Clock %d: n %d dn %d div %d sc %d\n",
-        	pSiS->SiS_Pr->CDClock, vclk[Midx], vclk[Nidx], vclk[VLDidx], vclk[Pidx]);
-#endif
-   }
+   
+   SiS_MakeClockRegs(pScrn, pSiS->SiS_Pr->CDClock, &pSiS->SiS_Pr->CSR2B, &pSiS->SiS_Pr->CSR2C);
 
    pSiS->SiS_Pr->CSRClock = (pSiS->SiS_Pr->CDClock / 1000) + 1;
 

@@ -747,7 +747,11 @@ SISSense30x(ScrnInfoPtr pScrn, Bool quiet)
                  (pSiS->Chipset == PCI_CHIP_SIS340)) {
           if(pSiS->ROM661New) {
 	     biosflag = 2;
-	     vga2 = GETROMWORD(0x63); svhs = cvbs = GETROMWORD(0x65);
+	     vga2 = GETROMWORD(0x63); 
+	     if(pSiS->BIOS[0x6f] & 0x01) {
+	        if(pSiS->VBFlags2 & VB_SISUMC) vga2 = GETROMWORD(0x4d); 
+	     }
+	     svhs = cvbs = GETROMWORD(0x65);
 	     if(pSiS->BIOS[0x5d] & 0x04) biosflag |= 0x01;
 	  }
        } else if(!pSiS->ROM661New) {
@@ -838,6 +842,7 @@ SISSense30x(ScrnInfoPtr pScrn, Bool quiet)
        if(pSiS->SenseYPbPr) {
           outSISIDXREG(SISPART2,0x4d,(backupP2_4d | 0x10));
           SiS_DDC2Delay(pSiS->SiS_Pr, 0x2000);
+	  /* New BIOS (2.x) uses vga2 sensing here for all bridges >301LV */
           if((result = SISDoSense(pScrn, svhs, 0x0604))) {
              if((result = SISDoSense(pScrn, cvbs, 0x0804))) {
 	        if(!quiet) {

@@ -304,6 +304,7 @@ typedef struct _SiS_Private
 	BOOLEAN HaveEMILCD;
 	BOOLEAN OverruleEMI;
 	UCHAR  EMI_30,EMI_31,EMI_32,EMI_33;
+	USHORT SiS_EMIOffset;
 	SHORT  PDC, PDCA;
 	UCHAR  SiS_MyCR63;
 	USHORT SiS_CRT1Mode;
@@ -663,6 +664,8 @@ typedef struct _SiS_Private
 	BOOLEAN CP_HaveCustomData;
 	int     CP_PreferredX, CP_PreferredY, CP_PreferredIndex;
 	int	CP_MaxX, CP_MaxY, CP_MaxClock;
+	UCHAR   CP_PrefSR2B, CP_PrefSR2C;
+	USHORT  CP_PrefClock;
 	BOOLEAN CP_Supports64048075;
 	int     CP_HDisplay[7], CP_VDisplay[7];	/* For Custom LCD panel dimensions */
     	int     CP_HTotal[7], CP_VTotal[7];

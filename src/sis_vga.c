@@ -1005,16 +1005,34 @@ SISSense6326(ScrnInfoPtr pScrn)
     }
 }
 
+static BOOLEAN
+SISIsUMC(SISPtr pSiS)
+{
+    USHORT p4_0f, p4_25, p4_27, temp;
+    
+    inSISIDXREG(SISPART4, 0x0f, p4_0f);
+    inSISIDXREG(SISPART4, 0x25, p4_25);
+    inSISIDXREG(SISPART4, 0x27, p4_27);
+    andSISIDXREG(SISPART4, 0x0f, 0x7f);
+    orSISIDXREG(SISPART4, 0x25, 0x08);
+    andSISIDXREG(SISPART4, 0x27, 0xfd);
+    inSISIDXREG(SISPART4, 0x26, temp);
+    outSISIDXREG(SISPART4, 0x27, p4_27);
+    outSISIDXREG(SISPART4, 0x25, p4_25);
+    outSISIDXREG(SISPART4, 0x0f, p4_0f);
+    return((temp & 0x08) ? TRUE : FALSE);
+}
+
 /* Detect video bridge and set VBFlags accordingly */
 void SISVGAPreInit(ScrnInfoPtr pScrn)
 {
     SISPtr  pSiS = SISPTR(pScrn);
-    int     temp,temp1,temp2;
+    int     temp,temp1,temp2,sistypeidx;
     int     upperlimitlvds, lowerlimitlvds;
     int     upperlimitch, lowerlimitch;
     int     chronteltype, chrontelidreg, upperlimitvb;
     
-    static const char *detectvb = "Detected %s video bridge (ID %d; Revision 0x%x)\n";
+    static const char *detectvb = "Detected %s (%s) video bridge (ID %d; Rev 0x%x)\n";
 #if 0
     unsigned char sr17=0;
 #endif
@@ -1028,6 +1046,16 @@ void SISVGAPreInit(ScrnInfoPtr pScrn)
 	"7019",
 	"7020",
 	"(unknown)"
+    };
+    static const char  *SiSVBTypeStr[] = {
+        "301",		/* 0 */
+	"301B",		/* 1 */
+	"301B-DH",	/* 2 */
+	"301LV",	/* 3 */
+	"302LV",	/* 4 */
+	"301C",		/* 5 */
+	"302ELV",	/* 6 */
+	"302B"		/* 7 */
     };
 
     switch (pSiS->Chipset) {
@@ -1057,7 +1085,7 @@ void SISVGAPreInit(ScrnInfoPtr pScrn)
 	SISSense6326(pScrn);
     }
 
-    pSiS->VBFlags = 0; /* reset VBFlags */
+    pSiS->VBFlags = pSiS->VBFlags2 = 0; /* reset VBFlags */
     pSiS->SiS_Pr->SiS_UseLCDA = FALSE;
     pSiS->SiS_Pr->Backup = FALSE;
 
@@ -1068,56 +1096,75 @@ void SISVGAPreInit(ScrnInfoPtr pScrn)
     inSISIDXREG(SISPART4, 0x00, temp);
     temp &= 0x0F;
     if(temp == 1) {
+    
         inSISIDXREG(SISPART4, 0x01, temp1);
 	temp1 &= 0xff;
+	
+	if(temp1 >= 0xC0) {
+	   if(SISIsUMC(pSiS)) pSiS->VBFlags2 |= VB_SISUMC;
+	}
+	
         if(temp1 >= 0xE0) {
 	        inSISIDXREG(SISPART4, 0x39, temp2);
 		if(temp2 == 0xff) {
 	   	   pSiS->VBFlags |= VB_302LV;
-    		   xf86DrvMsg(pScrn->scrnIndex, X_PROBED, detectvb, "SiS302LV", 1, temp1);
+		   sistypeidx = 4;
 		} else {
-		   pSiS->VBFlags |= VB_301C;   /* VB_302ELV; */
-    		   xf86DrvMsg(pScrn->scrnIndex, X_PROBED, detectvb, "SiS301C", 1, temp1);
+		   pSiS->VBFlags |= VB_301C;   	/* VB_302ELV; */
+		   sistypeidx = 5; 		/* 6; */
 		}
 	} else if(temp1 >= 0xD0) {
 	   	pSiS->VBFlags |= VB_301LV;
-    		xf86DrvMsg(pScrn->scrnIndex, X_PROBED, detectvb, "SiS301LV", 1, temp1);
+		sistypeidx = 3;
 	} else if(temp1 >= 0xC0) {
 	   	pSiS->VBFlags |= VB_301C;
-    		xf86DrvMsg(pScrn->scrnIndex, X_PROBED, detectvb, "SiS301C", 1, temp1);
+		sistypeidx = 5;
 	} else if(temp1 >= 0xB0) {
-	        pSiS->VBFlags |= VB_301B;
+	        pSiS->VBFlags |= VB_301B; 
+		sistypeidx = 1;
 		inSISIDXREG(SISPART4, 0x23, temp2);
-		if(!(temp2 & 0x02)) pSiS->VBFlags |= VB_30xBDH;
-    		xf86DrvMsg(pScrn->scrnIndex, X_PROBED, detectvb,
-				(temp2 & 0x02) ? "SiS301B" : "SiS301B-DH", 1, temp1);
+		if(!(temp2 & 0x02)) {
+		   pSiS->VBFlags |= VB_30xBDH;
+		   sistypeidx = 2;
+		}
 	} else {
 	        pSiS->VBFlags |= VB_301;
-		xf86DrvMsg(pScrn->scrnIndex, X_PROBED, detectvb, "SiS301", 1, temp1);
+		sistypeidx = 0;
 	}
+	
+	xf86DrvMsg(pScrn->scrnIndex, X_PROBED, detectvb, SiSVBTypeStr[sistypeidx], 
+		   		(pSiS->VBFlags2 & VB_SISUMC) ? "UMC" : "Charter", 1, temp1);
 
 	SISSense30x(pScrn, TRUE); 
 
-    } else if (temp == 2) {
+    } else if(temp == 2) {
 
         inSISIDXREG(SISPART4, 0x01, temp1);
 	temp1 &= 0xff;
+	
+	if(temp1 >= 0xC0) {
+	   if(SISIsUMC(pSiS)) pSiS->VBFlags2 |= VB_SISUMC;
+	}
+	
 	if(temp1 >= 0xE0) {
         	pSiS->VBFlags |= VB_302LV;
-    		xf86DrvMsg(pScrn->scrnIndex, X_PROBED, detectvb, "SiS302LV", 2, temp1);
+		sistypeidx = 4;
 	} else if(temp1 >= 0xD0) {
         	pSiS->VBFlags |= VB_301LV;
-    		xf86DrvMsg(pScrn->scrnIndex, X_PROBED, detectvb, "SiS301LV", 2, temp1);
+		sistypeidx = 3;
 	} else {
 	        pSiS->VBFlags |= VB_302B;
-		xf86DrvMsg(pScrn->scrnIndex, X_PROBED, detectvb, "SiS302B", 2, temp1);
+		sistypeidx = 7;
 	}
+	
+	xf86DrvMsg(pScrn->scrnIndex, X_PROBED, detectvb, SiSVBTypeStr[sistypeidx], 
+		   		(pSiS->VBFlags2 & VB_SISUMC) ? "UMC" : "Charter", 2, temp1);
 
 	SISSense30x(pScrn, FALSE);
 
     } else if (temp == 3) {
 
-    	xf86DrvMsg(pScrn->scrnIndex, X_PROBED, detectvb, "unsupported SiS303", temp, 0);
+    	xf86DrvMsg(pScrn->scrnIndex, X_PROBED, detectvb, "unsupported SiS303", "unknown", temp, 0);
 
     } else {
 
