@@ -1070,7 +1070,7 @@ SiSAllowSyncOverride(SISPtr pSiS)
       if(pSiS->SecondHead) {
          if(pSiS->VBFlags & CRT1_LCDA) return TRUE;
       } else {
-         if(pSiS->VBFlags & (CRT2_LCD | CRT2_TV)) return TRUE;
+         if(pSiS->VBFlags & (CRT2_TV | CRT2_LCD)) return TRUE;
       }
       return FALSE;
    } else
@@ -1083,12 +1083,8 @@ SiSAllowSyncOverride(SISPtr pSiS)
 #endif
 
    if(!(pSiS->VBFlags & DISPTYPE_CRT1)) {
-      if(pSiS->VBFlags & (CRT2_LCD | CRT2_TV)) {
-         return TRUE;
-      }
-   } else if(pSiS->VBFlags & CRT1_LCDA) {
-      return TRUE;
-   }
+      if(pSiS->VBFlags & (CRT2_TV | CRT2_LCD)) return TRUE;
+   } else if(pSiS->VBFlags & CRT1_LCDA)        return TRUE;
    
    return FALSE;
 }
@@ -5085,6 +5081,9 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
     * disable this behavior.
     * This should "fix" the - by far - most common configuration
     * mistakes.
+    * Addendum 2: For LCD, we only do this in case this is a
+    * standard panel. Don't kick out modes provided by the user
+    * for a custom panel.
     */
     if((pScrn->monitor->nHsync <= 0) || (pSiS->OverruleRanges)) {
 #if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,3,99,14,0)
@@ -5129,7 +5128,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
           if(SiSAllowSyncOverride(pSiS)) {
              /* Set sane ranges for LCD and TV */
 	     pScrn->monitor->nVrefresh = 1;
-	     pScrn->monitor->vrefresh[0].lo = 56;  /* 56 for 720/768x576 */
+	     pScrn->monitor->vrefresh[0].lo = 50;  /* 50 1280x720@50; 56 720/768x576 */
 	     pScrn->monitor->vrefresh[0].hi = 71;  /* 71 for 640x400 */
 	     xf86DrvMsg(pScrn->scrnIndex, X_INFO, sanev,
 #ifdef SISDUALHEAD
@@ -5171,7 +5170,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	     if(pSiS->VBFlags & (CRT2_TV | CRT2_LCD)) {
 	        /* Set sane ranges for LCD and TV */
 	        pSiS->CRT2pScrn->monitor->nVrefresh = 1;
-	        pSiS->CRT2pScrn->monitor->vrefresh[0].lo = 56; /* 56 for 768/720x576 */
+	        pSiS->CRT2pScrn->monitor->vrefresh[0].lo = 50; /* 50: 1280x720@50; 56: 768/720x576 */
 	        pSiS->CRT2pScrn->monitor->vrefresh[0].hi = 71; /* 71 for 640x400 */
 		xf86DrvMsg(pScrn->scrnIndex, X_INFO, sanev, 2);
 	     }

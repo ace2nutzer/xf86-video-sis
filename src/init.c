@@ -3381,7 +3381,7 @@ SiS_SetCRT1Group(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo,
 }
 
 /*********************************************/
-/*         HELPER: RESET VIDEO BRIDGE        */
+/*       HELPER: VIDEO BRIDGE PROG CLK       */
 /*********************************************/
 
 static void
@@ -3390,19 +3390,18 @@ SiS_ResetVB(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo)
    UCHAR  *ROMAddr  = HwInfo->pjVirtualRomBase;
    USHORT temp;
 
+   /* VB programming clock */
    if(SiS_Pr->SiS_UseROM) {
       if(HwInfo->jChipType < SIS_330) {
          temp = ROMAddr[VB310Data_1_2_Offset] | 0x40;
 	 if(SiS_Pr->SiS_ROMNew) temp = ROMAddr[0x80] | 0x40;
-         SiS_SetReg(SiS_Pr->SiS_Part1Port,0x02,temp);
+	 SiS_SetReg(SiS_Pr->SiS_Part1Port,0x02,temp);
       } else if(HwInfo->jChipType >= SIS_661) {
-         temp = ROMAddr[0x7e];
-         if(SiS_Pr->SiS_ROMNew) temp = ROMAddr[0x80];
-         if(HwInfo->jChipType >= SIS_660)                  temp |= 0x40;
-         else if(SiS_GetReg(SiS_Pr->SiS_P3d4,0x7b) >= 100) temp |= 0x40;
-         SiS_SetReg(SiS_Pr->SiS_Part1Port,0x02,temp);
+         temp = ROMAddr[0x7e] | 0x40;
+         if(SiS_Pr->SiS_ROMNew) temp = ROMAddr[0x80] | 0x40;
+	 SiS_SetReg(SiS_Pr->SiS_Part1Port,0x02,temp);
       }
-   }
+   } 
 }
 
 /*********************************************/
@@ -4454,7 +4453,7 @@ SiS_CheckBuildCustomMode(ScrnInfoPtr pScrn, DisplayModePtr mode, int VBFlags)
 }
 
 int
-SiS_FindPanelFromDB(SISPtr pSiS, USHORT panelvendor, USHORT panelproduct, int *maxx, int *maxy)
+SiS_FindPanelFromDB(SISPtr pSiS, USHORT panelvendor, USHORT panelproduct, int *maxx, int *maxy, int *prefx, int *prefy)
 {
    int i, j;
    BOOLEAN done = FALSE;
@@ -4467,6 +4466,8 @@ SiS_FindPanelFromDB(SISPtr pSiS, USHORT panelvendor, USHORT panelproduct, int *m
 	       if(SiS_PlasmaTable[i].maxx && SiS_PlasmaTable[i].maxy) {
 	          (*maxx) = (int)SiS_PlasmaTable[i].maxx;
 		  (*maxy) = (int)SiS_PlasmaTable[i].maxy;
+		  (*prefx) = (int)SiS_PlasmaTable[i].prefx;
+		  (*prefy) = (int)SiS_PlasmaTable[i].prefy;
 		  done = TRUE;
 		  xf86DrvMsg(pSiS->pScrn->scrnIndex, X_PROBED,
 	       	        "Identified %s, correcting max X res %d, max Y res %d\n",
@@ -4863,8 +4864,9 @@ SiSBuildBuiltInModeList(ScrnInfoPtr pScrn, BOOLEAN includelcdmodes, BOOLEAN isfo
 
 		  pSiS->AddedPlasmaModes = TRUE;
 		  
-	          sprintf(current->name, "%dx%d", SiS_PlasmaMode[l].HDisplay,
-                                                  SiS_PlasmaMode[l].VDisplay);
+		  strcpy(current->name, SiS_PlasmaMode[l].name);
+	          /* sprintf(current->name, "%dx%d", SiS_PlasmaMode[l].HDisplay,
+                                                  SiS_PlasmaMode[l].VDisplay); */
 
                   current->status = MODE_OK;
 
@@ -4911,6 +4913,9 @@ SiSBuildBuiltInModeList(ScrnInfoPtr pScrn, BOOLEAN includelcdmodes, BOOLEAN isfo
 		     pSiS->LCDwidth = pSiS->SiS_Pr->CP_MaxX = current->HDisplay;
 	          if(current->VDisplay > pSiS->LCDheight)
 		     pSiS->LCDheight = pSiS->SiS_Pr->CP_MaxY = current->VDisplay;
+		     
+		  xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
+		  	"\tAdding \"%s\" to list of built-in modes\n", current->name);
 
                }
 	       done = TRUE;

@@ -2046,6 +2046,7 @@ typedef struct _SiS_PlasmaTables
    const char *DDCnames[5];
    const char *plasmaname;
    USHORT maxx,maxy;
+   USHORT prefx, prefy;
    UCHAR  modenum;
    UCHAR  plasmamodes[20];  /* | 0x80 = DVI-capable, | 0x40 = analog */
 } SiS_PlasmaTables;
@@ -2156,7 +2157,42 @@ static const SiS_PlasmaModes SiS_PlasmaMode[] = {
         848, 1068, 20,  40,	/* differs from DDC data, better centered */
         480,  516,  3,   5,	/* won't work assumingly, because data is % 8 */
       SIS_PL_HSYNCN | SIS_PL_VSYNCN },
+   {  "1280x720",		/* 21: WIDE720(60) (aka "750p") (Panasonic) */
+      74300,
+      1280, 1650,110,  40,
+       720,  750,  5,   5,
+      SIS_PL_HSYNCP | SIS_PL_VSYNCP },
+   {  "1280x768",		/* 22: 1280x768@56.5 (Panasonic) */
+      76200,			/* (According to manual not supported for HDMI; but works) */
+      1280, 1680, 16,  24,
+       768,  802,  2,   5,
+      SIS_PL_HSYNCP | SIS_PL_VSYNCP },
+   {  "1280x720@50",		/* 23: WIDE720(50) (aka "750p") (Panasonic) */
+      74300,			/* Panasonic states 45.0kHz. Not possible. This one works (with some overscan) */
+      1280, 1980,400,  80,
+       720,  750,  1,   2,
+      SIS_PL_HSYNCP | SIS_PL_VSYNCP },
+   {  "720x480",		/* 24: 720x480 (aka "525p" and "480p") (Panasonic) */
+      27000,			
+       720,  856, 40,  32,   
+       480,  525,  1,   3,
+      SIS_PL_HSYNCP | SIS_PL_VSYNCP },
+   {  "720x576",		/* 25: 720x576 (aka "625p"and "576p") (Panasonic) */
+      27500,			
+       720,  864, 16,  64,
+       576,  625,  5,   6,
+      SIS_PL_HSYNCP | SIS_PL_VSYNCP },
+   {  "1280x720@50",		/* 26: WIDE720(50) (aka "750p") (Generic) */
+      74300,			
+      1280, 1980,400,  80,
+       720,  750,  5,   5,
+      SIS_PL_HSYNCP | SIS_PL_VSYNCP },
 };
+
+/*
+27.00  720 755 791 858  480 480 484 525
+27.50  720 732 795 864  576 581 587 625 
+*/
 
 static const SiS_PlasmaTables SiS_PlasmaTable[] = {
 #if 0  /* Product IDs missing */
@@ -2164,6 +2200,7 @@ static const SiS_PlasmaTables SiS_PlasmaTable[] = {
      { 0x0000, 0x0000, 0x0000, 0x0000, 0x0000 },
      { "", "", "", "", "" },
      "NEC PlasmaSync 42VP4/42VP4D/42VP4G/42VP4DG",
+     0, 0,
      0, 0,
      11,   /* All DVI, except 0, 7, 13 */
      { 0|0x40, 1|0xc0, 2|0xc0, 4|0xc0, 7|0x40, 9|0xc0,10|0xc0,11|0xc0,13|0x40,14|0xc0,
@@ -2176,6 +2213,7 @@ static const SiS_PlasmaTables SiS_PlasmaTable[] = {
      { "", "", "", "", "" },
      "NEC PlasmaSync 42PD1/50PD1/50PD2",
      0, 0,
+     0, 0,
      5,   /* DVI entirely unknown */
      { 0|0x40, 1|0xc0, 2|0xc0, 4|0xc0, 9|0xc0, 0     , 0     , 0     , 0     , 0     ,
        0     , 0     , 0     , 0     , 0     , 0     , 0     , 0     , 0     , 0       }
@@ -2184,6 +2222,7 @@ static const SiS_PlasmaTables SiS_PlasmaTable[] = {
      { 0x0000, 0x0000, 0x0000, 0x0000, 0x0000 },
      { "", "", "", "", "" },
      "NEC PlasmaSync 42PD3",
+     0, 0,
      0, 0,
      10,   /* DVI entirely unknown */
      { 0|0x40, 1|0xc0, 2|0xc0, 3|0xc0, 4|0xc0, 5|0xc0, 6|0xc0, 7|0x40, 8|0xc0, 9|0xc0,
@@ -2194,6 +2233,7 @@ static const SiS_PlasmaTables SiS_PlasmaTable[] = {
      { "", "", "", "", "" },
      "NEC PlasmaSync 42VM3/61XM1",
      0, 0,
+     0, 0,
      11,  /* DVI entirely unknown */
      { 0|0x40, 1|0xc0, 2|0xc0, 3|0xc0, 4|0xc0, 5|0xc0, 6|0xc0, 8|0xc0, 9|0xc0,11|0xc0,
       17|0xc0, 0     , 0     , 0     , 0     , 0     , 0     , 0     , 0     , 0       }
@@ -2203,6 +2243,7 @@ static const SiS_PlasmaTables SiS_PlasmaTable[] = {
      { "", "", "", "", "" },
      "NEC PlasmaSync 42MP1/42MP2",
      0, 0,
+     0, 0,
      6,   /* DVI entirely unknown */
      { 0|0x40, 1|0xc0, 2|0xc0, 4|0xc0, 9|0xc0,11|0xc0, 0     , 0     , 0     , 0     ,
        0     , 0     , 0     , 0     , 0     , 0     , 0     , 0     , 0     , 0       }
@@ -2211,6 +2252,7 @@ static const SiS_PlasmaTables SiS_PlasmaTable[] = {
      { 0x0000, 0x0000, 0x0000, 0x0000, 0x0000 },
      { "", "", "", "", "" },
      "NEC PlasmaSync 50MP1",
+     0, 0,
      0, 0,
      10,   /* DVI entirely unknown */
      { 0|0x40, 1|0xc0, 2|0xc0, 4|0xc0, 7|0x40, 9|0xc0,10|0xc0,11|0xc0,13|0x40,14|0xc0,
@@ -2222,6 +2264,7 @@ static const SiS_PlasmaTables SiS_PlasmaTable[] = {
      { "PX-42VM", "", "", "", "" },
      "NEC PlasmaSync 42MP3/42MP4/50MP2/61MP1",
      0, 0,
+     0, 0,
      11,   /* All DVI except 0, 7, 13, 17 */
      { 0|0x40, 1|0xc0, 2|0xc0, 4|0xc0, 7|0x40, 9|0xc0,10|0xc0,11|0xc0,13|0x40,14|0xc0,
       17|0x40, 0     , 0     , 0     , 0     , 0     , 0     , 0     , 0     , 0       }
@@ -2231,6 +2274,7 @@ static const SiS_PlasmaTables SiS_PlasmaTable[] = {
      { 0x0000, 0x0000, 0x0000, 0x0000, 0x0000 },
      { "", "", "", "", "" },
      "NEC PlasmaSync 3300W",
+     0, 0,
      0, 0,
      3,
      { 0|0x40, 1|0xc0,18|0xc0, 0     , 0     , 0     , 0     , 0     , 0     , 0     ,
@@ -2249,6 +2293,7 @@ static const SiS_PlasmaTables SiS_PlasmaTable[] = {
      { "", "", "", "", "" },
      "NEC PlasmaSync 4210W",
      0, 0,
+     0, 0,
      6,   /* DVI entirely unknown */
      { 0|0x40, 1|0xc0, 2|0xc0, 4|0xc0, 9|0xc0,11|0xc0, 0     , 0     , 0     , 0     ,
        0     , 0     , 0     , 0     , 0     , 0     , 0     , 0     , 0     , 0       }
@@ -2257,6 +2302,8 @@ static const SiS_PlasmaTables SiS_PlasmaTable[] = {
      { 0x0000, 0x0000, 0x0000, 0x0000, 0x0000 },
      { "", "", "", "", "" },
      "NEC PlasmaSync 5000W",
+     0, 0,
+     0, 0,
      7,   /* DVI entirely unknown */
      { 0|0x40, 1|0xc0, 2|0xc0, 4|0xc0, 7|0x40, 9|0xc0,11|0xc0, 0     , 0     , 0     ,
        0     , 0     , 0     , 0     , 0     , 0     , 0     , 0     , 0     , 0       }
@@ -2267,6 +2314,7 @@ static const SiS_PlasmaTables SiS_PlasmaTable[] = {
      { "", "", "", "", "" },
      "Pioneer 503CMX/PDA-5002",
      0, 0,
+     0, 0,
      6,   /* DVI unknown */
      { 1|0xc0, 2|0xc0, 9|0xc0,11|0xc0,12|0xc0,15|0xc0, 0     , 0     , 0     , 0     ,
        0     , 0     , 0     , 0     , 0     , 0     , 0     , 0     , 0     , 0       }
@@ -2275,6 +2323,7 @@ static const SiS_PlasmaTables SiS_PlasmaTable[] = {
      { 0xa00e, 0x0000, 0x0000, 0x0000, 0x0000 },
      { "", "", "", "", "" },
      "Panasonic TH-42",
+     0, 0,
      0, 0,
      5,   /* No DVI output */
      { 1|0x40, 2|0x40, 4|0x40, 9|0x40,15|0x40, 0     , 0     , 0     , 0     , 0     ,
@@ -2285,6 +2334,7 @@ static const SiS_PlasmaTables SiS_PlasmaTable[] = {
      { "TH-42PW*4", "", "", "", "" },
      "Panasonic TH-42PW5",
      0, 0,
+     0, 0,
      1,   /* No special modes otherwise; no DVI. */
      {20|0x40,19|0x40, 0     , 0     , 0     , 0     , 0     , 0     , 0     , 0     ,
        0     , 0     , 0     , 0     , 0     , 0     , 0     , 0     , 0     , 0       }
@@ -2294,17 +2344,29 @@ static const SiS_PlasmaTables SiS_PlasmaTable[] = {
      { "PLV-Z2", "", "", "", "" },
      "Sanyo PLV-Z2 (non HDCP-mode)", 	/* HDCP mode would be id 9b06, but not needed */
      1280, 768,				/* as it then advertises correct size */
+     1280, 720,
      1,   /* 1280x720, no special modes otherwise */
-     { 6|0xc0, 0     , 0     , 0     , 0     , 0     , 0     , 0     , 0     , 0     ,
+     {21|0xc0, 0     , 0     , 0     , 0     , 0     , 0     , 0     , 0     , 0     ,
        0     , 0     , 0     , 0     , 0     , 0     , 0     , 0     , 0     , 0       }
    },
    { 0x34a9, 1,
      { 0xd034, 0x0000, 0x0000, 0x0000, 0x0000 },
-     { "AE500U", "", "", "", "" },
+     { "AE500U (DVI-D)", "", "", "", "" },
      "Panasonic AE500U", 
      1280, 768,		
+     1280, 720,
      1,   /* 1280x720, no special modes otherwise */
-     { 6|0xc0, 0     , 0     , 0     , 0     , 0     , 0     , 0     , 0     , 0     ,
+     {21|0xc0, 0     , 0     , 0     , 0     , 0     , 0     , 0     , 0     , 0     ,
+       0     , 0     , 0     , 0     , 0     , 0     , 0     , 0     , 0     , 0       }
+   },
+   { 0x34a9, 1,
+     { 0xd043, 0x0000, 0x0000, 0x0000, 0x0000 },
+     { "AE700U (HDMI)", "", "", "", "" },
+     "Panasonic AE700U", 
+     1360, 768,		
+     1280, 720,
+     6,   /* 1280x720/60, 1280x720/50, 1280x768@56(digital/analog), 720x480, 720x576 */
+     {21|0xc0,23|0xc0,22|0x80,13|0x40,24|0x80,25|0x80, 0     , 0     , 0     , 0     ,  
        0     , 0     , 0     , 0     , 0     , 0     , 0     , 0     , 0     , 0       }
    },
    { 0x0000 }
@@ -2357,7 +2419,7 @@ int	SiSTranslateToOldMode(int modenumber);
 BOOLEAN	SiS_GetPanelID(SiS_Private *SiS_Pr, PSIS_HW_INFO);
 USHORT 	SiS_CheckBuildCustomMode(ScrnInfoPtr pScrn, DisplayModePtr mode, int VBFlags);
 DisplayModePtr SiSBuildBuiltInModeList(ScrnInfoPtr pScrn, BOOLEAN includelcdmodes, BOOLEAN isfordvi);
-int 	SiS_FindPanelFromDB(SISPtr pSiS, USHORT panelvendor, USHORT panelproduct, int *maxx, int *maxy);
+int 	SiS_FindPanelFromDB(SISPtr pSiS, USHORT panelvendor, USHORT panelproduct, int *maxx, int *maxy, int *prefx, int *prefy);
 void    SiS_MakeClockRegs(ScrnInfoPtr pScrn, int clock, UCHAR *p2b, UCHAR *p2c);
 #else
 BOOLEAN	SiSSetMode(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo,USHORT ModeNo);

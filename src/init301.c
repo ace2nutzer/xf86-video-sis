@@ -9695,9 +9695,11 @@ SiS_SenseLCDDDC(SiS_Private *SiS_Pr, SISPtr pSiS)
 {
    USHORT DDCdatatype, paneltype, flag, xres=0, yres=0;
    USHORT index, myindex, lumsize, numcodes, panelvendor, panelproduct;
+   int maxx=0, maxy=0, prefx=0, prefy=0;
    unsigned char cr37=0, seekcode;
    BOOLEAN checkexpand = FALSE;
    BOOLEAN havesync = FALSE;
+   BOOLEAN indb = FALSE;
    int retry, i;
    unsigned char buffer[256];
 
@@ -9794,6 +9796,12 @@ SiS_SenseLCDDDC(SiS_Private *SiS_Pr, SISPtr pSiS)
       
       panelvendor = buffer[9] | (buffer[8] << 8);
       panelproduct = buffer[10] | (buffer[11] << 8);
+      
+      /* Overrule bogus preferred modes from database */
+      if((indb = SiS_FindPanelFromDB(pSiS, panelvendor, panelproduct, &maxx, &maxy, &prefx, &prefy))) {
+         if(prefx) SiS_Pr->CP_PreferredX = xres = prefx;
+	 if(prefy) SiS_Pr->CP_PreferredY = yres = prefy;
+      }
 
       if(buffer[0x18] & 0x02) {
       
@@ -9801,8 +9809,8 @@ SiS_SenseLCDDDC(SiS_Private *SiS_Pr, SISPtr pSiS)
 	 USHORT phb  = (buffer[0x39] | ((buffer[0x3a] & 0x0f) << 8));
 	 USHORT pvb  = (buffer[0x3c] | ((buffer[0x3d] & 0x0f) << 8));
 
-         SiS_Pr->CP_PreferredX = xres = buffer[0x38] | ((buffer[0x3a] & 0xf0) << 4);
-         SiS_Pr->CP_PreferredY = yres = buffer[0x3b] | ((buffer[0x3d] & 0xf0) << 4);
+	 if(!xres) SiS_Pr->CP_PreferredX = xres = buffer[0x38] | ((buffer[0x3a] & 0xf0) << 4);
+         if(!yres) SiS_Pr->CP_PreferredY = yres = buffer[0x3b] | ((buffer[0x3d] & 0xf0) << 4);
 	 
          switch(xres) {
 #if 0	    /* Treat as custom */
@@ -9881,14 +9889,13 @@ SiS_SenseLCDDDC(SiS_Private *SiS_Pr, SISPtr pSiS)
 
       }
       
-      /* Check against our database; Eg. Sanyo projector reports
+      /* Check against our database; eg. Sanyo Z2 projector reports
        * 1024x768 as preferred mode, although it supports 1280x720 
-       * natively in non-HTCP mode. Treat such wrongly reporting  
+       * natively in non-HDCP mode. Treat such wrongly reporting  
        * panels as custom and fixup actual maximum resolutions.
        */
       if(paneltype != Panel_Custom) {
-         int maxx, maxy;
-         if((SiS_FindPanelFromDB(pSiS, panelvendor, panelproduct, &maxx, &maxy))) {
+         if(indb) {
 	    paneltype = Panel_Custom;
 	    SiS_Pr->CP_MaxX = maxx;
 	    SiS_Pr->CP_MaxY = maxy;
@@ -10217,8 +10224,8 @@ SiS_SenseLCDDDC(SiS_Private *SiS_Pr, SISPtr pSiS)
        * Treat such wrongly reporting panels as custom.
        */
       if(paneltype != Panel_Custom) {
-         int maxx, maxy;
-         if((SiS_FindPanelFromDB(pSiS, panelvendor, panelproduct, &maxx, &maxy))) {
+         int maxx, maxy, prefx, prefy;
+         if((SiS_FindPanelFromDB(pSiS, panelvendor, panelproduct, &maxx, &maxy, &prefx, &prefy))) {
 	    paneltype = Panel_Custom;
 	    SiS_Pr->CP_MaxX = maxx;
 	    SiS_Pr->CP_MaxY = maxy;
