@@ -24,17 +24,18 @@
  */
 
 #include "xf86.h"
-#include "sis.h"
 #include "compiler.h"
+#include "sis.h"
 
 extern FBLinearPtr SISAllocateOverlayMemory(ScrnInfoPtr pScrn, FBLinearPtr linear, int size);
 
-#define FL_LIBC  0x01
-#define FL_BI    0x02
-#define FL_SSE   0x04
-#define FL_MMX   0x08
-#define FL_3DNOW 0x10
-#define FL_MMX2  0x20
+#define FL_LIBC  0x001
+#define FL_BI    0x002
+#define FL_SSE   0x004
+#define FL_MMX   0x008
+#define FL_3DNOW 0x010
+#define FL_MMX2  0x020
+#define FL_BI2   0x040
 
 #define CPUBUFSIZE 2048      /* Size of /proc/cpuinfo buffer */
 #define BUFSIZ (576 * 1152)  /* Matches 720x576 YUV420 */
@@ -44,165 +45,205 @@ extern FBLinearPtr SISAllocateOverlayMemory(ScrnInfoPtr pScrn, FBLinearPtr linea
 /*                   arch specific memcpy() routines                    */
 /************************************************************************/
 
-/* i386 */
+/* i386, AMD64 */
 
-#define SSE_PREFETCH "  prefetchnta "
+#define FENCE 			\
+     __asm__ __volatile__( 	\
+		  " sfence\n" 	\
+		  :		\
+		  :		\
+		  : "memory");	
 
-#define FENCE __asm__ __volatile__ ("sfence":::"memory");
-
-#define FENCEMMS __asm__ __volatile__ ("\t"		\
-				       "sfence\n\t"	\
-				       "emms\n\t"	\
-				       :::"memory");
+#define FENCEMMS 		\
+     __asm__ __volatile__ (	\
+     	          " sfence\n"	\
+	          " emms\n"	\
+	          :		\
+		  :		\
+		  : "memory");
 				       
-#define FEMMS __asm__ __volatile__("femms":::"memory");
+#define FEMMS 			\
+     __asm__ __volatile__(	\
+      	 	  " femms\n"	\
+		  :		\
+		  :		\
+		  : "memory");
 
-#define EMMS __asm__ __volatile__("emms":::"memory");
+#define EMMS 			\
+     __asm__ __volatile__(	\
+     		  " emms\n"	\
+		  :		\
+		  :		\
+		  : "memory");
 
-#define NOW_PREFETCH "  prefetch "
+#define SSE_PREFETCH " prefetchnta "
+#define NOW_PREFETCH " prefetch "
 
-#define PREFETCH1(arch_prefetch,from)			\
-    __asm__ __volatile__ (				\
-		  "1:  " 				\
-		  arch_prefetch "(%0)\n"		\
-		  arch_prefetch "32(%0)\n"		\
-		  arch_prefetch "64(%0)\n"		\
-		  arch_prefetch "96(%0)\n"		\
-		  arch_prefetch "128(%0)\n"		\
-		  arch_prefetch "160(%0)\n"		\
-		  arch_prefetch "192(%0)\n"		\
-		  arch_prefetch "256(%0)\n"		\
-		  arch_prefetch "288(%0)\n"		\
-		  "2:\n"				\
-		  : : "r" (from) );
+#define PREFETCH1(arch_prefetch,from)		\
+    __asm__ __volatile__ (			\
+		  arch_prefetch "(%0)\n"	\
+		  arch_prefetch "32(%0)\n"	\
+		  arch_prefetch "64(%0)\n"	\
+		  arch_prefetch "96(%0)\n"	\
+		  arch_prefetch "128(%0)\n"	\
+		  arch_prefetch "160(%0)\n"	\
+		  arch_prefetch "192(%0)\n"	\
+		  arch_prefetch "256(%0)\n"	\
+		  arch_prefetch "288(%0)\n"	\
+		  : 				\
+		  : "r" (from) );
 
-#define PREFETCH2(arch_prefetch,from)			\
-    __asm__ __volatile__ (				\
-		  arch_prefetch "320(%0)\n"		\
-		  : : "r" (from) );
+#define PREFETCH2(arch_prefetch,from)		\
+    __asm__ __volatile__ (			\
+		  arch_prefetch "320(%0)\n"	\
+		  : 				\
+		  : "r" (from) );
 		  
-#define PREFETCH3(arch_prefetch,from)			\
-    __asm__ __volatile__ (				\
-		  arch_prefetch "288(%0)\n"		\
-		  : : "r" (from) );
+#define PREFETCH3(arch_prefetch,from)		\
+    __asm__ __volatile__ (			\
+		  arch_prefetch "288(%0)\n"	\
+		  : 				\
+		  : "r" (from) );
 
-#define small_memcpy(to,from,n)						\
+#define small_memcpy_i386(to,from,n)					\
     {									\
 	__asm__ __volatile__(						\
-		  "movl %2,%%ecx\n\t"					\
-                  "sarl $2,%%ecx\n\t"					\
-		  "rep ; movsl\n\t"					\
-		  "testb $2,%b2\n\t"					\
-		  "je 1f\n\t"						\
-		  "movsw\n"						\
-		  "1:\ttestb $1,%b2\n\t"				\
-		  "je 2f\n\t"						\
-		  "movsb\n"						\
-		  "2:"							\
-		  :"=&D" (to), "=&S" (from)				\
-		  :"q" (n),"0" ((long) to),"1" ((long) from) 		\
-		  : "%ecx","memory");					\
+		  " cld\n"						\
+		  " shrl $1, %%ecx\n"					\
+		  " jnc 1f\n"						\
+		  " movsb\n"						\
+	        "1: shrl $1, %%ecx\n"					\
+	          " jnc 2f\n"						\
+		  " movsw\n"						\
+	        "2: rep ; movsl"					\
+		  : "=&D" (to), "=&S" (from)				\
+		  : "c" (n), "0" ((long) to), "1" ((long) from) 	\
+		  : "memory", "cc");					\
     }
 
+#define small_memcpy_amd64(to,from,n)					\
+    {									\
+	__asm__ __volatile__(						\
+		  " cld\n"						\
+		  " shrq $1, %%rcx\n"					\
+		  " jnc 1f\n"						\
+		  " movsb\n"						\
+	        "1: shrq $1, %%rcx\n"					\
+	          " jnc 2f\n"						\
+		  " movsw\n"						\
+	        "2: shrq $1, %%rcx\n"					\
+		  " jnc 3f\n"						\
+		  " movsl\n"						\
+		"3: rep ; movsq"					\
+		  : "=&D" (to), "=&S" (from)				\
+		  : "c" (n), "0" ((long) to), "1" ((long) from) 	\
+		  : "memory", "cc");					\
+    }    
+    
+#define MMX_CPY(prefetch,from,to,dummy,lcnt)				\
+    __asm__ __volatile__ (						\
+	        "1:\n"							\
+		    prefetch "320(%1)\n"				\
+	          " movq (%1), %%mm0\n"					\
+		  " movq 8(%1), %%mm1\n"				\
+		  " movq 16(%1), %%mm2\n"				\
+		  " movq 24(%1), %%mm3\n"				\
+		  " movq %%mm0, (%0)\n"					\
+		  " movq %%mm1, 8(%0)\n"				\
+		  " movq %%mm2, 16(%0)\n"				\
+		  " movq %%mm3, 24(%0)\n"				\
+		    prefetch "352(%1)\n"				\
+		  " movq 32(%1), %%mm0\n"				\
+		  " movq 40(%1), %%mm1\n"				\
+		  " movq 48(%1), %%mm2\n"				\
+		  " movq 56(%1), %%mm3\n"				\
+		  " leal 64(%1),%1\n"					\
+		  " movq %%mm0, 32(%0)\n"				\
+		  " movq %%mm1, 40(%0)\n"				\
+		  " movq %%mm2, 48(%0)\n"				\
+		  " movq %%mm3, 56(%0)\n"				\
+		  " decl %2\n"						\
+		  " leal 64(%0),%0\n"					\
+		  " jne 1b\n"						\
+		  : "=&D"(to), "=&S"(from), "=&r"(dummy)		\
+		  : "0" (to), "1" (from), "2" (lcnt) 			\
+		  : "memory", "cc");     
+    
 #define SSE_CPY(prefetch,from,to,dummy,lcnt)				\
     if((unsigned long) from & 15) {					\
 	__asm__ __volatile__ (						\
-		  "1:\n"						\
-                  prefetch "320(%1)\n"					\
-		  "  movups (%1), %%xmm0\n"				\
-		  "  movups 16(%1), %%xmm1\n"				\
-		  "  movntps %%xmm0, (%0)\n"				\
-		  "  movntps %%xmm1, 16(%0)\n"				\
-                  prefetch "352(%1)\n"					\
-		  "  movups 32(%1), %%xmm2\n"				\
-		  "  movups 48(%1), %%xmm3\n"				\
-		  "  movntps %%xmm2, 32(%0)\n"				\
-		  "  movntps %%xmm3, 48(%0)\n"				\
-		  "  addl $64,%0\n"					\
-		  "  addl $64,%1\n"					\
-		  "  decl %2\n"						\
-		  "  jne 1b\n"						\
-		  :"=&D"(to), "=&S"(from), "=&r"(dummy)			\
-		  :"0" (to), "1" (from), "2" (lcnt): "memory"); 	\
+		"1:\n"							\
+                    prefetch "320(%1)\n"				\
+		  " movups (%1), %%xmm0\n"				\
+		  " movups 16(%1), %%xmm1\n"				\
+		  " movntps %%xmm0, (%0)\n"				\
+		  " movntps %%xmm1, 16(%0)\n"				\
+                    prefetch "352(%1)\n"				\
+		  " movups 32(%1), %%xmm2\n"				\
+		  " movups 48(%1), %%xmm3\n"				\
+		  " leal 64(%1),%1\n"					\
+		  " movntps %%xmm2, 32(%0)\n"				\
+		  " movntps %%xmm3, 48(%0)\n"				\
+		  " decl %2\n"						\
+		  " leal 64(%0),%0\n"					\
+		  " jne 1b\n"						\
+		  : "=&D"(to), "=&S"(from), "=&r"(dummy)		\
+		  : "0" (to), "1" (from), "2" (lcnt)			\
+		  : "memory", "cc"); 					\
     } else {								\
 	__asm__ __volatile__ (						\
-		  "2:\n"						\
-		  prefetch "320(%1)\n"					\
-		  "  movaps (%1), %%xmm0\n"				\
-		  "  movaps 16(%1), %%xmm1\n"				\
-		  "  movntps %%xmm0, (%0)\n"				\
-		  "  movntps %%xmm1, 16(%0)\n"				\
-                  prefetch "352(%1)\n"					\
-		  "  movaps 32(%1), %%xmm2\n"				\
-		  "  movaps 48(%1), %%xmm3\n"				\
-		  "  movntps %%xmm2, 32(%0)\n"				\
-		  "  movntps %%xmm3, 48(%0)\n"				\
-		  "  addl $64,%0\n"					\
-		  "  addl $64,%1\n"					\
-		  "  decl %2\n"						\
-		  "  jne 2b\n"						\
-		  :"=&D"(to), "=&S"(from), "=&r"(dummy)			\
-		  :"0" (to), "1" (from), "2" (lcnt): "memory"); 	\
+	        "2:\n"							\
+		    prefetch "320(%1)\n"				\
+		  " movaps (%1), %%xmm0\n"				\
+		  " movaps 16(%1), %%xmm1\n"				\
+		  " movntps %%xmm0, (%0)\n"				\
+		  " movntps %%xmm1, 16(%0)\n"				\
+                    prefetch "352(%1)\n"				\
+		  " movaps 32(%1), %%xmm2\n"				\
+		  " movaps 48(%1), %%xmm3\n"				\
+		  " leal 64(%1),%1\n"					\
+		  " movntps %%xmm2, 32(%0)\n"				\
+		  " movntps %%xmm3, 48(%0)\n"				\
+		  " decl %2\n"						\
+		  " leal 64(%0),%0\n"					\
+		  " jne 2b\n"						\
+		  : "=&D"(to), "=&S"(from), "=&r"(dummy)		\
+		  : "0" (to), "1" (from), "2" (lcnt)			\
+		  : "memory", "cc");					\
     }
-
-#define MMX_CPY(prefetch,from,to,dummy,lcnt)				\
-    __asm__ __volatile__ (						\
-		  "1:\n"						\
-		  prefetch "320(%1)\n"					\
-		  "2:  movq (%1), %%mm0\n"				\
-		  "  movq 8(%1), %%mm1\n"				\
-		  "  movq 16(%1), %%mm2\n"				\
-		  "  movq 24(%1), %%mm3\n"				\
-		  "  movq %%mm0, (%0)\n"				\
-		  "  movq %%mm1, 8(%0)\n"				\
-		  "  movq %%mm2, 16(%0)\n"				\
-		  "  movq %%mm3, 24(%0)\n"				\
-		  prefetch "352(%1)\n"					\
-		  "  movq 32(%1), %%mm0\n"				\
-		  "  movq 40(%1), %%mm1\n"				\
-		  "  movq 48(%1), %%mm2\n"				\
-		  "  movq 56(%1), %%mm3\n"				\
-		  "  movq %%mm0, 32(%0)\n"				\
-		  "  movq %%mm1, 40(%0)\n"				\
-		  "  movq %%mm2, 48(%0)\n"				\
-		  "  movq %%mm3, 56(%0)\n"				\
-		  "  addl $64,%0\n"					\
-		  "  addl $64,%1\n"					\
-		  "  decl %2\n"						\
-		  "  jne 1b\n"						\
-		  :"=&D"(to), "=&S"(from), "=&r"(dummy)			\
-		  :"0" (to), "1" (from), "2" (lcnt) : "memory"); 
 
 #define MMXEXT_CPY(prefetch,from,to,dummy,lcnt)				\
     __asm__ __volatile__ (						\
 		  ".p2align 4,,7\n"					\
-		  "1:\n"						\
-		  prefetch "320(%1)\n"					\
-		  "  movq (%1), %%mm0\n"				\
-		  "  movq 8(%1), %%mm1\n"				\
-		  "  movq 16(%1), %%mm2\n"				\
-		  "  movq 24(%1), %%mm3\n"				\
-		  "  movntq %%mm0, (%0)\n"				\
-		  "  movntq %%mm1, 8(%0)\n"				\
-		  "  movntq %%mm2, 16(%0)\n"				\
-		  "  movntq %%mm3, 24(%0)\n"				\
-		  prefetch "352(%1)\n"					\
-		  "  movq 32(%1), %%mm0\n"				\
-		  "  movq 40(%1), %%mm1\n"				\
-		  "  movq 48(%1), %%mm2\n"				\
-		  "  movq 56(%1), %%mm3\n"				\
-		  "  movntq %%mm0, 32(%0)\n"				\
-		  "  movntq %%mm1, 40(%0)\n"				\
-		  "  movntq %%mm2, 48(%0)\n"				\
-		  "  movntq %%mm3, 56(%0)\n"				\
-		  "  addl $64,%0\n"					\
-		  "  addl $64,%1\n"					\
-		  "  decl %2\n"						\
-		  "  jne 1b\n"						\
-		  :"=&D"(to), "=&S"(from), "=&r"(dummy)			\
-		  :"0" (to), "1" (from), "2" (lcnt) : "memory"); 
+		 "1:\n"							\
+		    prefetch "320(%1)\n"				\
+		  " movq (%1), %%mm0\n"					\
+		  " movq 8(%1), %%mm1\n"				\
+		  " movq 16(%1), %%mm2\n"				\
+		  " movq 24(%1), %%mm3\n"				\
+		  " movntq %%mm0, (%0)\n"				\
+		  " movntq %%mm1, 8(%0)\n"				\
+		  " movntq %%mm2, 16(%0)\n"				\
+		  " movntq %%mm3, 24(%0)\n"				\
+		    prefetch "352(%1)\n"				\
+		  " movq 32(%1), %%mm0\n"				\
+		  " movq 40(%1), %%mm1\n"				\
+		  " movq 48(%1), %%mm2\n"				\
+		  " movq 56(%1), %%mm3\n"				\
+		  " leal 64(%1),%1\n"					\
+		  " movntq %%mm0, 32(%0)\n"				\
+		  " movntq %%mm1, 40(%0)\n"				\
+		  " movntq %%mm2, 48(%0)\n"				\
+		  " movntq %%mm3, 56(%0)\n"				\
+		  " decl %2\n"						\
+		  " leal 64(%0),%0\n"					\
+		  " jne 1b\n"						\
+		  : "=&D"(to), "=&S"(from), "=&r"(dummy)		\
+		  : "0" (to), "1" (from), "2" (lcnt) 			\
+		  : "memory", "cc"); 
+		  
 
-#define PREFETCH_FUNC(prefix,itype,ptype,begin,fence)			\
+#define PREFETCH_FUNC(prefix,itype,ptype,begin,fence,small)		\
 									\
     static void prefix##_memcpy(unsigned char *to,			\
 				const unsigned char *from,		\
@@ -220,13 +261,13 @@ extern FBLinearPtr SISAllocateOverlayMemory(ScrnInfoPtr pScrn, FBLinearPtr linea
 	}								\
 	if(rest) {							\
 	   PREFETCH2(ptype##_PREFETCH,from);				\
-	   small_memcpy(to, from, rest);				\
+	   small(to, from, rest);					\
 	   PREFETCH3(ptype##_PREFETCH,from);				\
 	}								\
 	fence;								\
     }
 
-#define NOPREFETCH_FUNC(prefix,itype,begin,fence)			\
+#define NOPREFETCH_FUNC(prefix,itype,begin,fence,small)			\
 									\
     static void prefix##_memcpy(unsigned char *to,			\
 				const unsigned char *from,		\
@@ -241,7 +282,7 @@ extern FBLinearPtr SISAllocateOverlayMemory(ScrnInfoPtr pScrn, FBLinearPtr linea
 	   itype##_CPY("#",from,to,dummy,lcnt);				\
 	}								\
 	if(rest) {							\
-	   small_memcpy(to, from, rest);				\
+	   small(to, from, rest);					\
 	}								\
 	fence;								\
     }									
@@ -270,6 +311,20 @@ static void SiS_libc_memcpy(unsigned char *dst, const unsigned char *src, int si
 }
 
 /************************************************************************/
+/* We only do all that stuff under gcc; no idea what other compilers 	*/
+/* would do with our asm code.  					*/
+/************************************************************************/
+
+#ifndef __GNUC__
+
+vidCopyFunc SiSVidCopyInit(ScreenPtr pScreen) 
+{
+    return SiS_libc_memcpy;
+}
+
+#else /* Everything below is gcc specific */
+
+/************************************************************************/
 /*                   Built-in memcpy() - arch specific                  */
 /************************************************************************/
 
@@ -281,18 +336,125 @@ static __inline void * __memcpy(void * to, const void * from, size_t n)
     int d1,d2,d3;
 
     __asm__ __volatile__(
-		 "rep ; movsl\n\t"
-		 "testb $2,%b4\n\t"
-		 "je 1f\n\t"
-		 "movsw\n"
-		 "1:\ttestb $1,%b4\n\t"
-		 "je 2f\n\t"
-		 "movsb\n"
-		 "2:"
+    	   	 " cld\n"		 
+    		 " shrl $1, %%ecx\n"
+		 " jnc 1f\n"
+		 " movsb\n"
+	       "1: shrl $1, %%ecx\n"
+		 " jnc 2f\n"
+		 " movsw\n"
+	       "2: rep ; movsl\n"
 		 : "=&c" (d1), "=&D" (d2), "=&S" (d3)	
-		 :"0" (n >> 2), "q" (n),"1" ((long) to),"2" ((long) from)
-		 : "memory");
+		 : "0" (n), "1" ((long) to), "2" ((long) from)
+		 : "memory", "cc");
+
     return(to);
+}
+
+/* Alternative for 586: Unroll loop, copy 32 bytes at a time */
+static void SiS_builtin_memcp2(unsigned char *to, const unsigned char *from, int n)
+{
+    int d1,d2,d3;
+
+    __asm__ __volatile__(
+		 " movl %%edi, %%eax\n"
+		 " cmpl $32, %%ecx\n"
+		 " cld\n"
+		 " jbe 3f\n"
+		 " negl %%eax\n"		/* Align dest */
+		 " andl $3, %%eax\n"
+		 " subl %%eax, %%ecx\n"
+		 " xchgl %%eax, %%ecx\n"
+		 " rep ; movsb\n"
+		 " movl %%eax, %%ecx\n"
+		 " subl $32, %%ecx\n"
+		 " js 2f\n"
+		 " movl (%%edi), %%eax\n"
+	       "1: movl 28(%%edi), %%edx\n"   	/* Trick: Read-ahead */
+	 	 " subl $32, %%ecx\n"
+		 " movl (%%esi), %%eax\n"
+		 " movl 4(%%esi), %%edx\n"
+		 " movl %%eax, (%%edi)\n"
+		 " movl %%edx, 4(%%edi)\n"
+		 " movl 8(%%esi), %%eax\n"
+		 " movl 12(%%esi), %%edx\n"
+		 " movl %%eax, 8(%%edi)\n"
+		 " movl %%edx, 12(%%edi)\n"
+		 " movl 16(%%esi), %%eax\n"
+		 " movl 20(%%esi), %%edx\n"
+		 " movl %%eax, 16(%%edi)\n"
+		 " movl %%edx, 20(%%edi)\n"
+		 " movl 24(%%esi), %%eax\n"
+		 " movl 28(%%esi), %%edx\n"
+		 " movl %%eax, 24(%%edi)\n"
+		 " movl %%edx, 28(%%edi)\n"
+		 " leal 32(%%esi), %%esi\n"
+		 " leal 32(%%edi), %%edi\n"
+		 " jns 1b\n"
+	       "2: addl $32, %%ecx\n"
+	       "3: rep ; movsb"
+		 : "=&c" (d1), "=&D" (d2), "=&S" (d3)	
+		 : "0" (n), "1" ((long) to), "2" ((long) from)
+		 : "eax", "edx", "memory", "cc");
+		 
+}
+
+#elif defined(__AMD64__)
+
+/* Built-in memcpy for AMD64 */
+static __inline void * __memcpy(void * to, const void * from, int n)
+{
+    long d1, d2, d3;
+    
+    __asm__ __volatile__ (
+    		" cld\n"
+    		" rep ; movsq\n"
+		" movq %4, %%rcx\n"
+		" rep ; movsb"
+		: "=%c" (d1), "=&D" (d2), "=&S" (d3)
+		: "0" ((unsigned long)(n >> 3)), "q" ((unsigned long)(n & 7)), 
+		  "1" ((long) to), "2" ((long) from)
+		: "memory");
+
+    return(to);
+}
+
+/* Alternative: Unroll loop, copy 32 bytes at a time */
+static void SiS_builtin_memcp2(unsigned char *to, const unsigned char *from, int n)
+{
+    long d1,d2,d3;
+    
+    __asm__ __volatile__(
+		 " movq %%rdi, %%rax\n"
+		 " cmpq $32, %%rcx\n"
+		 " cld\n"			/* Pipeline; no other flags but DF */
+		 " jbe 1f\n"
+		 " negq %%rax\n"		/* Align dest */
+		 " andq $7, %%rax\n"
+		 " subq %%rax, %%rcx\n"
+		 " xchgq %%rax, %%rcx\n"
+		 " rep ; movsb\n"
+		 " movq %%rax, %%rcx\n"
+		 " subq $32, %%rcx\n"
+		 " js 2f\n"
+		 ".p2align 4\n"
+	       "3: subq $32, %%rcx\n"
+		 " movq (%%rsi), %%rax\n"
+		 " movq 8(%%rsi), %%rdx\n"
+		 " movq 16(%%rsi), %%r8\n"
+		 " movq 24(%%rsi), %%r9\n"
+		 " movq %%rax, (%%rdi)\n"
+		 " movq %%rdx, 8(%%rdi)\n"
+		 " movq %%r8, 16(%%rdi)\n"
+		 " movq %%r9, 24(%%rdi)\n"
+		 " leaq 32(%%rsi), %%rsi\n"
+		 " leaq 32(%%rdi), %%rdi\n"
+		 " jns 3b\n"
+	       "2: addq $32, %%rcx\n"
+	       "1: rep ; movsb"
+		 : "=&c" (d1), "=&D" (d2), "=&S" (d3)	
+		 :"0" ((unsigned long) n), "1" ((long) to), "2" ((long) from)
+		 : "rax", "rdx", "r8", "r9", "memory", "cc");
 }
 
 #else /* Other archs */
@@ -320,27 +482,49 @@ static void SiS_builtin_memcpy(unsigned char *dst, const unsigned char *src, int
 #undef SiS_canBenchmark
 #undef SiS_haveProc
 
-#ifdef __i386__  /* i386 */
+#if defined(__i386__) /* ***************************************** i386 */
 
-#define SiS_canBenchmark		/* Can we perform a benchmark? */
+#define SiS_canBenchmark	/* Can we perform a benchmark? */
 #ifdef linux
-#define SiS_haveProc			/* Do we have /proc/cpuinfo or similar? */
+#define SiS_haveProc		/* Do we have /proc/cpuinfo or similar? */
 #endif
 
 static unsigned int taketime(void)	/* get current time (for benchmarking) */
 {
-    unsigned eax;
-    __asm__ volatile ("\t"
-		"cpuid\n\t"
-		".byte 0x0f, 0x31" 
+    unsigned int eax;
+    
+    __asm__ volatile (
+		" cpuid\n"
+		" .byte 0x0f, 0x31\n" 
 		: "=a" (eax)
 		: "0"(0)
-		: "ebx","ecx","edx","cc");     
+		: "ebx", "ecx", "edx", "cc");     
 		
-    return (unsigned int)eax; 
+    return(eax); 
 }
 
-#else		/* Other archs */
+#elif defined(__AMD64__) /*************************************** AMD64 */
+
+#define SiS_canBenchmark	/* Can we perform a benchmark? */
+#ifdef linux
+#define SiS_haveProc		/* Do we have /proc/cpuinfo or similar? */
+#endif
+
+static unsigned int taketime(void)	/* get current time (for benchmarking) */
+{
+    unsigned int eax;
+    
+    __asm__ volatile (
+		" cpuid\n"
+		" rdtsc\n" 
+		: "=a" (eax)
+		: "0" (0)
+		: "rbx", "rcx", "rdx", "cc");     
+		
+    return(eax); 
+}
+
+#else		/* **************************************** Other archs */
 
 /* 1. Can we do a benchmark?  		*/
 /* #define SiS_canBenchmark		*/
@@ -422,7 +606,7 @@ static int SiS_BenchmarkMemcpy(ScrnInfoPtr pScrn, SISMCFuncData *MCFunctions,
     SiS_libc_memcpy(buf1, buf2, BUFSIZ);
 
     xf86DrvMsg(pScrn->scrnIndex, X_INFO,
-	       "Benchmarking memcpy() methods:\n");
+	       "Benchmarking system RAM to video RAM memory transfer methods:\n");
 	       
     j = 0;       
     while(MCFunctions[j].mFunc) {
@@ -512,7 +696,8 @@ static char *SiS_GetCPUFreq(ScrnInfoPtr pScrn, char *buf, double *cpuFreq)
        frqBuf += 11;
        (*cpuFreq) = strtod(frqBuf, &endBuf);
        if(endBuf == frqBuf) frqBuf = NULL;
-       else {
+       if((*cpuFreq) < 10.0) frqBuf = NULL; /* sanity check */
+       if(frqBuf) {
           xf86DrvMsg(pScrn->scrnIndex, X_PROBED, "CPU frequency %.2fMhz\n", (*cpuFreq));
        }
     }
@@ -554,14 +739,16 @@ static unsigned int SiS_ParseCPUFlags(char *cpuinfo, SISMCFuncData *MCFunctions)
 }
 #endif
 
-/* Arch-specific routines */
+/**********************************************************************/
+/*                      Arch-specific routines                        */
+/**********************************************************************/
 
 #ifdef __i386__   /* i386 *************************************/
 
-PREFETCH_FUNC(SiS_sse,SSE,SSE,,FENCE) 
-PREFETCH_FUNC(SiS_mmxext,MMXEXT,SSE,EMMS,FENCEMMS)
-PREFETCH_FUNC(SiS_now,MMX,NOW,FEMMS,FEMMS)
-NOPREFETCH_FUNC(SiS_mmx,MMX,EMMS,EMMS)
+PREFETCH_FUNC(SiS_sse,SSE,SSE,,FENCE,small_memcpy_i386) 
+PREFETCH_FUNC(SiS_mmxext,MMXEXT,SSE,EMMS,FENCEMMS,small_memcpy_i386)
+PREFETCH_FUNC(SiS_now,MMX,NOW,FEMMS,FEMMS,small_memcpy_i386)
+NOPREFETCH_FUNC(SiS_mmx,MMX,EMMS,EMMS,small_memcpy_i386)
 
 char *sse_cpuflags[]    = {" sse ", 0};
 char *mmx_cpuflags[]    = {" mmx ", 0};
@@ -569,55 +756,159 @@ char *now_cpuflags[]    = {" 3dnow ", 0};
 char *mmx2_cpuflags[]   = {" mmxext ", " sse ", 0};
 
 static SISMCFuncData MCFunctions_i386[] = {
-    {SiS_libc_memcpy,   "libc",    NULL,         FL_LIBC},
-    {SiS_builtin_memcpy,"built-in",NULL,         FL_BI},    
-    {SiS_sse_memcpy,    "SSE",     sse_cpuflags, FL_SSE}, 
-    {SiS_mmx_memcpy,    "MMX",     mmx_cpuflags, FL_MMX}, 
-    {SiS_now_memcpy,    "3DNow!",  now_cpuflags, FL_3DNOW}, 
-    {SiS_mmxext_memcpy, "MMX2",    mmx2_cpuflags,FL_MMX2},
-    {NULL,              "",        NULL,         0}
+    {SiS_libc_memcpy,   "libc",      NULL,         FL_LIBC},
+    {SiS_builtin_memcpy,"built-in-1",NULL,         FL_BI},    
+    {SiS_builtin_memcp2,"built-in-2",NULL, 	   FL_BI2},
+    {SiS_mmx_memcpy,    "MMX",       mmx_cpuflags, FL_MMX},
+    {SiS_sse_memcpy,    "SSE",       sse_cpuflags, FL_SSE}, 
+    {SiS_now_memcpy,    "3DNow!",    now_cpuflags, FL_3DNOW}, 
+    {SiS_mmxext_memcpy, "MMX2",      mmx2_cpuflags,FL_MMX2},
+    {NULL,              "",          NULL,         0}
 }; 
+
+#define Def_FL  (FL_LIBC | FL_BI | FL_BI2)  /* Default methods */
+
+#define cpuid(op, eax, ebx, ecx, edx) 		\
+    __asm__ __volatile__ (			\
+    		" pushl %%ebx\n"		\
+		" cpuid\n"			\
+		" movl %%ebx, %1\n"		\
+		" popl %%ebx\n"			\
+		: "=a" (eax), "=r" (ebx), 	\
+		  "=c" (ecx), "=d" (edx)	\
+		: "a" (op)			\
+		: "cc")			
 
 static Bool cpuIDSupported(ScrnInfoPtr pScrn)
 {
-    int eax, ecx;
+    int eax, ebx, ecx, edx;
        
     /* Check for cpuid instruction */
-    __asm__ __volatile__ ("\t"
-    		"pushf\n\t"
-		"popl %0\n\t"
-		"movl %0, %1\n\t"
-		"xorl $0x200000, %0\n\t"
-		"push %0\n\t"
-		"popf\n\t"
-		"pushf\n\t"
-		"popl %0"
+    __asm__ __volatile__ (
+    		" pushf\n"
+		" popl %0\n"
+		" movl %0, %1\n"
+		" xorl $0x200000, %0\n"
+		" push %0\n"
+		" popf\n"
+		" pushf\n"
+		" popl %0\n"
 		: "=a" (eax), "=c" (ecx)
 		:
 		: "cc");
 		
     if(eax == ecx) {
-       xf86DrvMsg(pScrn->scrnIndex, X_INFO, "CPU does not support CPUID instruction\n");
+       xf86DrvMsg(pScrn->scrnIndex, X_PROBED, "CPU does not support CPUID instruction\n");
+       return FALSE;
+    }
+    
+    /* Check for cpuid level */
+    cpuid(0x00000000, eax, ebx, ecx, edx);	
+    if(!eax) {
        return FALSE;
     }
     
     /* Check for RDTSC */
-    __asm__ __volatile__ ("\t"
-    		"pushl %%edx\n\t"
-    		"movl $1, %%eax\n\t"
-		"cpuid\t\n"
-		"movl %%edx, %%eax\t\n"
-		"popl %%edx"
-		: "=a" (eax)
-		:  
-		: "ebx","ecx","cc");
+    cpuid(0x00000001, eax, ebx, ecx, edx);
 
-    if(!(eax & 0x10)) {
-       xf86DrvMsg(pScrn->scrnIndex, X_INFO, "CPU does not support RDTSC instruction\n");
+    if(!(edx & 0x10)) {
+       xf86DrvMsg(pScrn->scrnIndex, X_PROBED, "CPU does not support RDTSC instruction\n");
        return FALSE;
     }
     
     return TRUE;
+}
+
+static int SiS_GetCpuFeatures(void)
+{
+    unsigned int flags = 0, eax, ebx, ecx, edx;
+    Bool IsAMD;
+    
+    cpuid(0x00000000, eax, ebx, ecx, edx);
+    
+    IsAMD = (ebx == 0x68747541) && (edx == 0x69746e65) && (ecx == 0x444d4163);
+    
+    cpuid(0x00000001, eax, ebx, ecx, edx);
+    /* MMX */
+    if(edx & 0x00800000) flags |= FL_MMX;
+    /* SSE, MMXEXT */
+    if(edx & 0x02000000) flags |= (FL_SSE | FL_MMX2);
+    /* SSE2 - don't need this one directly, set SSE instead */
+    if(edx & 0x04000000) flags |= FL_SSE; 
+    
+    cpuid(0x80000000, eax, ebx, ecx, edx);
+    if(eax >= 0x80000001) {
+       cpuid(0x80000001, eax, ebx, ecx, edx);
+       /* 3DNow! */
+       if(edx & 0x80000000) flags |= FL_3DNOW;
+       /* AMD MMXEXT */
+       if(IsAMD && (edx & 0x00400000)) flags |= FL_MMX2;
+    }
+
+    return flags;
+}
+
+static Bool CheckOSforSSE(ScrnInfoPtr pScrn)
+{
+    int signo;
+    
+    xf86InterceptSignals(&signo);
+    
+    __asm__ __volatile__ (" xorps %xmm0, %xmm0\n");
+		
+    xf86InterceptSignals(NULL);
+    
+    if(signo == 4) {
+       xf86DrvMsg(pScrn->scrnIndex, X_PROBED, 
+       		"OS does not support SSE/MMXEXT instructions\n");
+    } else if(signo >= 0) {
+       xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
+       		"Checking SSE/MMXEXT instructions caused signal %d - this should not happen!\n",
+		signo);
+    }
+    
+    return (signo >= 0) ? FALSE : TRUE;
+}
+
+#elif defined(__AMD64__) /* AMD64 ************************* */
+
+PREFETCH_FUNC(SiS_sse,SSE,SSE,,FENCE,small_memcpy_amd64) 
+
+static SISMCFuncData MCFunctions_AMD64[] = {
+    {SiS_libc_memcpy,   "libc",      NULL, FL_LIBC},
+    {SiS_builtin_memcpy,"built-in-1",NULL, FL_BI}, 
+    {SiS_builtin_memcp2,"built-in-2",NULL, FL_BI2}, 
+    {SiS_sse_memcpy,    "SSE",       NULL, FL_SSE}, 
+    {NULL,              "",          NULL, 0}
+}; 
+
+#define Def_FL  (FL_LIBC | FL_BI | FL_BI2 | FL_SSE)
+
+static int SiS_GetCpuFeatures(void)
+{
+    return((int)(FL_SSE));
+}
+
+static Bool CheckOSforSSE(ScrnInfoPtr pScrn)
+{
+    int signo;
+    
+    xf86InterceptSignals(&signo);
+    
+    __asm__ __volatile__ (" xorps %xmm0, %xmm0\n");
+		
+    xf86InterceptSignals(NULL);
+    
+    if(signo == 4) {
+       xf86DrvMsg(pScrn->scrnIndex, X_PROBED, 
+       		"OS does not support SSE/MMXEXT instructions\n");
+    } else if(signo >= 0) {
+       xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
+       		"Checking SSE/MMXEXT instructions caused signal %d - this should not happen!\n",
+		signo);
+    }
+    
+    return (signo >= 0) ? FALSE : TRUE;
 }
 
 #else  /* Other archs ************************************* */
@@ -626,8 +917,11 @@ static Bool cpuIDSupported(ScrnInfoPtr pScrn)
 
 #endif
 
+/**********************************************************************/
+/*     Benchmark the video copy routines and choose the fastest       */
+/**********************************************************************/
+
 #ifdef SiS_canBenchmark
-/* Main: Benchmark the video copy routines and choose the fastest */
 static vidCopyFunc SiSVidCopyInitGen(ScreenPtr pScreen, SISMCFuncData *MCFunctions) 
 {
     ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum];  
@@ -635,49 +929,46 @@ static vidCopyFunc SiSVidCopyInitGen(ScreenPtr pScreen, SISMCFuncData *MCFunctio
     FBLinearPtr tmpFbBuffer = NULL;
     char *frqBuf = NULL;
     unsigned char *buf1, *buf2, *buf3;
-    double cpuFreq;
-    unsigned int myCPUflags;
+    double cpuFreq = 0.0;
+    unsigned int myCPUflags = 0;
     int best;
 #ifdef SiS_haveProc   
     char buf[CPUBUFSIZE];
 #endif    
     
-    /* Bail out if user disabled benchmarking */
-    if(!pSiS->BenchMemCpy) {
+    /* Bail out if user disabled benchmarking or acceleration in general */
+    if((!pSiS->BenchMemCpy) && (pSiS->NoAccel)) {
        return SiS_libc_memcpy;
     }
 
 #ifdef SiS_haveProc   	
- 
     /* Read /proc/cpuinfo into buf */
     if(SiS_ReadProc(buf, "/proc/cpuinfo")) {
        
        /* Extract CPU frequency */ 
        frqBuf = SiS_GetCPUFreq(pScrn, buf, &cpuFreq);
-   
+          
        /* Parse the CPU flags and convert them to our internal value */
        myCPUflags = SiS_ParseCPUFlags(buf, MCFunctions);
-       if(!myCPUflags) myCPUflags = FL_LIBC | FL_BI;
        
-    } else {
-    
-       xf86DrvMsg(pScrn->scrnIndex, X_INFO, "/proc/cpuinfo not found\n");
+    }   
+#endif       
       
-       /* Default: no CPU freq, only libc and built-in memcpy() */
-       cpuFreq = 0.0;
-       frqBuf = NULL;
-       myCPUflags = FL_LIBC | FL_BI;
+    if(!myCPUflags) {
+     
+       /* If no /proc or parsing failed, get features from cpuid */
+       myCPUflags = SiS_GetCpuFeatures() | Def_FL;
     
     }
     
-#else 			
+    if(myCPUflags & (FL_SSE | FL_MMX2)) {
     
-    /* Default: no CPU freq, only libc and built-in memcpy() */
-    cpuFreq = 0.0;
-    frqBuf = NULL;
-    myCPUflags = FL_LIBC | FL_BI;
-
-#endif    		
+       /* Check if OS supports usage of SSE instructions */
+       if(!(CheckOSforSSE(pScrn))) {
+          myCPUflags &= ~(FL_SSE | FL_MMX2);
+       }
+       
+    }
 	
     /* Allocate buffers */
     if(!(tmpFbBuffer = SiS_AllocBuffers(pScrn, &buf1, &buf2, &buf3))) {
@@ -699,6 +990,10 @@ static vidCopyFunc SiSVidCopyInitGen(ScreenPtr pScreen, SISMCFuncData *MCFunctio
     return MCFunctions[best].mFunc; 
 }
 
+/**********************************************************************/
+/*                       main(): SiSVidCopyInit()                     */
+/**********************************************************************/
+
 #ifdef __i386__
 
 vidCopyFunc SiSVidCopyInit(ScreenPtr pScreen)
@@ -713,6 +1008,13 @@ vidCopyFunc SiSVidCopyInit(ScreenPtr pScreen)
     return(SiSVidCopyInitGen(pScreen, MCFunctions_i386));
 }
 
+#elif defined(__AMD64__)
+
+vidCopyFunc SiSVidCopyInit(ScreenPtr pScreen)
+{   
+    return(SiSVidCopyInitGen(pScreen, MCFunctions_AMD64));
+}
+
 #else /* Other archs: For now, use libc memcpy() */
 
 vidCopyFunc SiSVidCopyInit(ScreenPtr pScreen) 
@@ -722,12 +1024,17 @@ vidCopyFunc SiSVidCopyInit(ScreenPtr pScreen)
 
 #endif
 
-#else  /* no benchmark: use libc memcpy() */
+/**********************************************************************/
+/*                   No benchmark: Return libc memcpy()               */
+/**********************************************************************/
+
+#else   /* cenBenchmark */
  
 vidCopyFunc SiSVidCopyInit(ScreenPtr pScreen) 
 {
     return SiS_libc_memcpy;
 }
 
-#endif
+#endif  /* cenBenchmark */
 
+#endif /* GNU C */
