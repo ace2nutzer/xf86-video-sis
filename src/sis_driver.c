@@ -1,4 +1,4 @@
-/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/sis/sis_driver.c,v 1.176 2004/01/24 21:29:20 twini Exp $ */
+/* $XFree86$ */
 /*
  * SiS driver main code
  *

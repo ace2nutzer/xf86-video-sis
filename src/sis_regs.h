@@ -1,4 +1,4 @@
-/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/sis/sis_regs.h,v 1.27 2004/01/23 22:29:05 twini Exp $ */
+/* $XFree86$ */
 /*
  * Register definitions for old and 300 series
  *

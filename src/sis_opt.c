@@ -1,4 +1,4 @@
-/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/sis/sis_opt.c,v 1.55 2004/01/23 22:29:05 twini Exp $ */
+/* $XFree86$ */
 /*
  * SiS driver option evaluation
  *
