@@ -1,4 +1,4 @@
-/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/sis/sis_dac.c,v 1.56 2004/01/23 22:29:04 twini Exp $ */
+/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/sis/sis_dac.c,v 1.57 2004/02/02 03:55:29 dawes Exp $ */
 /*
  * DAC helper functions (Save/Restore, MemClk, etc)
  *
@@ -1473,10 +1473,16 @@ int SiSMemBandWidth(ScrnInfoPtr pScrn, BOOLEAN IsForCRT2)
 	int             bytesperpixel = (bpp + 7) / 8;
         float   	magic=0.0, total, crt2used, maxcrt2;
 	int		crt2clock, max=0;
+#ifdef __SUNPRO_C
+#define const
+#endif
         const float     magic300[4] = { 1.2,      1.368421, 2.263158, 1.2};
         const float     magic630[4] = { 1.441177, 1.441177, 2.588235, 1.441177 };
 	const float     magic315[4] = { 1.2,      1.368421, 1.368421, 1.2 };
 	const float     magic550[4] = { 1.441177, 1.441177, 2.588235, 1.441177 };
+#ifdef __SUNPRO_C
+#undef const
+#endif
 	BOOLEAN	        DHM, GetForCRT1;
 
         switch(pSiS->Chipset) {
