@@ -2158,13 +2158,7 @@ SiS_GetVCLK2Ptr(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
 	         VCLKIndex = VCLKIndexGEN;
 		 switch(resinfo) {
 		 /* Only those whose IndexGEN doesn't match VBVCLK array: */
-		 case SIS_RI_1280x720: VCLKIndex = VCLK_1280x720; 
-		 		       if(SiS_Pr->SiS_LCDResInfo == Panel_1280x720) {
-		                          if(SiS_Pr->PanelHT != 1650) {
-					     VCLKIndex = VCLK_1280x720_2;
-					  }
-				       }
-		 		       break;
+		 case SIS_RI_1280x720: VCLKIndex = VCLK_1280x720; break;
 		 case SIS_RI_720x480:  VCLKIndex = VCLK_720x480;  break;
 		 case SIS_RI_720x576:  VCLKIndex = VCLK_720x576;  break;
 		 case SIS_RI_768x576:  VCLKIndex = VCLK_768x576;  break;
