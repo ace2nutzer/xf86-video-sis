@@ -324,10 +324,22 @@ vidCopyFunc SiSVidCopyInit(ScreenPtr pScreen)
 #else /* ! Everything below is gcc specific ! */
 
 /************************************************************************/
-/*                   Built-in memcpy() - arch specific                  */
+/*                    Definitions for archs and OSes                    */
 /************************************************************************/
 
-#ifdef __i386__   
+#undef SiS_checkosforsse
+#undef SiS_canBenchmark
+#undef SiS_haveProc
+#undef SiS_haveBuiltInMC	
+
+#if defined(__i386__) /* ***************************************** i386 */
+
+#define SiS_checkosforsse 	/* Does this cpu support sse and do we need to check os? */
+#define SiS_canBenchmark	/* Can we perform a benchmark? */
+#ifdef linux
+#define SiS_haveProc		/* Do we have /proc/cpuinfo or similar? */
+#endif
+#define SiS_haveBuiltInMC	/* Is there a built-in memcpy for this arch? */
 
 /* Built-in memcpy for i386 */
 static __inline void * __memcpy(void * to, const void * from, size_t n)
@@ -398,13 +410,36 @@ static void SiS_builtin_memcp2(unsigned char *to, const unsigned char *from, int
 		 
 }
 
-#elif defined(__AMD64__)
+static unsigned int taketime(void)	/* get current time (for benchmarking) */
+{
+    unsigned int eax;
+    
+    __asm__ volatile (
+       	  	" pushl %%ebx\n"
+		" cpuid\n"
+		" rdtsc\n" 
+		" popl %%ebx\n"
+		: "=a" (eax)
+		: "0" (0)
+		: "ecx", "edx", "cc");     
+		
+    return(eax); 
+}
+
+#elif defined(__AMD64__) /*************************************** AMD64 */
+
+#define SiS_checkosforsse	/* Does this cpu support sse and do we need to check os? */
+#define SiS_canBenchmark	/* Can we perform a benchmark? */
+#ifdef linux
+#define SiS_haveProc		/* Do we have /proc/cpuinfo or similar? */
+#endif
+#define SiS_haveBuiltInMC	/* Is there a built-in memcpy for this arch? */
 
 /* Built-in memcpy for AMD64 */
 static __inline void * __memcpy(void * to, const void * from, int n)
 {
     long d1, d2, d3;
-    
+   
     __asm__ __volatile__ (
     		" cld\n"
     		" rep ; movsq\n"
@@ -454,65 +489,8 @@ static void SiS_builtin_memcp2(unsigned char *to, const unsigned char *from, int
 		 : "=&c" (d1), "=&D" (d2), "=&S" (d3)	
 		 :"0" ((unsigned long) n), "1" ((long) to), "2" ((long) from)
 		 : "rax", "rdx", "r8", "r9", "memory", "cc");
+		 
 }
-
-#else /* Other archs */
-
-static __inline void * __memcpy(void * to, const void * from, size_t n)
-{
-    memcpy(to, from, n);  /* placeholder */
-}
-
-#endif
-
-/************************************************************************/
-/*                   Generic built-in memcpy wrapper                    */
-/************************************************************************/
-
-static void SiS_builtin_memcpy(unsigned char *dst, const unsigned char *src, int size) 
-{
-    __memcpy(dst, src, size);
-}
-
-/************************************************************************/
-/*                    Definitions for archs and OSes                    */
-/************************************************************************/
-
-#undef SiS_checkosforsse
-#undef SiS_canBenchmark
-#undef SiS_haveProc
-
-#if defined(__i386__) /* ***************************************** i386 */
-
-#define SiS_checkosforsse 	/* Does this cpu support sse and do we need to check os? */
-#define SiS_canBenchmark	/* Can we perform a benchmark? */
-#ifdef linux
-#define SiS_haveProc		/* Do we have /proc/cpuinfo or similar? */
-#endif
-
-static unsigned int taketime(void)	/* get current time (for benchmarking) */
-{
-    unsigned int eax;
-    
-    __asm__ volatile (
-       	  	" pushl %%ebx\n"
-		" cpuid\n"
-		" rdtsc\n" 
-		" popl %%ebx\n"
-		: "=a" (eax)
-		: "0" (0)
-		: "ecx", "edx", "cc");     
-		
-    return(eax); 
-}
-
-#elif defined(__AMD64__) /*************************************** AMD64 */
-
-#define SiS_checkosforsse	/* Does this cpu support sse and do we need to check os? */
-#define SiS_canBenchmark	/* Can we perform a benchmark? */
-#ifdef linux
-#define SiS_haveProc		/* Do we have /proc/cpuinfo or similar? */
-#endif
 
 static unsigned int taketime(void)	/* get current time (for benchmarking) */
 {
@@ -538,13 +516,30 @@ static unsigned int taketime(void)	/* get current time (for benchmarking) */
 /* 2. Do we have /proc filesystem or similar for CPU information? */
 /* #define SiS_haveproc			*/
 
-/* 3. Function for getting current time (for benchmarking)  */
-/*
-static unsigned int taketime(void)
-{
-}
+/* 3. Optional: build-in memcpy() 	*/
+/* #define SiS_haveBuiltInMC 		*/
+/* static __inline void * __memcpy(void * to, const void * from, int n)
+   {  
+   }
 */
 
+/* 4. Function for getting current time (for benchmarking)  */
+/* static unsigned int taketime(void)
+   {
+   }
+*/
+
+#endif
+
+/************************************************************************/
+/*                   Generic built-in memcpy wrapper                    */
+/************************************************************************/
+
+#ifdef SiS_haveBuiltInMC
+static void SiS_builtin_memcpy(unsigned char *dst, const unsigned char *src, int size) 
+{
+    __memcpy(dst, src, size);
+}
 #endif
 
 /************************************************************************/
