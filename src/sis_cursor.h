@@ -49,7 +49,7 @@
   
 #define sis300SetCursorStatus(status) \
   { \
-  unsigned long temp; \
+  ULong temp; \
   temp = MMIO_IN32(pSiS->IOBase, CS(0)); \
   temp &= 0xbfffffff; \
   temp |= status; \
@@ -58,7 +58,7 @@
 
 #define sis300EnableHWCursor() \
   { \
-  unsigned long temp; \
+  ULong temp; \
   temp = MMIO_IN32(pSiS->IOBase, CS(0)); \
   temp &= 0x0fffffff; \
   temp |= 0x40000000; \
@@ -67,7 +67,7 @@
   
 #define sis300EnableHWARGBCursor() \
   { \
-  unsigned long temp; \
+  ULong temp; \
   temp = MMIO_IN32(pSiS->IOBase, CS(0)); \
   temp |= 0xF0000000; \
   MMIO_OUT32(pSiS->IOBase, CS(0), temp); \
@@ -75,7 +75,7 @@
 
 #define sis300EnableHWARGB16Cursor() \
   { \
-  unsigned long temp; \
+  ULong temp; \
   temp = MMIO_IN32(pSiS->IOBase, CS(0)); \
   temp &= 0x0fffffff; \
   temp |= 0xD0000000; \
@@ -84,7 +84,7 @@
 
 #define sis300SwitchToMONOCursor() \
   { \
-  unsigned long temp; \
+  ULong temp; \
   temp = MMIO_IN32(pSiS->IOBase, CS(0)); \
   temp &= 0x4fffffff; \
   MMIO_OUT32(pSiS->IOBase, CS(0), temp); \
@@ -92,7 +92,7 @@
   
 #define sis300SwitchToRGBCursor() \
   { \
-  unsigned long temp; \
+  ULong temp; \
   temp = MMIO_IN32(pSiS->IOBase, CS(0)); \
   temp |= 0xB0000000; \
   MMIO_OUT32(pSiS->IOBase, CS(0), temp); \
@@ -100,7 +100,7 @@
   
 #define sis300DisableHWCursor()\
   { \
-  unsigned long temp; \
+  ULong temp; \
   temp = MMIO_IN32(pSiS->IOBase, CS(0)); \
   temp &= 0xbFFFFFFF; \
   MMIO_OUT32(pSiS->IOBase, CS(0), temp); \
@@ -118,7 +118,7 @@
 
 #define sis300SetCursorAddress(address)\
   { \
-  unsigned long temp; \
+  ULong temp; \
   temp = MMIO_IN32(pSiS->IOBase, CS(0)); \
   temp &= 0xF0FF0000; \
   temp |= address; \
@@ -138,7 +138,7 @@
   
 #define sis301SetCursorStatus(status) \
   { \
-  unsigned long temp; \
+  ULong temp; \
   temp = MMIO_IN32(pSiS->IOBase, CS(8)); \
   temp &= 0xbfffffff; \
   temp |= status; \
@@ -147,7 +147,7 @@
   
 #define sis301EnableHWCursor()\
   { \
-  unsigned long temp; \
+  ULong temp; \
   temp = MMIO_IN32(pSiS->IOBase, CS(8)); \
   temp &= 0x0fffffff; \
   temp |= 0x40000000; \
@@ -156,7 +156,7 @@
   
 #define sis301EnableHWARGBCursor()\
   { \
-  unsigned long temp; \
+  ULong temp; \
   temp = MMIO_IN32(pSiS->IOBase, CS(8)); \
   temp |= 0xF0000000; \
   MMIO_OUT32(pSiS->IOBase, CS(8), temp); \
@@ -164,7 +164,7 @@
   
 #define sis301EnableHWARGB16Cursor()\
   { \
-  unsigned long temp; \
+  ULong temp; \
   temp = MMIO_IN32(pSiS->IOBase, CS(8)); \
   temp &= 0x0FFFFFFF; \
   temp |= 0xD0000000; \
@@ -173,7 +173,7 @@
   
 #define sis301SwitchToRGBCursor() \
   { \
-  unsigned long temp; \
+  ULong temp; \
   temp = MMIO_IN32(pSiS->IOBase, CS(8)); \
   temp |= 0xB0000000; \
   MMIO_OUT32(pSiS->IOBase, CS(8), temp); \
@@ -181,7 +181,7 @@
   
 #define sis301SwitchToMONOCursor() \
   { \
-  unsigned long temp; \
+  ULong temp; \
   temp = MMIO_IN32(pSiS->IOBase, CS(8)); \
   temp &= 0x4fffffff; \
   MMIO_OUT32(pSiS->IOBase, CS(8), temp); \
@@ -189,7 +189,7 @@
  
 #define sis301DisableHWCursor()\
   { \
-  unsigned long temp; \
+  ULong temp; \
   temp = MMIO_IN32(pSiS->IOBase, CS(8)); \
   temp &= 0xbFFFFFFF; \
   MMIO_OUT32(pSiS->IOBase, CS(8), temp); \
@@ -207,7 +207,7 @@
 
 #define sis301SetCursorAddress(address)\
   { \
-  unsigned long temp; \
+  ULong temp; \
   temp = MMIO_IN32(pSiS->IOBase, CS(8)); \
   temp &= 0xF0FF0000; \
   temp |= address; \

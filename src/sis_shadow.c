@@ -24,19 +24,12 @@
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
  *
- * TW: This module doesn't use CurrentLayout, because it is never
- *     active when DGA is active and vice versa.
+ * This module doesn't use CurrentLayout, because it is never
+ * active when DGA is active and vice versa.
  */
 
-#include "xf86.h"
-#include "xf86_OSproc.h"
-#include "xf86Resources.h"
-#include "xf86_ansic.h"
-#include "xf86PciInfo.h"
-#include "xf86Pci.h"
 #include "sis.h"
 #include "servermd.h"
-
 #include "sis_shadow.h"
 
 void
@@ -69,7 +62,7 @@ SISRefreshArea(ScrnInfoPtr pScrn, int num, BoxPtr pbox)
        dst = pSiS->FbBase + (pbox->y1 * FBPitch) + (pbox->x1 * Bpp);
 
        while(height--) {
-	  memcpy(dst, src, width);
+	  (*pSiS->SiSFastVidCopy)(dst, src, width);
 	  dst += FBPitch;
 	  src += pSiS->ShadowPitch;
        }

@@ -49,12 +49,6 @@
  * Author: 	Thomas Winischhofer <thomas@winischhofer.net>
  *
  */
- 
-#ifdef _INIT_
-#define EXTERN
-#else
-#define EXTERN extern
-#endif /* _INIT_ */
 
 #ifndef _VSTRUCT_
 #define _VSTRUCT_
@@ -286,7 +280,7 @@ typedef struct _SiS_Private
 	USHORT SiS_IF_DEF_FSTN;
 	USHORT SiS_SysFlags;
 	UCHAR  SiS_VGAINFO;
-#ifndef LINUX_KERNEL
+#ifdef LINUX_XF86
         USHORT SiS_CP1, SiS_CP2, SiS_CP3, SiS_CP4;
 #endif
 	BOOLEAN SiS_UseROM;
@@ -359,7 +353,7 @@ typedef struct _SiS_Private
 	USHORT SiS_PanelMin301;
 
 	const SiS_StStruct          *SiS_SModeIDTable;
-	SiS_StandTableStruct        *SiS_StandTable;
+	const SiS_StandTableStruct  *SiS_StandTable;
 	const SiS_ExtStruct         *SiS_EModeIDTable;
 	const SiS_Ext2Struct        *SiS_RefIndex;
 	const SiS_VBModeStruct      *SiS_VBModeIDTable;
@@ -375,7 +369,7 @@ typedef struct _SiS_Private
 	const UCHAR                 *pSiS_SoftSetting;
 
 	const DRAM4Type *SiS_SR15; /* pointer : point to array */
-#ifndef LINUX_XF86
+#ifdef LINUX_KERNEL
 	UCHAR *pSiS_SR07;
 	const DRAM4Type *SiS_CR40; /* pointer : point to array */
 	UCHAR *SiS_CR49;

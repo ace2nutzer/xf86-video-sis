@@ -217,34 +217,6 @@ InitTo300Pointer(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo)
 {
    InitCommonPointer(SiS_Pr, HwInfo);
 
-   SiS_StandTable[0x04].CRTC[4] = 0x2b;
-   SiS_StandTable[0x05].CRTC[4] = 0x2b;
-   SiS_StandTable[0x06].CRTC[4] = 0x54;
-   SiS_StandTable[0x06].CRTC[5] = 0x80;
-   SiS_StandTable[0x0d].CRTC[4] = 0x2b;
-   SiS_StandTable[0x0e].CRTC[4] = 0x54;
-   SiS_StandTable[0x0e].CRTC[5] = 0x80;
-   SiS_StandTable[0x11].CRTC[4] = 0x54;
-   SiS_StandTable[0x11].CRTC[5] = 0x80;
-   SiS_StandTable[0x11].CRTC[16] = 0x83;
-   SiS_StandTable[0x11].CRTC[17] = 0x85;
-   SiS_StandTable[0x12].CRTC[4] = 0x54;
-   SiS_StandTable[0x12].CRTC[5] = 0x80;
-   SiS_StandTable[0x12].CRTC[16] = 0x83;
-   SiS_StandTable[0x12].CRTC[17] = 0x85;
-   SiS_StandTable[0x13].CRTC[5] = 0xa0;
-   SiS_StandTable[0x17].CRTC[5] = 0xa0;
-   SiS_StandTable[0x1a].CRTC[4] = 0x54;
-   SiS_StandTable[0x1a].CRTC[5] = 0x80;
-   SiS_StandTable[0x1a].CRTC[16] = 0xea;
-   SiS_StandTable[0x1a].CRTC[17] = 0x8c;
-   SiS_StandTable[0x1b].CRTC[4] = 0x54;
-   SiS_StandTable[0x1b].CRTC[5] = 0x80;
-   SiS_StandTable[0x1b].CRTC[16] = 0xea;
-   SiS_StandTable[0x1b].CRTC[17] = 0x8c;
-   SiS_StandTable[0x1c].CRTC[4] = 0x54;
-   SiS_StandTable[0x1c].CRTC[5] = 0x80;
-
    SiS_Pr->SiS_SModeIDTable  = SiS300_SModeIDTable;
    SiS_Pr->SiS_VBModeIDTable = SiS300_VBModeIDTable;
    SiS_Pr->SiS_EModeIDTable  = SiS300_EModeIDTable;
@@ -260,7 +232,7 @@ InitTo300Pointer(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo)
 
    SiS_Pr->SiS_SR15  = SiS300_SR15;
 
-#ifndef LINUX_XF86
+#ifdef LINUX_KERNEL
    SiS_Pr->pSiS_SR07 = &SiS300_SR07;
    SiS_Pr->SiS_CR40  = SiS300_CR40;
    SiS_Pr->SiS_CR49  = SiS300_CR49;
@@ -399,34 +371,6 @@ InitTo310Pointer(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo)
 {
    InitCommonPointer(SiS_Pr, HwInfo);
 
-   SiS_StandTable[0x04].CRTC[4] = 0x2c;
-   SiS_StandTable[0x05].CRTC[4] = 0x2c;
-   SiS_StandTable[0x06].CRTC[4] = 0x55;
-   SiS_StandTable[0x06].CRTC[5] = 0x81;
-   SiS_StandTable[0x0d].CRTC[4] = 0x2c;
-   SiS_StandTable[0x0e].CRTC[4] = 0x55;
-   SiS_StandTable[0x0e].CRTC[5] = 0x81;
-   SiS_StandTable[0x11].CRTC[4] = 0x55;
-   SiS_StandTable[0x11].CRTC[5] = 0x81;
-   SiS_StandTable[0x11].CRTC[16] = 0x82;
-   SiS_StandTable[0x11].CRTC[17] = 0x84;
-   SiS_StandTable[0x12].CRTC[4] = 0x55;
-   SiS_StandTable[0x12].CRTC[5] = 0x81;
-   SiS_StandTable[0x12].CRTC[16] = 0x82;
-   SiS_StandTable[0x12].CRTC[17] = 0x84;
-   SiS_StandTable[0x13].CRTC[5] = 0xb1;
-   SiS_StandTable[0x17].CRTC[5] = 0xb1;
-   SiS_StandTable[0x1a].CRTC[4] = 0x55;
-   SiS_StandTable[0x1a].CRTC[5] = 0x81;
-   SiS_StandTable[0x1a].CRTC[16] = 0xe9;
-   SiS_StandTable[0x1a].CRTC[17] = 0x8b;
-   SiS_StandTable[0x1b].CRTC[4] = 0x55;
-   SiS_StandTable[0x1b].CRTC[5] = 0x81;
-   SiS_StandTable[0x1b].CRTC[16] = 0xe9;
-   SiS_StandTable[0x1b].CRTC[17] = 0x8b;
-   SiS_StandTable[0x1c].CRTC[4] = 0x55;
-   SiS_StandTable[0x1c].CRTC[5] = 0x81;
-
    SiS_Pr->SiS_SModeIDTable  = SiS310_SModeIDTable;
    SiS_Pr->SiS_EModeIDTable  = SiS310_EModeIDTable;
    SiS_Pr->SiS_RefIndex      = (SiS_Ext2Struct *)SiS310_RefIndex;
@@ -456,7 +400,7 @@ InitTo310Pointer(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo)
 
    SiS_Pr->SiS_SR15  = SiS310_SR15;
 
-#ifndef LINUX_XF86
+#ifdef LINUX_KERNEL
    SiS_Pr->pSiS_SR07 = &SiS310_SR07;
    SiS_Pr->SiS_CR40  = SiS310_CR40;
    SiS_Pr->SiS_CR49  = SiS310_CR49;
@@ -622,6 +566,7 @@ SiSInitPtr(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo)
 /*            HELPER: Get ModeID             */
 /*********************************************/
 
+#ifdef LINUX_XF86
 USHORT
 SiS_GetModeID(int VGAEngine, ULONG VBFlags, int HDisplay, int VDisplay,
               int Depth, BOOLEAN FSTN, int LCDwidth, int LCDheight)
@@ -752,6 +697,7 @@ SiS_GetModeID(int VGAEngine, ULONG VBFlags, int HDisplay, int VDisplay,
 
    return(ModeIndex);
 }
+#endif
 
 USHORT
 SiS_GetModeID_LCD(int VGAEngine, ULONG VBFlags, int HDisplay, int VDisplay,
@@ -1738,7 +1684,7 @@ SiS_GetVBType(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo)
 /*           HELPER: Check RAM size          */
 /*********************************************/
 
-#ifndef LINUX_XF86
+#ifdef LINUX_KERNEL
 static BOOLEAN
 SiS_CheckMemorySize(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo,
                     USHORT ModeNo, USHORT ModeIdIndex)
@@ -1809,10 +1755,10 @@ SiS_Get310DRAMType(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo)
    return data;
 }
 
-USHORT
+static USHORT
 SiS_GetMCLK(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo)
 {
-  UCHAR  *ROMAddr  = HwInfo->pjVirtualRomBase;
+  UCHAR  *ROMAddr = HwInfo->pjVirtualRomBase;
   USHORT index;
 
   index = SiS_Get310DRAMType(SiS_Pr, HwInfo);
@@ -1834,26 +1780,26 @@ SiS_GetMCLK(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo)
 /*           HELPER: ClearBuffer             */
 /*********************************************/
 
-#ifndef LINUX_XF86
+#ifdef LINUX_KERNEL
 static void
 SiS_ClearBuffer(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo, USHORT ModeNo)
 {
-  UCHAR   *VideoMemoryAddress = HwInfo->pjVideoMemoryAddress;
-  ULONG   AdapterMemorySize  = (ULONG)HwInfo->ulVideoMemorySize;
-  USHORT  *pBuffer;
+  UCHAR SISIOMEMTYPE *VideoMemoryAddress = HwInfo->pjVideoMemoryAddress;
+  ULONG  AdapterMemorySize = HwInfo->ulVideoMemorySize;
+  USHORT SISIOMEMTYPE *pBuffer;
   int i;
 
   if(SiS_Pr->SiS_ModeType >= ModeEGA) {
      if(ModeNo > 0x13) {
         SiS_SetMemory(VideoMemoryAddress, AdapterMemorySize, 0);
      } else {
-        pBuffer = (USHORT *)VideoMemoryAddress;
-        for(i=0; i<0x4000; i++) pBuffer[i] = 0x0000;
+        pBuffer = (USHORT SISIOMEMTYPE *)VideoMemoryAddress;
+        for(i=0; i<0x4000; i++) writew(0x0000, &pBuffer[i]);
      }
   } else {
      if(SiS_Pr->SiS_ModeType < ModeCGA) {
-        pBuffer = (USHORT *)VideoMemoryAddress;
-        for(i=0; i<0x4000; i++) pBuffer[i] = 0x0720;
+        pBuffer = (USHORT SISIOMEMTYPE *)VideoMemoryAddress;
+        for(i=0; i<0x4000; i++) writew(0x0720, &pBuffer[i]);
      } else {
         SiS_SetMemory(VideoMemoryAddress, 0x8000, 0);
      }
@@ -2775,7 +2721,7 @@ SiS_SetCRT1FIFO_630(SiS_Private *SiS_Pr, USHORT ModeNo,
      data2 = (data2 & 0xC0) >> 5;
      data2 <<= 8;
 
-#ifndef LINUX_XF86
+#ifdef LINUX_KERNEL
      SiS_SetRegLong(0xcf8,0x80000050);
      eax = SiS_GetRegLong(0xcfc);
      eax &= 0xfffff9ff;
@@ -2797,7 +2743,7 @@ SiS_SetCRT1FIFO_630(SiS_Private *SiS_Pr, USHORT ModeNo,
      data2 = (data2 & 0x0f00) | ((data2 & 0x3000) >> 8);
      data2 <<= 20;
 
-#ifndef LINUX_XF86
+#ifdef LINUX_KERNEL
      SiS_SetRegLong(0xcf8,0x800000A0);
      eax = SiS_GetRegLong(0xcfc);
      eax &= 0x00ffffff;
@@ -2816,7 +2762,7 @@ SiS_SetCRT1FIFO_630(SiS_Private *SiS_Pr, USHORT ModeNo,
      data2 = (data2 & 0xf0) >> 4;
      data2 <<= 24;
 
-#ifndef LINUX_XF86
+#ifdef LINUX_KERNEL
      SiS_SetRegLong(0xcf8,0x80000050);
      eax = SiS_GetRegLong(0xcfc);
      eax &= 0xf0ffffff;
@@ -2834,7 +2780,7 @@ SiS_SetCRT1FIFO_630(SiS_Private *SiS_Pr, USHORT ModeNo,
      data2 &= 0x0f;
      data2 <<= 24;
 
-#ifndef LINUX_XF86
+#ifdef LINUX_KERNEL
      SiS_SetRegLong(0xcf8,0x800000A0);
      eax = SiS_GetRegLong(0xcfc);
      eax &= 0xf0ffffff;
@@ -3368,7 +3314,7 @@ SiS_SetCRT1Group(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo,
 
   SiS_LoadDAC(SiS_Pr, HwInfo, ModeNo, ModeIdIndex);
 
-#ifndef LINUX_XF86
+#ifdef LINUX_KERNEL
   if(SiS_Pr->SiS_flag_clearbuffer) {
      SiS_ClearBuffer(SiS_Pr,HwInfo,ModeNo);
   }
@@ -3493,7 +3439,7 @@ SiSSetMode(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo,USHORT ModeNo)
    USHORT  ModeIdIndex;
    SISIOADDRESS BaseAddr = HwInfo->ulIOAddress;
    unsigned char backupreg=0;
-#ifndef LINUX_XF86
+#ifdef LINUX_KERNEL
    USHORT  KeepLockReg;
    ULONG   temp;
 
@@ -3522,13 +3468,13 @@ SiSSetMode(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo,USHORT ModeNo)
    SiS_Pr->SiS_flag_clearbuffer = 0;
 
    if(!SiS_Pr->UseCustomMode) {
-#ifndef LINUX_XF86
+#ifdef LINUX_KERNEL
       if(!(ModeNo & 0x80)) SiS_Pr->SiS_flag_clearbuffer = 1;
 #endif
       ModeNo &= 0x7f;
    }
 
-#ifndef LINUX_XF86
+#ifdef LINUX_KERNEL
    KeepLockReg = SiS_GetReg(SiS_Pr->SiS_P3c4,0x05);
 #endif
    SiS_SetReg(SiS_Pr->SiS_P3c4,0x05,0x86);
@@ -3563,7 +3509,7 @@ SiSSetMode(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo,USHORT ModeNo)
    SiS_GetLCDResInfo(SiS_Pr, ModeNo, ModeIdIndex, HwInfo);
    SiS_SetLowModeTest(SiS_Pr, ModeNo, HwInfo);
 
-#ifndef LINUX_XF86
+#ifdef LINUX_KERNEL
    /* 3. Check memory size (Kernel framebuffer driver only) */
    temp = SiS_CheckMemorySize(SiS_Pr, HwInfo, ModeNo, ModeIdIndex);
    if(!temp) return(0);
@@ -3652,7 +3598,7 @@ SiSSetMode(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo,USHORT ModeNo)
    }
 #endif
 
-#ifndef LINUX_XF86  /* We never lock registers in XF86 */
+#ifdef LINUX_KERNEL  /* We never lock registers in XF86 */
    if(KeepLockReg == 0xA1) SiS_SetReg(SiS_Pr->SiS_P3c4,0x05,0x86);
    else SiS_SetReg(SiS_Pr->SiS_P3c4,0x05,0x00);
 #endif

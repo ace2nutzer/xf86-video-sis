@@ -31,25 +31,21 @@
  *		
  */
 
-#include "xf86.h"
-#include "xf86_ansic.h"
-#include "compiler.h"
-#include "xf86PciInfo.h"
-
 #include "sis.h"
 #include "sis_regs.h"
 #include "sis_vb.h"
 #include "sis_dac.h"
 
+extern void   SISDetermineLCDACap(ScrnInfoPtr pScrn);
+extern void   SISSaveDetectedDevices(ScrnInfoPtr pScrn);
+extern void   SISWaitRetraceCRT1(ScrnInfoPtr pScrn);
+extern UChar  SiS_GetSetBIOSScratch(ScrnInfoPtr pScrn, UShort offset, UChar value);
+
+/* From init.c, init301.c ---- (use their data types) */
 extern BOOLEAN SiS_GetPanelID(SiS_Private *SiS_Pr, PSIS_HW_INFO HwDeviceExtension);
 extern USHORT  SiS_SenseLCDDDC(SiS_Private *SiS_Pr, SISPtr pSiS);
 extern USHORT  SiS_SenseVGA2DDC(SiS_Private *SiS_Pr, SISPtr pSiS);
 
-extern void    SISDetermineLCDACap(ScrnInfoPtr pScrn);
-extern void    SISSaveDetectedDevices(ScrnInfoPtr pScrn);
-
-extern void    	     SISWaitRetraceCRT1(ScrnInfoPtr pScrn);
-extern unsigned char SiS_GetSetBIOSScratch(ScrnInfoPtr pScrn, USHORT offset, unsigned char value);
 
 static const SiS_LCD_StStruct SiS300_LCD_Type[]=
 {
@@ -114,9 +110,9 @@ static const SiS_LCD_StStruct SiS661_LCD_Type[]=
 static Bool
 TestDDC1(ScrnInfoPtr pScrn)
 {
-    SISPtr  pSiS = SISPTR(pScrn);
-    unsigned short old;
-    int count = 48;
+    SISPtr pSiS = SISPTR(pScrn);
+    UShort old;
+    int    count = 48;
 
     old = SiS_ReadDDC1Bit(pSiS->SiS_Pr);
     do {
@@ -128,11 +124,11 @@ TestDDC1(ScrnInfoPtr pScrn)
 static int
 SiS_SISDetectCRT1(ScrnInfoPtr pScrn)
 {
-    SISPtr  pSiS = SISPTR(pScrn);
-    unsigned short temp = 0xffff;
-    unsigned char SR1F, CR63=0, CR17;
-    int i, ret = 0;
-    Bool mustwait = FALSE;
+    SISPtr pSiS = SISPTR(pScrn);
+    UShort temp = 0xffff;
+    UChar  SR1F, CR63=0, CR17;
+    int    i, ret = 0;
+    Bool   mustwait = FALSE;
 
     inSISIDXREG(SISSR,0x1F,SR1F);
     setSISIDXREG(SISSR,0x1F,0x3f,0x04);
@@ -211,9 +207,9 @@ SiS_SISDetectCRT1(ScrnInfoPtr pScrn)
 void SISCRT1PreInit(ScrnInfoPtr pScrn)
 {
     SISPtr  pSiS = SISPTR(pScrn);
-    unsigned char CR32;
-    unsigned char CRT1Detected = 0;
-    unsigned char OtherDevices = 0;
+    UChar CR32;
+    UChar CRT1Detected = 0;
+    UChar OtherDevices = 0;
 
     if(!(pSiS->VBFlags & VB_VIDEOBRIDGE)) {
        pSiS->CRT1off = 0;
@@ -271,7 +267,7 @@ void SISCRT1PreInit(ScrnInfoPtr pScrn)
 void SISLCDPreInit(ScrnInfoPtr pScrn, Bool quiet)
 {
     SISPtr  pSiS = SISPTR(pScrn);
-    unsigned char CR32, CR36, CR37, CR7D=0, tmp;
+    UChar CR32, CR36, CR37, CR7D=0, tmp;
     
     pSiS->VBFlags &= ~(CRT2_LCD);
     pSiS->VBLCDFlags = 0;
@@ -347,6 +343,11 @@ void SISLCDPreInit(ScrnInfoPtr pScrn, Bool quiet)
 
     if(pSiS->VBFlags & CRT2_LCD) {
        inSISIDXREG(SISCR, 0x36, CR36);
+       if(pSiS->VGAEngine == SIS_300_VGA) {
+	  if(pSiS->VBFlags & VB_301) {
+	     if((CR36 & 0x0f) < 0x0f) CR36 &= 0xf7;          
+	  }
+       }
        inSISIDXREG(SISCR, 0x37, CR37);
        if(pSiS->sishw_ext.jChipType < SIS_661) {
           inSISIDXREG(SISCR, 0x3C, CR7D);
@@ -450,7 +451,7 @@ void SISLCDPreInit(ScrnInfoPtr pScrn, Bool quiet)
 void SISTVPreInit(ScrnInfoPtr pScrn, Bool quiet)
 {
     SISPtr pSiS = SISPTR(pScrn);
-    unsigned char SR16, SR38, CR32, CR35=0, CR38=0, CR79, CR39;
+    UChar SR16, SR38, CR32, CR35=0, CR38=0, CR79, CR39;
     int temp = 0;
     
     if(!(pSiS->VBFlags & VB_VIDEOBRIDGE)) return;
@@ -612,7 +613,7 @@ void SISTVPreInit(ScrnInfoPtr pScrn, Bool quiet)
 void SISCRT2PreInit(ScrnInfoPtr pScrn, Bool quiet)
 {
     SISPtr pSiS = SISPTR(pScrn);
-    unsigned char CR32; 
+    UChar CR32; 
 
     /* CRT2-VGA only supported on these bridges */
     if(!(pSiS->VBFlags & VB_SISVGA2BRIDGE))
@@ -666,7 +667,7 @@ void SISCRT2PreInit(ScrnInfoPtr pScrn, Bool quiet)
 }
 
 static int
-SISDoSense(ScrnInfoPtr pScrn, unsigned short type, unsigned short test)
+SISDoSense(ScrnInfoPtr pScrn, UShort type, UShort test)
 {
     SISPtr pSiS = SISPTR(pScrn);
     int    temp, mytest, result, i, j;
@@ -706,12 +707,12 @@ SISDoSense(ScrnInfoPtr pScrn, unsigned short type, unsigned short test)
 void
 SISSense30x(ScrnInfoPtr pScrn, Bool quiet)
 {
-    SISPtr  pSiS = SISPTR(pScrn);
-    unsigned char backupP4_0d,backupP2_00,backupP2_4d,backupSR_1e,biosflag=0;
-    unsigned short svhs=0, svhs_c=0;
-    unsigned short cvbs=0, cvbs_c=0;
-    unsigned short vga2=0, vga2_c=0;
-    int myflag, result; /* , i; */
+    SISPtr pSiS = SISPTR(pScrn);
+    UChar  backupP4_0d, backupP2_00, backupP2_4d, backupSR_1e, biosflag=0;
+    UShort svhs=0, svhs_c=0;
+    UShort cvbs=0, cvbs_c=0;
+    UShort vga2=0, vga2_c=0;
+    int    myflag, result; /* , i; */
     
     if(!(pSiS->VBFlags & VB_SISBRIDGE)) return;
     
@@ -929,7 +930,7 @@ SISSenseChrontel(ScrnInfoPtr pScrn, Bool quiet)
 {
     SISPtr  pSiS = SISPTR(pScrn);
     int     temp1=0, temp2, i;
-    unsigned char test[3];
+    UChar test[3];
 
     if(pSiS->SiS_Pr->SiS_IF_DEF_CH70xx == 1) {
 
@@ -1051,10 +1052,10 @@ SISSenseChrontel(ScrnInfoPtr pScrn, Bool quiet)
  */
 Bool SISRedetectCRT2Type(ScrnInfoPtr pScrn)
 {
-    SISPtr  pSiS = SISPTR(pScrn);
-    unsigned long VBFlagsBackup = pSiS->VBFlags;
-    Bool backup1 = pSiS->forcecrt2redetection;
-    Bool backup2 = pSiS->nocrt2ddcdetection;
+    SISPtr pSiS = SISPTR(pScrn);
+    ULong  VBFlagsBackup = pSiS->VBFlags;
+    Bool   backup1 = pSiS->forcecrt2redetection;
+    Bool   backup2 = pSiS->nocrt2ddcdetection;
     
 #ifdef SISDUALHEAD
     if(pSiS->DualHeadMode) return FALSE;

@@ -51,8 +51,11 @@
  *
  */
 
+#ifndef _SIS_OSDEF_H_
+#define _SIS_OSDEF_H_ 
+ 
 /* The choices are: */
-/* #define LINUX_KERNEL	 */  	/* Kernel framebuffer */
+/* #define LINUX_KERNEL	 */  	/* Linux kernel framebuffer */
 #define LINUX_XF86    		/* XFree86/X.org */
 
 #ifdef OutPortByte
@@ -85,7 +88,6 @@
 
 #ifdef LINUX_KERNEL
 #include <linux/config.h>
-#include <linux/version.h>
 
 #ifdef CONFIG_FB_SIS_300
 #define SIS300
@@ -95,8 +97,9 @@
 #define SIS315H
 #endif
 
-#if 1
-#define SISFBACCEL	/* Include 2D acceleration */
+#if !defined(SIS300) && !defined(SIS315H)
+#warning Neither CONFIG_FB_SIS_300 nor CONFIG_FB_SIS_315 is set
+#warning sisfb will not work!
 #endif
 
 #define OutPortByte(p,v) outb((u8)(v),(IOADDRESS)(p))
@@ -116,12 +119,13 @@
 #define SIS300
 #define SIS315H
 
-#define OutPortByte(p,v) outb((IOADDRESS)(p),(CARD8)(v))
-#define OutPortWord(p,v) outw((IOADDRESS)(p),(CARD16)(v))
-#define OutPortLong(p,v) outl((IOADDRESS)(p),(CARD32)(v))
-#define InPortByte(p)    inb((IOADDRESS)(p))
-#define InPortWord(p)    inw((IOADDRESS)(p))
-#define InPortLong(p)    inl((IOADDRESS)(p))
+#define OutPortByte(p,v) outSISREG((IOADDRESS)(p),(CARD8)(v))
+#define OutPortWord(p,v) outSISREGW((IOADDRESS)(p),(CARD16)(v))
+#define OutPortLong(p,v) outSISREGL((IOADDRESS)(p),(CARD32)(v))
+#define InPortByte(p)    inSISREG((IOADDRESS)(p))
+#define InPortWord(p)    inSISREGW((IOADDRESS)(p))
+#define InPortLong(p)    inSISREGL((IOADDRESS)(p))
 #define SiS_SetMemory(MemoryAddress,MemorySize,value) memset(MemoryAddress, value, MemorySize)
 #endif
 
+#endif  /* _OSDEF_H_ */

@@ -36,18 +36,12 @@
  *		others.
  */
 
-#include "xf86.h"
-#include "xf86_OSproc.h"
-#include "xf86_ansic.h"
-#include "xf86Priv.h"
+#include "sis.h"
 
-#include "xf86PciInfo.h"
-#include "xf86Pci.h"
 #include "fb.h"
 
 #include "GL/glxtokens.h"
 
-#include "sis.h"
 
 #ifndef SISHAVEDRMWRITE
 # if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,2,99,0,0)
@@ -712,7 +706,7 @@ SISDRIFinishScreenInit(ScreenPtr pScreen)
 
        /* frame control */
        saPriv->FrameCount = 0;
-       *(unsigned long *)(pSiS->IOBase+0x8a2c) = 0;
+       *(ULong *)(pSiS->IOBase+0x8a2c) = 0;
        SiSIdle
     }
   }

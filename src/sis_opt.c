@@ -31,12 +31,10 @@
  *              ?
  */
 
-#include "xf86.h"
-#include "xf86PciInfo.h"
+#include "sis.h"
+
 #include "xf86str.h"
 #include "xf86Cursor.h"
-
-#include "sis.h"
 
 extern const customttable mycustomttable[];
 
@@ -943,7 +941,7 @@ SiSOptions(ScrnInfoPtr pScrn)
 	     xf86DrvMsg(pScrn->scrnIndex, X_INFO,
 	         "WARNING: Using the Hotkey might freeze your machine, regardless\n");
 	     xf86DrvMsg(pScrn->scrnIndex, X_INFO,
-		 "\twhether enabled or disabled. This is no driver bug.\n");
+		 "         whether enabled or disabled. This is no driver bug.\n");
 	  }
 	  }
 
@@ -1168,7 +1166,7 @@ SiSOptions(ScrnInfoPtr pScrn)
 	  strptr = (char *)xf86GetOptValString(pSiS->Options, OPTION_SPECIALTIMING);
           if(strptr != NULL) {
 	     int i = 0;
-	     BOOLEAN found = FALSE;
+	     Bool found = FALSE;
 	     if(!xf86NameCmp(strptr,"NONE")) {
 	        pSiS->SiS_Pr->SiS_CustomT = CUT_FORCENONE;
 		xf86DrvMsg(pScrn->scrnIndex, X_CONFIG,

@@ -36,16 +36,10 @@
 #define DEBUG
 #endif
 
-#include "xf86.h"
-#include "xf86_OSproc.h"
-#include "xf86_ansic.h"
-#include "xf86PciInfo.h"
-#include "xf86Pci.h"
-#include "compiler.h"
-#include "xaa.h"
+#include "sis.h"
+
 #include "xaarop.h"
 
-#include "sis.h"
 #include "sis300_accel.h"
 
 #ifdef SISDUALHEAD
@@ -86,7 +80,7 @@ static void SiSSubsequentSolidHorzVertLine(ScrnInfoPtr pScrn,
                                 int x, int y, int len, int dir);
 static void SiSSetupForDashedLine(ScrnInfoPtr pScrn,
                                 int fg, int bg, int rop, unsigned int planemask,
-                                int length, unsigned char *pattern);
+                                int length, UChar *pattern);
 static void SiSSubsequentDashedTwoPointLine(ScrnInfoPtr pScrn,
                                 int x1, int y1, int x2, int y2,
                                 int flags, int phase);
@@ -139,8 +133,8 @@ static void SiSSubsequentColorExpandScanline(ScrnInfoPtr pScrn, int bufno);
 static void SiSRestoreAccelState(ScrnInfoPtr pScrn);
 #endif
 
-extern unsigned char SiSGetCopyROP(int rop);
-extern unsigned char SiSGetPatternROP(int rop);
+extern UChar SiSGetCopyROP(int rop);
+extern UChar SiSGetPatternROP(int rop);
 
 static void
 SiSInitializeAccelerator(ScrnInfoPtr pScrn)
@@ -156,7 +150,7 @@ SiS300AccelInit(ScreenPtr pScreen)
 	ScrnInfoPtr     pScrn = xf86Screens[pScreen->myNum];
 	SISPtr          pSiS = SISPTR(pScrn);
 	XAAInfoRecPtr   infoPtr = NULL;
-	unsigned char   *AvailBufBase;
+	UChar           *AvailBufBase;
 	int		topFB, reservedFbSize, usableFbSize, i;
 	BoxRec          Avail;
 
@@ -272,7 +266,7 @@ SiS300AccelInit(ScreenPtr pScreen)
 	      
 	      pSiS->PerColorExpandBufferSize = ((pScrn->virtualX + 31)/32) * 4;
 	      infoPtr->NumScanlineColorExpandBuffers = pSiS->ColorExpandBufferNumber;
-	      infoPtr->ScanlineColorExpandBuffers = (unsigned char **)&pSiS->ColorExpandBufferAddr[0];
+	      infoPtr->ScanlineColorExpandBuffers = (UChar **)&pSiS->ColorExpandBufferAddr[0];
 
 	      infoPtr->SetupForScanlineCPUToScreenColorExpandFill =
 	                            SiSSetupForScanlineCPUToScreenColorExpandFill;
@@ -349,7 +343,7 @@ SiS300AccelInit(ScreenPtr pScreen)
 	}
 
 	xf86DrvMsg(pScrn->scrnIndex, X_INFO,
-		   "Framebuffer from (%d,%d) fo (%d,%d)\n",
+		   "Framebuffer from (%d,%d) to (%d,%d)\n",
 		   Avail.x1, Avail.y1, Avail.x2 - 1, Avail.y2 - 1);
  
 	xf86InitFBManager(pScreen, &Avail);
@@ -715,7 +709,7 @@ SiSSubsequentSolidHorzVertLine(ScrnInfoPtr pScrn,
 static void
 SiSSetupForDashedLine(ScrnInfoPtr pScrn,
                                 int fg, int bg, int rop, unsigned int planemask,
-                                int length, unsigned char *pattern)
+                                int length, UChar *pattern)
 {
 	SISPtr pSiS = SISPTR(pScrn);
 

@@ -36,13 +36,6 @@
  *
  */
 
-#include "xf86.h"
-#include "xf86_OSproc.h"
-#include "xf86_ansic.h"
-#include "xf86Version.h"
-#include "xf86PciInfo.h"
-#include "xf86Pci.h"
-
 #include "sis.h"
 #include "sis_regs.h"
 #include "sis_dac.h"
@@ -55,6 +48,19 @@ static void  SiS6326TVDelay(ScrnInfoPtr pScrn, int delay);
 
 extern void  SISSense30x(ScrnInfoPtr pScrn, Bool quiet);
 extern void  SISSenseChrontel(ScrnInfoPtr pScrn, Bool quiet);
+
+/* Our very own vgaHW functions */
+Bool SiSVGAInit(ScrnInfoPtr pScrn, DisplayModePtr mode);
+void SiSVGASave(ScrnInfoPtr pScrn, SISRegPtr save, int flags);
+void SiSVGARestore(ScrnInfoPtr pScrn, SISRegPtr restore, int flags);
+void SiSVGASaveFonts(ScrnInfoPtr pScrn);
+void SiSVGARestoreFonts(ScrnInfoPtr pScrn);
+void SISVGALock(SISPtr pSiS);
+void SiSVGAUnlock(SISPtr pSiS);
+void SiSVGAProtect(ScrnInfoPtr pScrn, Bool on);
+Bool SiSVGAMapMem(ScrnInfoPtr pScrn);
+void SiSVGAUnmapMem(ScrnInfoPtr pScrn);
+Bool SiSVGASaveScreen(ScreenPtr pScreen, int mode);
 
 const CARD8 SiS6326TVRegs1[14] = {
      0x00,0x01,0x02,0x03,0x04,0x11,0x12,0x13,0x21,0x26,0x27,0x3a,0x3c,0x43
@@ -160,30 +166,32 @@ const CARD8 SiS6326CR[9][15] = {
 static Bool
 SISInit(ScrnInfoPtr pScrn, DisplayModePtr mode)
 {
-    SISPtr         pSiS = SISPTR(pScrn);
-    SISRegPtr      pReg = &pSiS->ModeReg;
-    vgaRegPtr      vgaReg = &VGAHWPTR(pScrn)->ModeReg;
-    unsigned char  temp;
-    int            mclk = pSiS->MemClock;
-    int            offset;
-    int            clock = mode->Clock;
-    int            width = mode->HDisplay;
-    int            height = mode->VDisplay;
-    int            rate = SiSCalcVRate(mode);
-    int            buswidth = pSiS->BusWidth;
-    unsigned int   vclk[5];
-    unsigned short CRT_CPUthresholdLow;
-    unsigned short CRT_CPUthresholdHigh;
-    unsigned short CRT_ENGthreshold;
-    double         a, b, c;
-    int            d, factor;
-    int            num, denum, div, sbit, scale;
-    BOOL	   sis6326tvmode, sis6326himode;
+    SISPtr       pSiS = SISPTR(pScrn);
+    SISRegPtr    pReg = &pSiS->ModeReg;
+    UChar        temp;
+    int          mclk = pSiS->MemClock;
+    int          clock = mode->Clock;
+    int          width = mode->HDisplay;
+    int          height = mode->VDisplay;
+    int          rate = SiSCalcVRate(mode);
+    int          buswidth = pSiS->BusWidth;
+    unsigned int vclk[5];
+    UShort       CRT_CPUthresholdLow, CRT_CPUthresholdHigh, CRT_ENGthreshold;
+    double       a, b, c;
+    int          d, factor, offset;
+    int          num, denum, div, sbit, scale;
+    Bool	 sis6326tvmode, sis6326himode;
 
     PDEBUG(xf86DrvMsgVerb(pScrn->scrnIndex, X_INFO, 3, "SISInit()\n"));
 
     /* Save the registers for further processing */
     (*pSiS->SiSSave)(pScrn, pReg);
+    
+    /* Initialise the standard VGA registers */
+    if(!SiSVGAInit(pScrn, mode)) {
+       xf86DrvMsg(pScrn->scrnIndex, X_ERROR, "SISInit: SiSVGAInit() failed\n");
+       return FALSE;
+    }
 
     /* Determine if chosen mode is suitable for TV on the 6326
      * and if the mode is one of our special hi-res modes.
@@ -319,7 +327,7 @@ SISInit(ScrnInfoPtr pScrn, DisplayModePtr mode)
        pReg->sisRegs3C4[0x21] = ((pSiS->FbAddress & 0xF8000000) >> 27) | temp;
 
        /* Set screen offset */
-       vgaReg->CRTC[0x13] = offset & 0xFF;
+       pReg->sisRegs3D4[0x13] = offset & 0xFF;
 
        /* Set CR registers for our built-in TV and hi-res modes */
        if((sis6326tvmode) || (sis6326himode)) {
@@ -361,18 +369,18 @@ SISInit(ScrnInfoPtr pScrn, DisplayModePtr mode)
 	     }
           }
 	  for(i=0; i<=5; i++) {
-	     vgaReg->CRTC[i] = SiS6326CR[index][i];
+	     pReg->sisRegs3D4[i] = SiS6326CR[index][i];
 	  }
           pReg->sisRegs3C4[0x12] = SiS6326CR[index][6];
-	  vgaReg->CRTC[6] = SiS6326CR[index][7];
-	  vgaReg->CRTC[7] = SiS6326CR[index][8];
-	  vgaReg->CRTC[0x10] = SiS6326CR[index][9];
-	  vgaReg->CRTC[0x11] = SiS6326CR[index][10];
-	  vgaReg->CRTC[0x12] = SiS6326CR[index][11];
-	  vgaReg->CRTC[0x15] = SiS6326CR[index][12];
-	  vgaReg->CRTC[0x16] = SiS6326CR[index][13];
-	  vgaReg->CRTC[9] &= ~0x20;
-	  vgaReg->CRTC[9] |= (SiS6326CR[index][14] & 0x20);
+	  pReg->sisRegs3D4[6] = SiS6326CR[index][7];
+	  pReg->sisRegs3D4[7] = SiS6326CR[index][8];
+	  pReg->sisRegs3D4[0x10] = SiS6326CR[index][9];
+	  pReg->sisRegs3D4[0x11] = SiS6326CR[index][10];
+	  pReg->sisRegs3D4[0x12] = SiS6326CR[index][11];
+	  pReg->sisRegs3D4[0x15] = SiS6326CR[index][12];
+	  pReg->sisRegs3D4[0x16] = SiS6326CR[index][13];
+	  pReg->sisRegs3D4[9] &= ~0x20;
+	  pReg->sisRegs3D4[9] |= (SiS6326CR[index][14] & 0x20);
 	  pReg->sisRegs3C4[0x0A] = ((offset & 0xF00) >> 4) | (SiS6326CR[index][14] & 0x0f);
 
        } else {
@@ -435,7 +443,7 @@ SISInit(ScrnInfoPtr pScrn, DisplayModePtr mode)
        pReg->sisRegs3C4[0x38] &= 0xFC;
 
        /* Programmable Clock */
-       pReg->sisRegs3C2 = inb(SISMISCR) | 0x0C;
+       pReg->sisRegs3C2 = inSISREG(SISMISCR) | 0x0C;
 
 #if 0       
        if(pSiS->oldChipset <= OC_SIS86202) {
@@ -770,7 +778,7 @@ SISInit(ScrnInfoPtr pScrn, DisplayModePtr mode)
 
        /* Set SiS6326 TV registers */
        if((pSiS->Chipset == PCI_CHIP_SIS6326) && (sis6326tvmode)) {
-          unsigned char tmp;
+          UChar tmp;
           int index=0, i, j, k;
           int fsc;
 
@@ -844,16 +852,16 @@ SISInit(ScrnInfoPtr pScrn, DisplayModePtr mode)
     return(TRUE);
 }
 
-/* Init a mode for SiS 300, 315 and 330 series
+/* Init a mode for SiS 300, 315, 330, 340 series
  * This function is now only used for setting up some
  * variables (eg. scrnOffset).
  */
 Bool
 SIS300Init(ScrnInfoPtr pScrn, DisplayModePtr mode)
 {
-    SISPtr         pSiS = SISPTR(pScrn);
-    SISRegPtr      pReg = &pSiS->ModeReg;
-    unsigned short temp;
+    SISPtr    pSiS = SISPTR(pScrn);
+    SISRegPtr pReg = &pSiS->ModeReg;
+    UShort    temp;
     DisplayModePtr realmode = mode;
 
     PDEBUG(xf86DrvMsgVerb(pScrn->scrnIndex, X_INFO, 4, "SIS300Init()\n"));
@@ -944,10 +952,10 @@ SiS6326TVDelay(ScrnInfoPtr pScrn, int delay)
 {
     SISPtr  pSiS = SISPTR(pScrn);
     int i;
-    unsigned char temp;
+    UChar temp;
 
     for(i=0; i<delay; i++) {
-    	inSISIDXREG(SISSR, 0x05, temp);
+       inSISIDXREG(SISSR, 0x05, temp);
     }
     (void)temp;
 }
@@ -955,7 +963,7 @@ SiS6326TVDelay(ScrnInfoPtr pScrn, int delay)
 static int
 SIS6326DoSense(ScrnInfoPtr pScrn, int tempbh, int tempbl, int tempch, int tempcl)
 {
-    unsigned char temp;
+    UChar temp;
 
     SiS6326SetTVReg(pScrn, 0x42, tempbl);
     temp = SiS6326GetTVReg(pScrn, 0x43);
@@ -976,8 +984,8 @@ static void
 SISSense6326(ScrnInfoPtr pScrn)
 {
     SISPtr pSiS = SISPTR(pScrn);
-    unsigned char temp;
-    int result;
+    UChar  temp;
+    int    result;
 
     pSiS->SiS6326Flags &= (SIS6326_HASTV | SIS6326_TVPAL);
     temp = SiS6326GetTVReg(pScrn, 0x43);
@@ -991,24 +999,24 @@ SISSense6326(ScrnInfoPtr pScrn)
     temp &= 0xfb;
     SiS6326SetTVReg(pScrn, 0x43, temp);
     if(pSiS->SiS6326Flags & (SIS6326_TVSVIDEO | SIS6326_TVCVBS)) {
-    	pSiS->SiS6326Flags |= SIS6326_TVDETECTED;
-	xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
-		"SiS6326: Detected TV connected to %s output\n",
+       pSiS->SiS6326Flags |= SIS6326_TVDETECTED;
+       xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
+	    "SiS6326: Detected TV connected to %s output\n",
 		(((pSiS->SiS6326Flags & (SIS6326_TVSVIDEO | SIS6326_TVCVBS)) ==
 		   (SIS6326_TVSVIDEO | SIS6326_TVCVBS)) ?
 		   	"both SVIDEO and COMPOSITE" :
 		      	   ((pSiS->SiS6326Flags & SIS6326_TVSVIDEO) ?
 			     	"SVIDEO" : "COMPOSITE")));
     } else {
-        xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
-		"SiS6326: No TV detected\n");
+       xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
+	    "SiS6326: No TV detected\n");
     }
 }
 
-static BOOLEAN
+static Bool
 SISIsUMC(SISPtr pSiS)
 {
-    USHORT p4_0f, p4_25, p4_27, temp;
+    UShort p4_0f, p4_25, p4_27, temp;
     
     inSISIDXREG(SISPART4, 0x0f, p4_0f);
     inSISIDXREG(SISPART4, 0x25, p4_25);
@@ -1026,15 +1034,15 @@ SISIsUMC(SISPtr pSiS)
 /* Detect video bridge and set VBFlags accordingly */
 void SISVGAPreInit(ScrnInfoPtr pScrn)
 {
-    SISPtr  pSiS = SISPTR(pScrn);
-    int     temp,temp1,temp2,sistypeidx;
-    int     upperlimitlvds, lowerlimitlvds;
-    int     upperlimitch, lowerlimitch;
-    int     chronteltype, chrontelidreg, upperlimitvb;
+    SISPtr pSiS = SISPTR(pScrn);
+    int    temp,temp1,temp2,sistypeidx;
+    int    upperlimitlvds, lowerlimitlvds;
+    int    upperlimitch, lowerlimitch;
+    int    chronteltype, chrontelidreg, upperlimitvb;
     
     static const char *detectvb = "Detected %s (%s) video bridge (ID %d; Rev 0x%x)\n";
 #if 0
-    unsigned char sr17=0;
+    UChar sr17=0;
 #endif
     static const char  *ChrontelTypeStr[] = {
         "7004",
@@ -1058,40 +1066,40 @@ void SISVGAPreInit(ScrnInfoPtr pScrn)
 	"302B"		/* 7 */
     };
 
-    switch (pSiS->Chipset) {
-        case PCI_CHIP_SIS300:
-        case PCI_CHIP_SIS630:
-        case PCI_CHIP_SIS540:
-	case PCI_CHIP_SIS550:
-	case PCI_CHIP_SIS650:
-	case PCI_CHIP_SIS315:
-	case PCI_CHIP_SIS315H:
-	case PCI_CHIP_SIS315PRO:
-	case PCI_CHIP_SIS330:
-	case PCI_CHIP_SIS660:
-	case PCI_CHIP_SIS340:
-            pSiS->ModeInit = SIS300Init;
-            break;
-        default:
-            pSiS->ModeInit = SISInit;
+    switch(pSiS->Chipset) {
+       case PCI_CHIP_SIS300:
+       case PCI_CHIP_SIS540:
+       case PCI_CHIP_SIS630:
+       case PCI_CHIP_SIS550:
+       case PCI_CHIP_SIS315:
+       case PCI_CHIP_SIS315H:
+       case PCI_CHIP_SIS315PRO:
+       case PCI_CHIP_SIS650:
+       case PCI_CHIP_SIS330:
+       case PCI_CHIP_SIS660:
+       case PCI_CHIP_SIS340:
+          pSiS->ModeInit = SIS300Init;
+          break;
+       default:
+          pSiS->ModeInit = SISInit;
     }
 
     if((pSiS->Chipset == PCI_CHIP_SIS6326) && (pSiS->SiS6326Flags & SIS6326_HASTV)) {
-        unsigned char sr0d;
-	inSISIDXREG(SISSR, 0x0d, sr0d);
-	if(sr0d & 0x04) {
-		pSiS->SiS6326Flags |= SIS6326_TVPAL;
-	}
-	SISSense6326(pScrn);
+       UChar sr0d;
+       inSISIDXREG(SISSR, 0x0d, sr0d);
+       if(sr0d & 0x04) {
+	  pSiS->SiS6326Flags |= SIS6326_TVPAL;
+       }
+       SISSense6326(pScrn);
     }
 
     pSiS->VBFlags = pSiS->VBFlags2 = 0; /* reset VBFlags */
     pSiS->SiS_Pr->SiS_UseLCDA = FALSE;
     pSiS->SiS_Pr->Backup = FALSE;
 
-    /* Videobridges only available for 300/315 series */
+    /* Videobridges only available for 300/315/330/340 series */
     if((pSiS->VGAEngine != SIS_300_VGA) && (pSiS->VGAEngine != SIS_315_VGA))
-        return;
+       return;
 	
     inSISIDXREG(SISPART4, 0x00, temp);
     temp &= 0x0F;
@@ -1294,7 +1302,7 @@ void SISVGAPreInit(ScrnInfoPtr pScrn)
         (pSiS->Chipset != PCI_CHIP_SIS300) &&
         (sr17 & 0x0F) ) {
 	
-	unsigned char cr32;
+	UChar cr32;
 	inSISIDXREG(SISCR, 0x32, cr32);
 	
 	xf86DrvMsg(pScrn->scrnIndex, X_INFO, 
@@ -1374,5 +1382,594 @@ void SISVGAPreInit(ScrnInfoPtr pScrn)
        }
     }
 }
+
+static void
+SiS_WriteAttr(SISPtr pSiS, int index, int value)
+{
+    (void)inSISREG(SISINPSTAT);
+    index |= 0x20;
+    outSISREG(SISAR, index);
+    outSISREG(SISAR, value);
+}
+
+static int
+SiS_ReadAttr(SISPtr pSiS, int index)
+{
+    (void)inSISREG(SISINPSTAT);
+    index |= 0x20;
+    outSISREG(SISAR, index);
+    return(inSISREG(SISARR));
+}
+
+static void
+SiS_EnablePalette(SISPtr pSiS)
+{
+    (void)inSISREG(SISINPSTAT);
+    outSISREG(SISAR, 0x00);
+    pSiS->VGAPaletteEnabled = TRUE;
+}
+
+static void
+SiS_DisablePalette(SISPtr pSiS)
+{
+    (void)inSISREG(SISINPSTAT);
+    outSISREG(SISAR, 0x20);
+    pSiS->VGAPaletteEnabled = FALSE;
+}
+
+void
+SISVGALock(SISPtr pSiS)
+{
+    orSISIDXREG(SISCR, 0x11, 0x80);  	/* Protect CRTC[0-7] */
+}
+
+void
+SiSVGAUnlock(SISPtr pSiS)
+{
+    andSISIDXREG(SISCR, 0x11, 0x7f);	/* Unprotect CRTC[0-7] */    
+}
+
+#define SIS_FONTS_SIZE (8 * 8192)
+
+void
+SiSVGASaveFonts(ScrnInfoPtr pScrn)
+{
+#ifdef SIS_PC_PLATFORM
+    SISPtr pSiS = SISPTR(pScrn);
+    pointer vgaMemBase = pSiS->VGAMemBase;
+    UChar miscOut, attr10, gr4, gr5, gr6, seq2, seq4, scrn;
+
+    if((pSiS->fonts) || (vgaMemBase == NULL)) return;
+
+    /* If in graphics mode, don't save anything */
+    attr10 = SiS_ReadAttr(pSiS, 0x10);
+    if(attr10 & 0x01) return;
+
+    if(!(pSiS->fonts = xalloc(SIS_FONTS_SIZE * 2))) {
+       xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
+       		"Could not save console fonts, mem allocation failed\n");
+       return;
+    }
+
+    /* save the registers that are needed here */
+    miscOut = inSISREG(SISMISCR);
+    inSISIDXREG(SISGR, 0x04, gr4);
+    inSISIDXREG(SISGR, 0x05, gr5);
+    inSISIDXREG(SISGR, 0x06, gr6);
+    inSISIDXREG(SISSR, 0x02, seq2);
+    inSISIDXREG(SISSR, 0x04, seq4);
+
+    /* Force into color mode */
+    outSISREG(SISMISCW, miscOut | 0x01);
+
+    inSISIDXREG(SISSR, 0x01, scrn);
+    outSISIDXREG(SISSR, 0x00, 0x01);
+    outSISIDXREG(SISSR, 0x01, scrn | 0x20);
+    outSISIDXREG(SISSR, 0x00, 0x03);
+
+    SiS_WriteAttr(pSiS, 0x10, 0x01);  /* graphics mode */
+
+    /*font1 */
+    outSISIDXREG(SISSR, 0x02, 0x04);  /* write to plane 2 */
+    outSISIDXREG(SISSR, 0x04, 0x06);  /* enable plane graphics */
+    outSISIDXREG(SISGR, 0x04, 0x02);  /* read plane 2 */
+    outSISIDXREG(SISGR, 0x05, 0x00);  /* write mode 0, read mode 0 */
+    outSISIDXREG(SISGR, 0x06, 0x05);  /* set graphics */
+    slowbcopy_frombus(vgaMemBase, pSiS->fonts, SIS_FONTS_SIZE);
+
+    /* font2 */
+    outSISIDXREG(SISSR, 0x02, 0x08);  /* write to plane 3 */
+    outSISIDXREG(SISSR, 0x04, 0x06);  /* enable plane graphics */
+    outSISIDXREG(SISGR, 0x04, 0x03);  /* read plane 3 */
+    outSISIDXREG(SISGR, 0x05, 0x00);  /* write mode 0, read mode 0 */
+    outSISIDXREG(SISGR, 0x06, 0x05);  /* set graphics */
+    slowbcopy_frombus(vgaMemBase, pSiS->fonts + SIS_FONTS_SIZE, SIS_FONTS_SIZE);
+
+    inSISIDXREG(SISSR, 0x01, scrn);
+    outSISIDXREG(SISSR, 0x00, 0x01);
+    outSISIDXREG(SISSR, 0x01, scrn & ~0x20);
+    outSISIDXREG(SISSR, 0x00, 0x03);
+
+    /* Restore clobbered registers */
+    SiS_WriteAttr(pSiS, 0x10, attr10);
+    outSISIDXREG(SISSR, 0x02, seq2);
+    outSISIDXREG(SISSR, 0x04, seq4);
+    outSISIDXREG(SISGR, 0x04, gr4);
+    outSISIDXREG(SISGR, 0x05, gr5);
+    outSISIDXREG(SISGR, 0x06, gr6);
+    outSISREG(SISMISCW, miscOut);
+#endif    
+}
+
+static void
+SiSVGASaveMode(ScrnInfoPtr pScrn, SISRegPtr save)
+{
+    SISPtr pSiS = SISPTR(pScrn);
+    int i;
+
+    save->sisRegMiscOut = inSISREG(SISMISCR);
+
+    for(i = 0; i < 25; i++) {
+       inSISIDXREG(SISCR, i, save->sisRegs3D4[i]);
+    }
+
+    SiS_EnablePalette(pSiS);
+    for(i = 0; i < 21; i++) {
+       save->sisRegsATTR[i] = SiS_ReadAttr(pSiS, i);
+    }
+    SiS_DisablePalette(pSiS);
+
+    for(i = 0; i < 9; i++) {
+       inSISIDXREG(SISGR, i, save->sisRegsGR[i]);
+    }
+
+    for(i = 1; i < 5; i++) {
+       inSISIDXREG(SISSR, i, save->sisRegs3C4[i]);
+    }
+}
+
+static void
+SiSVGASaveColormap(ScrnInfoPtr pScrn, SISRegPtr save)
+{
+    SISPtr pSiS = SISPTR(pScrn);
+    int i;
+
+    if(pSiS->VGACMapSaved) return;
+
+    outSISREG(SISPEL, 0xff);			
+    
+    outSISREG(SISCOLIDXR, 0x00); 
+    for(i = 0; i < 768; i++) {
+       save->sisDAC[i] = inSISREG(SISCOLDATA); 
+       (void)inSISREG(SISINPSTAT);
+       (void)inSISREG(SISINPSTAT);
+    }
+
+    SiS_DisablePalette(pSiS);
+    pSiS->VGACMapSaved = TRUE;
+}
+
+void
+SiSVGASave(ScrnInfoPtr pScrn, SISRegPtr save, int flags)
+{
+    if(save == NULL) return;
+
+    if(flags & SISVGA_SR_CMAP)  SiSVGASaveColormap(pScrn, save);
+    if(flags & SISVGA_SR_MODE)  SiSVGASaveMode(pScrn, save);
+    if(flags & SISVGA_SR_FONTS) SiSVGASaveFonts(pScrn);
+}
+
+void
+SiSVGARestoreFonts(ScrnInfoPtr pScrn)
+{
+#ifdef SIS_PC_PLATFORM
+    SISPtr pSiS = SISPTR(pScrn);
+    pointer vgaMemBase = pSiS->VGAMemBase;
+    UChar miscOut, attr10, gr1, gr3, gr4, gr5, gr6, gr8, seq2, seq4, scrn;
+
+    if((!pSiS->fonts) || (vgaMemBase == NULL)) return;
+
+    /* save the registers that are needed here */
+    miscOut = inSISREG(SISMISCR);
+    attr10 = SiS_ReadAttr(pSiS, 0x10);
+    inSISIDXREG(SISGR, 0x01, gr1);
+    inSISIDXREG(SISGR, 0x03, gr3);
+    inSISIDXREG(SISGR, 0x04, gr4);
+    inSISIDXREG(SISGR, 0x05, gr5);
+    inSISIDXREG(SISGR, 0x06, gr6);
+    inSISIDXREG(SISGR, 0x08, gr8);
+    inSISIDXREG(SISSR, 0x02, seq2);
+    inSISIDXREG(SISSR, 0x04, seq4);
+
+    /* Force into color mode */
+    outSISREG(SISMISCW, miscOut | 0x01);
+    inSISIDXREG(SISSR, 0x01, scrn);
+    outSISIDXREG(SISSR, 0x00, 0x01);
+    outSISIDXREG(SISSR, 0x01, scrn | 0x20);
+    outSISIDXREG(SISSR, 0x00, 0x03);
+
+    SiS_WriteAttr(pSiS, 0x10, 0x01);	  /* graphics mode */
+    if(pScrn->depth == 4) {
+       outSISIDXREG(SISGR, 0x03, 0x00);  /* don't rotate, write unmodified */
+       outSISIDXREG(SISGR, 0x08, 0xFF);  /* write all bits in a byte */
+       outSISIDXREG(SISGR, 0x01, 0x00);  /* all planes come from CPU */
+    }
+
+    outSISIDXREG(SISSR, 0x02, 0x04); /* write to plane 2 */
+    outSISIDXREG(SISSR, 0x04, 0x06); /* enable plane graphics */
+    outSISIDXREG(SISGR, 0x04, 0x02); /* read plane 2 */
+    outSISIDXREG(SISGR, 0x05, 0x00); /* write mode 0, read mode 0 */
+    outSISIDXREG(SISGR, 0x06, 0x05); /* set graphics */
+    slowbcopy_tobus(pSiS->fonts, vgaMemBase, SIS_FONTS_SIZE);
+
+    outSISIDXREG(SISSR, 0x02, 0x08); /* write to plane 3 */
+    outSISIDXREG(SISSR, 0x04, 0x06); /* enable plane graphics */
+    outSISIDXREG(SISGR, 0x04, 0x03); /* read plane 3 */
+    outSISIDXREG(SISGR, 0x05, 0x00); /* write mode 0, read mode 0 */
+    outSISIDXREG(SISGR, 0x06, 0x05); /* set graphics */
+    slowbcopy_tobus(pSiS->fonts + SIS_FONTS_SIZE, vgaMemBase, SIS_FONTS_SIZE);
+
+    inSISIDXREG(SISSR, 0x01, scrn);
+    outSISIDXREG(SISSR, 0x00, 0x01);
+    outSISIDXREG(SISSR, 0x01, scrn & ~0x20);
+    outSISIDXREG(SISSR, 0x00, 0x03);
+
+    /* restore the registers that were changed */
+    outSISREG(SISMISCW, miscOut);
+    SiS_WriteAttr(pSiS, 0x10, attr10);
+    outSISIDXREG(SISGR, 0x01, gr1);
+    outSISIDXREG(SISGR, 0x03, gr3);
+    outSISIDXREG(SISGR, 0x04, gr4);
+    outSISIDXREG(SISGR, 0x05, gr5);
+    outSISIDXREG(SISGR, 0x06, gr6);
+    outSISIDXREG(SISGR, 0x08, gr8);
+    outSISIDXREG(SISSR, 0x02, seq2);
+    outSISIDXREG(SISSR, 0x04, seq4);
+#endif    
+}
+
+static void
+SiSVGARestoreMode(ScrnInfoPtr pScrn, SISRegPtr restore)
+{
+    SISPtr pSiS = SISPTR(pScrn);
+    int i;
+
+    outSISREG(SISMISCW, restore->sisRegMiscOut);
+
+    for(i = 1; i < 5; i++) {
+       outSISIDXREG(SISSR, i, restore->sisRegs3C4[i]);
+    }
+  
+    outSISIDXREG(SISCR, 17, restore->sisRegs3D4[17] & ~0x80);
+
+    for(i = 0; i < 25; i++) {
+       outSISIDXREG(SISCR, i, restore->sisRegs3D4[i]);
+    }
+    
+    for(i = 0; i < 9; i++) {
+       outSISIDXREG(SISGR, i, restore->sisRegsGR[i]);
+    }
+
+    SiS_EnablePalette(pSiS);
+    for(i = 0; i < 21; i++) {
+       SiS_WriteAttr(pSiS, i, restore->sisRegsATTR[i]);
+    }
+    SiS_DisablePalette(pSiS);
+}
+
+
+static void
+SiSVGARestoreColormap(ScrnInfoPtr pScrn, SISRegPtr restore)
+{
+    SISPtr pSiS = SISPTR(pScrn);
+    int i;
+    
+    if(!pSiS->VGACMapSaved) return;
+    
+    outSISREG(SISPEL, 0xff);
+    
+    outSISREG(SISCOLIDX, 0x00);
+    for(i = 0; i < 768; i++) {
+       outSISREG(SISCOLDATA, restore->sisDAC[i]); 
+       (void)inSISREG(SISINPSTAT);
+       (void)inSISREG(SISINPSTAT);
+    }
+
+    SiS_DisablePalette(pSiS);
+}
+
+void
+SiSVGARestore(ScrnInfoPtr pScrn, SISRegPtr restore, int flags)
+{
+    if(restore == NULL) return;
+    
+    if(flags & SISVGA_SR_MODE)  SiSVGARestoreMode(pScrn, restore);
+    if(flags & SISVGA_SR_FONTS) SiSVGARestoreFonts(pScrn);
+    if(flags & SISVGA_SR_CMAP)  SiSVGARestoreColormap(pScrn, restore);
+}
+
+static void
+SiS_SeqReset(SISPtr pSiS, Bool start)
+{
+    if(start) {
+       outSISIDXREG(SISSR, 0x00, 0x01);	/* Synchronous Reset */
+    } else {
+       outSISIDXREG(SISSR, 0x00, 0x03);	/* End Reset */
+    }
+}
+
+void
+SiSVGAProtect(ScrnInfoPtr pScrn, Bool on)
+{
+    SISPtr pSiS = SISPTR(pScrn); 
+    UChar  tmp;
+  
+    if(!pScrn->vtSema) return;
+  
+    if(on) {
+       inSISIDXREG(SISSR, 0x01, tmp);
+       SiS_SeqReset(pSiS, TRUE);			/* start synchronous reset */
+       outSISIDXREG(SISSR, 0x01, tmp | 0x20);	/* disable display */	
+       SiS_EnablePalette(pSiS);
+    } else {
+       andSISIDXREG(SISSR, 0x01, ~0x20);		/* enable display */	
+       SiS_SeqReset(pSiS, FALSE);		/* clear synchronous reset */
+       SiS_DisablePalette(pSiS);
+    }
+}
+
+#ifdef SIS_PC_PLATFORM
+Bool
+SiSVGAMapMem(ScrnInfoPtr pScrn)
+{
+    SISPtr pSiS = SISPTR(pScrn);
+    
+    /* Map only once */
+    if(pSiS->VGAMemBase) return TRUE;
+
+    if(pSiS->VGAMapSize == 0) pSiS->VGAMapSize = (64 * 1024);
+    if(pSiS->VGAMapPhys == 0) pSiS->VGAMapPhys = 0xA0000;
+
+#if XF86_VERSION_CURRENT >= XF86_VERSION_NUMERIC(4,3,0,0,0)    
+    pSiS->VGAMemBase = xf86MapDomainMemory(pScrn->scrnIndex, VIDMEM_MMIO_32BIT, 
+    			pSiS->PciTag, pSiS->VGAMapPhys, pSiS->VGAMapSize);
+#else			
+    pSiS->VGAMemBase = xf86MapVidMem(pScrn->scrnIndex, VIDMEM_MMIO_32BIT,
+			pSiS->VGAMapPhys, pSiS->VGAMapSize);			
+#endif			      
+				    
+    return(pSiS->VGAMemBase != NULL);
+}
+
+
+void
+SiSVGAUnmapMem(ScrnInfoPtr pScrn)
+{
+    SISPtr pSiS = SISPTR(pScrn);
+
+    if(pSiS->VGAMemBase == NULL) return;
+
+    xf86UnMapVidMem(pScrn->scrnIndex, pSiS->VGAMemBase, pSiS->VGAMapSize);
+    pSiS->VGAMemBase = NULL;
+}
+#endif
+
+static CARD32
+SiS_HBlankKGA(DisplayModePtr mode, SISRegPtr regp, int nBits, 
+	       unsigned int Flags)
+{
+    int    nExtBits = (nBits < 6) ? 0 : nBits - 6;
+    CARD32 ExtBits;
+    CARD32 ExtBitMask = ((1 << nExtBits) - 1) << 6;
+
+    regp->sisRegs3D4[3] = (regp->sisRegs3D4[3] & ~0x1F) |
+                          (((mode->CrtcHBlankEnd >> 3) - 1) & 0x1F);
+    regp->sisRegs3D4[5] = (regp->sisRegs3D4[5] & ~0x80) |
+                          ((((mode->CrtcHBlankEnd >> 3) - 1) & 0x20) << 2);
+    ExtBits             = ((mode->CrtcHBlankEnd >> 3) - 1) & ExtBitMask;
+
+    if((Flags & SISKGA_FIX_OVERSCAN) && ((mode->CrtcHBlankEnd >> 3) == (mode->CrtcHTotal >> 3))) {
+       int i = (regp->sisRegs3D4[3] & 0x1F)        |
+	       ((regp->sisRegs3D4[5] & 0x80) >> 2) |
+	       ExtBits;
+       if(Flags & SISKGA_ENABLE_ON_ZERO) {
+	  if((i-- > (((mode->CrtcHBlankStart >> 3) - 1) & (0x3F | ExtBitMask))) &&
+	     (mode->CrtcHBlankEnd == mode->CrtcHTotal)) {
+	     i = 0;
+	  }
+       } else if (Flags & SISKGA_BE_TOT_DEC) i--;
+       regp->sisRegs3D4[3] = (regp->sisRegs3D4[3] & ~0x1F) | (i & 0x1F);
+       regp->sisRegs3D4[5] = (regp->sisRegs3D4[5] & ~0x80) | ((i << 2) & 0x80);
+       ExtBits = i & ExtBitMask;
+    }
+    return ExtBits >> 6;
+}
+
+static CARD32
+SiS_VBlankKGA(DisplayModePtr mode, SISRegPtr regp, int nBits, 
+	       unsigned int Flags)
+{
+    CARD32 nExtBits   = (nBits < 8) ? 0 : (nBits - 8);
+    CARD32 ExtBitMask = ((1 << nExtBits) - 1) << 8;
+    CARD32 ExtBits    = (mode->CrtcVBlankEnd - 1) & ExtBitMask;
+    CARD32 BitMask    = (nBits < 7) ? 0 : ((1 << nExtBits) - 1);
+    int VBlankStart   = (mode->CrtcVBlankStart - 1) & 0xFF; 
+    regp->sisRegs3D4[22] = (mode->CrtcVBlankEnd - 1) & 0xFF;
+
+    if((Flags & SISKGA_FIX_OVERSCAN) && (mode->CrtcVBlankEnd == mode->CrtcVTotal)) {
+       int i = regp->sisRegs3D4[22] | ExtBits;
+       if(Flags & SISKGA_ENABLE_ON_ZERO) {
+	  if(((BitMask && ((i & BitMask) > (VBlankStart & BitMask)))
+	     || ((i > VBlankStart)  &&  		/* 8-bit case */
+	     ((i & 0x7F) > (VBlankStart & 0x7F)))) &&	/* 7-bit case */
+	     !(regp->sisRegs3D4[9] & 0x9F)) {		/* 1 scanline/row */
+	     i = 0;
+	  } else {
+	     i--;
+	  }
+       } else if (Flags & SISKGA_BE_TOT_DEC) i--;
+
+       regp->sisRegs3D4[22] = i & 0xFF;
+       ExtBits = i & 0xFF00;
+    }
+    return ExtBits >> 8;
+}
+
+Bool
+SiSVGAInit(ScrnInfoPtr pScrn, DisplayModePtr mode)
+{
+    SISPtr pSiS = SISPTR(pScrn);
+    SISRegPtr regp = &pSiS->ModeReg;
+    int depth = pScrn->depth;
+    unsigned int i;
+ 
+    /* Sync */
+    if((mode->Flags & (V_PHSYNC | V_NHSYNC)) && (mode->Flags & (V_PVSYNC | V_NVSYNC))) {
+        regp->sisRegMiscOut = 0x23;
+        if(mode->Flags & V_NHSYNC) regp->sisRegMiscOut |= 0x40;
+        if(mode->Flags & V_NVSYNC) regp->sisRegMiscOut |= 0x80;
+    } else {
+        int VDisplay = mode->VDisplay;
+	
+        if(mode->Flags & V_DBLSCAN)     VDisplay *= 2;
+        if(mode->VScan > 1)             VDisplay *= mode->VScan;
+	
+        if(VDisplay < 400)        regp->sisRegMiscOut = 0xA3;	/* +hsync -vsync */
+        else if (VDisplay < 480)  regp->sisRegMiscOut = 0x63;	/* -hsync +vsync */
+        else if (VDisplay < 768)  regp->sisRegMiscOut = 0xE3;	/* -hsync -vsync */
+        else                      regp->sisRegMiscOut = 0x23;	/* +hsync +vsync */
+    }
+    
+    regp->sisRegMiscOut |= (mode->ClockIndex & 0x03) << 2;
+
+    /* Seq */
+    if(depth == 4) regp->sisRegs3C4[0] = 0x02;
+    else	   regp->sisRegs3C4[0] = 0x00;
+    
+    if(mode->Flags & V_CLKDIV2) regp->sisRegs3C4[1] = 0x09;
+    else                        regp->sisRegs3C4[1] = 0x01;
+    
+    regp->sisRegs3C4[2] = 0x0F;
+    
+    regp->sisRegs3C4[3] = 0x00;                
+    
+    if(depth < 8)  regp->sisRegs3C4[4] = 0x06; 
+    else           regp->sisRegs3C4[4] = 0x0E; 
+
+    /* CRTC */
+    regp->sisRegs3D4[0]  = (mode->CrtcHTotal >> 3) - 5;
+    regp->sisRegs3D4[1]  = (mode->CrtcHDisplay >> 3) - 1;
+    regp->sisRegs3D4[2]  = (mode->CrtcHBlankStart >> 3) - 1;
+    regp->sisRegs3D4[3]  = (((mode->CrtcHBlankEnd >> 3) - 1) & 0x1F) | 0x80;
+    i = (((mode->CrtcHSkew << 2) + 0x10) & ~0x1F);
+    if(i < 0x80)  regp->sisRegs3D4[3] |= i;
+    regp->sisRegs3D4[4]  = (mode->CrtcHSyncStart >> 3);
+    regp->sisRegs3D4[5]  = ((((mode->CrtcHBlankEnd >> 3) - 1) & 0x20) << 2) |
+		           (((mode->CrtcHSyncEnd >> 3)) & 0x1F);
+    regp->sisRegs3D4[6]  = (mode->CrtcVTotal - 2) & 0xFF;
+    regp->sisRegs3D4[7]  = (((mode->CrtcVTotal - 2) & 0x100) >> 8)      |
+	                   (((mode->CrtcVDisplay - 1) & 0x100) >> 7)    |
+	                   ((mode->CrtcVSyncStart & 0x100) >> 6)        |
+	                   (((mode->CrtcVBlankStart - 1) & 0x100) >> 5) |
+	                   0x10                                         |
+	                   (((mode->CrtcVTotal - 2) & 0x200)   >> 4)    |
+	                   (((mode->CrtcVDisplay - 1) & 0x200) >> 3)    |
+	                   ((mode->CrtcVSyncStart & 0x200) >> 2);
+    regp->sisRegs3D4[8]  = 0x00;
+    regp->sisRegs3D4[9]  = (((mode->CrtcVBlankStart - 1) & 0x200) >> 4) | 0x40;
+    if(mode->Flags & V_DBLSCAN) regp->sisRegs3D4[9] |= 0x80;
+    if(mode->VScan >= 32)     regp->sisRegs3D4[9] |= 0x1F;
+    else if (mode->VScan > 1) regp->sisRegs3D4[9] |= mode->VScan - 1;
+    regp->sisRegs3D4[10] = 0x00;
+    regp->sisRegs3D4[11] = 0x00;
+    regp->sisRegs3D4[12] = 0x00;
+    regp->sisRegs3D4[13] = 0x00;
+    regp->sisRegs3D4[14] = 0x00;
+    regp->sisRegs3D4[15] = 0x00;
+    regp->sisRegs3D4[16] = mode->CrtcVSyncStart & 0xFF;
+    regp->sisRegs3D4[17] = (mode->CrtcVSyncEnd & 0x0F) | 0x20;
+    regp->sisRegs3D4[18] = (mode->CrtcVDisplay - 1) & 0xFF;
+    regp->sisRegs3D4[19] = pScrn->displayWidth >> 4;  
+    regp->sisRegs3D4[20] = 0x00;
+    regp->sisRegs3D4[21] = (mode->CrtcVBlankStart - 1) & 0xFF; 
+    regp->sisRegs3D4[22] = (mode->CrtcVBlankEnd - 1) & 0xFF;
+    if(depth < 8) regp->sisRegs3D4[23] = 0xE3;
+    else   	  regp->sisRegs3D4[23] = 0xC3;
+    regp->sisRegs3D4[24] = 0xFF;
+
+    SiS_HBlankKGA(mode, regp, 0, SISKGA_FIX_OVERSCAN | SISKGA_ENABLE_ON_ZERO);
+    SiS_VBlankKGA(mode, regp, 0, SISKGA_FIX_OVERSCAN | SISKGA_ENABLE_ON_ZERO);
+
+    /* GR */
+    regp->sisRegsGR[0] = 0x00;
+    regp->sisRegsGR[1] = 0x00;
+    regp->sisRegsGR[2] = 0x00;
+    regp->sisRegsGR[3] = 0x00;
+    regp->sisRegsGR[4] = 0x00;
+    if(depth == 4) regp->sisRegsGR[5] = 0x02;
+    else           regp->sisRegsGR[5] = 0x40;
+    regp->sisRegsGR[6] = 0x05;   /* only map 64k VGA memory !!!! */
+    regp->sisRegsGR[7] = 0x0F;
+    regp->sisRegsGR[8] = 0xFF;
+  
+    /* Attr */
+    regp->sisRegsATTR[0]  = 0x00; /* standard colormap translation */
+    regp->sisRegsATTR[1]  = 0x01;
+    regp->sisRegsATTR[2]  = 0x02;
+    regp->sisRegsATTR[3]  = 0x03;
+    regp->sisRegsATTR[4]  = 0x04;
+    regp->sisRegsATTR[5]  = 0x05;
+    regp->sisRegsATTR[6]  = 0x06;
+    regp->sisRegsATTR[7]  = 0x07;
+    regp->sisRegsATTR[8]  = 0x08;
+    regp->sisRegsATTR[9]  = 0x09;
+    regp->sisRegsATTR[10] = 0x0A;
+    regp->sisRegsATTR[11] = 0x0B;
+    regp->sisRegsATTR[12] = 0x0C;
+    regp->sisRegsATTR[13] = 0x0D;
+    regp->sisRegsATTR[14] = 0x0E;
+    regp->sisRegsATTR[15] = 0x0F;
+    if(depth == 4) regp->sisRegsATTR[16] = 0x81; 
+    else           regp->sisRegsATTR[16] = 0x41; 
+    if(depth >= 4) regp->sisRegsATTR[17] = 0xFF;
+    else           regp->sisRegsATTR[17] = 0x01;
+    regp->sisRegsATTR[18] = 0x0F;
+    regp->sisRegsATTR[19] = 0x00;
+    regp->sisRegsATTR[20] = 0x00;
+
+    return(TRUE);
+}
+
+static void
+SISVGABlankScreen(ScrnInfoPtr pScrn, Bool on)
+{
+    SISPtr pSiS = SISPTR(pScrn);
+    UChar  tmp;
+
+    inSISIDXREG(SISSR, 0x01, tmp);
+    if(on) tmp &= ~0x20;
+    else   tmp |= 0x20;
+    SiS_SeqReset(pSiS, TRUE);
+    outSISIDXREG(SISSR, 0x01, tmp);
+    SiS_SeqReset(pSiS, FALSE);
+}
+
+Bool
+SiSVGASaveScreen(ScreenPtr pScreen, int mode)
+{
+    ScrnInfoPtr pScrn = NULL;
+    Bool on = xf86IsUnblank(mode);
+   
+    if(pScreen == NULL) return FALSE;
+   
+    pScrn = xf86Screens[pScreen->myNum];
+
+    if(pScrn->vtSema) {
+       SISVGABlankScreen(pScrn, on);
+    }
+    return TRUE;
+}
+
+#undef SIS_FONTS_SIZE
 
 

@@ -34,16 +34,10 @@
  *
  */
 
-#include "xf86.h"
-#include "xf86_OSproc.h"
-#include "xf86_ansic.h"
-#include "xf86PciInfo.h"
-#include "xf86Pci.h"
-#include "compiler.h"
-#include "xaa.h"
+#include "sis.h"
+
 #include "xaarop.h"
 
-#include "sis.h"
 #include "sis310_accel.h"
 
 #if 0
@@ -1773,7 +1767,7 @@ SiSSetupForCPUToScreenAlphaTexture(ScrnInfoPtr pScrn,
 	int    sbpp = pSiS->CurrentLayout.bitsPerPixel >> 3;
 	int    sbppshift = sbpp >> 1;	/* 8->0, 16->1, 32->2 */
 	CARD8  myalpha;
-	BOOLEAN docopy = TRUE;
+	Bool   docopy = TRUE;
 
 #ifdef ACCELDEBUG
 	xf86DrvMsg(0, X_INFO, "AT: op %d t %x/%x ARGB %x %x %x %x, w %d h %d pch %d\n",
@@ -1916,7 +1910,7 @@ SiSSetupForCPUToScreenTexture(ScrnInfoPtr pScrn,
 	int     sbpp = pSiS->CurrentLayout.bitsPerPixel >> 3;
 	int     sbppshift = sbpp >> 1;	          	  /* 8->0, 16->1, 32->2 */
 	int     bppshift = PICT_FORMAT_BPP(texType) >> 4; /* 8->0, 16->1, 32->2 */
-	BOOLEAN docopy = TRUE;
+	Bool    docopy = TRUE;
 
 #ifdef ACCELDEBUG
 	xf86DrvMsg(0, X_INFO, "T: type %x/%x op %d w %d h %d T-pitch %d\n",

@@ -416,7 +416,7 @@
 #define Panel_640x480_2		0x13    /* SiS 550 */
 #define Panel_640x480_3		0x14    /* SiS 550 */
 #define Panel_1280x768_2        0x15	/* 30xLV */
-#define Panel_1280x768_3        0x16    /* 30xLV */
+#define Panel_1280x768_3        0x16    /* (unused) */
 #define Panel_1280x800_2	0x17    /* 30xLV */
 
 /* Index in ModeResInfo table */
@@ -481,7 +481,7 @@
 #define VCLK108_3_300           0x42   /* Index in VCLKData table (300) */
 #define VCLK100_300             0x43   /* Index in VCLKData table (300) */
 #define VCLK34_300              0x3d   /* Index in VCLKData table (300) */
-#define VCLK_CUSTOM_300		0x46
+#define VCLK_CUSTOM_300		0x47
 #define VCLK65_315              0x0b   /* Index in (VB)VCLKData table (315) */
 #define VCLK108_2_315           0x19   /* Index in (VB)VCLKData table (315) */
 #define VCLK81_315		0x5b   /* Index in (VB)VCLKData table (315) */
@@ -494,7 +494,7 @@
 #define VCLK121_315		0x5d   /* Index in VBVCLKData table (315) */
 #define VCLK_1280x720		0x5f
 #define VCLK_1280x768_2		0x60
-#define VCLK_1280x768_3		0x61
+#define VCLK_1280x768_3		0x61   /* (unused?) */
 #define VCLK_CUSTOM_315		0x62
 #define VCLK_1280x720_2		0x63
 #define VCLK_720x480		0x67 

@@ -34,22 +34,25 @@
 /* VESA */
 /*     The following is included because there are BIOSes out there that
  *     report incomplete mode lists. These are 630 BIOS versions <2.01.2x
- *
  *     -) VBE 3.0 on SiS300 and 315 series do not support 24 fpp modes
  *     -) Only SiS315 series support 1920x1440x32
  */
-				             /*     8      16    (24)    32   */
-static const UShort  VESAModeIndex_320x200[]   = {0x138, 0x10e, 0x000, 0x000};
-static const UShort  VESAModeIndex_320x240[]   = {0x132, 0x135, 0x000, 0x000};
-static const UShort  VESAModeIndex_400x300[]   = {0x133, 0x136, 0x000, 0x000};
-static const UShort  VESAModeIndex_512x384[]   = {0x134, 0x137, 0x000, 0x000};
-static const UShort  VESAModeIndex_640x400[]   = {0x100, 0x139, 0x000, 0x000};
-static const UShort  VESAModeIndex_640x480[]   = {0x101, 0x111, 0x000, 0x13a};
-static const UShort  VESAModeIndex_800x600[]   = {0x103, 0x114, 0x000, 0x13b};
-static const UShort  VESAModeIndex_1024x768[]  = {0x105, 0x117, 0x000, 0x13c};
-static const UShort  VESAModeIndex_1280x1024[] = {0x107, 0x11a, 0x000, 0x13d};
-static const UShort  VESAModeIndex_1600x1200[] = {0x130, 0x131, 0x000, 0x13e};
-static const UShort  VESAModeIndex_1920x1440[] = {0x13f, 0x140, 0x000, 0x141};
+ 
+static const UShort VESAModeIndices[] = {
+   /*   x    y     8      16    (24)    32   */
+       320, 200, 0x138, 0x10e, 0x000, 0x000,
+       320, 240, 0x132, 0x135, 0x000, 0x000,
+       400, 300, 0x133, 0x136, 0x000, 0x000,
+       512, 384, 0x134, 0x137, 0x000, 0x000,
+       640, 400, 0x100, 0x139, 0x000, 0x000,
+       640, 480, 0x101, 0x111, 0x000, 0x13a,
+       800, 600, 0x103, 0x114, 0x000, 0x13b,
+      1024, 768, 0x105, 0x117, 0x000, 0x13c,
+      1280,1024, 0x107, 0x11a, 0x000, 0x13d,
+      1600,1200, 0x130, 0x131, 0x000, 0x13e,
+      1920,1440, 0x13f, 0x140, 0x000, 0x141,
+      9999,9999, 0,     0,     0,     0
+};      
 
 /* For calculating refresh rate index (CR33) */
 static const struct _sis_vrate {
@@ -57,7 +60,7 @@ static const struct _sis_vrate {
     CARD16 xres;
     CARD16 yres;
     CARD16 refresh;
-    BOOLEAN SiS730valid32bpp;
+    Bool SiS730valid32bpp;
 } sisx_vrate[] = {
 	{1,  320,  200,  70,  TRUE},
 	{1,  320,  240,  60,  TRUE},
@@ -655,7 +658,7 @@ static DisplayModeRec SiS6326SIS1600x1200_60Mode = {
 /*     TV filters for SiS video bridges
  */
 static const struct _SiSTVFilter301 {
-	unsigned char filter[7][4];
+	UChar filter[7][4];
 } SiSTVFilter301[] = {
 	{{ {0x00,0xE0,0x10,0x60},   /* NTSCFilter - 320 */
 	   {0x00,0xEE,0x10,0x44},
@@ -716,7 +719,7 @@ static const struct _SiSTVFilter301 {
 };
 
 static const struct _SiSTVFilter301B {
-	unsigned char filter[7][7];
+	UChar filter[7][7];
 } SiSTVFilter301B[] = {
 	{{ {0x01,0x02,0xfb,0xf8,0x06,0x27,0x3a},   /* NTSC - 640 */
 	   {0x01,0x02,0xfe,0xf7,0x03,0x27,0x3c},
@@ -779,16 +782,16 @@ static const struct _SiSTVFilter301B {
 /*     TV scaling data for SiS video bridges
  */
 typedef struct _SiSTVVScale {
-        unsigned short ScaleVDE;
+        UShort ScaleVDE;
 	int sindex;
-	unsigned short RealVDE;
+	UShort RealVDE;
 #if 0
-	unsigned short HT, HRS, HRE, VT, VRS, VRE;
-	unsigned short NFF, HCFACT, HCMAX, VBHT, VBVT, VBHRS;
-	unsigned short HT300, HRS300, HRE300, VT300, VRS300, VRE300;
-	unsigned short NFF300, HCFACT300, HCMAX300, VBHT300, VBVT300, VBHRS300;
+	UShort HT, HRS, HRE, VT, VRS, VRE;
+	UShort NFF, HCFACT, HCMAX, VBHT, VBVT, VBHRS;
+	UShort HT300, HRS300, HRE300, VT300, VRS300, VRE300;
+	UShort NFF300, HCFACT300, HCMAX300, VBHT300, VBVT300, VBHRS300;
 #endif
-	unsigned short reg[24];
+	UShort reg[24];
 } MySiSTVVScale, *MySiSTVVScalePtr;
 
 static const MySiSTVVScale SiSTVVScale[] = {
@@ -1038,7 +1041,7 @@ unsigned const char SiSScalingP4Regs[] = {
 	0x13,0x14,0x15,0x16,0x17,0x18,0x19,0x1a,0x1b
 };
 
-static const unsigned char SiS301CScaling[] = {
+static const UChar SiS301CScaling[] = {
 
     /* NTSC/PAL-M/525ip 640x480 */
 
@@ -1305,54 +1308,68 @@ static UShort  SiSCalcVESAModeIndex(ScrnInfoPtr pScrn, DisplayModePtr mode);
 static void    SISVESASaveRestore(ScrnInfoPtr pScrn, vbeSaveRestoreFunction function);
 static void    SISBridgeRestore(ScrnInfoPtr pScrn);
 static void    SiSEnableTurboQueue(ScrnInfoPtr pScrn);
-unsigned char  SISSearchCRT1Rate(ScrnInfoPtr pScrn, DisplayModePtr mode);
+UChar  	       SISSearchCRT1Rate(ScrnInfoPtr pScrn, DisplayModePtr mode);
 static void    SISWaitVBRetrace(ScrnInfoPtr pScrn);
 void           SISWaitRetraceCRT1(ScrnInfoPtr pScrn);
 void           SISWaitRetraceCRT2(ScrnInfoPtr pScrn);
 static Bool    InRegion(int x, int y, region r);
-static USHORT  SiS_CheckModeCRT1(ScrnInfoPtr pScrn, DisplayModePtr mode,
-				 unsigned long VBFlags, BOOLEAN hcm);
-static USHORT  SiS_CheckModeCRT2(ScrnInfoPtr pScrn, DisplayModePtr mode,
-				 unsigned long VBFlags, BOOLEAN hcm);				 
+static UShort  SiS_CheckModeCRT1(ScrnInfoPtr pScrn, DisplayModePtr mode,
+				 ULong VBFlags, Bool hcm);
+static UShort  SiS_CheckModeCRT2(ScrnInfoPtr pScrn, DisplayModePtr mode,
+				 ULong VBFlags, Bool hcm);				 
 #ifdef SISMERGED
 static void    SISMergePointerMoved(int scrnIndex, int x, int y);
 #endif
-BOOLEAN        SiSBridgeIsInSlaveMode(ScrnInfoPtr pScrn);
-USHORT	       SiS_GetModeNumber(ScrnInfoPtr pScrn, DisplayModePtr mode, unsigned long VBFlags);
-unsigned char  SiS_GetSetBIOSScratch(ScrnInfoPtr pScrn, USHORT offset, unsigned char value);
+Bool           SiSBridgeIsInSlaveMode(ScrnInfoPtr pScrn);
+UShort	       SiS_GetModeNumber(ScrnInfoPtr pScrn, DisplayModePtr mode, ULong VBFlags);
+UChar  	       SiS_GetSetBIOSScratch(ScrnInfoPtr pScrn, UShort offset, UChar value);
 #ifdef DEBUG
 static void    SiSDumpModeInfo(ScrnInfoPtr pScrn, DisplayModePtr mode);
 #endif
 void           SISDetermineLCDACap(ScrnInfoPtr pScrn);
 void           SISSaveDetectedDevices(ScrnInfoPtr pScrn);
 
+/* Our very own vgaHW functions (sis_vga.c) */
+extern Bool 	SiSVGAInit(ScrnInfoPtr pScrn, DisplayModePtr mode);
+extern void 	SiSVGASave(ScrnInfoPtr pScrn, SISRegPtr save, int flags);
+extern void 	SiSVGARestore(ScrnInfoPtr pScrn, SISRegPtr restore, int flags);
+extern void 	SiSVGASaveFonts(ScrnInfoPtr pScrn);
+extern void 	SiSVGARestoreFonts(ScrnInfoPtr pScrn);
+extern void 	SISVGALock(SISPtr pSiS);
+extern void 	SiSVGAUnlock(SISPtr pSiS);
+extern void 	SiSVGAProtect(ScrnInfoPtr pScrn, Bool on);
+extern Bool 	SiSVGAMapMem(ScrnInfoPtr pScrn);
+extern void 	SiSVGAUnmapMem(ScrnInfoPtr pScrn);
+extern Bool 	SiSVGASaveScreen(ScreenPtr pScreen, int mode);
+
+/* init.c, init301.c ----- (use their data types!) */
 extern USHORT   SiS_GetModeID(int VGAEngine, ULONG VBFlags, int HDisplay, int VDisplay,
-				  int Depth, BOOL FSTN, int LCDwith, int LCDheight);
+				  int Depth, BOOLEAN FSTN, int LCDwith, int LCDheight);
 extern USHORT   SiS_GetModeID_LCD(int VGAEngine, ULONG VBFlags, int HDisplay, int VDisplay, int Depth,
 				  BOOLEAN FSTN, USHORT CustomT, int LCDwith, int LCDheight);
 extern USHORT   SiS_GetModeID_TV(int VGAEngine, ULONG VBFlags, int HDisplay, int VDisplay, int Depth);
 extern USHORT   SiS_GetModeID_VGA2(int VGAEngine, ULONG VBFlags, int HDisplay, int VDisplay, int Depth);
 extern int      SiSTranslateToVESA(ScrnInfoPtr pScrn, int modenumber);
 extern int      SiSTranslateToOldMode(int modenumber);
-extern BOOLEAN  SiSDetermineROMLayout661(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo);
+extern BOOLEAN 	SiSDetermineROMLayout661(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo);
 extern BOOLEAN 	SiSBIOSSetMode(SiS_Private *SiS_Pr, PSIS_HW_INFO HwDeviceExtension,
                                ScrnInfoPtr pScrn, DisplayModePtr mode, BOOLEAN IsCustom);
-extern BOOLEAN  SiSSetMode(SiS_Private *SiS_Pr, PSIS_HW_INFO HwDeviceExtension,
-                           ScrnInfoPtr pScrn,USHORT ModeNo, BOOLEAN dosetpitch);
-extern void	SiSRegInit(SiS_Private *SiS_Pr, USHORT BaseAddr);
-extern void     SiSSetLVDSetc(SiS_Private *SiS_Pr, PSIS_HW_INFO HwDeviceExtension,USHORT ModeNo);
-extern void     SiS_GetVBType(SiS_Private *SiS_Pr, PSIS_HW_INFO);
-extern DisplayModePtr SiSBuildBuiltInModeList(ScrnInfoPtr pScrn, BOOLEAN includelcdmodes,
-					       BOOLEAN isfordvi);
+extern BOOLEAN	SiSSetMode(SiS_Private *SiS_Pr, PSIS_HW_INFO HwDeviceExtension,
+                           ScrnInfoPtr pScrn, USHORT ModeNo, BOOLEAN dosetpitch);
 extern BOOLEAN 	SiSBIOSSetModeCRT1(SiS_Private *SiS_Pr, PSIS_HW_INFO HwDeviceExtension,
 				   ScrnInfoPtr pScrn, DisplayModePtr mode, BOOLEAN IsCustom);
 extern BOOLEAN 	SiSBIOSSetModeCRT2(SiS_Private *SiS_Pr, PSIS_HW_INFO HwDeviceExtension,
-				   ScrnInfoPtr pScrn, DisplayModePtr mode, BOOLEAN IsCustom);
+				   ScrnInfoPtr pScrn, DisplayModePtr mode, BOOLEAN IsCustom);			   
+extern DisplayModePtr SiSBuildBuiltInModeList(ScrnInfoPtr pScrn, BOOLEAN includelcdmodes,
+					      BOOLEAN isfordvi);
+extern void 	SiS_Chrontel701xBLOn(SiS_Private *SiS_Pr, PSIS_HW_INFO HwDeviceExtension);
+extern void 	SiS_Chrontel701xBLOff(SiS_Private *SiS_Pr);
+extern void 	SiS_SiS30xBLOn(SiS_Private *SiS_Pr, PSIS_HW_INFO HwDeviceExtension);
+extern void 	SiS_SiS30xBLOff(SiS_Private *SiS_Pr, PSIS_HW_INFO HwDeviceExtension);
+/* End of init.c, init301.c ----- */
 
-/* For power management for 315 series */
-extern void SiS_Chrontel701xBLOn(SiS_Private *SiS_Pr, PSIS_HW_INFO HwDeviceExtension);
-extern void SiS_Chrontel701xBLOff(SiS_Private *SiS_Pr);
-extern void SiS_SiS30xBLOn(SiS_Private *SiS_Pr, PSIS_HW_INFO HwDeviceExtension);
-extern void SiS_SiS30xBLOff(SiS_Private *SiS_Pr, PSIS_HW_INFO HwDeviceExtension);
+
+
+
 
 

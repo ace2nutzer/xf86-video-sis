@@ -1,6 +1,10 @@
 /*
- * Copyright (C) 2004 Thomas Hellstrom, All Rights Reserved.
+ * SiS memcpy() routines (assembly)
+ *
  * Copyright (C) 2004 Thomas Winischhofer
+ *
+ * Based on via_memcpy.c which is
+ * Copyright (C) 2004 Thomas Hellstrom, All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -23,9 +27,6 @@
  *
  */
 
-#include "xf86.h"
-#include "xf86_ansic.h"
-#include "compiler.h"
 #include "sis.h"
 
 #if 0			/* Debug */
@@ -166,7 +167,7 @@ extern FBLinearPtr SISAllocateOverlayMemory(ScrnInfoPtr pScrn, FBLinearPtr linea
 		  : "memory", "cc");     
     
 #define SSE_CPY(prefetch,from,to,dummy,lcnt)				\
-    if((unsigned long) from & 15) {					\
+    if((ULong) from & 15) {						\
 	__asm__ __volatile__ (						\
 		"1:\n"							\
                     prefetch "320(%1)\n"				\
@@ -241,8 +242,8 @@ extern FBLinearPtr SISAllocateOverlayMemory(ScrnInfoPtr pScrn, FBLinearPtr linea
 
 #define PREFETCH_FUNC(prefix,itype,ptype,begin,fence,small)		\
 									\
-    static void prefix##_memcpy(unsigned char *to,			\
-				const unsigned char *from,		\
+    static void prefix##_memcpy(UChar *to,				\
+				const UChar *from,			\
 				int size)				\
     {									\
 	int lcnt = size >> 6;						\
@@ -265,8 +266,8 @@ extern FBLinearPtr SISAllocateOverlayMemory(ScrnInfoPtr pScrn, FBLinearPtr linea
 
 #define NOPREFETCH_FUNC(prefix,itype,begin,fence,small)			\
 									\
-    static void prefix##_memcpy(unsigned char *to,			\
-				const unsigned char *from,		\
+    static void prefix##_memcpy(UChar *to,				\
+				const UChar *from,			\
 				int size)				\
     {									\
 	int lcnt = size >> 6;						\
@@ -288,19 +289,20 @@ extern FBLinearPtr SISAllocateOverlayMemory(ScrnInfoPtr pScrn, FBLinearPtr linea
 /* ... */
 
     
-/* Type for table for benchmark */    
+/* Type for table for benchmark list */    
     
 typedef struct {
     vidCopyFunc mFunc;
     char *mName;
     unsigned int mycpuflag;
+    int  grade;
 } SISMCFuncData;
 
 /************************************************************************/
 /*                   libc memcpy() wrapper - generic                    */
 /************************************************************************/
 
-static void SiS_libc_memcpy(unsigned char *dst, const unsigned char *src, int size)
+static void SiS_libc_memcpy(UChar *dst, const UChar *src, int size)
 {
     memcpy(dst, src, size);
 }
@@ -364,7 +366,7 @@ static __inline void * __memcpy(void * to, const void * from, size_t n)
 }
 
 /* Alternative for 586: Unroll loop, copy 32 bytes at a time */
-static void SiS_builtin_memcp2(unsigned char *to, const unsigned char *from, int n)
+static void SiS_builtin_memcp2(UChar *to, const UChar *from, int n)
 {
     int d1,d2,d3;
 
@@ -447,7 +449,7 @@ static __inline void * __memcpy(void * to, const void * from, int n)
 		" movq %4, %%rcx\n"
 		" rep ; movsb"
 		: "=%c" (d1), "=&D" (d2), "=&S" (d3)
-		: "0" ((unsigned long)(n >> 3)), "q" ((unsigned long)(n & 7)), 
+		: "0" ((ULong)(n >> 3)), "q" ((ULong)(n & 7)), 
 		  "1" ((long) to), "2" ((long) from)
 		: "memory");
 
@@ -455,7 +457,7 @@ static __inline void * __memcpy(void * to, const void * from, int n)
 }
 
 /* Alternative: Unroll loop, copy 32 bytes at a time */
-static void SiS_builtin_memcp2(unsigned char *to, const unsigned char *from, int n)
+static void SiS_builtin_memcp2(UChar *to, const UChar *from, int n)
 {
     long d1,d2,d3;
     
@@ -488,7 +490,7 @@ static void SiS_builtin_memcp2(unsigned char *to, const unsigned char *from, int
 	       "2: addq $32, %%rcx\n"
 	       "1: rep ; movsb"
 		 : "=&c" (d1), "=&D" (d2), "=&S" (d3)	
-		 :"0" ((unsigned long) n), "1" ((long) to), "2" ((long) from)
+		 :"0" ((ULong) n), "1" ((long) to), "2" ((long) from)
 		 : "rax", "rdx", "r8", "r9", "memory", "cc");
 		 
 }
@@ -537,7 +539,7 @@ static unsigned int taketime(void)	/* get current time (for benchmarking) */
 /************************************************************************/
 
 #ifdef SiS_haveBuiltInMC
-static void SiS_builtin_memcpy(unsigned char *dst, const unsigned char *src, int size) 
+static void SiS_builtin_memcpy(UChar *dst, const UChar *src, int size) 
 {
     __memcpy(dst, src, size);
 }
@@ -550,7 +552,7 @@ static void SiS_builtin_memcpy(unsigned char *dst, const unsigned char *src, int
 #ifdef SiS_canBenchmark
 
 /* Get time (unsigned int) */
-static unsigned int time_function(vidCopyFunc mf, unsigned char *buf1, unsigned char *buf2, int size) 
+static unsigned int time_function(vidCopyFunc mf, UChar *buf1, UChar *buf2, int size) 
 {
     unsigned int t1, t2;
 
@@ -566,8 +568,8 @@ static unsigned int time_function(vidCopyFunc mf, unsigned char *buf1, unsigned 
 /* Allocate an area of offscreen FB memory (buf1), a simulated video
  * player buffer (buf2) and a pool of uninitialized "video" data (buf3). 
  */      
-static FBLinearPtr SiS_AllocBuffers(ScrnInfoPtr pScrn, unsigned char **buf1, 
-                                         unsigned char **buf2, unsigned char **buf3)    
+static FBLinearPtr SiS_AllocBuffers(ScrnInfoPtr pScrn, UChar **buf1, 
+                                         UChar **buf2, UChar **buf3)    
 {   
     SISPtr pSiS = SISPTR(pScrn);
     int depth = pSiS->CurrentLayout.bitsPerPixel >> 3;
@@ -577,15 +579,15 @@ static FBLinearPtr SiS_AllocBuffers(ScrnInfoPtr pScrn, unsigned char **buf1,
     if(!(tmpFbBuffer = SISAllocateOverlayMemory(pScrn, tmpFbBuffer, alignSize + 31))) {
        return NULL;
     }
-    (*buf1) = (unsigned char *)pSiS->FbBase + (tmpFbBuffer->offset * depth);
-    (*buf1) = (unsigned char *)(((unsigned long)(*buf1) + 31) & ~31);
+    (*buf1) = (UChar *)pSiS->FbBase + (tmpFbBuffer->offset * depth);
+    (*buf1) = (UChar *)(((ULong)(*buf1) + 31) & ~31);
 	
-    if(!((*buf2) = (unsigned char *)xalloc(BUFSIZ))) {
+    if(!((*buf2) = (UChar *)xalloc(BUFSIZ))) {
        xf86FreeOffscreenLinear(tmpFbBuffer);
        return NULL;
     }
     
-    if(!((*buf3) = (unsigned char *)xalloc(BUFSIZ))) {
+    if(!((*buf3) = (UChar *)xalloc(BUFSIZ))) {
        xfree((*buf2));
        xf86FreeOffscreenLinear(tmpFbBuffer);
        return NULL;
@@ -597,8 +599,8 @@ static FBLinearPtr SiS_AllocBuffers(ScrnInfoPtr pScrn, unsigned char **buf1,
 /* Perform Benchmark */
 static int SiS_BenchmarkMemcpy(ScrnInfoPtr pScrn, SISMCFuncData *MCFunctions, 
                                unsigned int myCPUflags, 
-			       unsigned char *buf1, unsigned char *buf2, 
-			       unsigned char *buf3, char *frqBuf, double cpuFreq)    
+			       UChar *buf1, UChar *buf2, 
+			       UChar *buf3, char *frqBuf, double cpuFreq)    
 {    
     SISMCFuncData *curData;
     int j = 0, bestSoFar = 0;
@@ -609,6 +611,10 @@ static int SiS_BenchmarkMemcpy(ScrnInfoPtr pScrn, SISMCFuncData *MCFunctions,
 
     xf86DrvMsg(pScrn->scrnIndex, X_INFO,
 	       "Benchmarking system RAM to video RAM memory transfer methods:\n");
+	       
+#ifdef TWDEBUG
+    xf86DrvMsg(pScrn->scrnIndex, X_INFO, "Benchmark: CPUFlags %x\n", myCPUflags);
+#endif	       
 	       
     j = 0;       
     while(MCFunctions[j].mFunc) {
@@ -653,6 +659,30 @@ static int SiS_BenchmarkMemcpy(ScrnInfoPtr pScrn, SISMCFuncData *MCFunctions,
     
     return bestSoFar;
 }
+
+static vidCopyFunc SiS_GetBestByGrade(ScrnInfoPtr pScrn, SISMCFuncData *MCFunctions, 
+                               		unsigned int myCPUflags)
+{
+    int j = 0, best = -1, bestSoFar = 10;
+    
+    while(MCFunctions[j].mFunc) {  
+	if(myCPUflags & MCFunctions[j].mycpuflag) {
+	   if(MCFunctions[j].grade < bestSoFar) {
+	      best = j;
+	      bestSoFar = MCFunctions[j].grade;
+	   }
+	}
+	j++; 
+    }
+    if(best >= 0) {
+       xf86DrvMsg(pScrn->scrnIndex, X_INFO,
+       		"Chose %s method for video data transfers by grade\n",
+		MCFunctions[best].mName);
+       return MCFunctions[best].mFunc;
+    }
+    
+    return SiS_libc_memcpy;
+}			      
 #endif /* canBenchmark */
 
 /**********************************************************************/
@@ -785,14 +815,14 @@ PREFETCH_FUNC(SiS_now,MMX,NOW,FEMMS,FEMMS,small_memcpy_i386)
 NOPREFETCH_FUNC(SiS_mmx,MMX,EMMS,EMMS,small_memcpy_i386)
 
 static SISMCFuncData MCFunctions_i386[] = {
-    {SiS_libc_memcpy,   "libc",      SIS_CPUFL_LIBC},
-    {SiS_builtin_memcpy,"built-in-1",SIS_CPUFL_BI},    
-    {SiS_builtin_memcp2,"built-in-2",SIS_CPUFL_BI2},
-    {SiS_mmx_memcpy,    "MMX",       SIS_CPUFL_MMX},
-    {SiS_sse_memcpy,    "SSE",       SIS_CPUFL_SSE}, 
-    {SiS_now_memcpy,    "3DNow!",    SIS_CPUFL_3DNOW}, 
-    {SiS_mmxext_memcpy, "MMX2",      SIS_CPUFL_MMX2},
-    {NULL,              "",          0}
+    {SiS_libc_memcpy,   "libc",      SIS_CPUFL_LIBC,  3},
+    {SiS_builtin_memcpy,"built-in-1",SIS_CPUFL_BI,    4},    
+    {SiS_builtin_memcp2,"built-in-2",SIS_CPUFL_BI2,   5},
+    {SiS_mmx_memcpy,    "MMX",       SIS_CPUFL_MMX,   2},
+    {SiS_sse_memcpy,    "SSE",       SIS_CPUFL_SSE,   0}, 
+    {SiS_now_memcpy,    "3DNow!",    SIS_CPUFL_3DNOW, 1}, 
+    {SiS_mmxext_memcpy, "MMX2",      SIS_CPUFL_MMX2,  0},
+    {NULL,              "",          0,              10}
 }; 
 
 #define Def_FL  (SIS_CPUFL_LIBC | SIS_CPUFL_BI | SIS_CPUFL_BI2)  /* Default methods */
@@ -888,11 +918,11 @@ static unsigned int SiS_GetCpuFeatures(ScreenPtr pScreen)
 PREFETCH_FUNC(SiS_sse,SSE,SSE,,FENCE,small_memcpy_amd64) 
 
 static SISMCFuncData MCFunctions_AMD64[] = {
-    {SiS_libc_memcpy,   "libc",      SIS_CPUFL_LIBC},
-    {SiS_builtin_memcpy,"built-in-1",SIS_CPUFL_BI}, 
-    {SiS_builtin_memcp2,"built-in-2",SIS_CPUFL_BI2}, 
-    {SiS_sse_memcpy,    "SSE",       SIS_CPUFL_SSE}, 
-    {NULL,              "",          0}
+    {SiS_libc_memcpy,   "libc",      SIS_CPUFL_LIBC, 2},
+    {SiS_builtin_memcpy,"built-in-1",SIS_CPUFL_BI,   1}, 
+    {SiS_builtin_memcp2,"built-in-2",SIS_CPUFL_BI2,  3}, 
+    {SiS_sse_memcpy,    "SSE",       SIS_CPUFL_SSE,  0}, 
+    {NULL,              "",          0,             10}
 }; 
 
 #define Def_FL  (SIS_CPUFL_LIBC | SIS_CPUFL_BI | SIS_CPUFL_BI2)
@@ -925,15 +955,15 @@ static vidCopyFunc SiSVidCopyInitGen(ScreenPtr pScreen, SISMCFuncData *MCFunctio
     ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum];  
     SISPtr pSiS = SISPTR(pScrn);
     FBLinearPtr tmpFbBuffer = NULL;
-    char *frqBuf = NULL;
-    unsigned char *buf1, *buf2, *buf3;
+    char  *frqBuf = NULL;
+    UChar *buf1, *buf2, *buf3;
     double cpuFreq = 0.0;
     unsigned int myCPUflags = pSiS->CPUFlags | Def_FL;
     int best;
 #ifdef SiS_haveProc   
     char buf[CPUBUFSIZE];
 #endif    
-    
+
     /* Bail out if user disabled benchmarking */
     if(!pSiS->BenchMemCpy) {
        return SiS_libc_memcpy;
@@ -948,10 +978,12 @@ static vidCopyFunc SiSVidCopyInitGen(ScreenPtr pScreen, SISMCFuncData *MCFunctio
        
     }   
 #endif       
-	
+
     /* Allocate buffers */
     if(!(tmpFbBuffer = SiS_AllocBuffers(pScrn, &buf1, &buf2, &buf3))) {
-       return SiS_libc_memcpy;
+       xf86DrvMsg(pScrn->scrnIndex, X_INFO,
+       		"Failed to allocate video RAM for video data transfer benchmark\n");
+       return SiS_GetBestByGrade(pScrn, MCFunctions, myCPUflags);
     }
       
     /* Perform Benchmark */
@@ -964,7 +996,7 @@ static vidCopyFunc SiSVidCopyInitGen(ScreenPtr pScreen, SISMCFuncData *MCFunctio
     xfree(buf3);   
     
     xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
-	       "Using %s memcpy() for video data transfers\n", MCFunctions[best].mName);
+	       "Using %s method for video data transfers\n", MCFunctions[best].mName);
 	       
     return MCFunctions[best].mFunc; 
 }

@@ -34,26 +34,23 @@
  *           Thomas Winischhofer <thomas@winischhofer.net>
  */
 
-#include "xf86.h"
-#include "xf86_OSproc.h"
-#include "xf86_ansic.h"
-#include "xf86Pci.h"
-#include "xf86PciInfo.h"
-#include "xaa.h"
 #include "sis.h"
-#include "sis_regs.h"
+
+#include "xaa.h"
 #include "dgaproc.h"
 
-static Bool SIS_OpenFramebuffer(ScrnInfoPtr, char **, unsigned char **, 
+#include "sis_regs.h"
+
+static Bool SIS_OpenFramebuffer(ScrnInfoPtr, char **, UChar **, 
                     int *, int *, int *);
 static Bool SIS_SetMode(ScrnInfoPtr, DGAModePtr);
 static void SIS_Sync(ScrnInfoPtr);
 static int  SIS_GetViewport(ScrnInfoPtr);
 static void SIS_SetViewport(ScrnInfoPtr, int, int, int);
-static void SIS_FillRect(ScrnInfoPtr, int, int, int, int, unsigned long);
+static void SIS_FillRect(ScrnInfoPtr, int, int, int, int, ULong);
 static void SIS_BlitRect(ScrnInfoPtr, int, int, int, int, int, int);
 static void SIS_BlitTransRect(ScrnInfoPtr, int, int, int, int, int, int,
-                    unsigned long);
+                    ULong);
 
 static
 DGAFunctionRec SISDGAFuncs = {
@@ -90,9 +87,9 @@ SISSetupDGAMode(
    int depth,
    Bool pixmap,
    int secondPitch,
-   unsigned long red,
-   unsigned long green,
-   unsigned long blue,
+   ULong red,
+   ULong green,
+   ULong blue,
    short visualClass
 ){
    SISPtr pSiS = SISPTR(pScrn);
@@ -336,7 +333,7 @@ static void
 SIS_FillRect (
    ScrnInfoPtr pScrn, 
    int x, int y, int w, int h, 
-   unsigned long color
+   ULong color
 ){
     SISPtr pSiS = SISPTR(pScrn);
 
@@ -385,7 +382,7 @@ SIS_BlitTransRect(
    int srcx, int srcy, 
    int w, int h, 
    int dstx, int dsty,
-   unsigned long color
+   ULong color
 ){
     SISPtr pSiS = SISPTR(pScrn);
 
@@ -405,7 +402,7 @@ static Bool
 SIS_OpenFramebuffer(
    ScrnInfoPtr pScrn,
    char **name,
-   unsigned char **mem,
+   UChar **mem,
    int *size,
    int *offset,
    int *flags
@@ -413,7 +410,7 @@ SIS_OpenFramebuffer(
     SISPtr pSiS = SISPTR(pScrn);
 
     *name = NULL;       /* no special device */
-    *mem = (unsigned char*)pSiS->FbAddress;
+    *mem = (UChar *)pSiS->FbAddress;
     *size = pSiS->maxxfbmem;
     *offset = 0;
     *flags = DGA_NEED_ROOT;

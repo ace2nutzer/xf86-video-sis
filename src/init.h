@@ -54,21 +54,16 @@
 #define _INIT_
 
 #include "osdef.h"
-
 #include "initdef.h"
-#include "vgatypes.h"
-#include "vstruct.h"
 
 #ifdef LINUX_XF86
-#include "xf86.h"
-#include "xf86Pci.h"
-#include "xf86PciInfo.h"
-#include "xf86_OSproc.h"
 #include "sis.h"
 #include "sis_regs.h"
 #endif
 
 #ifdef LINUX_KERNEL
+#include "vgatypes.h"
+#include "vstruct.h"
 #ifdef SIS_CP
 #undef SIS_CP
 #endif
@@ -85,44 +80,44 @@
 #endif
 
 /* Mode numbers */
-const USHORT  ModeIndex_320x200[]      = {0x59, 0x41, 0x00, 0x4f};
-const USHORT  ModeIndex_320x240[]      = {0x50, 0x56, 0x00, 0x53};
-const USHORT  ModeIndex_320x240_FSTN[] = {0x5a, 0x5b, 0x00, 0x00};  /* FSTN */
-const USHORT  ModeIndex_400x300[]      = {0x51, 0x57, 0x00, 0x54};
-const USHORT  ModeIndex_512x384[]      = {0x52, 0x58, 0x00, 0x5c};
-const USHORT  ModeIndex_640x400[]      = {0x2f, 0x5d, 0x00, 0x5e};
-const USHORT  ModeIndex_640x480[]      = {0x2e, 0x44, 0x00, 0x62};
-const USHORT  ModeIndex_720x480[]      = {0x31, 0x33, 0x00, 0x35};
-const USHORT  ModeIndex_720x576[]      = {0x32, 0x34, 0x00, 0x36};
-const USHORT  ModeIndex_768x576[]      = {0x5f, 0x60, 0x00, 0x61};
-const USHORT  ModeIndex_800x480[]      = {0x70, 0x7a, 0x00, 0x76};
-const USHORT  ModeIndex_800x600[]      = {0x30, 0x47, 0x00, 0x63};
-const USHORT  ModeIndex_848x480[]      = {0x39, 0x3b, 0x00, 0x3e};
-const USHORT  ModeIndex_856x480[]      = {0x3f, 0x42, 0x00, 0x45};
-const USHORT  ModeIndex_960x540[]      = {0x1d, 0x1e, 0x00, 0x1f};  /* 315 series only */
-const USHORT  ModeIndex_960x600[]      = {0x20, 0x21, 0x00, 0x22};  /* 315 series only */
-const USHORT  ModeIndex_1024x768[]     = {0x38, 0x4a, 0x00, 0x64};
-const USHORT  ModeIndex_1024x576[]     = {0x71, 0x74, 0x00, 0x77};
-const USHORT  ModeIndex_1024x600[]     = {0x20, 0x21, 0x00, 0x22};  /* 300 series only */
-const USHORT  ModeIndex_1280x1024[]    = {0x3a, 0x4d, 0x00, 0x65};
-const USHORT  ModeIndex_1280x960[]     = {0x7c, 0x7d, 0x00, 0x7e};
-const USHORT  ModeIndex_1152x768[]     = {0x23, 0x24, 0x00, 0x25};  /* 300 series only */
-const USHORT  ModeIndex_1152x864[]     = {0x29, 0x2a, 0x00, 0x2b};
-const USHORT  ModeIndex_300_1280x768[] = {0x55, 0x5a, 0x00, 0x5b};
-const USHORT  ModeIndex_310_1280x768[] = {0x23, 0x24, 0x00, 0x25};
-const USHORT  ModeIndex_1280x720[]     = {0x79, 0x75, 0x00, 0x78};
-const USHORT  ModeIndex_1280x800[]     = {0x14, 0x15, 0x00, 0x16};
-const USHORT  ModeIndex_1360x768[]     = {0x48, 0x4b, 0x00, 0x4e};
-const USHORT  ModeIndex_300_1360x1024[]= {0x67, 0x6f, 0x00, 0x72};  /* 300 series, BARCO only */
-const USHORT  ModeIndex_1400x1050[]    = {0x26, 0x27, 0x00, 0x28};  /* 315 series only */
-const USHORT  ModeIndex_1680x1050[]    = {0x17, 0x18, 0x00, 0x19};  /* 315 series only */
-const USHORT  ModeIndex_1600x1200[]    = {0x3c, 0x3d, 0x00, 0x66};
-const USHORT  ModeIndex_1920x1080[]    = {0x2c, 0x2d, 0x00, 0x73};  /* 315 series only */
-const USHORT  ModeIndex_1920x1440[]    = {0x68, 0x69, 0x00, 0x6b};
-const USHORT  ModeIndex_300_2048x1536[]= {0x6c, 0x6d, 0x00, 0x00};
-const USHORT  ModeIndex_310_2048x1536[]= {0x6c, 0x6d, 0x00, 0x6e};
+static const USHORT ModeIndex_320x200[]      = {0x59, 0x41, 0x00, 0x4f};
+static const USHORT ModeIndex_320x240[]      = {0x50, 0x56, 0x00, 0x53};
+static const USHORT ModeIndex_320x240_FSTN[] = {0x5a, 0x5b, 0x00, 0x00};  /* FSTN */
+static const USHORT ModeIndex_400x300[]      = {0x51, 0x57, 0x00, 0x54};
+static const USHORT ModeIndex_512x384[]      = {0x52, 0x58, 0x00, 0x5c};
+static const USHORT ModeIndex_640x400[]      = {0x2f, 0x5d, 0x00, 0x5e};
+static const USHORT ModeIndex_640x480[]      = {0x2e, 0x44, 0x00, 0x62};
+static const USHORT ModeIndex_720x480[]      = {0x31, 0x33, 0x00, 0x35};
+static const USHORT ModeIndex_720x576[]      = {0x32, 0x34, 0x00, 0x36};
+static const USHORT ModeIndex_768x576[]      = {0x5f, 0x60, 0x00, 0x61};
+static const USHORT ModeIndex_800x480[]      = {0x70, 0x7a, 0x00, 0x76};
+static const USHORT ModeIndex_800x600[]      = {0x30, 0x47, 0x00, 0x63};
+static const USHORT ModeIndex_848x480[]      = {0x39, 0x3b, 0x00, 0x3e};
+static const USHORT ModeIndex_856x480[]      = {0x3f, 0x42, 0x00, 0x45};
+static const USHORT ModeIndex_960x540[]      = {0x1d, 0x1e, 0x00, 0x1f};  /* 315 series only */
+static const USHORT ModeIndex_960x600[]      = {0x20, 0x21, 0x00, 0x22};  /* 315 series only */
+static const USHORT ModeIndex_1024x768[]     = {0x38, 0x4a, 0x00, 0x64};
+static const USHORT ModeIndex_1024x576[]     = {0x71, 0x74, 0x00, 0x77};
+static const USHORT ModeIndex_1024x600[]     = {0x20, 0x21, 0x00, 0x22};  /* 300 series only */
+static const USHORT ModeIndex_1280x1024[]    = {0x3a, 0x4d, 0x00, 0x65};
+static const USHORT ModeIndex_1280x960[]     = {0x7c, 0x7d, 0x00, 0x7e};
+static const USHORT ModeIndex_1152x768[]     = {0x23, 0x24, 0x00, 0x25};  /* 300 series only */
+static const USHORT ModeIndex_1152x864[]     = {0x29, 0x2a, 0x00, 0x2b};
+static const USHORT ModeIndex_300_1280x768[] = {0x55, 0x5a, 0x00, 0x5b};
+static const USHORT ModeIndex_310_1280x768[] = {0x23, 0x24, 0x00, 0x25};
+static const USHORT ModeIndex_1280x720[]     = {0x79, 0x75, 0x00, 0x78};
+static const USHORT ModeIndex_1280x800[]     = {0x14, 0x15, 0x00, 0x16};
+static const USHORT ModeIndex_1360x768[]     = {0x48, 0x4b, 0x00, 0x4e};
+static const USHORT ModeIndex_300_1360x1024[]= {0x67, 0x6f, 0x00, 0x72};  /* 300 series, BARCO only */
+static const USHORT ModeIndex_1400x1050[]    = {0x26, 0x27, 0x00, 0x28};  /* 315 series only */
+static const USHORT ModeIndex_1680x1050[]    = {0x17, 0x18, 0x00, 0x19};  /* 315 series only */
+static const USHORT ModeIndex_1600x1200[]    = {0x3c, 0x3d, 0x00, 0x66};
+static const USHORT ModeIndex_1920x1080[]    = {0x2c, 0x2d, 0x00, 0x73};  /* 315 series only */
+static const USHORT ModeIndex_1920x1440[]    = {0x68, 0x69, 0x00, 0x6b};
+static const USHORT ModeIndex_300_2048x1536[]= {0x6c, 0x6d, 0x00, 0x00};
+static const USHORT ModeIndex_310_2048x1536[]= {0x6c, 0x6d, 0x00, 0x6e};
 
-const USHORT SiS_DRAMType[17][5]={
+static const USHORT SiS_DRAMType[17][5]={
 	{0x0C,0x0A,0x02,0x40,0x39},
 	{0x0D,0x0A,0x01,0x40,0x48},
 	{0x0C,0x09,0x02,0x20,0x35},
@@ -142,7 +137,7 @@ const USHORT SiS_DRAMType[17][5]={
 	{0x09,0x08,0x01,0x01,0x00}
 };
 
-const USHORT SiS_SDRDRAM_TYPE[13][5] =
+static const USHORT SiS_SDRDRAM_TYPE[13][5] =
 {
 	{ 2,12, 9,64,0x35},
 	{ 1,13, 9,64,0x44},
@@ -159,7 +154,7 @@ const USHORT SiS_SDRDRAM_TYPE[13][5] =
 	{ 1, 9, 8, 2,0x00}
 };
 
-const USHORT SiS_DDRDRAM_TYPE[4][5] =
+static const USHORT SiS_DDRDRAM_TYPE[4][5] =
 {
 	{ 2,12, 9,64,0x35},
 	{ 2,12, 8,32,0x31},
@@ -167,7 +162,7 @@ const USHORT SiS_DDRDRAM_TYPE[4][5] =
 	{ 2, 9, 8, 4,0x01}
 };
 
-const USHORT SiS_MDA_DAC[] =
+static const USHORT SiS_MDA_DAC[] =
 {
 	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
         0x15,0x15,0x15,0x15,0x15,0x15,0x15,0x15,
@@ -179,7 +174,7 @@ const USHORT SiS_MDA_DAC[] =
         0x3F,0x3F,0x3F,0x3F,0x3F,0x3F,0x3F,0x3F
 };
 
-const USHORT SiS_CGA_DAC[] =
+static const USHORT SiS_CGA_DAC[] =
 {
         0x00,0x10,0x04,0x14,0x01,0x11,0x09,0x15,
         0x00,0x10,0x04,0x14,0x01,0x11,0x09,0x15,
@@ -191,7 +186,7 @@ const USHORT SiS_CGA_DAC[] =
         0x2A,0x3A,0x2E,0x3E,0x2B,0x3B,0x2F,0x3F
 };
 
-const USHORT SiS_EGA_DAC[] =
+static const USHORT SiS_EGA_DAC[] =
 {
         0x00,0x10,0x04,0x14,0x01,0x11,0x05,0x15,
         0x20,0x30,0x24,0x34,0x21,0x31,0x25,0x35,
@@ -203,7 +198,7 @@ const USHORT SiS_EGA_DAC[] =
         0x2A,0x3A,0x2E,0x3E,0x2B,0x3B,0x2F,0x3F
 };
 
-const USHORT SiS_VGA_DAC[] =
+static const USHORT SiS_VGA_DAC[] =
 {
 	0x00,0x10,0x04,0x14,0x01,0x11,0x09,0x15,
 	0x2A,0x3A,0x2E,0x3E,0x2B,0x3B,0x2F,0x3F,
@@ -265,7 +260,7 @@ static const SiS_ModeResInfoStruct SiS_ModeResInfo[] =
 };
 
 #if defined(SIS300) || defined(SIS315H)
-static SiS_StandTableStruct SiS_StandTable[]=
+static const SiS_StandTableStruct SiS_StandTable[]=
 {
 /* 0x00: MD_0_200 */
  {
@@ -963,7 +958,8 @@ static const SiS_LCDDataStruct  SiS_LCD1280x720Data[] =  /* 2.03.00 */
 /* About 1280x768: For TMDS, Panel_1280x768 will only be set if
  * the panel is a Fujitsu 7911 (VL-17WDX8) (with clock 81, 1688x802)
  * Other TMDS panels of this resolution will be treated as custom.
- * For LVDS, we know two types. Data follows:
+ * For LVDS, we know another type (_2). 
+ * (Note: 1280x768_3 is now special for SiS301/NetVista 
  */
 
 static const SiS_LCDDataStruct  SiS_StLCD1280x768_2Data[] = /* 2.03.00 */
@@ -996,7 +992,7 @@ static const SiS_LCDDataStruct  SiS_ExtLCD1280x768_2Data[] = /* 2.03.00 */
 	{  16,   15, 1600,  750, 1600,  806 }  /* 1280x720 */
 };
 
-#if 0
+#if 0  /* Not used; _3 now reserved for NetVista (SiS301) */
 static const SiS_LCDDataStruct  SiS_LCD1280x768_3Data[] =
 {
 	{  64,   25, 1056,  422, 1664,  798 },			/* 640x400 */
@@ -1152,8 +1148,8 @@ static const SiS_LCDDataStruct  SiS_NoScaleData[] =
 	{ 1, 1,1552, 812,1552, 812 },  /* 0x0d: 1280x800_2 (LVDS) (was: 1408,816/ 1656,841) */
 	{ 1, 1,1900,1066,1900,1066 },  /* 0x0e: 1680x1050 (LVDS) */
 	{ 1, 1,1660, 806,1660, 806 },  /* 0x0f: 1280x768_2 (LVDS) */
-	{ 1, 1,1664, 798,1664, 798 },  /* 0x10: 1280x768_3 (LVDS) - temp */
-	{ 1, 1,1688, 802,1688, 802 },  /* 0x11: 1280x768   (TMDS) */
+	{ 1, 1,1664, 798,1664, 798 },  /* 0x10: 1280x768_3 (NetVista SiS 301) - TODO */
+	{ 1, 1,1688, 802,1688, 802 },  /* 0x11: 1280x768   (TMDS Fujitsu) */
 	{ 1, 1,1408, 806,1408, 806 },  /* 0x12: 1280x720 (LVDS) */
 	{ 1, 1, 896, 497, 896, 497 },  /* 0x13: 720x480 */
 	{ 1, 1, 912, 597, 912, 597 },  /* 0x14: 720x576 */
@@ -2023,6 +2019,8 @@ static const SiS_LVDSCRT1DataStruct  SiS_LVDSCRT11280x768_2_H[] =
 /* COMMON --------------------------------------------------- */
 /**************************************************************/
 
+#ifdef LINUX_XF86
+
 #define SIS_PL_HSYNCP 0x01
 #define SIS_PL_HSYNCN 0x02
 #define SIS_PL_VSYNCP 0x04
@@ -2371,9 +2369,12 @@ static const SiS_PlasmaTables SiS_PlasmaTable[] = {
    },
    { 0x0000 }
 };
+#endif
 
+#ifdef LINUX_XF86
 USHORT  SiS_GetModeID(int VGAEngine, ULONG VBFlags, int HDisplay, int VDisplay,
 			  int Depth, BOOLEAN FSTN, int LCDwith, int LCDheight);
+#endif		  			  
 USHORT  SiS_GetModeID_LCD(int VGAEngine, ULONG VBFlags, int HDisplay, int VDisplay, int Depth, BOOLEAN FSTN,
                           USHORT CustomT, int LCDwith, int LCDheight);
 USHORT  SiS_GetModeID_TV(int VGAEngine, ULONG VBFlags, int HDisplay, int VDisplay, int Depth);
@@ -2387,9 +2388,9 @@ UCHAR	SiS_GetReg(SISIOADDRESS port, USHORT index);
 UCHAR 	SiS_GetRegByte(SISIOADDRESS port);
 USHORT	SiS_GetRegShort(SISIOADDRESS port);
 ULONG	SiS_GetRegLong(SISIOADDRESS port);
-void	SiS_SetRegANDOR(SISIOADDRESS Port,USHORT Index,USHORT DataAND,USHORT DataOR);
-void 	SiS_SetRegAND(SISIOADDRESS Port,USHORT Index,USHORT DataAND);
-void	SiS_SetRegOR(SISIOADDRESS Port,USHORT Index,USHORT DataOR);
+void	SiS_SetRegANDOR(SISIOADDRESS Port, USHORT Index, USHORT DataAND, USHORT DataOR);
+void 	SiS_SetRegAND(SISIOADDRESS Port,USHORT Index, USHORT DataAND);
+void	SiS_SetRegOR(SISIOADDRESS Port,USHORT Index, USHORT DataOR);
 void	SiS_DisplayOn(SiS_Private *SiS_Pr);
 void	SiS_DisplayOff(SiS_Private *SiS_Pr);
 void	SiSRegInit(SiS_Private *SiS_Pr, SISIOADDRESS BaseAddr);
@@ -2398,14 +2399,14 @@ BOOLEAN SiSDetermineROMLayout661(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo);
 void	SiS_SetEnableDstn(SiS_Private *SiS_Pr, int enable);
 void	SiS_SetEnableFstn(SiS_Private *SiS_Pr, int enable);
 void	SiS_GetVBType(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo);
-USHORT	SiS_GetMCLK(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo);
 BOOLEAN	SiS_SearchModeID(SiS_Private *SiS_Pr, USHORT *ModeNo, USHORT *ModeIdIndex);
 UCHAR	SiS_GetModePtr(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex);
 USHORT	SiS_GetColorDepth(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex);
-USHORT	SiS_GetOffset(SiS_Private *SiS_Pr,USHORT ModeNo,USHORT ModeIdIndex,
-              USHORT RefreshRateTableIndex,PSIS_HW_INFO HwInfo);
+USHORT	SiS_GetOffset(SiS_Private *SiS_Pr,USHORT ModeNo, USHORT ModeIdIndex,
+              USHORT RefreshRateTableIndex, PSIS_HW_INFO HwInfo);
 void	SiS_LoadDAC(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo, USHORT ModeNo, USHORT ModeIdIndex);
-void	SiS_CalcLCDACRT1Timing(SiS_Private *SiS_Pr,USHORT ModeNo,USHORT ModeIdIndex);
+void	SiS_CalcLCDACRT1Timing(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex);
+
 #ifdef LINUX_XF86
 BOOLEAN	SiSSetMode(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo,ScrnInfoPtr pScrn,USHORT ModeNo, BOOLEAN dosetpitch);
 BOOLEAN	SiSBIOSSetMode(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo, ScrnInfoPtr pScrn,
@@ -2424,44 +2425,47 @@ void    SiS_MakeClockRegs(ScrnInfoPtr pScrn, int clock, UCHAR *p2b, UCHAR *p2c);
 #else
 BOOLEAN	SiSSetMode(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo,USHORT ModeNo);
 #endif
+
 #ifdef LINUX_KERNEL
-int    sisfb_mode_rate_to_dclock(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo,
-			      unsigned char modeno, unsigned char rateindex);
-int    sisfb_mode_rate_to_ddata(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo,
-			 unsigned char modeno, unsigned char rateindex,
-			 struct fb_var_screeninfo *var);
+int    	sisfb_mode_rate_to_dclock(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo,
+			      UCHAR modeno, UCHAR rateindex);
+int    	sisfb_mode_rate_to_ddata(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo,
+			UCHAR modeno, UCHAR rateindex,
+			struct fb_var_screeninfo *var);
 BOOLEAN sisfb_gettotalfrommode(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo,
-		       unsigned char modeno, int *htotal, int *vtotal, unsigned char rateindex);
+		       	UCHAR modeno, int *htotal, int *vtotal, UCHAR rateindex);
 #endif
 
-extern void      SiS_GetVBInfo(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
-			       PSIS_HW_INFO HwInfo, int chkcrt2mode);
-extern void      SiS_GetLCDResInfo(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
-			           PSIS_HW_INFO HwInfo);
-extern void      SiS_SetYPbPr(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo);
-extern void 	 SiS_SetTVMode(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex, PSIS_HW_INFO HwInfo);
-extern void      SiS_UnLockCRT2(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo);
-extern void      SiS_LockCRT2(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo);
-extern void      SiS_DisableBridge(SiS_Private *, PSIS_HW_INFO);
-extern BOOLEAN   SiS_SetCRT2Group(SiS_Private *, PSIS_HW_INFO, USHORT);
-extern USHORT    SiS_GetRatePtr(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
-                                PSIS_HW_INFO HwInfo);
-extern void      SiS_WaitRetrace1(SiS_Private *SiS_Pr);
-extern USHORT    SiS_GetResInfo(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex);
-extern USHORT    SiS_GetCH700x(SiS_Private *SiS_Pr, USHORT tempax);
-extern USHORT    SiS_GetVCLK2Ptr(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
-                                 USHORT RefreshRateTableIndex, PSIS_HW_INFO HwInfo);
-extern BOOLEAN   SiS_IsVAMode(SiS_Private *, PSIS_HW_INFO);
-extern BOOLEAN   SiS_IsDualEdge(SiS_Private *, PSIS_HW_INFO);
+/* init301.c: */
+extern void     SiS_GetVBInfo(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
+			       	PSIS_HW_INFO HwInfo, int chkcrt2mode);
+extern void     SiS_GetLCDResInfo(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
+			       	PSIS_HW_INFO HwInfo);
+extern void     SiS_SetYPbPr(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo);
+extern void 	SiS_SetTVMode(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex, PSIS_HW_INFO HwInfo);
+extern void     SiS_UnLockCRT2(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo);
+extern void     SiS_LockCRT2(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo);
+extern void     SiS_DisableBridge(SiS_Private *, PSIS_HW_INFO);
+extern BOOLEAN  SiS_SetCRT2Group(SiS_Private *, PSIS_HW_INFO, USHORT);
+extern USHORT   SiS_GetRatePtr(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
+                               	PSIS_HW_INFO HwInfo);
+extern void     SiS_WaitRetrace1(SiS_Private *SiS_Pr);
+extern USHORT   SiS_GetResInfo(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex);
+extern USHORT   SiS_GetCH700x(SiS_Private *SiS_Pr, USHORT tempax);
+extern USHORT   SiS_GetVCLK2Ptr(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
+                               	USHORT RefreshRateTableIndex, PSIS_HW_INFO HwInfo);
+extern BOOLEAN  SiS_IsVAMode(SiS_Private *, PSIS_HW_INFO);
+extern BOOLEAN  SiS_IsDualEdge(SiS_Private *, PSIS_HW_INFO);
 
 #ifdef LINUX_XF86
+/* From other sis driver modules: */
 extern int      SiS_compute_vclk(int Clock, int *out_n, int *out_dn, int *out_div,
-	     	 		 int *out_sbit, int *out_scale);
+	     	 	 	int *out_sbit, int *out_scale);
 extern void 	SiSCalcClock(ScrnInfoPtr pScrn, int clock, int max_VLD, unsigned int *vclk);
 
-extern unsigned char SiS_GetSetBIOSScratch(ScrnInfoPtr pScrn, USHORT offset, unsigned char value);
-extern unsigned char SiS_GetSetModeID(ScrnInfoPtr pScrn, unsigned char id);
-extern USHORT 	     SiS_GetModeNumber(ScrnInfoPtr pScrn, DisplayModePtr mode, unsigned long VBFlags);
+extern UCHAR   	SiS_GetSetBIOSScratch(ScrnInfoPtr pScrn, USHORT offset, UCHAR value);
+extern UCHAR   	SiS_GetSetModeID(ScrnInfoPtr pScrn, UCHAR id);
+extern USHORT 	SiS_GetModeNumber(ScrnInfoPtr pScrn, DisplayModePtr mode, ULONG VBFlags);
 #endif
 
 #endif

@@ -38,17 +38,9 @@
 #define CTSCE		/* Include enhanced color expansion code */
 #endif			/* This produces drawing errors sometimes */
 
-#include "xf86.h"
-#include "xf86_OSproc.h"
-#include "xf86_ansic.h"
-
-#include "xf86PciInfo.h"
-#include "xf86Pci.h"
-
-#include "sis_accel.h"
-#include "sis_regs.h"
 #include "sis.h"
 #include "xaarop.h"
+#include "sis_accel.h"
 
 static void SiSSync(ScrnInfoPtr pScrn);
 static void SiSSetupForFillRectSolid(ScrnInfoPtr pScrn, int color,
@@ -94,8 +86,8 @@ static void SiSSubsequentScanlineCPUToScreenColorExpandFill(ScrnInfoPtr pScrn,
 static void SiSSubsequentColorExpandScanline(ScrnInfoPtr pScrn, int bufno);
 #endif
 
-extern unsigned char SiSGetCopyROP(int rop);
-extern unsigned char SiSGetPatternROP(int rop);
+extern UChar SiSGetCopyROP(int rop);
+extern UChar SiSGetPatternROP(int rop);
 
 Bool
 SiSAccelInit(ScreenPtr pScreen)
@@ -104,7 +96,7 @@ SiSAccelInit(ScreenPtr pScreen)
     SISPtr         pSiS = SISPTR(pScrn);
     XAAInfoRecPtr  infoPtr = NULL;
     int            topFB, reservedFbSize, usableFbSize, i;
-    unsigned char  *AvailBufBase;
+    UChar          *AvailBufBase;
     BoxRec         Avail;
     
     pSiS->ColorExpandBufferNumber = 0;
@@ -172,7 +164,7 @@ SiSAccelInit(ScreenPtr pScreen)
           pSiS->PerColorExpandBufferSize = ((pScrn->virtualX + 31) / 32) * 4;
 
           infoPtr->NumScanlineColorExpandBuffers = pSiS->ColorExpandBufferNumber;
-          infoPtr->ScanlineColorExpandBuffers = (unsigned char **)&pSiS->ColorExpandBufferAddr[0];
+          infoPtr->ScanlineColorExpandBuffers = (UChar **)&pSiS->ColorExpandBufferAddr[0];
 
           infoPtr->SetupForScanlineCPUToScreenColorExpandFill =
 	                            SiSSetupForScanlineCPUToScreenColorExpandFill;
@@ -399,17 +391,17 @@ static void
 SiSSubsequentMono8x8PatternFillRect(ScrnInfoPtr pScrn, int patternx, 
                 int patterny, int x, int y, int w, int h)
 {
-    SISPtr                  pSiS = SISPTR(pScrn);
-    register unsigned char  *patternRegPtr;
-    register unsigned char  *srcPatternRegPtr;
+    SISPtr   pSiS = SISPTR(pScrn);
+    register UChar  *patternRegPtr;
+    register UChar  *srcPatternRegPtr;
     register unsigned int   *patternRegPtrL;
-    unsigned short          tmp;
-    int                     dstaddr, i, k, shift;
-    int                     op  = sisCMDCOLEXP |
-                                  sisTOP2BOTTOM |
-		                  sisLEFT2RIGHT |
-                                  sisPATFG |
-		                  sisSRCBG;
+    UShort   tmp;
+    int      dstaddr, i, k, shift;
+    int      op  = sisCMDCOLEXP |
+                  sisTOP2BOTTOM |
+		  sisLEFT2RIGHT |
+                       sisPATFG |
+		       sisSRCBG;
 
     if(pSiS->ClipEnabled)
        op |= sisCLIPINTRN | sisCLIPENABL;
@@ -420,7 +412,7 @@ SiSSubsequentMono8x8PatternFillRect(ScrnInfoPtr pScrn, int patternx,
     sisBLTSync;
 
     patternRegPtr = sisSETPATREG();
-    srcPatternRegPtr = (unsigned char *)pSiS->sisPatternReg ;
+    srcPatternRegPtr = (UChar *)pSiS->sisPatternReg ;
     shift = 8 - patternx ;
     for(i = 0, k = patterny ; i < 8 ; i++, k++ ) {
        tmp = srcPatternRegPtr[k]<<8 | srcPatternRegPtr[k] ;

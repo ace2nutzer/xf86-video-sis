@@ -92,17 +92,10 @@
  *
  */
  
-#include "xf86.h"
-#include "xf86_OSproc.h"
-#include "xf86Resources.h"
-#include "xf86_ansic.h"
-#include "compiler.h"
-#include "xf86PciInfo.h"
-#include "xf86Pci.h"
+#include "sis.h" 
 #include "xf86fbman.h"
 #include "regionstr.h"
 
-#include "sis.h"
 #include "xf86xv.h"
 #include "Xv.h"
 #include "xaa.h"
@@ -123,26 +116,26 @@ static void 	SISQueryBestSize(ScrnInfoPtr, Bool, short, short, short,
 			short, unsigned int *,unsigned int *, pointer);
 static int 	SISPutImage( ScrnInfoPtr,
     			short, short, short, short, short, short, short, short,
-    			int, unsigned char*, short, short, Bool, RegionPtr, pointer);
+    			int, UChar *, short, short, Bool, RegionPtr, pointer);
 static int 	SISQueryImageAttributes(ScrnInfoPtr,
-    			int, unsigned short *, unsigned short *, int *, int *);
+    			int, UShort *, UShort *, int *, int *);
 static void 	SISVideoTimerCallback(ScrnInfoPtr pScrn, Time now);
 static void     SISInitOffscreenImages(ScreenPtr pScrn);
 FBLinearPtr     SISAllocateOverlayMemory(ScrnInfoPtr pScrn, FBLinearPtr linear, int size);
-extern BOOLEAN  SiSBridgeIsInSlaveMode(ScrnInfoPtr pScrn);
+extern Bool     SiSBridgeIsInSlaveMode(ScrnInfoPtr pScrn);
 
 #ifdef INCL_YUV_BLIT_ADAPTOR
 static 		XF86VideoAdaptorPtr SISSetupBlitVideo(ScreenPtr);
-static void 	SISStopVideoBlit(ScrnInfoPtr, unsigned long, Bool);
-static int 	SISSetPortAttributeBlit(ScrnInfoPtr, Atom, INT32, unsigned long);
-static int 	SISGetPortAttributeBlit(ScrnInfoPtr, Atom ,INT32 *, unsigned long);
+static void 	SISStopVideoBlit(ScrnInfoPtr, ULong, Bool);
+static int 	SISSetPortAttributeBlit(ScrnInfoPtr, Atom, INT32, ULong);
+static int 	SISGetPortAttributeBlit(ScrnInfoPtr, Atom ,INT32 *, ULong);
 static void 	SISQueryBestSizeBlit(ScrnInfoPtr, Bool, short, short, short,
-			short, unsigned int *,unsigned int *, unsigned long);
+			short, unsigned int *,unsigned int *, ULong);
 static int 	SISPutImageBlit( ScrnInfoPtr,
     			short, short, short, short, short, short, short, short,
-    			int, unsigned char*, short, short, Bool, RegionPtr, unsigned long);
+    			int, UChar *, short, short, Bool, RegionPtr, ULong);
 static int 	SISQueryImageAttributesBlit(ScrnInfoPtr,
-    			int, unsigned short *, unsigned short *, int *, int *);			
+    			int, UShort *, UShort *, int *, int *);			
 #endif
 
 #define OFF_DELAY   	200    /* milliseconds */
@@ -222,6 +215,9 @@ static char sisxvinsidechromakey[] 			= "XV_INSIDE_CHROMAKEY";
 static char sisxvyuvchromakey[] 			= "XV_YUV_CHROMAKEY";
 static char sisxvchromamin[] 				= "XV_CHROMAMIN";
 static char sisxvchromamax[] 				= "XV_CHROMAMAX";
+#ifdef SISDEINT
+static char sisxvdeinterlace[]				= "XV_OVERLAY_DEINTERLACING_METHOD";
+#endif
 static char sisxvqueryvbflags[] 			= "XV_QUERYVBFLAGS";
 static char sisxvsdgetdriverversion[] 			= "XV_SD_GETDRIVERVERSION";
 static char sisxvsdgethardwareinfo[]			= "XV_SD_GETHARDWAREINFO";
@@ -290,11 +286,20 @@ static XF86VideoEncodingRec DummyEncoding =
 };
 
 #ifndef SIS_CP
+#ifdef SISDEINT
+#define NUM_ATTRIBUTES_300 59
+#ifdef TWDEBUG
+#define NUM_ATTRIBUTES_315 66
+#else
+#define NUM_ATTRIBUTES_315 65
+#endif
+#else
 #define NUM_ATTRIBUTES_300 58
 #ifdef TWDEBUG
 #define NUM_ATTRIBUTES_315 65
 #else
 #define NUM_ATTRIBUTES_315 64
+#endif
 #endif
 #endif
 
@@ -315,6 +320,9 @@ static XF86AttributeRec SISAttributes_300[NUM_ATTRIBUTES_300] =
    {XvSettable | XvGettable, 0, 1,             sisxvyuvchromakey},
    {XvSettable | XvGettable, 0, (1 << 24) - 1, sisxvchromamin},
    {XvSettable | XvGettable, 0, (1 << 24) - 1, sisxvchromamax},
+#ifdef SISDEINT   
+   {XvSettable | XvGettable, 0, 4,             sisxvdeinterlace},
+#endif   
    {             XvGettable, 0, -1,    	       sisxvqueryvbflags},
    {             XvGettable, 0, -1,	       sisxvsdgetdriverversion},
    {             XvGettable, 0, -1,    	       sisxvsdgethardwareinfo},
@@ -384,6 +392,9 @@ static XF86AttributeRec SISAttributes_315[NUM_ATTRIBUTES_315] =
    {XvSettable | XvGettable, 0, 1,             sisxvinsidechromakey},
    {XvSettable | XvGettable, 0, (1 << 24) - 1, sisxvchromamin},
    {XvSettable | XvGettable, 0, (1 << 24) - 1, sisxvchromamax},
+#ifdef SISDEINT   
+   {XvSettable | XvGettable, 0, 4,             sisxvdeinterlace},
+#endif    
    {             XvGettable, 0, -1,    	       sisxvqueryvbflags},
    {             XvGettable, 0, -1,    	       sisxvsdgetdriverversion},
    {             XvGettable, 0, -1,    	       sisxvsdgethardwareinfo},
@@ -552,17 +563,17 @@ typedef struct {
     FBLinearPtr  linear;
     CARD32       bufAddr[2];
 
-    unsigned char currentBuf;
+    UChar currentBuf;
 
     short drw_x, drw_y, drw_w, drw_h;
     short src_x, src_y, src_w, src_h;
     int id;
     short srcPitch, height;
 
-    char          brightness;
-    unsigned char contrast;
-    char 	  hue;
-    short         saturation;
+    char         brightness;
+    UChar        contrast;
+    char 	 hue;
+    short        saturation;
 
     RegionRec    clip;
     CARD32       colorKey;
@@ -574,9 +585,12 @@ typedef struct {
     Bool         usechromakey;
     Bool	 insidechromakey, yuvchromakey;
     CARD32	 chromamin, chromamax;
+#ifdef SISDEINT   
+    int		 deinterlacemethod;
+#endif     
 
     CARD32       videoStatus;
-    BOOLEAN	 overlayStatus;
+    Bool	 overlayStatus;
     Time         offTime;
     Time         freeTime;
 
@@ -773,7 +787,7 @@ typedef struct {
     FBLinearPtr  linear[NUM_BLIT_PORTS];
     CARD32       bufAddr[NUM_BLIT_PORTS][2];
 
-    unsigned char currentBuf[NUM_BLIT_PORTS];
+    UChar        currentBuf[NUM_BLIT_PORTS];
     
     RegionRec    blitClip[NUM_BLIT_PORTS];
     
@@ -908,7 +922,7 @@ static void
 SiSSetXvGamma(SISPtr pSiS)
 {
     int i;
-    unsigned char backup = getsrreg(pSiS, 0x1f);
+    UChar backup = getsrreg(pSiS, 0x1f);
     setsrregmask(pSiS, 0x1f, 0x08, 0x18);
     for(i = 0; i <= 255; i++) {
        MMIO_OUT32(pSiS->IOBase, 0x8570,
@@ -923,7 +937,7 @@ SiSSetXvGamma(SISPtr pSiS)
 static void
 SiSUpdateXvGamma(SISPtr pSiS, SISPortPrivPtr pPriv)
 {
-    unsigned char sr7 = getsrreg(pSiS, 0x07);
+    UChar sr7 = getsrreg(pSiS, 0x07);
 
     if(!pSiS->XvGamma) return;
     if(!(pSiS->MiscFlags & MISC_CRT1OVERLAYGAMMA)) return;
@@ -1529,6 +1543,9 @@ SISSetupImageVideo(ScreenPtr pScreen)
     pSiS->xvYUVChromakey      = MAKE_ATOM(sisxvyuvchromakey);
     pSiS->xvChromaMin	      = MAKE_ATOM(sisxvchromamin);
     pSiS->xvChromaMax         = MAKE_ATOM(sisxvchromamax);
+#ifdef SISDEINT    
+    pSiS->xvdeintmeth	      = MAKE_ATOM(sisxvdeinterlace);
+#endif    
     pSiS->xv_QVF              = MAKE_ATOM(sisxvqueryvbflags);
     pSiS->xv_GDV	      = MAKE_ATOM(sisxvsdgetdriverversion);
     pSiS->xv_GHI	      = MAKE_ATOM(sisxvsdgethardwareinfo);
@@ -1774,6 +1791,12 @@ SISSetPortAttribute(ScrnInfoPtr pScrn, Atom attribute,
      pPriv->chromamin = value;
   } else if(attribute == pSiS->xvChromaMax) {
      pPriv->chromamax = value;
+#ifdef SISDEINT   
+  } else if(attribute == pSiS->xvdeintmeth) {
+     if(value < 0) value = 0;
+     if(value > 4) value = 4;
+     pPriv->deinterlacemethod = value;
+#endif     
   } else if(attribute == pSiS->xv_USD) {
      if(pSiS->enablesisctrl) {
         if(value == SIS_DIRECTKEY) {
@@ -1789,7 +1812,7 @@ SISSetPortAttribute(ScrnInfoPtr pScrn, Atom attribute,
      if(!pPriv->dualHeadMode)
 #endif
         if(pSiS->xv_sisdirectunlocked) {
-	   SISSwitchCRT2Type(pScrn, (unsigned long)value);
+	   SISSwitchCRT2Type(pScrn, (ULong)value);
 	   set_dispmode(pScrn, pPriv);
 	   set_allowswitchcrt(pSiS, pPriv);
 	   set_maxencoding(pSiS, pPriv);
@@ -1799,7 +1822,7 @@ SISSetPortAttribute(ScrnInfoPtr pScrn, Atom attribute,
      if(!pPriv->dualHeadMode)
 #endif
         if(pSiS->xv_sisdirectunlocked) {
-	   SISSwitchCRT1Status(pScrn, (unsigned long)value);
+	   SISSwitchCRT1Status(pScrn, (ULong)value);
 	   set_dispmode(pScrn, pPriv);
 	   set_allowswitchcrt(pSiS, pPriv);
 	   set_maxencoding(pSiS, pPriv);
@@ -1875,8 +1898,8 @@ SISSetPortAttribute(ScrnInfoPtr pScrn, Atom attribute,
      if(pSiS->xv_sisdirectunlocked) {
         int result = 0;
         pSiS->xv_sd_result = (value & 0xffffff00);
-        result = SISCheckModeIndexForCRT2Type(pScrn, (unsigned short)(value & 0xff),
-	                                      (unsigned short)((value >> 8) & 0xff),
+        result = SISCheckModeIndexForCRT2Type(pScrn, (UShort)(value & 0xff),
+	                                      (UShort)((value >> 8) & 0xff),
 					      FALSE);
 	pSiS->xv_sd_result |= (result & 0xff);
      }
@@ -2024,7 +2047,7 @@ SISSetPortAttribute(ScrnInfoPtr pScrn, Atom attribute,
      }
 #ifdef TWDEBUG
   } else if(attribute == pSiS->xv_STR) {
-     unsigned short port;
+     ULong port;
      switch((value & 0xff000000) >> 24) {
      case 0x00: port = SISSR;    break;
      case 0x01: port = SISPART1; break;
@@ -2120,6 +2143,10 @@ SISGetPortAttribute(
      *value = pPriv->chromamin;
   } else if(attribute == pSiS->xvChromaMax) {
      *value = pPriv->chromamax;
+#ifdef SISDEINT   
+  } else if(attribute == pSiS->xvdeintmeth) {
+     *value = pPriv->deinterlacemethod;
+#endif     
   } else if(attribute == pSiS->xv_QVF) {
      *value = pSiS->VBFlags;
   } else if(attribute == pSiS->xv_GDV) {
@@ -2286,7 +2313,7 @@ SiSHandleSiSDirectCommand(ScrnInfoPtr pScrn, SISPortPrivPtr pPriv, sisdirectcomm
 {
    SISPtr pSiS = SISPTR(pScrn);
    int i;
-   unsigned long j;
+   ULong j;
 
    if(sdcbuf->sdc_id != SDC_ID) return BadMatch;
 
@@ -2307,8 +2334,8 @@ SiSHandleSiSDirectCommand(ScrnInfoPtr pScrn, SISPortPrivPtr pPriv, sisdirectcomm
    case SDC_CMD_CHECKMODEFORCRT2:
       j = sdcbuf->sdc_parm[0];
       sdcbuf->sdc_parm[0] = SISCheckModeIndexForCRT2Type(pScrn,
-      			(unsigned short)(j & 0xff),
-	                (unsigned short)((j >> 8) & 0xff),
+      			(UShort)(j & 0xff),
+	                (UShort)((j >> 8) & 0xff),
 			FALSE) & 0xff;
       break;
    default:
@@ -2656,7 +2683,7 @@ static void
 merge_line_buf_mfb(SISPtr pSiS, SISPortPrivPtr pPriv, Bool enable1, Bool enable2,
                    short width1, short width2, short limit)
 {
-    unsigned char misc1, misc2, mask = pPriv->linebufmask;
+    UChar misc1, misc2, mask = pPriv->linebufmask;
 
     if(pPriv->hasTwoOverlays) {     /* This means we are in MIRROR mode */
 
@@ -2717,7 +2744,7 @@ merge_line_buf_mfb(SISPtr pSiS, SISPortPrivPtr pPriv, Bool enable1, Bool enable2
 static void
 merge_line_buf(SISPtr pSiS, SISPortPrivPtr pPriv, Bool enable, short width, short limit)
 {
-  unsigned char misc1, misc2, mask = pPriv->linebufmask;
+  UChar misc1, misc2, mask = pPriv->linebufmask;
 
   if(enable) { 		/* ----- enable linebuffer merge */
 
@@ -3263,18 +3290,18 @@ SISDisplayVideo(ScrnInfoPtr pScrn, SISPortPrivPtr pPriv)
 #ifdef SISDUALHEAD
    SISEntPtr pSiSEnt = pSiS->entityPrivate;
 #endif   
-   short srcPitch = pPriv->srcPitch;
-   short height = pPriv->height;
-   unsigned short screenwidth;
+   short  srcPitch = pPriv->srcPitch;
+   short  height = pPriv->height;
+   UShort screenwidth;
    SISOverlayRec overlay; 
-   int srcOffsetX=0, srcOffsetY=0;
-   int sx=0, sy=0;
-   int index = 0, iscrt2 = 0;
+   int    srcOffsetX=0, srcOffsetY=0;
+   int    sx=0, sy=0;
+   int    index = 0, iscrt2 = 0;
 #ifdef SISMERGED
-   unsigned char temp;
-   unsigned short screen2width=0;
-   int srcOffsetX2=0, srcOffsetY2=0;
-   int sx2=0, sy2=0, watchdog;
+   UChar  temp;
+   UShort screen2width=0;
+   int    srcOffsetX2=0, srcOffsetY2=0;
+   int    sx2=0, sy2=0, watchdog;
 #endif
    
    pPriv->NoOverlay = FALSE;
@@ -3331,8 +3358,27 @@ SISDisplayVideo(ScrnInfoPtr pScrn, SISPortPrivPtr pPriv)
    } else {
       overlay.keyOP = VI_ROP_DestKey;
    }
-   /* overlay.bobEnable = 0x02; */
-   overlay.bobEnable = 0x00;    /* Disable BOB de-interlacer */
+   
+#ifdef SISDEINT   
+   switch(pPriv->deinterlacemethod) {
+   case 1:
+      overlay.bobEnable = 0x02;   
+      /* overlay.bobEnable |= (pPriv->currentBuf) ? 0x00 : 0x10; */
+      break;      
+   case 2:
+      overlay.bobEnable = 0x08;
+      /* overlay.bobEnable |= (pPriv->currentBuf) ? 0x00 : 0x10; */
+      break;
+   case 3:
+      overlay.bobEnable = 0x0a;   
+      /* overlay.bobEnable |= (pPriv->currentBuf) ? 0x00 : 0x10; */
+      break;
+   default:   	
+#endif   
+      overlay.bobEnable = 0x00;    /* Disable BOB de-interlacer */
+#ifdef SISDEINT         
+   }
+#endif   
 
 #ifdef SISMERGED
    if(pSiS->MergedFB) {
@@ -3976,11 +4022,11 @@ SISAllocateOverlayMemory(
    }
    if(!new_linear)
       xf86DrvMsg(pScrn->scrnIndex, X_INFO,
-	           "Xv: Failed to allocate %d pixels of linear video memory\n", size/1024);
+	           "Xv: Failed to allocate %d pixels of linear video memory\n", size);
 #ifdef TWDEBUG 
    else
       xf86DrvMsg(pScrn->scrnIndex, X_INFO,
-	           "Xv: Allocated %d pixels of linear video memory\n", size/1024);
+	           "Xv: Allocated %d pixels of linear video memory\n", size);
 #endif 
 
    return new_linear;
@@ -4031,7 +4077,7 @@ SISPutImage(
   short drw_x, short drw_y,
   short src_w, short src_h,
   short drw_w, short drw_h,
-  int id, unsigned char* buf,
+  int id, UChar *buf,
   short width, short height,
   Bool sync,
   RegionPtr clipBoxes, pointer data
@@ -4040,9 +4086,11 @@ SISPutImage(
    SISPortPrivPtr pPriv = (SISPortPrivPtr)data;
    XAAInfoRecPtr pXAA = pSiS->AccelInfoPtr;
 
-   int totalSize=0;
-   int depth = pSiS->CurrentLayout.bitsPerPixel >> 3;
+   int totalSize = 0, depth = pSiS->CurrentLayout.bitsPerPixel >> 3;
    int myreds[] = { 0x000000ff, 0x0000f800, 0, 0x00ff0000 };
+#ifdef SISDEINT   
+   Bool	deintfm = (pPriv->deinterlacemethod > 1) ? TRUE : FALSE;
+#endif
 
 #if 0
    if(id == SDC_ID) {
@@ -4128,23 +4176,43 @@ SISPutImage(
 
    /* fixup pointers */
    pPriv->bufAddr[0] = (pPriv->linear->offset * depth);
-   pPriv->bufAddr[1] = pPriv->bufAddr[0] + totalSize;
-
-   /* copy data */
-   if((pSiS->XvUseMemcpy) || (totalSize < 16)) {
-      (*pSiS->SiSFastVidCopy)(pSiS->FbBase + pPriv->bufAddr[pPriv->currentBuf], buf, totalSize);
-   } else {
-      unsigned long i;
-      CARD32 *src = (CARD32 *)buf;
-      CARD32 *dest = (CARD32 *)(pSiS->FbBase + pPriv->bufAddr[pPriv->currentBuf]);
-      for(i = 0; i < (totalSize/16); i++) {
-         *dest++ = *src++;
-	 *dest++ = *src++;
-	 *dest++ = *src++;
-	 *dest++ = *src++;
+#ifdef SISDEINT   
+   if(deintfm) {
+      pPriv->bufAddr[1] = pPriv->bufAddr[0] + pPriv->srcPitch;
+      
+      {
+         CARD8 *src = (CARD8 *)buf;
+         CARD8 *dest = (CARD8 *)(pSiS->FbBase + pPriv->bufAddr[pPriv->currentBuf]);      
+         int i = height;
+         while(i--) {
+            (*pSiS->SiSFastVidCopy)(dest, src, pPriv->srcPitch);
+	    src += pPriv->srcPitch;
+	    dest += (pPriv->srcPitch << 1);
+         }
       }
-   }
+      
+   } else {
+#endif   
+      pPriv->bufAddr[1] = pPriv->bufAddr[0] + totalSize;
 
+      /* copy data */
+      if((pSiS->XvUseMemcpy) || (totalSize < 16)) {
+         (*pSiS->SiSFastVidCopy)(pSiS->FbBase + pPriv->bufAddr[pPriv->currentBuf], buf, totalSize);
+      } else {
+         ULong i;
+         CARD32 *src = (CARD32 *)buf;
+         CARD32 *dest = (CARD32 *)(pSiS->FbBase + pPriv->bufAddr[pPriv->currentBuf]);
+         for(i = 0; i < (totalSize/16); i++) {
+            *dest++ = *src++;
+	    *dest++ = *src++;
+	    *dest++ = *src++;
+	    *dest++ = *src++;
+         }
+      }
+#ifdef SISDEINT   
+   }
+#endif
+   
    SISDisplayVideo(pScrn, pPriv);
 
    /* update cliplist */
@@ -4195,7 +4263,7 @@ static int
 SISQueryImageAttributes(
   ScrnInfoPtr pScrn,
   int id,
-  unsigned short *w, unsigned short *h,
+  UShort *w, UShort *h,
   int *pitches, int *offsets
 ){
     int    pitchY, pitchUV;
@@ -4270,8 +4338,8 @@ static int
 SISAllocSurface (
     ScrnInfoPtr pScrn,
     int id,
-    unsigned short w,
-    unsigned short h,
+    UShort w,
+    UShort h,
     XF86SurfacePtr surface
 )
 {
@@ -4587,7 +4655,7 @@ SISSetupBlitVideo(ScreenPtr pScreen)
    pPriv = (SISBPortPrivPtr)(pSiS->blitPriv);
     
    for(i = 0; i < NUM_BLIT_PORTS; i++) {
-      adapt->pPortPrivates[i].uval = (unsigned long)(i);
+      adapt->pPortPrivates[i].uval = (ULong)(i);
 #if defined(REGION_NULL)
       REGION_NULL(pScreen, &pPriv->blitClip[i]);
 #else
@@ -4646,7 +4714,7 @@ SISFreeBlitMemory(ScrnInfoPtr pScrn, int index)
 
 static int
 SISGetPortAttributeBlit(ScrnInfoPtr pScrn, Atom attribute,
-  			INT32 *value, unsigned long index)
+  			INT32 *value, ULong index)
 {
    SISPtr pSiS = SISPTR(pScrn);
    SISBPortPrivPtr pPriv = (SISBPortPrivPtr)(pSiS->blitPriv);
@@ -4659,7 +4727,7 @@ SISGetPortAttributeBlit(ScrnInfoPtr pScrn, Atom attribute,
 
 static int
 SISSetPortAttributeBlit(ScrnInfoPtr pScrn, Atom attribute,
-  		    	INT32 value, unsigned long index)
+  		    	INT32 value, ULong index)
 {
    SISPtr pSiS = SISPTR(pScrn);
    SISBPortPrivPtr pPriv = (SISBPortPrivPtr)(pSiS->blitPriv);
@@ -4674,7 +4742,7 @@ SISSetPortAttributeBlit(ScrnInfoPtr pScrn, Atom attribute,
 }
 
 static void
-SISStopVideoBlit(ScrnInfoPtr pScrn, unsigned long index, Bool shutdown)
+SISStopVideoBlit(ScrnInfoPtr pScrn, ULong index, Bool shutdown)
 {
    SISPtr pSiS = SISPTR(pScrn);
    SISBPortPrivPtr pPriv = (SISBPortPrivPtr)(pSiS->blitPriv);
@@ -4716,10 +4784,10 @@ SISPutImageBlit(
   short drw_x, short drw_y,
   short src_w, short src_h,
   short drw_w, short drw_h,
-  int id, unsigned char* buf,
+  int id, UChar *buf,
   short width, short height,
   Bool sync,
-  RegionPtr clipBoxes, unsigned long index
+  RegionPtr clipBoxes, ULong index
 ){
    SISPtr pSiS = SISPTR(pScrn);
    SISBPortPrivPtr pPriv = (SISBPortPrivPtr)(pSiS->blitPriv);
@@ -4732,8 +4800,8 @@ SISPutImageBlit(
    CARD32 dstbase = 0, offsety, offsetuv, temp;
    int    totalSize, bytesize=0, h, w, wb, srcPitch;
    int 	  xoffset = 0, yoffset = 0, left, right, top, bottom;
-   unsigned char *ybases, *ubases = NULL, *vbases = NULL, *myubases, *myvbases;
-   unsigned char *ybased, *uvbased, packed;
+   UChar  *ybases, *ubases = NULL, *vbases = NULL, *myubases, *myvbases;
+   UChar  *ybased, *uvbased, packed;
    CARD16 *myuvbased;
    SiS_Packet12_YUV MyPacket;
    Bool first;
@@ -5028,7 +5096,7 @@ static int
 SISQueryImageAttributesBlit(
   ScrnInfoPtr pScrn,
   int id,
-  unsigned short *w, unsigned short *h,
+  UShort *w, UShort *h,
   int *pitches, int *offsets
 ){
     int    pitchY, pitchUV;
@@ -5096,7 +5164,7 @@ SISQueryBestSizeBlit(
   short vid_w, short vid_h,
   short drw_w, short drw_h,
   unsigned int *p_w, unsigned int *p_h, 
-  unsigned long index
+  ULong index
 ){
   /* We cannot scale */
   *p_w = vid_w;
@@ -5114,7 +5182,7 @@ SISVideoTimerCallback(ScrnInfoPtr pScrn, Time now)
     SISPtr          pSiS = SISPTR(pScrn);
     SISPortPrivPtr  pPriv = NULL;
     SISBPortPrivPtr pPrivBlit = NULL;
-    unsigned char   sridx, cridx;
+    UChar           sridx, cridx;
     Bool	    setcallback = FALSE;
 
     if(!pScrn->vtSema) return;

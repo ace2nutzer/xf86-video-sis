@@ -55,14 +55,14 @@ typedef struct {
   unsigned int FrameCount;
 #ifdef SIS315DRI
   /* For 315 series */
-  unsigned long sharedWPoffset;
+  ULong sharedWPoffset;
 #endif
 #if 0
-  unsigned char *AGPCmdBufBase;
-  unsigned long AGPCmdBufAddr;
-  unsigned long AGPCmdBufOffset;
-  unsigned int  AGPCmdBufSize;
-  unsigned long AGPCmdBufNext;
+  UChar        *AGPCmdBufBase;
+  ULong        AGPCmdBufAddr;
+  ULong        AGPCmdBufOffset;
+  unsigned int AGPCmdBufSize;
+  ULong        AGPCmdBufNext;
 #endif
 } SISSAREAPriv, *SISSAREAPrivPtr;
 

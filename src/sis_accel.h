@@ -108,15 +108,15 @@ const int sisReg32MMIO[] = {
   }
 
 #define sisSETPATREG() \
-   ((unsigned char *)(pSiS->IOBase + BR(11)))
+   ((UChar *)(pSiS->IOBase + BR(11)))
 
 #define sisSETPATREGL() \
-   ((unsigned long *)(pSiS->IOBase + BR(11)))
+   ((ULong *)(pSiS->IOBase + BR(11)))
 
 /* trigger command */
 #define sisSETCMD(op) \
   { \
-  unsigned long temp; \
+  ULong temp; \
   MMIO_OUT16(pSiS->IOBase, BR(10) + 2, op); \
   temp = MMIO_IN32(pSiS->IOBase, BR(10)); \
   (void)temp; \

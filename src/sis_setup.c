@@ -33,29 +33,10 @@
  *
  */
  
-#include "xf86PciInfo.h"
-#include "xf86Pci.h"
-#include "xf86.h"
-#include "fb.h"
-#include "xf1bpp.h"
-#include "xf4bpp.h"
-#include "xf86_OSproc.h"
-#include "xf86Resources.h"
-#include "xf86_ansic.h"
-#include "xf86Version.h"
-
-#include "xf86cmap.h"
-
 #include "sis.h"
 #include "sis_regs.h"
-#include "sis_dac.h"
 
-#define _XF86DGA_SERVER_
-#include "extensions/xf86dgastr.h"
-
-#include "globals.h"
-#define DPMS_SERVER
-#include "extensions/dpms.h"
+extern int SiSMclk(SISPtr pSiS);
 
 static const char *dramTypeStr[] = {
         "Fast Page DRAM",
@@ -81,9 +62,9 @@ static const int SiS6326MCLKIndex[4][8] = {
 
 static const struct _sis6326mclk {
     CARD16 mclk;
-    unsigned char sr13;
-    unsigned char sr28;
-    unsigned char sr29;
+    UChar  sr13;
+    UChar  sr28;
+    UChar  sr29;
 } SiS6326MCLK[] = {
 	{  0, 0,    0,    0 },
 	{  0, 0,    0,    0 },
@@ -111,16 +92,15 @@ static const struct _sis6326mclk {
 static  void
 sisOldSetup(ScrnInfoPtr pScrn)
 {
-    SISPtr  pSiS = SISPTR(pScrn);
-    int     ramsize[8]  = { 1,  2,  4, 0, 0,  2,  4,  8};
-    int     buswidth[8] = {32, 64, 64, 0, 0, 32, 32, 64 };
-    int     clockTable[4] = { 66, 75, 83, 100 };
-    int     ramtype[4]  = { 5, 0, 1, 3 };
-    int     config;
-    int     temp, i;
-    unsigned char sr23, sr33, sr37;
+    SISPtr pSiS = SISPTR(pScrn);
+    int    ramsize[8]  = { 1,  2,  4, 0, 0,  2,  4,  8};
+    int    buswidth[8] = {32, 64, 64, 0, 0, 32, 32, 64 };
+    int    clockTable[4] = { 66, 75, 83, 100 };
+    int    ramtype[4]  = { 5, 0, 1, 3 };
+    int    config, temp, i;
+    UChar  sr23, sr33, sr37;
 #if 0
-    unsigned char newsr13, newsr28, newsr29;
+    UChar  newsr13, newsr28, newsr29;
 #endif
     pciConfigPtr pdptr, *systemPCIdevices = NULL;
 
@@ -271,10 +251,10 @@ sis300Setup(ScrnInfoPtr pScrn)
                                     100, 100, 100, 100};
     const int adaptermclk300[8] = { 125, 125, 125, 100,
                                     100, 100, 100, 100};
-    unsigned int    config, pciconfig, sr3a, ramtype;
-    unsigned char   temp;
-    int		    cpubuswidth;
-    MessageType	    from = X_PROBED;
+    unsigned int config, pciconfig, sr3a, ramtype;
+    UChar        temp;
+    int		 cpubuswidth;
+    MessageType	 from = X_PROBED;
 
     pSiS->MemClock = SiSMclk(pSiS);
 
@@ -525,10 +505,10 @@ sis315Setup(ScrnInfoPtr pScrn)
 static  void
 sis550Setup(ScrnInfoPtr pScrn)
 {
-    SISPtr  pSiS = SISPTR(pScrn);
-    unsigned int    config, ramtype=0, i;
-    CARD8	    pciconfig, temp;
-    BOOLEAN	    alldone = FALSE;
+    SISPtr       pSiS = SISPTR(pScrn);
+    unsigned int config, ramtype=0, i;
+    CARD8	 pciconfig, temp;
+    Bool	 alldone = FALSE;
 
     pSiS->IsAGPCard = TRUE;
     pSiS->ChipFlags &= ~SiSCF_760UMA;

@@ -1,7 +1,7 @@
 /* $XFree86$ */
 /* $XdotOrg$ */
 /*
- * Register definitions for old and 300 series
+ * Register access macros and register definitions 
  *
  * Copyright (C) 2001-2004 by Thomas Winischhofer, Vienna, Austria
  *
@@ -27,89 +27,219 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Old series register definitions
- * Copyright (C) 1998, 1999 by Alan Hourihane, Wigan, England.
- *
- * Authors:	Thomas Winischhofer <thomas@winischhofer.net>
- *		Alan Hourihane
- *
  */
 
-/* For general use --------------------------------------------------------------- */
+#ifndef _SIS_REGS_H_
+#define _SIS_REGS_H_
+ 
+/* Register access macros  --------------- */
+
+#ifndef SISUSEDEVPORT
 
 #define inSISREG(base)          inb(base)
+#define inSISREGW(base)         inw(base)
+#define inSISREGL(base)         inl(base)
 
 #define outSISREG(base,val)     outb(base,val)
+#define outSISREGW(base,val)    outw(base,val)
+#define outSISREGL(base,val)    outl(base,val)
 
 #define orSISREG(base,val)      			\
 		    do { 				\
-                      unsigned char __Temp = inb(base); \
-                      outb(base, __Temp | (val)); 	\
+                      UChar __Temp = inSISREG(base); 	\
+                      outSISREG(base, __Temp | (val)); 	\
                     } while (0)
 		    
 #define andSISREG(base,val)     			\
 		    do { 				\
-                      unsigned char __Temp = inb(base); \
-                      outb(base, __Temp & (val)); 	\
+                      UChar __Temp = inSISREG(base); 	\
+                      outSISREG(base, __Temp & (val)); 	\
                     } while (0)
-		    
+
 #define inSISIDXREG(base,idx,var)   		\
 		    do { 			\
-                      outb(base, idx); 		\
-		      var = inb((base)+1);	\
+                      outSISREG(base, idx); 	\
+		      var = inSISREG((base)+1);	\
                     } while (0)
-		    
+
 #define outSISIDXREG(base,idx,val)  		\
 		    do { 			\
-                      outb(base, idx); 		\
-		      outb((base)+1, val); 	\
-                    } while (0)	
-		    
-#define orSISIDXREG(base,idx,val)   			\
-		    do { 				\
-                      unsigned char __Temp; 		\
-                      outb(base, idx);   		\
-                      __Temp = inb((base)+1) | (val); 	\
-		      outb((base)+1, __Temp);		\
+                      outSISREG(base, idx); 	\
+		      outSISREG((base)+1, val); \
+                    } while (0)			    
+		    		    
+#define orSISIDXREG(base,idx,val)   				\
+		    do { 					\
+                      UChar __Temp; 				\
+                      outSISREG(base, idx);   			\
+                      __Temp = inSISREG((base)+1) | (val); 	\
+		      outSISREG((base)+1, __Temp);		\
                     } while (0)
 		    
-#define andSISIDXREG(base,idx,and)  			\
-		    do { 				\
-                      unsigned char __Temp; 		\
-                      outb(base, idx);   		\
-                      __Temp = inb((base)+1) & (and); 	\
-		      outb((base)+1, __Temp);		\
+#define andSISIDXREG(base,idx,and)  				\
+		    do { 					\
+                      UChar __Temp; 				\
+                      outSISREG(base, idx);   			\
+                      __Temp = inSISREG((base)+1) & (and); 	\
+		      outSISREG((base)+1, __Temp);		\
                     } while (0)
 		    
-#define setSISIDXREG(base,idx,and,or)   		   	\
-		    do { 				   	\
-                      unsigned char __Temp; 		   	\
-                      outb(base, idx);   		   	\
-                      __Temp = (inb((base)+1) & (and)) | (or); 	\
-		      outb((base)+1, __Temp);			\
+#define setSISIDXREG(base,idx,and,or)   		   		\
+		    do { 				   		\
+                      UChar __Temp; 		   			\
+                      outSISREG(base, idx);   		   		\
+                      __Temp = (inSISREG((base)+1) & (and)) | (or); 	\
+		      outSISREG((base)+1, __Temp);			\
                     } while (0)
+
+#define setSISIDXREGmask(base,idx,data,mask)		   	\
+		    do {				   	\
+		      UChar __Temp;		   		\
+		      outSISREG(base, idx);			\
+		      __Temp = (inSISREG((base)+1)) & (~(mask));\
+		      __Temp |= ((data) & (mask));	   	\
+		      outSISREG((base)+1, __Temp);		\
+		    } while(0)		    
 		    
-#define setSISIDXREGmask(base,idx,data,mask)		   \
-		    do {				   \
-		      unsigned char __Temp;		   \
-		      outb(base, idx);			   \
-		      __Temp = (inb((base)+1)) & (~(mask));\
-		      __Temp |= ((data) & (mask));	   \
-		      outb((base)+1, __Temp);		   \
-		    } while(0)
+#else
 
-#define BITMASK(h,l)    	(((unsigned)(1U << ((h)-(l)+1))-1)<<(l))
-#define GENMASK(mask)   	BITMASK(1?mask,0?mask)
+extern int sisdevport;
 
-#define GETBITS(var,mask)   	(((var) & GENMASK(mask)) >> (0?mask))
-#define SETBITS(val,mask)   	((val) << (0?mask))
-#define SETBIT(n)       	(1<<(n))
+/* Note to self: SEEK_SET is faster than SEEK_CUR */
 
-#define GETBITSTR(val,from,to)  	((GETBITS(val,from)) << (0?to))
-#define SETVARBITS(var,val,from,to) 	(((var)&(~(GENMASK(to)))) | \
-                                    		GETBITSTR(val,from,to))
-#define GETVAR8(var)        ((var)&0xFF)
-#define SETVAR8(var,val)    (var) =  GETVAR8(val)
+static UChar inSISREG(ULong base)
+{
+    UChar tmp;
+    lseek(sisdevport, base, SEEK_SET);
+    read(sisdevport, &tmp, 1);
+    return tmp;
+}
+
+static __inline UShort inSISREGW(ULong base)
+{
+    UShort tmp;
+    lseek(sisdevport, base, SEEK_SET);
+    read(sisdevport, &tmp, 2);
+    return tmp;
+}
+
+static __inline unsigned int inSISREGL(ULong base)
+{
+    ULong tmp;
+    lseek(sisdevport, base, SEEK_SET);
+    read(sisdevport, &tmp, 4);
+    return tmp;
+}
+
+static void outSISREG(ULong base, UChar val)
+{
+    lseek(sisdevport, base, SEEK_SET);
+    write(sisdevport, &val, 1);
+}
+
+static __inline void outSISREGW(ULong base, UShort val)
+{
+    lseek(sisdevport, base, SEEK_SET);
+    write(sisdevport, &val, 2);
+}
+
+static __inline void outSISREGL(ULong base, unsigned int val)
+{
+    lseek(sisdevport, base, SEEK_SET);
+    write(sisdevport, &val, 4);
+}
+
+static void orSISREG(ULong base, UChar val)
+{
+    UChar tmp;
+    lseek(sisdevport, base, SEEK_SET);
+    read(sisdevport, &tmp, 1);
+    tmp |= val;
+    lseek(sisdevport, -1, SEEK_CUR);		     
+    write(sisdevport, &tmp, 1);
+}
+
+static void andSISREG(ULong base, UChar val)
+{
+    UChar tmp;
+    lseek(sisdevport, base, SEEK_SET);
+    read(sisdevport, &tmp, 1);
+    tmp &= val;
+    lseek(sisdevport, base, SEEK_SET);		     
+    write(sisdevport, &tmp, 1);
+}
+
+static void outSISIDXREG(ULong base, UChar idx, UChar val)
+{
+    UChar value[2];
+    value[0] = idx;
+    value[1] = val;
+    lseek(sisdevport, base, SEEK_SET);
+    write(sisdevport, &value[0], 2);
+}
+
+static UChar __inSISIDXREG(ULong base, UChar idx)
+{
+    UChar tmp;
+    lseek(sisdevport, base, SEEK_SET);
+    write(sisdevport, &idx, 1);
+    read(sisdevport, &tmp, 1);
+    return tmp;
+}
+
+#define inSISIDXREG(base,idx,var)  var = __inSISIDXREG(base, idx);
+	    
+static void orSISIDXREG(ULong base, UChar idx, UChar val)
+{
+    UChar tmp;
+    lseek(sisdevport, base, SEEK_SET);
+    write(sisdevport, &idx, 1);
+    read(sisdevport, &tmp, 1);
+    tmp |= val;
+    lseek(sisdevport, base + 1, SEEK_SET);		     
+    write(sisdevport, &tmp, 1);
+}
+
+static void andSISIDXREG(ULong base, UChar idx, UChar val)
+{
+    UChar tmp;
+    lseek(sisdevport, base, SEEK_SET);
+    write(sisdevport, &idx, 1);
+    read(sisdevport, &tmp, 1);
+    tmp &= val;
+    lseek(sisdevport, base + 1, SEEK_SET);		     		     
+    write(sisdevport, &tmp, 1);
+}
+
+static void setSISIDXREG(ULong base, UChar idx,
+			 UChar myand, UChar myor)
+{
+    UChar tmp;
+    lseek(sisdevport, base, SEEK_SET);
+    write(sisdevport, &idx, 1);
+    read(sisdevport, &tmp, 1);
+    tmp &= myand;
+    tmp |= myor;
+    lseek(sisdevport, base + 1, SEEK_SET);		     		     
+    write(sisdevport, &tmp, 1);
+}			 
+	    
+static void setSISIDXREGmask(ULong base, UChar idx, 
+                             UChar data, UChar mask)
+{
+    UChar tmp;
+    lseek(sisdevport, base, SEEK_SET);
+    write(sisdevport, &idx, 1);
+    read(sisdevport, &tmp, 1);
+    tmp &= ~(mask);
+    tmp |= (data & mask);
+    lseek(sisdevport, base + 1, SEEK_SET);		     		     
+    write(sisdevport, &tmp, 1);
+}
+
+#endif  /* SISUSEDEVPORT */
+
+/* Port offsets  --------------- */
 
 #define AROFFSET        0x40
 #define ARROFFSET       0x41
@@ -144,79 +274,14 @@
 #define SISPART5    pSiS->RelIO + PART5OFFSET
 #define SISCAP      pSiS->RelIO + CAPTUREOFFSET
 #define SISVID      pSiS->RelIO + VIDEOOFFSET
+#define SISCOLIDXR  pSiS->RelIO + COLREGOFFSET - 1
 #define SISCOLIDX   pSiS->RelIO + COLREGOFFSET
 #define SISCOLDATA  pSiS->RelIO + COLREGOFFSET + 1
 #define SISCOL2IDX  SISPART5
 #define SISCOL2DATA SISPART5 + 1
 #define SISPEL      pSiS->RelIO + PELMASKOFFSET
 
-#define vc_index_offset    CAPTUREOFFSET  /* Video capture - unused */
-#define vc_data_offset     (CAPTUREOFFSET + 1)
-#define vi_index_offset    VIDEOOFFSET
-#define vi_data_offset     (VIDEOOFFSET + 1)
-#define crt2_index_offset  PART1OFFSET
-#define crt2_port_offset   (PART1OFFSET + 1)
-#define sr_index_offset    SROFFSET
-#define sr_data_offset     (SROFFSET + 1)
-#define cr_index_offset    CROFFSET
-#define cr_data_offset     (CROFFSET + 1)
-#define input_stat         INPUTSTATOFFSET
-
-/* For old chipsets (5597/5598, 6326, 530/620) ------------ */
-/* SR (3C4) */
-#define BankReg 0x06
-#define ClockReg 0x07
-#define CPUThreshold 0x08
-#define CRTThreshold 0x09
-#define CRTCOff 0x0A
-#define DualBanks 0x0B
-#define MMIOEnable 0x0B
-#define RAMSize 0x0C
-#define Mode64 0x0C
-#define ExtConfStatus1 0x0E
-#define ClockBase 0x13
-#define LinearAdd0 0x20
-#define LinearAdd1 0x21
-#define GraphEng 0x27
-#define MemClock0 0x28
-#define MemClock1 0x29
-#define XR2A 0x2A
-#define XR2B 0x2B
-#define TurboQueueBase 0x2C
-#define FBSize 0x2F
-#define ExtMiscCont5 0x34
-#define ExtMiscCont9 0x3C
-
-/* 3x4 */
-#define Offset 0x13
-
-/* SiS Registers for 300, 540, 630, 730, 315, 550, 650, 740 ---------------------- */
-
-/* VGA standard register */
-#define  Index_SR_Graphic_Mode                  0x06
-#define  Index_SR_RAMDAC_Ctrl                   0x07
-#define  Index_SR_Threshold_Ctrl1               0x08
-#define  Index_SR_Threshold_Ctrl2               0x09
-#define  Index_SR_Misc_Ctrl                     0x0F
-#define  Index_SR_DDC                           0x11
-#define  Index_SR_Feature_Connector_Ctrl        0x12
-#define  Index_SR_DRAM_Sizing                   0x14
-#define  Index_SR_DRAM_State_Machine_Ctrl       0x15
-#define  Index_SR_AGP_PCI_State_Machine         0x21
-#define  Index_SR_Internal_MCLK0                0x28
-#define  Index_SR_Internal_MCLK1                0x29
-#define  Index_SR_Internal_DCLK1                0x2B
-#define  Index_SR_Internal_DCLK2                0x2C
-#define  Index_SR_Internal_DCLK3                0x2D
-#define  Index_SR_Ext_Clock_Sel                 0x32
-#define  Index_SR_Int_Status                    0x34
-#define  Index_SR_Int_Enable                    0x35
-#define  Index_SR_Int_Reset                     0x36
-#define  Index_SR_Power_On_Trap                 0x38
-#define  Index_SR_Power_On_Trap2                0x39
-#define  Index_SR_Power_On_Trap3                0x3A
-
-/* video registers (300/630/730/315/550/650/740 only) */
+/* Video registers (300/315/330/340 series only)  --------------- */
 #define  Index_VI_Passwd                        0x00
 
 /* Video overlay horizontal start/end, unit=screen pixels */
@@ -296,19 +361,19 @@
 #define  Index_VI_Control_Misc1                 0x31
 #define  Index_VI_Control_Misc2                 0x32
 
-/* TW: Subpicture registers */
+/* Subpicture registers */
 #define  Index_VI_SubPict_Buf_Start_Low		0x33
 #define  Index_VI_SubPict_Buf_Start_Middle	0x34
 #define  Index_VI_SubPict_Buf_Start_High	0x35
 
-/* TW: What is this ? */
+/* What is this ? */
 #define  Index_VI_SubPict_Buf_Preset_Low	0x36
 #define  Index_VI_SubPict_Buf_Preset_Middle	0x37
 
-/* TW: Subpicture pitch, unit=16 bytes */
+/* Subpicture pitch, unit=16 bytes */
 #define  Index_VI_SubPict_Buf_Pitch		0x38
 
-/* TW: Subpicture scaling control */
+/* Subpicture scaling control */
 #define  Index_VI_SubPict_Hor_Scale_Low		0x39
 #define  Index_VI_SubPict_Hor_Scale_High	0x3A
 #define  Index_VI_SubPict_Vert_Scale_Low	0x3B
@@ -343,7 +408,7 @@
 #define  Index_MPEG_UV_Buf_Preset_Middle	0x69
 #define  Index_MPEG_Y_UV_Buf_Preset_High	0x6A
 
-/* The following registers only exist on the 315 series */
+/* The following registers only exist on the 315/330/340 series */
 
 /* Bit 16:24 of Y_U_V buf start address */
 #define  Index_VI_Y_Buf_Start_Over		0x6B
@@ -362,7 +427,7 @@
 
 #define  Index_VI_Control_Misc3			0x74
 
-/* 340: */
+/* 340 and later: */
 /* DDA registers 0x75 - 0xb4 */
 /* threshold high 0xb5, 0xb6 */
 #define  Index_VI_Line_Buffer_Size_High		0xb7
@@ -389,8 +454,8 @@
 #define  VI_Misc1_DisableGraphicsAtOverlay      0x01 /* Disables graphics display in overlay area */
 #define  VI_Misc1_BOB_Enable			0x02 /* Enable BOB de-interlacer */
 #define	 VI_Misc1_Line_Merge			0x04
-#define  VI_Misc1_Field_Mode			0x08 /* ? */
-#define  VI_Misc1_Non_Interleave                0x10 /* ? 0x20 ? - Odd and Even fields are not interleaved ? */
+#define  VI_Misc1_Field_Mode			0x08 /* ? Assume even/odd fields interleaved in memory ? */
+#define  VI_Misc1_Non_Interleave                0x10 /* ? Odd and Even fields are not interleaved ? */
 #define  VI_Misc1_Buf_Addr_Lock			0x20 /* 315 series only? */
 /* #define  VI_Misc1_?                          0x40  */
 /* #define  VI_Misc1_?                          0x80  */
@@ -418,7 +483,7 @@
 #define  VI_ROP_Always				0x0F
 
 
-/* video registers (6326 and 530/620) --------------- */
+/* Video registers (6326 and 530/620) --------------- */
 #define  Index_VI6326_Passwd                        0x80
 
 /* Video overlay horizontal start/end, unit=screen pixels */
@@ -567,48 +632,9 @@
 
 /* --- end of 6326 video registers ---------------------------------- */
 
-/* register base (6326 only) */
+/* TV register base (6326 only) */
 #define  Index_TV6326_TVOutIndex		    0xE0
 #define  Index_TV6326_TVOutData		    	    0xE1
-
-/*
- *  CRT_2 function control register ---------------------------------
- */
-#define  Index_CRT2_FC_CONTROL                  0x00
-#define  Index_CRT2_FC_SCREEN_HIGH              0x04
-#define  Index_CRT2_FC_SCREEN_MID               0x05
-#define  Index_CRT2_FC_SCREEN_LOW               0x06
-#define  Index_CRT2_FC_ENABLE_WRITE             0x24
-#define  Index_CRT2_FC_VR                       0x25
-#define  Index_CRT2_FC_VCount                   0x27
-#define  Index_CRT2_FC_VCount1                  0x28
-
-#define  Index_310_CRT2_FC_VR                   0x30  /* d[1] = vertical retrace */
-#define  Index_310_CRT2_FC_RT			0x33  /* d[7] = retrace in progress */
-
-/* video attributes - these should probably be configurable on the fly
- *                    so users with different desktop sizes can keep
- *                    captured data off the desktop
- */
-#define _VINWID                                  704
-#define _VINHGT                         _VINHGT_NTSC
-#define _VINHGT_NTSC                             240
-#define _VINHGT_PAL                              290
-#define _VIN_WINDOW                  (704 * 291 * 2)
-#define _VBI_WINDOW                   (704 * 64 * 2)
-
-#define _VIN_FIELD_EVEN                            1
-#define _VIN_FIELD_ODD                             2
-#define _VIN_FIELD_BOTH                            4
-
-
-/* i2c registers (not on 300/315 series) */
-#define X_INDEXREG      0x14
-#define X_PORTREG       0x15
-#define X_DATA          0x0f
-#define I2C_SCL         0x00
-#define I2C_SDA         0x01
-#define I2C_DELAY       10
 
 /* mmio registers for video */
 #define REG_PRIM_CRT_COUNTER    0x8514
@@ -616,4 +642,8 @@
 /* MPEG MMIO registers (630 and later) ----------------------------------------- */
 
 /* Not public (yet?) */
+
+
+#endif  /* SIS_REGS_H_ */
+
 
