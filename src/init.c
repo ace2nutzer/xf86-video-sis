@@ -4985,12 +4985,12 @@ SiSBuildBuiltInModeList(ScrnInfoPtr pScrn, BOOLEAN includelcdmodes, BOOLEAN isfo
 
 }
 
-/* Build a list of supported modes */
+/* Translate a mode number into the VESA pendant */
 int
 SiSTranslateToVESA(ScrnInfoPtr pScrn, int modenumber)
 {
-   SISPtr         pSiS = SISPTR(pScrn);
-   int i;
+   SISPtr pSiS = SISPTR(pScrn);
+   int    i = 0;
 
    /* Initialize our pointers */
    if(pSiS->VGAEngine == SIS_300_VGA) {
@@ -5008,16 +5008,49 @@ SiSTranslateToVESA(ScrnInfoPtr pScrn, int modenumber)
    } else return -1;
 
    if(modenumber <= 0x13) return modenumber;
+   
+#ifdef SIS315H
+   if(pSiS->ROM661New) {
+      while(SiS_EModeIDTable661[i].Ext_ModeID != 0xff) {
+         if(SiS_EModeIDTable661[i].Ext_ModeID == modenumber) {
+            return (int)SiS_EModeIDTable661[i].Ext_VESAID;
+         }
+         i++;
+      }
+   } else {
+#endif   
+      while(pSiS->SiS_Pr->SiS_EModeIDTable[i].Ext_ModeID != 0xff) {
+         if(pSiS->SiS_Pr->SiS_EModeIDTable[i].Ext_ModeID == modenumber) {
+            return (int)pSiS->SiS_Pr->SiS_EModeIDTable[i].Ext_VESAID;
+         }
+         i++;
+      }
+#ifdef SIS315H
+   }
+#endif        
+   return -1;
+}
 
-   i = 0;
-   while(pSiS->SiS_Pr->SiS_EModeIDTable[i].Ext_ModeID != 0xff) {
-      if(pSiS->SiS_Pr->SiS_EModeIDTable[i].Ext_ModeID == modenumber) {
-         return (int)pSiS->SiS_Pr->SiS_EModeIDTable[i].Ext_VESAID;
+/* Translate a new BIOS mode number into the driver's pendant */
+int
+SiSTranslateToOldMode(int modenumber)
+{
+#ifdef SIS315H
+   int    i = 0;
+  
+   while(SiS_EModeIDTable661[i].Ext_ModeID != 0xff) {
+      if(SiS_EModeIDTable661[i].Ext_ModeID == modenumber) {
+         if(SiS_EModeIDTable661[i].Ext_MyModeID) 
+            return (int)SiS_EModeIDTable661[i].Ext_MyModeID;
+	 else 
+	    return modenumber;
       }
       i++;
    }
-   return -1;
+#endif   
+   return modenumber;
 }
+
 #endif  /* Xfree86 */
 
 #ifdef LINUX_KERNEL

@@ -6878,6 +6878,12 @@ SISRestore(ScrnInfoPtr pScrn)
 	      int backupscaler = pSiS->SiS_Pr->UsePanelScaler;
 	      int backupcenter = pSiS->SiS_Pr->CenterScreen;
 	      unsigned long backupspecialtiming = pSiS->SiS_Pr->SiS_CustomT;
+	      int mymode = pSiS->OldMode;
+	      
+	      if((pSiS->VGAEngine == SIS_315_VGA) && (pSiS->ROM661New) && (!pSiS->sisfbfound)) {
+	         /* New BIOS has set mode, therefore eventually translate number */
+	         mymode = SiSTranslateToOldMode(mymode);
+	      }
 
  	      if((pSiS->VBFlags & (VB_301B|VB_301C|VB_302B|VB_301LV|VB_302LV|VB_302ELV))) {
 	        /* !!! REQUIRED for 630+301B-DH, otherwise the text modes
@@ -6888,8 +6894,8 @@ SISRestore(ScrnInfoPtr pScrn)
 	         unsigned char temp;
 	         inSISIDXREG(SISCR, 0x30, temp);
 	         if(temp & 0x20) {
-	            if(pSiS->OldMode == 0x03) {
-	      	       pSiS->OldMode = 0x13;
+	            if(mymode == 0x03) {
+	      	       mymode = 0x13;
 		       changedmode = TRUE;
 	            }
 	         }
@@ -6897,16 +6903,21 @@ SISRestore(ScrnInfoPtr pScrn)
 
 	      pSiS->SiS_Pr->UseCustomMode = FALSE;
 	      pSiS->SiS_Pr->CRT1UsesCustomMode = FALSE;
-	      pSiS->SiS_Pr->UsePanelScaler = pSiS->sisfbscalelcd;
 	      pSiS->SiS_Pr->CenterScreen = 0;
-	      pSiS->SiS_Pr->SiS_CustomT = pSiS->sisfbspecialtiming;
-	      SiSSetMode(pSiS->SiS_Pr, &pSiS->sishw_ext, pScrn, pSiS->OldMode, FALSE);
+	      if(pSiS->sisfbfound) {
+	         pSiS->SiS_Pr->UsePanelScaler = pSiS->sisfbscalelcd;
+	         pSiS->SiS_Pr->SiS_CustomT = pSiS->sisfbspecialtiming;
+	      } else {
+	         pSiS->SiS_Pr->UsePanelScaler = -1;
+		 /* Leave CustomT as it is */
+	      }
+	      SiSSetMode(pSiS->SiS_Pr, &pSiS->sishw_ext, pScrn, mymode, FALSE);
 	      if(changedmode) {
-	   	 pSiS->OldMode = 0x03;
+	   	 mymode = 0x03;
 		 outSISIDXREG(SISCR,0x34,0x03);
 	      }
 	      SISSpecialRestore(pScrn);
-	      SiS_GetSetModeID(pScrn,pSiS->OldMode);
+	      SiS_GetSetModeID(pScrn,pSiS->OldMode); /* NOT mymode! */
 	      pSiS->SiS_Pr->UsePanelScaler = backupscaler;
 	      pSiS->SiS_Pr->CenterScreen = backupcenter;
 	      pSiS->SiS_Pr->SiS_CustomT = backupspecialtiming;
