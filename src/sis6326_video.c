@@ -1,33 +1,31 @@
-/* $XFree86$ */
+/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/sis/sis6326_video.c,v 1.9 2003/08/07 12:52:23 twini Exp $ */
 /*
  * Xv driver for SiS 5597/5598, 6236 and 530/620.
  *
- * Copyright (C) 2001-2004 by Thomas Winischhofer, Vienna, Austria.
+ * Copyright 2002, 2003 by Thomas Winischhofer, Vienna, Austria.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1) Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2) Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3) The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
+ * Based on sis_video.c which is
+ *    Copyright 2002, 2003 by Thomas Winischhofer, Vienna, Austria.
  *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESSED OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Permission to use, copy, modify, distribute, and sell this software and its
+ * documentation for any purpose is hereby granted without fee, provided that
+ * the above copyright notice appear in all copies and that both that
+ * copyright notice and this permission notice appear in supporting
+ * documentation, and that the name of the copyright holder not be used in
+ * advertising or publicity pertaining to distribution of the software without
+ * specific, written prior permission.  The copyright holder makes no representations
+ * about the suitability of this software for any purpose.  It is provided
+ * "as is" without express or implied warranty.
+ *
+ * THE COPYRIGHT HOLDER DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
+ * INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO
+ * EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+ * CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE,
+ * DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+ * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+ * PERFORMANCE OF THIS SOFTWARE.
  *
  * Author:	Thomas Winischhofer <thomas@winischhofer.net>
- *
  */
 
 #include "sis.h"
@@ -392,7 +390,7 @@ typedef struct {
    (SISPortPrivPtr)((SISPTR(pScrn))->adaptor->pPortPrivates[0].ptr)
 
 static void
-SIS6326SetPortDefaults(ScrnInfoPtr pScrn, SISPortPrivPtr pPriv)
+SIS6326SetPortDefaults (ScrnInfoPtr pScrn, SISPortPrivPtr pPriv)
 {
     SISPtr    pSiS = SISPTR(pScrn);
     
@@ -578,11 +576,7 @@ SIS6326SetupImageVideo(ScreenPtr pScreen)
     SIS6326SetPortDefaults(pScrn, pPriv);
 
     /* gotta uninit this someplace */
-#if defined(REGION_NULL)
-    REGION_NULL(pScreen, &pPriv->clip);
-#else
-    REGION_INIT(pScreen, &pPriv->clip, NullBox, 0);
-#endif
+    REGION_INIT(pScreen, &pPriv->clip, NullBox, 0); 
 
     pSiS->adaptor = adapt;
 
@@ -594,7 +588,6 @@ SIS6326SetupImageVideo(ScreenPtr pScreen)
     xvDisableGfx = MAKE_ATOM("XV_DISABLE_GRAPHICS");
 
     SIS6326ResetVideo(pScrn);
-    pSiS->ResetXv = SIS6326ResetVideo;
 
     return adapt;
 }
@@ -1390,25 +1383,29 @@ SIS6326PutImage(
    SIS6326DisplayVideo(pScrn, pPriv);
 
    /* update cliplist */
+#if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,3,99,0,0)
    if(  pPriv->autopaintColorKey &&
         (pPriv->grabbedByV4L ||
-#if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,3,99,0,0)
 	 !RegionsEqual(&pPriv->clip, clipBoxes)) ) {
-#else
-         !REGION_EQUAL(pScrn->pScreen, &pPriv->clip, clipBoxes)) ) {
-#endif
      /* We always paint colorkey for V4L */
      if(!pPriv->grabbedByV4L)
      	REGION_COPY(pScrn->pScreen, &pPriv->clip, clipBoxes);
      /* draw these */
-#if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,2,99,0,0)
      XAAFillSolidRects(pScrn, pPriv->colorKey, GXcopy, ~0,
                     REGION_NUM_RECTS(clipBoxes),
                     REGION_RECTS(clipBoxes));
-#else
-     xf86XVFillKeyHelper(pScrn->pScreen, pPriv->colorKey, clipBoxes);
-#endif
    }
+#else
+   if(  pPriv->autopaintColorKey &&
+        (pPriv->grabbedByV4L ||
+	 !REGION_EQUAL(pScrn->pScreen, &pPriv->clip, clipBoxes)) ) {
+     /* We always paint colorkey for V4L */
+     if(!pPriv->grabbedByV4L)
+     	REGION_COPY(pScrn->pScreen, &pPriv->clip, clipBoxes);
+     /* draw these */
+     xf86XVFillKeyHelper(pScrn->pScreen, pPriv->colorKey, clipBoxes);
+   }
+#endif
 
    pPriv->currentBuf ^= 1;
 
@@ -1661,7 +1658,7 @@ SIS6326DisplaySurface (
    SIS6326DisplayVideo(pScrn, pPriv);
 
    if(pPriv->autopaintColorKey) {
-#if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,2,99,0,0)
+#if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,3,99,0,0)
    	XAAFillSolidRects(pScrn, pPriv->colorKey, GXcopy, ~0,
                     REGION_NUM_RECTS(clipBoxes),
                     REGION_RECTS(clipBoxes));

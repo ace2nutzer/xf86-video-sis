@@ -1,34 +1,28 @@
-/* $XFree86$ */
+/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/sis/sis_setup.c,v 1.18 2003/08/27 23:32:50 twini Exp $ */
 /*
  * Basic hardware and memory detection
  *
- * Copyright (C) 2001-2004 by Thomas Winischhofer, Vienna, Austria.
+ * Copyright 2001, 2002, 2003 by Thomas Winischhofer, Vienna, Austria.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1) Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2) Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3) The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
+ * Permission to use, copy, modify, distribute, and sell this software and its
+ * documentation for any purpose is hereby granted without fee, provided that
+ * the above copyright notice appear in all copies and that both that
+ * copyright notice and this permission notice appear in supporting
+ * documentation, and that the name of the copyright holder not be used in
+ * advertising or publicity pertaining to distribution of the software without
+ * specific, written prior permission.  The copyright holder makes no representations
+ * about the suitability of this software for any purpose.  It is provided
+ * "as is" without express or implied warranty.
  *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESSED OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * THE COPYRIGHT HOLDER DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
+ * INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO
+ * EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+ * CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE,
+ * DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+ * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+ * PERFORMANCE OF THIS SOFTWARE.
  *
- * Author:  	Thomas Winischhofer <thomas@winischhofer.net>
- *
- * Ideas and methods for old series based on code by Can-Ru Yeou, SiS Inc.
+ * Author:  Thomas Winischhofer <thomas@winischhofer.net>
  *
  */
  
@@ -64,8 +58,8 @@ static const char *dramTypeStr[] = {
         "SDR SDRAM",
         "SGRAM",
         "ESDRAM",
-	"DDR SDRAM",  /* for 550/650/etc */
-	"DDR SDRAM",  /* for 550/650/etc */
+	"DDR SDRAM",  /* for 550/650 */
+	"DDR SDRAM",  /* for 550/650 */
 	"VCM"	      /* for 630 */
         "" };
 
@@ -116,7 +110,7 @@ sisOldSetup(ScrnInfoPtr pScrn)
     int     ramtype[4]  = { 5, 0, 1, 3 };
     int     config;
     int     temp, i;
-    unsigned char sr23, sr33, sr37;
+    unsigned char sr23, sr33, sr34, sr37;
 #if 0
     unsigned char newsr13, newsr28, newsr29;
 #endif
@@ -199,6 +193,7 @@ sisOldSetup(ScrnInfoPtr pScrn)
     if(pSiS->oldChipset >= OC_SIS82204) {
        inSISIDXREG(SISSR, 0x23, sr23);
        inSISIDXREG(SISSR, 0x33, sr33);
+       inSISIDXREG(SISSR, 0x34, sr34);
        if(pSiS->oldChipset >= OC_SIS530A) sr33 &= ~0x08;
        if(sr33 & 0x09) {   	  			/* 5597: Sync DRAM timing | One cycle EDO ram;   */
        		pSiS->Flags |= (sr33 & SYNCDRAM);	/* 6326: Enable SGRam timing | One cycle EDO ram */
@@ -272,7 +267,7 @@ sis300Setup(ScrnInfoPtr pScrn)
     unsigned int    config, pciconfig, sr3a, ramtype;
     unsigned char   temp;
     int		    cpubuswidth;
-    MessageType	    from = X_PROBED;
+    int 	    from = X_PROBED;
 
     pSiS->MemClock = SiSMclk(pSiS);
 
@@ -464,7 +459,7 @@ sis315Setup(ScrnInfoPtr pScrn)
 	    pSiS->BusWidth);
 }
 
-/* For 550, 65x, 740, 661, 741, 660, 760 */
+/* For 550, 65x, 74x, 660 */
 static  void
 sis550Setup(ScrnInfoPtr pScrn)
 {
@@ -479,82 +474,27 @@ sis550Setup(ScrnInfoPtr pScrn)
 
     if(pSiS->Chipset == PCI_CHIP_SIS660) {
 
-       if(pSiS->sishw_ext.jChipType >= SIS_660) {
+       /* TODO - this is entirely guessed */
 
-          /* UMA - shared fb */
-          pSiS->ChipFlags &= ~SiSCF_760UMA;
-          pciconfig = pciReadByte(0x00000000, 0x4c);
-	  if(pciconfig & 0xe0) {
-	     pScrn->videoRam = ((1 << (pciconfig & 0xe0) >> 5) - 2) * 32768;
-	     pSiS->ChipFlags |= SiSCF_760UMA;
-	     xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
-	     	"%dK shared video RAM\n",
-		pScrn->videoRam);
-	  } else pScrn->videoRam = 0;
-
-	  /* LFB - local framebuffer */
-	  pciconfig = (pciReadByte(0x00000800, 0xcd) >> 1) & 0x03;
-	  if(pciconfig == 0x01)      pScrn->videoRam += 32768;
-	  else if(pciconfig == 0x03) pScrn->videoRam += 65536;
-
-	  if((pScrn->videoRam < 32768) || (pScrn->videoRam > 131072)) {
-	     xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
-	     	"Illegal video Ram size (%d) detected, using BIOS setting\n",
-		pScrn->videoRam);
-	  } else {
-	     pSiS->BusWidth = 64;
-	     ramtype = 8;
-	     alldone = TRUE;
-	  }
-
-       } else {
-
-          int dimmnum, maxmem;
-
-          if(pSiS->sishw_ext.jChipType == SIS_741) {
-	     dimmnum = 4;
-	     maxmem = 131072;
-          } else {  /* 661 */
-	     dimmnum = 3;
-	     maxmem = 65536;
-	  }
-
-	  pciconfig = pciReadByte(0x00000000, 0x64);
-          if(pciconfig & 0x80) {
-             pScrn->videoRam = (1 << (((pciconfig & 0x70) >> 4) - 1)) * 32768;
-	     if((pScrn->videoRam < 32768) || (pScrn->videoRam > maxmem)) {
-	        xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
-			"Illegal video RAM size (%d) detected, using BIOS setting\n",
-			pScrn->videoRam);
+       pciconfig = pciReadByte(0x00000000, 0x64);
+       if(pciconfig & 0x80) {
+          pScrn->videoRam = (1 << (((pciconfig & 0x70) >> 4) + 22)) / 1024;
+	  pSiS->BusWidth = 64;
+	  for(i=0; i<=3; i++) {
+	     if(pciconfig & (1 << i)) {
+		temp = pciReadByte(0x00000000, 0x60 + i);
+		xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
+		   "DIMM%d is %s SDRAM\n",
+		   i, (temp & 0x40) ? "DDR" : "SDR");
 	     } else {
-	        pSiS->BusWidth = 64;
-	        for(i=0; i<=(dimmnum - 1); i++) {
-	           if(pciconfig & (1 << i)) {
-		      temp = pciReadByte(0x00000000, 0x60 + i);
-		      xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
-		         "DIMM%d is %s SDRAM\n",
-		         i, (temp & 0x40) ? "DDR" : "SDR");
-	           } else {
-	              xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
-	     	         "DIMM%d is not installed\n", i);
-	           }
-	        }
-	        pciconfig = pciReadByte(0x00000000, 0x7c);
-	        if(pciconfig & 0x02) ramtype = 8;
-	        else ramtype = 4;
-		if(pSiS->sishw_ext.jChipType == SIS_741) {
-		   /* Is this really correct? */
-		   ramtype = 12 - ramtype;
-		   xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
-		   	"SiS741 PCI RamType %d\n", ramtype);
-		   /* For now, we don't trust it */
-		   inSISIDXREG(SISSR, 0x79, config);
-		   ramtype = (config & 0x01) ? 8 : 4;
-		}
-	        alldone = TRUE;
+	        xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
+	     	   "DIMM%d is not installed\n", i);
 	     }
-          }
-
+	  }
+	  pciconfig = pciReadByte(0x00000000, 0x7c);
+	  if(pciconfig & 0x02) ramtype = 8;
+	  else ramtype = 4;
+	  alldone = TRUE;
        }
 
     } else if(pSiS->Chipset == PCI_CHIP_SIS650) {
@@ -597,37 +537,16 @@ sis550Setup(ScrnInfoPtr pScrn)
     }
 
     if(!alldone) {
-
-       if(pSiS->Chipset == PCI_CHIP_SIS660) {
-          inSISIDXREG(SISCR, 0x79, config);
-	  pSiS->BusWidth = (config & 0x04) ? 128 : 64;
-          ramtype = (config & 0x01) ? 8 : 4;
-	  if(pSiS->sishw_ext.jChipType >= SIS_660) {
-	     pScrn->videoRam = 0;
-	     if(config & 0xf0) {
-	        pScrn->videoRam = (1 << ((config & 0xf0) >> 4)) * 1024;
-	     }
-	     inSISIDXREG(SISCR, 0x78, config);
-	     config &= 0x30;
-	     if(config) {
-	        if(config == 0x10) pScrn->videoRam += 32768;
-		else		   pScrn->videoRam += 65536;
-	     }
-	  } else {
-	     pScrn->videoRam = (1 << ((config & 0xf0) >> 4)) * 1024;
-	  }
+       xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
+	   "Shared Memory Area is disabled - awaiting doom\n");
+       inSISIDXREG(SISSR, 0x14, config);
+       pScrn->videoRam = (((config & 0x3F) + 1) * 4) * 1024;
+       if(pSiS->Chipset == PCI_CHIP_SIS650) {
+          ramtype = (((config & 0x80) >> 7) << 2) + 4;
+	  pSiS->BusWidth = 64;   /* (config & 0x40) ? 128 : 64; */
        } else {
-          xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
-	      "Shared Memory Area is disabled - awaiting doom\n");
-          inSISIDXREG(SISSR, 0x14, config);
-          pScrn->videoRam = (((config & 0x3F) + 1) * 4) * 1024;
-          if(pSiS->Chipset == PCI_CHIP_SIS650) {
-             ramtype = (((config & 0x80) >> 7) << 2) + 4;
-	     pSiS->BusWidth = 64;   /* (config & 0x40) ? 128 : 64; */
-          } else {
-             ramtype = 4;
-	     pSiS->BusWidth = 64;
-          }
+          ramtype = 4;
+	  pSiS->BusWidth = 64;
        }
     }
 
@@ -643,7 +562,7 @@ sis550Setup(ScrnInfoPtr pScrn)
             "DRAM bus width: %d bit\n",
 	    pSiS->BusWidth);
 
-    /* DDR -> Mclk * 2 - needed for bandwidth calculation */
+    /* TW: DDR -> Mclk * 2 - needed for bandwidth calculation */
     if(ramtype == 8) pSiS->MemClock *= 2;
 }
 
@@ -669,7 +588,7 @@ SiSSetup(ScrnInfoPtr pScrn)
 	break;
     case    PCI_CHIP_SIS550:
     case    PCI_CHIP_SIS650: /* + 740 */
-    case    PCI_CHIP_SIS660: /* + 661,741,760 */
+    case    PCI_CHIP_SIS660: /* + 760 */
         sis550Setup(pScrn);
 	break;
     case    PCI_CHIP_SIS5597:

@@ -1,35 +1,32 @@
-/* $XFree86$ */
+/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/sis/sis310_accel.c,v 1.20 2003/09/02 18:28:35 twini Exp $ */
 /*
- * 2D Acceleration for SiS 315 and 330 series
+ * 2D Acceleration for SiS 315 and Xabre series
+ * (315/550/650/740/M650/651/652/M652/330/660/M660/760/M760)
  *
- * Copyright (C) 2001-2004 by Thomas Winischhofer, Vienna, Austria
+ * Copyright 2002, 2003 by Thomas Winischhofer, Vienna, Austria
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1) Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2) Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3) The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
+ * Permission to use, copy, modify, distribute, and sell this software and its
+ * documentation for any purpose is hereby granted without fee, provided that
+ * the above copyright notice appear in all copies and that both that
+ * copyright notice and this permission notice appear in supporting
+ * documentation, and that the name of the copyright holder not be used in
+ * advertising or publicity pertaining to distribution of the software without
+ * specific, written prior permission.  The copyright holder makes no representations
+ * about the suitability of this software for any purpose.  It is provided
+ * "as is" without express or implied warranty.
  *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESSED OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * THE COPYRIGHT HOLDER DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
+ * INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO
+ * EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+ * CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE,
+ * DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+ * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+ * PERFORMANCE OF THIS SOFTWARE.
  *
+ * Based on sis300_accel.c
+ * 2003/08/18: Rewritten for using VRAM command queue (TW)
  *
  * Author:  	Thomas Winischhofer <thomas@winischhofer.net>
- *
- * 2003/08/18: Rewritten for using VRAM command queue
  *
  */
 
@@ -41,7 +38,6 @@
 #include "compiler.h"
 #include "xaa.h"
 #include "xaalocal.h"
-#include "xaarop.h"
 
 #include "sis.h"
 #include "sis310_accel.h"
@@ -61,7 +57,7 @@
 			 * checking the trapezoid for such a case is very
 			 * time-intensive, it is faster to let it be done
 			 * by the generic polygon functions.
-			 * Does not work on 330 series at all, hangs the engine.
+			 * Does not work on XABRE at all, hangs the engine.
 			 * Even with correct trapezoids, this is slower than
 			 * doing it by the CPU.
                          */
@@ -69,9 +65,9 @@
 #undef CTSCE          	/* Use/Don't use CPUToScreenColorExpand. Disabled
 			 * because it is slower than doing it by the CPU.
 			 * Indirect mode does not work in VRAM queue mode.
-			 * Does not work on 330 series (even in MMIO mode).
+			 * Does not work on Xabre (even in MMIO mode).
 			 */
-#undef CTSCE_DIRECT    	/* Use direct method - This works (on both 315 and 330 at
+#undef CTSCE_DIRECT    	/* Use direct method - This works (on both 315 and Xabre at
 			 * least in VRAM queue mode) but we don't use this either,
 			 * because it's slower than doing it by the CPU. (Using it
 			 * would require defining CTSCE)
@@ -187,9 +183,9 @@ extern void SiSSubsequentCPUToScreenTexture(ScrnInfoPtr	pScrn,
 				int width, int height);
 
 extern CARD32 SiSAlphaTextureFormats[2];
-extern CARD32 SiSTextureFormats[2];
-CARD32 SiSAlphaTextureFormats[2] = { PICT_a8      , 0 };
-CARD32 SiSTextureFormats[2]      = { PICT_a8r8g8b8, 0 };
+extern CARD32 SiSTextureFormats[2];		
+CARD32 SiSAlphaTextureFormats[2] = { PICT_a8,       0 };
+CARD32 SiSTextureFormats[2]      = { PICT_a8r8g8b8, 0 };		
 #endif
 #endif
 
@@ -222,16 +218,13 @@ SiS315AccelInit(ScreenPtr pScreen)
 	int		topFB;
 	int             reservedFbSize;
 	int             UsableFbSize;
-	BoxRec          Avail;
-#ifdef SISDUALHEAD
-        SISEntPtr       pSiSEnt = NULL;
-#endif
-#ifdef CTSCE
 	unsigned char   *AvailBufBase;
+	BoxRec          Avail;
+#ifdef CTSCE
 #ifndef CTSCE_DIRECT
 	int             i;
 #endif
-#endif
+#endif	
 
 	pSiS->AccelInfoPtr = infoPtr = XAACreateInfoRec();
 	if(!infoPtr) return FALSE;
@@ -248,10 +241,6 @@ SiS315AccelInit(ScreenPtr pScreen)
 	if((pScrn->bitsPerPixel != 8) && (pScrn->bitsPerPixel != 16) &&
 		(pScrn->bitsPerPixel != 32))
 			return FALSE;
-
-#ifdef SISDUALHEAD
-	pSiSEnt = pSiS->entityPrivate;
-#endif
 
 	/* BitBlt */
 	infoPtr->SetupForScreenToScreenCopy = SiSSetupForScreenToScreenCopy;
@@ -294,14 +283,14 @@ SiS315AccelInit(ScreenPtr pScreen)
 	infoPtr->Mono8x8PatternFillFlags = NO_PLANEMASK |
 					   HARDWARE_PATTERN_SCREEN_ORIGIN |
 					   HARDWARE_PATTERN_PROGRAMMED_BITS |
-					   BIT_ORDER_IN_BYTE_MSBFIRST;
+					   BIT_ORDER_IN_BYTE_MSBFIRST ;
 
 #ifdef SISVRAMQ
 	/* 8x8 color pattern fill (MMIO support not implemented) */
 	infoPtr->SetupForColor8x8PatternFill = SiSSetupForColor8x8PatternFill;
 	infoPtr->SubsequentColor8x8PatternFillRect = SiSSubsequentColor8x8PatternFillRect;
 	infoPtr->Color8x8PatternFillFlags = NO_PLANEMASK |
-	 				    HARDWARE_PATTERN_SCREEN_ORIGIN |
+					    HARDWARE_PATTERN_SCREEN_ORIGIN |
 					    NO_TRANSPARENCY;
 #endif
 
@@ -352,7 +341,7 @@ SiS315AccelInit(ScreenPtr pScreen)
 	 *
 	 * SLOW! SLOWER! SLOWEST!
 	 *
-	 * Does not work on 330 series, hangs the engine (both VRAM and MMIO).
+	 * Does not work on XABRE, hangs the engine (both VRAM and MMIO).
 	 * Does not work in VRAM queue mode.
 	 */
 #ifndef SISVRAMQ
@@ -386,35 +375,25 @@ SiS315AccelInit(ScreenPtr pScreen)
 	pSiS->PerColorExpandBufferSize = 0;
 #endif
 
-	pSiS->RenderAccelArray = NULL;
-
 #ifdef INCL_RENDER
 #ifdef RENDER
         /* Render */
         if(((pScrn->bitsPerPixel == 16) || (pScrn->bitsPerPixel == 32)) && pSiS->doRender) {
 	   int i, j;
-#ifdef SISDUALHEAD
-	   if(pSiSEnt) pSiS->RenderAccelArray = pSiSEnt->RenderAccelArray;
-#endif
-	   if(!pSiS->RenderAccelArray) {
-	      if((pSiS->RenderAccelArray = xnfcalloc(65536, 1))) {
-#ifdef SISDUALHEAD
-  	         if(pSiSEnt) pSiSEnt->RenderAccelArray = pSiS->RenderAccelArray;
-#endif
-	         for(i = 0; i < 256; i++) {
-	            for(j = 0; j < 256; j++) {
-	               pSiS->RenderAccelArray[(i << 8) + j] = (i * j) / 255;
-		    }
-	         }
+	   if((pSiS->RenderAccelArray = xnfcalloc(65536, 1))) {
+	      for(i = 0; i < 256; i++) {
+	         for(j = 0; j < 256; j++) {
+	            pSiS->RenderAccelArray[(i << 8) + j] = (i * j) / 255;
+		 }
 	      }
-	   }
-	   if(pSiS->RenderAccelArray) {
+
 	      pSiS->AccelLinearScratch = NULL;
 
 	      infoPtr->SetupForCPUToScreenAlphaTexture = SiSSetupForCPUToScreenAlphaTexture;
 	      infoPtr->SubsequentCPUToScreenAlphaTexture = SiSSubsequentCPUToScreenTexture;
 	      infoPtr->CPUToScreenAlphaTextureFormats = SiSAlphaTextureFormats;
-	      infoPtr->CPUToScreenAlphaTextureFlags = XAA_RENDER_NO_TILE;
+	      infoPtr->CPUToScreenAlphaTextureFlags = XAA_RENDER_NO_TILE |
+	      					      XAA_RENDER_NO_SRC_ALPHA;
 
               infoPtr->SetupForCPUToScreenTexture = SiSSetupForCPUToScreenTexture;
               infoPtr->SubsequentCPUToScreenTexture = SiSSubsequentCPUToScreenTexture;
@@ -445,8 +424,8 @@ SiS315AccelInit(ScreenPtr pScreen)
 	 *   UsableFbSize  ColorExpandBuffers |  DRI-Heap   HWCursor  CommandQueue
 	 *                                 topFB
 	 */
-#ifdef CTSCE
 	AvailBufBase = pSiS->FbBase + UsableFbSize;
+#ifdef CTSCE
 	if(pSiS->ColorExpandBufferNumber) {
 #ifdef CTSCE_DIRECT
 	   infoPtr->ColorExpandBase = (unsigned char *)AvailBufBase;
@@ -471,7 +450,7 @@ SiS315AccelInit(ScreenPtr pScreen)
 	if(Avail.y2 < pScrn->currentMode->VDisplay) {
 	   xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
 		"Not enough video RAM for accelerator. At least "
-		"%dKB needed, %ldKB available\n",
+		"%dKB needed, %dKB available\n",
 		((((pScrn->displayWidth * pScrn->bitsPerPixel/8)   /* +8 for make it sure */
 		     * pScrn->currentMode->VDisplay) + reservedFbSize) / 1024) + 8,
 		pSiS->maxxfbmem/1024);
@@ -525,6 +504,47 @@ SiSRestoreAccelState(ScrnInfoPtr pScrn)
 }
 #endif
 
+static const int sisALUConv[] =
+{
+    0x00,       /* dest = 0;            0,      GXclear,        0 */
+    0x88,       /* dest &= src;         DSa,    GXand,          0x1 */
+    0x44,       /* dest = src & ~dest;  SDna,   GXandReverse,   0x2 */
+    0xCC,       /* dest = src;          S,      GXcopy,         0x3 */
+    0x22,       /* dest &= ~src;        DSna,   GXandInverted,  0x4 */
+    0xAA,       /* dest = dest;         D,      GXnoop,         0x5 */
+    0x66,       /* dest = ^src;         DSx,    GXxor,          0x6 */
+    0xEE,       /* dest |= src;         DSo,    GXor,           0x7 */
+    0x11,       /* dest = ~src & ~dest; DSon,   GXnor,          0x8 */
+    0x99,       /* dest ^= ~src ;       DSxn,   GXequiv,        0x9 */
+    0x55,       /* dest = ~dest;        Dn,     GXInvert,       0xA */
+    0xDD,       /* dest = src|~dest ;   SDno,   GXorReverse,    0xB */
+    0x33,       /* dest = ~src;         Sn,     GXcopyInverted, 0xC */
+    0xBB,       /* dest |= ~src;        DSno,   GXorInverted,   0xD */
+    0x77,       /* dest = ~src|~dest;   DSan,   GXnand,         0xE */
+    0xFF,       /* dest = 0xFF;         1,      GXset,          0xF */
+};
+
+/* same ROP but with Pattern as Source */
+static const int sisPatALUConv[] =
+{
+    0x00,       /* dest = 0;            0,      GXclear,        0 */
+    0xA0,       /* dest &= src;         DPa,    GXand,          0x1 */
+    0x50,       /* dest = src & ~dest;  PDna,   GXandReverse,   0x2 */
+    0xF0,       /* dest = src;          P,      GXcopy,         0x3 */
+    0x0A,       /* dest &= ~src;        DPna,   GXandInverted,  0x4 */
+    0xAA,       /* dest = dest;         D,      GXnoop,         0x5 */
+    0x5A,       /* dest = ^src;         DPx,    GXxor,          0x6 */
+    0xFA,       /* dest |= src;         DPo,    GXor,           0x7 */
+    0x05,       /* dest = ~src & ~dest; DPon,   GXnor,          0x8 */
+    0xA5,       /* dest ^= ~src ;       DPxn,   GXequiv,        0x9 */
+    0x55,       /* dest = ~dest;        Dn,     GXInvert,       0xA */
+    0xF5,       /* dest = src|~dest ;   PDno,   GXorReverse,    0xB */
+    0x0F,       /* dest = ~src;         Pn,     GXcopyInverted, 0xC */
+    0xAF,       /* dest |= ~src;        DPno,   GXorInverted,   0xD */
+    0x5F,       /* dest = ~src|~dest;   DPan,   GXnand,         0xE */
+    0xFF,       /* dest = 0xFF;         1,      GXset,          0xF */
+};
+
 static void SiSSetupForScreenToScreenCopy(ScrnInfoPtr pScrn,
                                 int xdir, int ydir, int rop,
                                 unsigned int planemask, int trans_color)
@@ -549,7 +569,7 @@ static void SiSSetupForScreenToScreenCopy(ScrnInfoPtr pScrn,
 	   SiSSetupSRCTrans(trans_color)
 	   SiSSetupCMDFlag(TRANSPARENT_BITBLT)
 	} else {
-	   SiSSetupROP(XAACopyROP[rop])
+	   SiSSetupROP(sisALUConv[rop])
 	   /* Set command - not needed, both 0 */
 	   /* SiSSetupCMDFlag(BITBLT | SRCVIDEO) */
 	}
@@ -584,9 +604,7 @@ static void SiSSubsequentScreenToScreenCopy(ScrnInfoPtr pScrn,
 	 * correctly if there are 512x512 slots, but no 256x256
 	 * slots. This leads to catastrophic data fed to us.
 	 * Filter this out here and warn the user.
-	 * Fixed in 4.3.99.10 (?) and Debian's 4.3.0.1
 	 */
-#if (XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,3,99,10,0)) && (XF86_VERSION_CURRENT != XF86_VERSION_NUMERIC(4,3,0,1,0))
         if((src_x < 0)  ||
 	   (dst_x < 0)  ||
 	   (src_y < 0)  ||
@@ -604,7 +622,6 @@ static void SiSSubsequentScreenToScreenCopy(ScrnInfoPtr pScrn,
 	   	"Please update libxaa.a to avoid this error.\n");
 	   return;
 	}
-#endif
 
 	/* Although the chip knows the direction to use
 	 * if the source and destination areas overlap,
@@ -672,14 +689,14 @@ SiSSetupForSolidFill(ScrnInfoPtr pScrn, int color,
 	SiSSetupDSTColorDepth(pSiS->SiS310_AccelDepth);
 	SiSCheckQueue(16 * 1);
 	SiSSetupPATFGDSTRect(color, pSiS->scrnOffset, -1)
-	SiSSetupROP(XAAPatternROP[rop])
+	SiSSetupROP(sisPatALUConv[rop])
 	SiSSetupCMDFlag(PATFG)
         SiSSyncWP
 #else
   	SiSSetupPATFG(color)
 	SiSSetupDSTRect(pSiS->scrnOffset, -1)
 	SiSSetupDSTColorDepth(pSiS->DstColor);
-	SiSSetupROP(XAAPatternROP[rop])
+	SiSSetupROP(sisPatALUConv[rop])
 	SiSSetupCMDFlag(PATFG | pSiS->SiS310_AccelDepth)
 #endif
 }
@@ -726,7 +743,7 @@ SiSSubsequentSolidFillRect(ScrnInfoPtr pScrn,
 /* This would work better if XAA would provide us with valid trapezoids.
  * In fact, with small trapezoids the left and the right edge often cross
  * each other which causes drawing errors (filling over whole scanline).
- * DOES NOT WORK ON 330 SERIES, HANGS THE ENGINE.
+ * DOES NOT WORK ON XABRE, HANGS THE ENGINE.
  */
 #ifdef TRAP
 static void
@@ -817,7 +834,7 @@ SiSSetupForSolidLine(ScrnInfoPtr pScrn, int color, int rop,
 	SiSCheckQueue(16 * 3);
         SiSSetupLineCountPeriod(1, 1)
 	SiSSetupPATFGDSTRect(color, pSiS->scrnOffset, -1)
-	SiSSetupROP(XAAPatternROP[rop])
+	SiSSetupROP(sisPatALUConv[rop])
 	SiSSetupCMDFlag(PATFG | LINE)
         SiSSyncWP
 #else
@@ -825,7 +842,7 @@ SiSSetupForSolidLine(ScrnInfoPtr pScrn, int color, int rop,
 	SiSSetupPATFG(color)
 	SiSSetupDSTRect(pSiS->scrnOffset, -1)
 	SiSSetupDSTColorDepth(pSiS->DstColor)
-	SiSSetupROP(XAAPatternROP[rop])
+	SiSSetupROP(sisPatALUConv[rop])
 	SiSSetupCMDFlag(PATFG | LINE | pSiS->SiS310_AccelDepth)
 #endif
 }
@@ -936,7 +953,7 @@ SiSSetupForDashedLine(ScrnInfoPtr pScrn,
 	SiSSetupPATFG(fg)
 #endif
 
-	SiSSetupROP(XAAPatternROP[rop])
+	SiSSetupROP(sisPatALUConv[rop])
 
 	SiSSetupCMDFlag(LINE | LINE_STYLE)
 
@@ -1016,7 +1033,7 @@ SiSSetupForMonoPatternFill(ScrnInfoPtr pScrn,
 
 	SiSSetupMONOPAT(patx,paty)
 
-	SiSSetupROP(XAAPatternROP[rop])
+	SiSSetupROP(sisPatALUConv[rop])
 
 #ifdef SISVRAMQ
         SiSSetupCMDFlag(PATMONO)
@@ -1075,7 +1092,7 @@ SiSSubsequentMonoPatternFill(ScrnInfoPtr pScrn,
 
 /* --- Trapezoid --- */
 
-/* Does not work at all on 330 series */
+/* Does not work at all on Xabre */
 
 #ifdef TRAP
 static void
@@ -1175,7 +1192,7 @@ SiSSetupForColor8x8PatternFill(ScrnInfoPtr pScrn, int patternx, int patterny,
 	   patadr += 16;  /* = 64 due to (CARD32 *) */
 	}
 
-	SiSSetupROP(XAAPatternROP[rop])
+	SiSSetupROP(sisPatALUConv[rop])
 
 	SiSSetupCMDFlag(PATPATREG)
 
@@ -1234,7 +1251,7 @@ SiSSetupForCPUToScreenColorExpandFill(ScrnInfoPtr pScrn,
 
 #ifdef SISVRAMQ
         SiSSetupDSTColorDepth(pSiS->SiS310_AccelDepth);
-	SiSSetupROP(XAACopyROP[rop]);
+	SiSSetupROP(sisALUConv[rop]);
 	SiSSetupSRCFGDSTRect(fg, pSiS->scrnOffset, -1)
 	if(bg == -1) {
 	   SiSSetupCMDFlag(TRANSPARENT | ENCOLOREXP | SRCVIDEO);
@@ -1245,7 +1262,7 @@ SiSSetupForCPUToScreenColorExpandFill(ScrnInfoPtr pScrn,
         SiSSyncWP
 #else
 	SiSSetupSRCXY(0,0);
-	SiSSetupROP(XAACopyROP[rop]);
+	SiSSetupROP(sisALUConv[rop]);
 	SiSSetupSRCFG(fg);
 	SiSSetupDSTRect(pSiS->scrnOffset, -1);
 	SiSSetupDSTColorDepth(pSiS->DstColor);
@@ -1346,7 +1363,7 @@ SiSSetupForScanlineCPUToScreenColorExpandFill(ScrnInfoPtr pScrn,
 #endif
 	SiSSetupSRCXY(0,0);
 
-	SiSSetupROP(XAACopyROP[rop]);
+	SiSSetupROP(sisALUConv[rop]);
 	SiSSetupSRCFG(fg);
 	SiSSetupDSTRect(pSiS->scrnOffset, -1);
 #ifndef SISVRAMQ
@@ -1457,7 +1474,7 @@ SiSSubsequentColorExpandScanline(ScrnInfoPtr pScrn, int bufno)
  * limit the drawing width (similar to width set by SetupRect).
  * XAA provides the pattern bitmap with scrnOffset (displayWidth * bpp/8)
  * offset, but this is not supported by the hardware.
- * DOES NOT WORK ON 330 SERIES, HANGS ENGINE.
+ * DOES NOT WORK ON XABRE, HANGS ENGINE.
  */
 
 #ifdef STSCE
@@ -1474,7 +1491,7 @@ SiSSetupForScreenToScreenColorExpand(ScrnInfoPtr pScrn,
 	SiSSetupDSTColorDepth(pSiS->DstColor)
 #endif
 	SiSSetupDSTRect(pSiS->scrnOffset, -1)
-	SiSSetupROP(XAACopyROP[rop])
+	SiSSetupROP(sisALUConv[rop])
 	SiSSetupSRCFG(fg)
 	/* SiSSetupSRCXY(0,0) */
 
@@ -1699,8 +1716,8 @@ SiSSetupForCPUToScreenAlphaTexture(ScrnInfoPtr pScrn,
 	unsigned char *renderaccelarray;
 
 #ifdef ACCELDEBUG
-	xf86DrvMsg(0, X_INFO, "AT: op %d type %d ARGB %x %x %x %x, w %d h %d A-pitch %d\n",
-		op, alphaType, alpha, red, green, blue, width, height, alphaPitch);
+	xf86DrvMsg(0, X_INFO, "AT: op %d RGB %x %x %x, w %d h %d A-pitch %d\n",
+		op, red, green, blue, width, height, alphaPitch);
 #endif
 
     	if(op != PictOpOver) return FALSE;
@@ -1711,15 +1728,13 @@ SiSSetupForCPUToScreenAlphaTexture(ScrnInfoPtr pScrn,
     	sizeNeeded = pitch * height;
     	if(pScrn->bitsPerPixel == 16) sizeNeeded <<= 1;
 
-	if(!((renderaccelarray = pSiS->RenderAccelArray)))
-	   return FALSE;
-
-	if(!SiSAllocateLinear(pScrn, sizeNeeded))
-	   return FALSE;
-
 	red &= 0xff00;
 	green &= 0xff00;
 	blue &= 0xff00;
+	renderaccelarray = pSiS->RenderAccelArray;
+
+	if(!SiSAllocateLinear(pScrn, sizeNeeded))
+	   return FALSE;
 
 #ifdef SISVRAMQ
         SiSSetupDSTColorDepth(pSiS->SiS310_AccelDepth);
@@ -1744,38 +1759,17 @@ SiSSetupForCPUToScreenAlphaTexture(ScrnInfoPtr pScrn,
 	   SiSIdle
 	}
 
-
-	if(alpha == 0xffff) {
-
-           while(height--) {
-	      for(x = 0; x < width; x++) {
-	         myalpha = alphaPtr[x];
-	         dstPtr[x] = (renderaccelarray[red + myalpha] << 16)  |
-	     	             (renderaccelarray[green + myalpha] << 8) |
-			     renderaccelarray[blue + myalpha]         |
-			     myalpha << 24;
-	      }
-	      dstPtr += pitch;
-	      alphaPtr += alphaPitch;
-           }
-
-	} else {
-
-	   alpha &= 0xff00;
-
-	   while(height--) {
-	      for(x = 0; x < width; x++) {
-	         myalpha = alphaPtr[x];
-	         dstPtr[x] = (renderaccelarray[alpha + myalpha] << 24) |
-		    	     (renderaccelarray[red + myalpha] << 16)   |
-	   	    	     (renderaccelarray[green + myalpha] << 8)  |
-			     renderaccelarray[blue + myalpha];
-	      }
-	      dstPtr += pitch;
-	      alphaPtr += alphaPitch;
-           }
-
-	}
+        while(height--) {
+	   for(x = 0; x < width; x++) {
+	      myalpha = alphaPtr[x];
+	      dstPtr[x] = (renderaccelarray[red + myalpha] << 16)  |
+	   		  (renderaccelarray[green + myalpha] << 8) |
+			  renderaccelarray[blue + myalpha]         |
+			  myalpha << 24;
+	   }
+	   dstPtr += pitch;
+	   alphaPtr += alphaPitch;
+        }
 
     	return TRUE;
 }
@@ -1852,7 +1846,8 @@ SiSSubsequentCPUToScreenTexture(ScrnInfoPtr pScrn,
 	long srcbase, dstbase;
 
 	srcbase = pSiS->AccelLinearScratch->offset << 1;
-	if(pScrn->bitsPerPixel == 32) srcbase <<= 1;
+	if(pScrn->bitsPerPixel == 32)
+	   srcbase <<= 1;
 
 #ifdef ACCELDEBUG
 	xf86DrvMsg(0, X_INFO, "FIRE: scrbase %x dx %d dy %d w %d h %d\n",
