@@ -1309,14 +1309,15 @@ static void    SISWaitVBRetrace(ScrnInfoPtr pScrn);
 void           SISWaitRetraceCRT1(ScrnInfoPtr pScrn);
 void           SISWaitRetraceCRT2(ScrnInfoPtr pScrn);
 static Bool    InRegion(int x, int y, region r);
+static USHORT  SiS_CheckModeCRT1(ScrnInfoPtr pScrn, DisplayModePtr mode,
+				 unsigned long VBFlags, BOOLEAN hcm);
+static USHORT  SiS_CheckModeCRT2(ScrnInfoPtr pScrn, DisplayModePtr mode,
+				 unsigned long VBFlags, BOOLEAN hcm);				 
 #ifdef SISMERGED
 static void    SISMergePointerMoved(int scrnIndex, int x, int y);
 #endif
 BOOLEAN        SiSBridgeIsInSlaveMode(ScrnInfoPtr pScrn);
-USHORT 	       SiS_CalcModeIndex(ScrnInfoPtr pScrn, DisplayModePtr mode,
-				 unsigned long VBFlags, BOOLEAN hcm);
-USHORT         SiS_CheckCalcModeIndex(ScrnInfoPtr pScrn, DisplayModePtr mode,
-				 unsigned long VBFlags, BOOLEAN hcm);
+USHORT	       SiS_GetModeNumber(ScrnInfoPtr pScrn, DisplayModePtr mode, unsigned long VBFlags);
 unsigned char  SiS_GetSetBIOSScratch(ScrnInfoPtr pScrn, USHORT offset, unsigned char value);
 #ifdef DEBUG
 static void    SiSDumpModeInfo(ScrnInfoPtr pScrn, DisplayModePtr mode);

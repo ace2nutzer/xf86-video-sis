@@ -302,11 +302,11 @@ void SISLCDPreInit(ScrnInfoPtr pScrn, Bool quiet)
      */
 #ifdef SISDUALHEAD
     if((!pSiS->DualHeadMode) || (!pSiS->SecondHead)) {
-#endif
+#endif 
        if((pSiS->VGAEngine == SIS_315_VGA) &&
-          (pSiS->VBFlags & (VB_301|VB_301B|VB_301C|VB_302B)) &&
+          (pSiS->VBFlags & VB_SISTMDSBRIDGE) &&
           (!(pSiS->VBFlags & VB_30xBDH)) &&
-	  (!pSiS->VESA)) {
+	  (pSiS->VESA != 1)) {
 
           if(pSiS->forcecrt2redetection) {
              pSiS->VBFlags &= ~CRT2_LCD;
@@ -390,13 +390,13 @@ void SISLCDPreInit(ScrnInfoPtr pScrn, Bool quiet)
 		inSISIDXREG(SISCR,0x37,CR37);
 	     }
 	  }
-	  if(((CR36 & 0x0f) == 0x0f) && (pSiS->SiS_Pr->CP_HaveCustomData)) {
+	  if((CR36 & 0x0f) == 0x0f) {
 	     pSiS->VBLCDFlags |= VB_LCD_CUSTOM;
              pSiS->LCDheight = pSiS->SiS_Pr->CP_MaxY;
 	     pSiS->LCDwidth = pSiS->SiS_Pr->CP_MaxX;
 	     if(CR37 & 0x10) pSiS->VBLCDFlags |= VB_LCD_EXPANDING;
 	     xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
-		"Detected LCD/Plasma panel (max. X %d Y %d, preferred %dx%d, RGB%d)\n",
+		"Detected LCD/Plasma panel (max. X %d Y %d, pref. %dx%d, RGB%d)\n",
  		pSiS->SiS_Pr->CP_MaxX, pSiS->SiS_Pr->CP_MaxY,
 		pSiS->SiS_Pr->CP_PreferredX, pSiS->SiS_Pr->CP_PreferredY,
 		(CR37 & 0x01) ? 18 : 24);
@@ -603,7 +603,7 @@ void SISCRT2PreInit(ScrnInfoPtr pScrn, Bool quiet)
     unsigned char CR32; 
 
     /* CRT2-VGA only supported on these bridges */
-    if(!(pSiS->VBFlags & (VB_301|VB_301B|VB_301C|VB_302B)))
+    if(!(pSiS->VBFlags & VB_SISVGA2BRIDGE))
        return;
 
     inSISIDXREG(SISCR, 0x32, CR32);
@@ -768,7 +768,7 @@ SISSense30x(ScrnInfoPtr pScrn, Bool quiet)
        }
     }
 
-    if(!(pSiS->VBFlags & (VB_301|VB_301B|VB_301C|VB_302B))) {
+    if(!(pSiS->VBFlags & VB_SISVGA2BRIDGE)) {
        vga2 = vga2_c = 0;
     }
     
@@ -787,7 +787,7 @@ SISSense30x(ScrnInfoPtr pScrn, Bool quiet)
     outSISIDXREG(SISPART2,0x00,((backupP2_00 | 0x1c) & 0xfc));
 
     inSISIDXREG(SISPART2,0x4d,backupP2_4d);
-    if(pSiS->VBFlags & (VB_301C|VB_301LV|VB_302LV|VB_302ELV)) {
+    if(pSiS->VBFlags & VB_SISYPBPRBRIDGE) {
        outSISIDXREG(SISPART2,0x4d,(backupP2_4d & ~0x10));
     }
     
@@ -828,7 +828,7 @@ SISSense30x(ScrnInfoPtr pScrn, Bool quiet)
        orSISIDXREG(SISPART4,0x0d,0x04);
     }
 
-    if((pSiS->VGAEngine == SIS_315_VGA) && (pSiS->VBFlags & (VB_301C|VB_301LV|VB_302LV|VB_302ELV))) {
+    if((pSiS->VGAEngine == SIS_315_VGA) && (pSiS->VBFlags & VB_SISYPBPRBRIDGE)) {
        if(pSiS->SenseYPbPr) {
           outSISIDXREG(SISPART2,0x4d,(backupP2_4d | 0x10));
           SiS_DDC2Delay(pSiS->SiS_Pr, 0x2000);
@@ -1052,16 +1052,16 @@ Bool SISRedetectCRT2Type(ScrnInfoPtr pScrn)
      * there is no way of detecting this). 
      */
     if((pSiS->VGAEngine == SIS_315_VGA) &&
-       (pSiS->VBFlags & (VB_301|VB_301B|VB_301C|VB_302B)) &&
+       (pSiS->VBFlags & VB_SISTMDSBRIDGE) &&
        (!(pSiS->VBFlags & VB_30xBDH)) &&
-       (!pSiS->VESA)) {
+       (pSiS->VESA != 1)) {
        SISLCDPreInit(pScrn, TRUE);
     } else {
        pSiS->VBFlags |= (pSiS->detectedCRT2Devices & CRT2_LCD);
     }
     
     /* Secondary VGA is only supported on these bridges: */
-    if(pSiS->VBFlags & (VB_301|VB_301B|VB_301C|VB_302B)) {
+    if(pSiS->VBFlags & VB_SISVGA2BRIDGE) {
        SISCRT2PreInit(pScrn, TRUE);
     }
     
@@ -1087,6 +1087,8 @@ Bool SISRedetectCRT2Type(ScrnInfoPtr pScrn)
        pSiS->VBFlags &= ~(CRT1_LCDA);       
        pSiS->VBFlags_backup = pSiS->VBFlags;
     }
+    
+    pSiS->VBFlagsInit = pSiS->VBFlags;
     
     /* Save new detection result registers to write them back in EnterVT() */
     inSISIDXREG(SISCR,0x32,pSiS->myCR32);

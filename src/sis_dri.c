@@ -52,9 +52,13 @@
 #undef SISHAVECOMPATLAYER
 #ifdef XORG_VERSION_CURRENT
 #define SISHAVECOMPATLAYER
+#define SISHAVECREATEBUSID
 #else
 # if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,4,99,7,0)
 # define SISHAVECOMPATLAYER
+# endif
+# if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,4,99,99,0)
+# undef SISHAVECREATEBUSID  /* Waiting, waiting, waiting... */
 # endif
 #endif
 
@@ -294,15 +298,19 @@ Bool SISDRIScreenInit(ScreenPtr pScreen)
   pDRIInfo->drmDriverName = SISKernelDriverName;
   pDRIInfo->clientDriverName = SISClientDriverName;
 
+#ifdef SISHAVECREATEBUSID  
   if(xf86LoaderCheckSymbol("DRICreatePCIBusID")) {
      pDRIInfo->busIdString = DRICreatePCIBusID(pSIS->PciInfo);
   } else {
+#endif  
      pDRIInfo->busIdString = xalloc(64);
      sprintf(pDRIInfo->busIdString, "PCI:%d:%d:%d",
              ((pciConfigPtr)pSIS->PciInfo->thisCard)->busnum,
       	     ((pciConfigPtr)pSIS->PciInfo->thisCard)->devnum,
       	     ((pciConfigPtr)pSIS->PciInfo->thisCard)->funcnum);   
+#ifdef SISHAVECREATEBUSID  	     
   }
+#endif
 
   /* Hack to keep old DRI working -- checked for major==1 and
    * minor==1.

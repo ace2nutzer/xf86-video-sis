@@ -1412,10 +1412,12 @@ SiSEstimateCRT2Clock(ScrnInfoPtr pScrn, BOOLEAN IsForMergedFBCRT2)
 	      else                  return 122000;
 	   } else if(pSiS->VBLCDFlags & VB_LCD_1600x1200) {
 	      return 162000;
-	   } else if((pSiS->VBLCDFlags & VB_LCD_CUSTOM) && (pSiS->SiS_Pr->CP_HaveCustomData)) {
+	   } else if((pSiS->VBLCDFlags & VB_LCD_CUSTOM) && (pSiS->SiS_Pr->CP_MaxClock)) {
 	      return pSiS->SiS_Pr->CP_MaxClock;
-	   } else
-	      return 108000;
+	   } else {
+	      if(pSiS->VBFlags & VB_301C) return 162000;
+	      else return 108000;
+	   }
 	} else if(pSiS->VBFlags & CRT2_TV) {
 	   if(pSiS->VBFlags & VB_CHRONTEL) {
 	      switch(pSiS->VGAEngine) {

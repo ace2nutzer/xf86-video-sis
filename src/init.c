@@ -960,7 +960,7 @@ SiS_GetModeID_LCD(int VGAEngine, ULONG VBFlags, int HDisplay, int VDisplay,
 	     break;
 	case 1400:
 	     if(VGAEngine == SIS_315_VGA) {
-	        if(VBFlags & (VB_301B | VB_301C | VB_302B | VB_302LV | VB_302ELV)) {
+	        if(VBFlags & (VB_301C | VB_302LV | VB_302ELV)) {
 		   if((LCDwidth == 1400) || (LCDwidth == 1600) || (LCDwidth == 1680)) {
 		      ModeIndex = ModeIndex_1400x1050[Depth];
 		   }
@@ -969,18 +969,20 @@ SiS_GetModeID_LCD(int VGAEngine, ULONG VBFlags, int HDisplay, int VDisplay,
 	     break;
 	case 1600:
 	     if(VGAEngine == SIS_315_VGA) {
-	        if(VBFlags & (VB_301C | VB_302B | VB_302LV | VB_302ELV)) {
+	        if(VBFlags & (VB_301C | VB_302LV | VB_302ELV)) {
 	           if(VDisplay == 1200) ModeIndex = ModeIndex_1600x1200[Depth];
 		}
 	     }
 	     break;
+#ifndef VB_FORBID_CRT2LCD_OVER_1600	     
 	case 1680:
 	     if(VGAEngine == SIS_315_VGA) {
-	        if(VBFlags & (VB_301C | VB_302B | VB_302LV | VB_302ELV)) {
+	        if(VBFlags & (VB_301C | VB_302LV | VB_302ELV)) {
 	           if(VDisplay == 1050) ModeIndex = ModeIndex_1680x1050[Depth];
 		}
 	     }
 	     break;
+#endif	     
       }
    }
 
@@ -3653,28 +3655,29 @@ BOOLEAN
 SiSBIOSSetMode(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo, ScrnInfoPtr pScrn,
                DisplayModePtr mode, BOOLEAN IsCustom)
 {
-   SISPtr  pSiS = SISPTR(pScrn);
-   UShort  ModeNo=0;
+   SISPtr pSiS = SISPTR(pScrn);
+   UShort ModeNo = 0;
    
    SiS_Pr->UseCustomMode = FALSE;
 
    if((IsCustom) && (SiS_CheckBuildCustomMode(pScrn, mode, pSiS->VBFlags))) {
 
-         xf86DrvMsgVerb(pScrn->scrnIndex, X_INFO, 3, "Setting custom mode %dx%d\n",
+      xf86DrvMsgVerb(pScrn->scrnIndex, X_INFO, 3, "Setting custom mode %dx%d\n",
 	 	SiS_Pr->CHDisplay,
 		(mode->Flags & V_INTERLACE ? SiS_Pr->CVDisplay * 2 :
 		   (mode->Flags & V_DBLSCAN ? SiS_Pr->CVDisplay / 2 :
 		      SiS_Pr->CVDisplay)));
 
-	 return(SiSSetMode(SiS_Pr, HwInfo, pScrn, ModeNo, TRUE));
+   } else {
 
+      /* Don't need vbflags here; checks done earlier */
+      ModeNo = SiS_GetModeNumber(pScrn, mode, 0);
+      if(!ModeNo) return FALSE;
+
+      xf86DrvMsgVerb(pScrn->scrnIndex, X_INFO, 3, "Setting standard mode 0x%x\n", ModeNo);
+      
    }
-
-   ModeNo = SiS_CalcModeIndex(pScrn, mode, pSiS->VBFlags, pSiS->HaveCustomModes);
-   if(!ModeNo) return FALSE;
-
-   xf86DrvMsgVerb(pScrn->scrnIndex, X_INFO, 3, "Setting standard mode 0x%x\n", ModeNo);
-
+      
    return(SiSSetMode(SiS_Pr, HwInfo, pScrn, ModeNo, TRUE));
 }
 
@@ -3698,9 +3701,8 @@ SiSBIOSSetModeCRT2(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo, ScrnInfoPtr pScrn,
    SiS_Pr->UseCustomMode = FALSE;
 
    /* Remember: Custom modes for CRT2 are ONLY supported
-    * 		-) on 315/330 series,
-    *           -) on the 30x/B/C, and
-    *           -) if CRT2 is LCD or VGA
+    *     -) on the 30x/B/C, and
+    *     -) if CRT2 is LCD or VGA, or CRT1 is LCDA
     */
 
    if((IsCustom) && (SiS_CheckBuildCustomMode(pScrn, mode, pSiS->VBFlags))) {
@@ -3709,13 +3711,7 @@ SiSBIOSSetModeCRT2(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo, ScrnInfoPtr pScrn,
 
    } else {
 
-         BOOLEAN havecustommodes = pSiS->HaveCustomModes;
-
-#ifdef SISMERGED
-	 if(pSiS->MergedFB) havecustommodes = pSiS->HaveCustomModes2;
-#endif
-
-         ModeNo = SiS_CalcModeIndex(pScrn, mode, pSiS->VBFlags, havecustommodes);
+         ModeNo = SiS_GetModeNumber(pScrn, mode, 0);
          if(!ModeNo) return FALSE;
 
    }
@@ -3754,7 +3750,7 @@ SiSBIOSSetModeCRT2(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo, ScrnInfoPtr pScrn,
    }
 #endif
 
-   /* We don't clear the buffer under X */
+   /* We don't clear the buffer in X */
    SiS_Pr->SiS_flag_clearbuffer=0;
 
    if(SiS_Pr->UseCustomMode) {
@@ -3893,7 +3889,7 @@ SiSBIOSSetModeCRT1(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo, ScrnInfoPtr pScrn,
 
    } else {
 
-         ModeNo = SiS_CalcModeIndex(pScrn, mode, pSiS->VBFlags, pSiS->HaveCustomModes);
+         ModeNo = SiS_GetModeNumber(pScrn, mode, 0);
          if(!ModeNo) return FALSE;
 
          xf86DrvMsgVerb(pScrn->scrnIndex, X_INFO, 3,
@@ -3912,7 +3908,7 @@ SiSBIOSSetModeCRT1(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo, ScrnInfoPtr pScrn,
    SiSSetLVDSetc(SiS_Pr, HwInfo);
    SiSDetermineROMUsage(SiS_Pr, HwInfo);
 
-   /* We don't clear the buffer under X */
+   /* We don't clear the buffer in X */
    SiS_Pr->SiS_flag_clearbuffer = 0;
 
    SiS_SetReg(SiS_Pr->SiS_P3c4,0x05,0x86);
@@ -4430,7 +4426,39 @@ SiS_CheckBuildCustomMode(ScrnInfoPtr pScrn, DisplayModePtr mode, int VBFlags)
    return 1;
 }
 
-/* Build a list of supported modes */
+int
+SiS_FindPanelFromDB(SISPtr pSiS, USHORT panelvendor, USHORT panelproduct, int *maxx, int *maxy)
+{
+   int i, j;
+   BOOLEAN done = FALSE;
+    
+   i = 0;
+   while((!done) && (SiS_PlasmaTable[i].vendor) && panelvendor) {
+      if(SiS_PlasmaTable[i].vendor == panelvendor) {
+         for(j=0; j<SiS_PlasmaTable[i].productnum; j++) {
+	    if(SiS_PlasmaTable[i].product[j] == panelproduct) {
+	       if(SiS_PlasmaTable[i].maxx && SiS_PlasmaTable[i].maxy) {
+	          (*maxx) = (int)SiS_PlasmaTable[i].maxx;
+		  (*maxy) = (int)SiS_PlasmaTable[i].maxy;
+		  done = TRUE;
+		  xf86DrvMsg(pSiS->pScrn->scrnIndex, X_PROBED,
+	       	        "Identified %s, correcting max X res %d, max Y res %d\n",
+			 SiS_PlasmaTable[i].plasmaname,
+		         SiS_PlasmaTable[i].maxx, SiS_PlasmaTable[i].maxy);
+	          break;
+	       }
+ 	    }
+	 }
+      }
+      i++;
+   }
+   return (done) ? 1 : 0;
+}
+
+/* Build a list of supported modes:
+ * Built-in modes for which we have all data are M_T_DEFAULT,
+ * modes derived from DDC or database data are M_T_BUILTIN
+ */
 DisplayModePtr
 SiSBuildBuiltInModeList(ScrnInfoPtr pScrn, BOOLEAN includelcdmodes, BOOLEAN isfordvi)
 {
@@ -4740,27 +4768,6 @@ SiSBuildBuiltInModeList(ScrnInfoPtr pScrn, BOOLEAN includelcdmodes, BOOLEAN isfo
 	 current->VTotal >>= 1;
       }
 
-#if 0
-      if((backup = xalloc(sizeof(DisplayModeRec)))) {
-         if(!pSiS->backupmodelist) pSiS->backupmodelist = backup;
-	 else {
-	    pSiS->backupmodelist->next = backup;
-	    backup->prev = pSiS->backupmodelist;
-	 }
-	 backup->next = NULL;
-	 backup->HDisplay = current->HDisplay;
-         backup->HSyncStart = current->HSyncStart;
-         backup->HSyncEnd = current->HSyncEnd;
-         backup->HTotal = current->HTotal;
-         backup->VDisplay = current->VDisplay;
-         backup->VSyncStart = current->VSyncStart;
-         backup->VSyncEnd = current->VSyncEnd;
-         backup->VTotal = current->VTotal;
-	 backup->Flags = current->Flags;
-	 backup->Clock = current->Clock;
-      }
-#endif
-
 #ifdef TWDEBUG
       xf86DrvMsg(pScrn->scrnIndex, X_INFO,
       	"Built-in: %s %.2f %d %d %d %d %d %d %d %d\n",
@@ -4803,11 +4810,19 @@ SiSBuildBuiltInModeList(ScrnInfoPtr pScrn, BOOLEAN includelcdmodes, BOOLEAN isfo
 		  } else {
 		     if(!(SiS_PlasmaTable[i].plasmamodes[k] & 0x40)) continue;
 		  }
+		  
+		  l = SiS_PlasmaTable[i].plasmamodes[k] & 0x3f;
+		  
+		  if(pSiS->VBFlags & (VB_301|VB_301B|VB_302B|VB_301LV)) {
+		     if(isfordvi) {
+		        if(SiS_PlasmaMode[l].VDisplay > 1024) continue;
+		     }
+		  }
 
 	          if(!(new = xalloc(sizeof(DisplayModeRec)))) return first;
 
                   memset(new, 0, sizeof(DisplayModeRec));
-                  if(!(new->name = xalloc(10))) {
+                  if(!(new->name = xalloc(12))) {
       		     xfree(new);
 		     return first;
                   }
@@ -4820,9 +4835,7 @@ SiSBuildBuiltInModeList(ScrnInfoPtr pScrn, BOOLEAN includelcdmodes, BOOLEAN isfo
                   current = new;
 
 		  pSiS->AddedPlasmaModes = TRUE;
-
-		  l = SiS_PlasmaTable[i].plasmamodes[k] & 0x3f;
-
+		  
 	          sprintf(current->name, "%dx%d", SiS_PlasmaMode[l].HDisplay,
                                                   SiS_PlasmaMode[l].VDisplay);
 

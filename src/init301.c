@@ -981,7 +981,7 @@ SiS_GetVBInfo(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
 
 #ifdef SIS315H
 	if(HwInfo->jChipType >= SIS_315H) {
-    	   if(SiS_Pr->SiS_VBType & (VB_SIS301C|VB_SIS302B|VB_SIS301LV|VB_SIS302LV|VB_SIS302ELV)) {
+    	   if(SiS_Pr->SiS_VBType & VB_SISLCDA) {
 	      if(ModeNo == 0x03) {
 	         /* Mode 0x03 is never in driver mode */
 		 SiS_SetRegAND(SiS_Pr->SiS_P3d4,0x31,0xbf);
@@ -1012,13 +1012,13 @@ SiS_GetVBInfo(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
 	   if(HwInfo->jChipType >= SIS_661) {
 	      tempbx &= ~(SetCRT2ToYPbPr525750 | SetCRT2ToHiVision);
 	      temp = SiS_GetReg(SiS_Pr->SiS_P3d4,0x38);
-	      if(SiS_Pr->SiS_VBType & (VB_SIS301C|VB_SIS301LV|VB_SIS302LV|VB_SIS302ELV)) {
+	      if(SiS_Pr->SiS_VBType & VB_SISYPBPR) {
 	         if(temp & 0x04) {
 		    temp = SiS_GetReg(SiS_Pr->SiS_P3d4,0x35) & 0xe0;
 		    if(temp == 0x60) tempbx |= SetCRT2ToHiVision;
 		    else             tempbx |= SetCRT2ToYPbPr525750;
 		 }
-	      } else if(SiS_Pr->SiS_VBType & (VB_SIS301 | VB_SIS301B | VB_SIS302B)) {
+	      } else if(SiS_Pr->SiS_VBType & VB_SISHIVISION) {
 	         if(temp & 0x04) {
 		    temp = SiS_GetReg(SiS_Pr->SiS_P3d4,0x35) & 0xe0;
 		    if(temp == 0x60) tempbx |= SetCRT2ToHiVision;
@@ -9557,7 +9557,7 @@ USHORT
 SiS_SenseLCDDDC(SiS_Private *SiS_Pr, SISPtr pSiS)
 {
    USHORT DDCdatatype, paneltype, flag, xres=0, yres=0;
-   USHORT index, myindex, lumsize, numcodes;
+   USHORT index, myindex, lumsize, numcodes, panelvendor, panelproduct;
    unsigned char cr37=0, seekcode;
    BOOLEAN checkexpand = FALSE;
    int retry, i;
@@ -9652,15 +9652,15 @@ SiS_SenseLCDDDC(SiS_Private *SiS_Pr, SISPtr pSiS)
 
       paneltype = Panel_Custom;
       checkexpand = FALSE;
+      
+      panelvendor = buffer[9] | (buffer[8] << 8);
+      panelproduct = buffer[10] | (buffer[11] << 8);
 
       if(buffer[0x18] & 0x02) {
 
-         xres = buffer[0x38] | ((buffer[0x3a] & 0xf0) << 4);
-         yres = buffer[0x3b] | ((buffer[0x3d] & 0xf0) << 4);
-
-	 SiS_Pr->CP_PreferredX = xres;
-	 SiS_Pr->CP_PreferredY = yres;
-
+         SiS_Pr->CP_PreferredX = xres = buffer[0x38] | ((buffer[0x3a] & 0xf0) << 4);
+         SiS_Pr->CP_PreferredY = yres = buffer[0x3b] | ((buffer[0x3d] & 0xf0) << 4);
+	 
          switch(xres) {
 #if 0	    /* Treat as custom */
             case 800:
@@ -9704,7 +9704,6 @@ SiS_SenseLCDDDC(SiS_Private *SiS_Pr, SISPtr pSiS)
 	           }
 	        }
       	        break;
-#if 0	    /* Treat this as custom, as we have no valid timing data yet */
 	    case 1600:
 	        if(pSiS->VGAEngine == SIS_315_VGA) {
 		   if(pSiS->VBFlags & VB_301C) {
@@ -9715,7 +9714,6 @@ SiS_SenseLCDDDC(SiS_Private *SiS_Pr, SISPtr pSiS)
 	           }
 	        }
       	        break;
-#endif
          }
 
 	 if(paneltype != Panel_Custom) {
@@ -9730,6 +9728,21 @@ SiS_SenseLCDDDC(SiS_Private *SiS_Pr, SISPtr pSiS)
 	 }
 
       }
+      
+      /* Check against our database; Eg. Sanyo projector reports
+       * 1024x768 as preferred mode, although it supports 1280x720 
+       * natively in non-HTCP mode. Treat such wrongly reporting  
+       * panels as custom and fixup actual maximum resolutions.
+       */
+      if(paneltype != Panel_Custom) {
+         int maxx, maxy;
+         if((SiS_FindPanelFromDB(pSiS, panelvendor, panelproduct, &maxx, &maxy))) {
+	    paneltype = Panel_Custom;
+	    SiS_Pr->CP_MaxX = maxx;
+	    SiS_Pr->CP_MaxY = maxy;
+	    /* Leave preferred unchanged (MUST contain a valid mode!) */
+	 }
+      }
 
       /* If we still don't know what panel this is, we take it
        * as a custom panel and derive the timing data from the
@@ -9740,15 +9753,20 @@ SiS_SenseLCDDDC(SiS_Private *SiS_Pr, SISPtr pSiS)
          BOOLEAN havesync = FALSE;
 	 int i, temp, base = 0x36;
 	 unsigned long estpack;
-	 unsigned short estx[] = {
+	 const unsigned short estx[] = {
 	 	720, 720, 640, 640, 640, 640, 800, 800,
 		800, 800, 832,1024,1024,1024,1024,1280,
 		1152
 	 };
-	 unsigned short esty[] = {
+	 const unsigned short esty[] = {
 	 	400, 400, 480, 480, 480, 480, 600, 600,
 		600, 600, 624, 768, 768, 768, 768,1024,
 		870
+	 };
+	 const int estclk[] = {
+	            0,     0, 25100,   0, 31500, 31500, 36100, 40000,
+		50100, 49500,     0,   0, 65100, 75200, 78700,135200,
+		0
 	 };
 
 	 paneltype = 0;
@@ -9762,8 +9780,14 @@ SiS_SenseLCDDDC(SiS_Private *SiS_Pr, SISPtr pSiS)
 	     if(estpack & (1 << i)) {
 	        if(estx[16 - i] > SiS_Pr->CP_MaxX) SiS_Pr->CP_MaxX = estx[16 - i];
 		if(esty[16 - i] > SiS_Pr->CP_MaxY) SiS_Pr->CP_MaxY = esty[16 - i];
+		if(estclk[16 - i] > SiS_Pr->CP_MaxClock) SiS_Pr->CP_MaxClock = estclk[16 - i];
 	     }
 	 }
+	 
+	 /* By default we drive the LCD at 75Hz in 640x480 mode; if
+  	  * the panel does not provide this mode, use 60hz
+	  */
+	 if(!(buffer[0x23] & 0x04)) SiS_Pr->CP_Supports64048075 = FALSE;
 
 	 /* 2. From Standard Timings */
 	 for(i=0x26; i < 0x36; i+=2) {
@@ -9808,28 +9832,27 @@ SiS_SenseLCDDDC(SiS_Private *SiS_Pr, SISPtr pSiS)
 	       SiS_Pr->CP_DataValid[i] = TRUE;
 
 	       /* Sort out invalid timings, interlace and too high clocks */
-	       if((SiS_Pr->CP_HDisplay[i] & 7)						||
-	          (SiS_Pr->CP_HDisplay[i] > SiS_Pr->CP_HSyncStart[i])  			||
-	          (SiS_Pr->CP_HDisplay[i] >= SiS_Pr->CP_HSyncEnd[i])   			||
-	          (SiS_Pr->CP_HDisplay[i] >= SiS_Pr->CP_HTotal[i])     			||
-	          (SiS_Pr->CP_HSyncStart[i] >= SiS_Pr->CP_HSyncEnd[i]) 			||
-	          (SiS_Pr->CP_HSyncStart[i] > SiS_Pr->CP_HTotal[i])    			||
-	          (SiS_Pr->CP_HSyncEnd[i] > SiS_Pr->CP_HTotal[i])      			||
-	          (SiS_Pr->CP_VDisplay[i] > SiS_Pr->CP_VSyncStart[i])  			||
-	          (SiS_Pr->CP_VDisplay[i] >= SiS_Pr->CP_VSyncEnd[i])   			||
-	          (SiS_Pr->CP_VDisplay[i] >= SiS_Pr->CP_VTotal[i])     			||
-	          (SiS_Pr->CP_VSyncStart[i] > SiS_Pr->CP_VSyncEnd[i])  			||
-	          (SiS_Pr->CP_VSyncStart[i] > SiS_Pr->CP_VTotal[i])    			||
-	          (SiS_Pr->CP_VSyncEnd[i] > SiS_Pr->CP_VTotal[i])      			||
+	       if((SiS_Pr->CP_HDisplay[i] & 7)						  ||
+	          (SiS_Pr->CP_HDisplay[i] > SiS_Pr->CP_HSyncStart[i])  			  ||
+	          (SiS_Pr->CP_HDisplay[i] >= SiS_Pr->CP_HSyncEnd[i])   			  ||
+	          (SiS_Pr->CP_HDisplay[i] >= SiS_Pr->CP_HTotal[i])     			  ||
+	          (SiS_Pr->CP_HSyncStart[i] >= SiS_Pr->CP_HSyncEnd[i]) 			  ||
+	          (SiS_Pr->CP_HSyncStart[i] > SiS_Pr->CP_HTotal[i])    			  ||
+	          (SiS_Pr->CP_HSyncEnd[i] > SiS_Pr->CP_HTotal[i])      			  ||
+	          (SiS_Pr->CP_VDisplay[i] > SiS_Pr->CP_VSyncStart[i])  			  ||
+	          (SiS_Pr->CP_VDisplay[i] >= SiS_Pr->CP_VSyncEnd[i])   			  ||
+	          (SiS_Pr->CP_VDisplay[i] >= SiS_Pr->CP_VTotal[i])     			  ||
+	          (SiS_Pr->CP_VSyncStart[i] > SiS_Pr->CP_VSyncEnd[i])  			  ||
+	          (SiS_Pr->CP_VSyncStart[i] > SiS_Pr->CP_VTotal[i])    			  ||
+	          (SiS_Pr->CP_VSyncEnd[i] > SiS_Pr->CP_VTotal[i])      			  ||
 		  (((pSiS->VBFlags & VB_301C) && (SiS_Pr->CP_Clock[i] > 162500)) ||
-	           ((!(pSiS->VBFlags & VB_301C)) && (SiS_Pr->CP_Clock[i] > 108200)))	||
+	           ((!(pSiS->VBFlags & VB_301C)) && 
+		    ((SiS_Pr->CP_Clock[i] > 108200) || (SiS_Pr->CP_VDisplay[i] > 1024)))) ||
 		  (buffer[base+17] & 0x80)) {
 
 	          SiS_Pr->CP_DataValid[i] = FALSE;
 
 	       } else {
-
-	          paneltype = Panel_Custom;
 
 		  SiS_Pr->CP_HaveCustomData = TRUE;
 
@@ -9840,20 +9863,6 @@ SiS_SenseLCDDDC(SiS_Private *SiS_Pr, SISPtr pSiS)
 		  if((SiS_Pr->CP_PreferredX == xres) && (SiS_Pr->CP_PreferredY == yres)) {
 	             SiS_Pr->CP_PreferredIndex = i;
 	          }
-
-		  SiS_Pr->CP_Vendor = buffer[9] | (buffer[8] << 8);
-		  SiS_Pr->CP_Product = buffer[10] | (buffer[11] << 8);
-
-		  /* By default we drive the LCD at 75Hz in 640x480 mode; if
-		   * the panel does not provide this mode, use 60hz
-		   */
-		  if(!(buffer[0x23] & 0x04)) SiS_Pr->CP_Supports64048075 = FALSE;
-
-	          /* We must assume the panel can scale, since we have
-	           * no scaling data
-		   */
-	          checkexpand = FALSE;
-	          cr37 |= 0x10;
 
 	          /* Extract the sync polarisation information. This only works
 	           * if the Flags indicate a digital separate output.
@@ -9869,13 +9878,32 @@ SiS_SenseLCDDDC(SiS_Private *SiS_Pr, SISPtr pSiS)
 	          } else {
 		     SiS_Pr->CP_SyncValid[i] = FALSE;
 		  }
+		  
 	       }
-            }
+	       
+            } else if((!buffer[base]) && (!buffer[base+1]) && (!buffer[base+2]) && (!buffer[base+4])) {
+	    
+	       /* Maximum pixclock from Monitor Range Limits */
+	       if((buffer[base+3] == 0xfd) && (buffer[base+9] != 0xff)) {
+	          SiS_Pr->CP_MaxClock = buffer[base+9] * 10 * 1000;
+	       }
+	    
+	    }
+	    
 	 }
-	 if(!havesync) {
-	    xf86DrvMsg(pSiS->pScrn->scrnIndex, X_WARNING,
+	 
+	 if(SiS_Pr->CP_MaxX && SiS_Pr->CP_MaxY) {
+	    paneltype = Panel_Custom;
+	    checkexpand = FALSE;
+	    cr37 |= 0x10;
+	    SiS_Pr->CP_Vendor = panelvendor;
+	    SiS_Pr->CP_Product = panelproduct;
+	    if(!havesync) {
+	       xf86DrvMsg(pSiS->pScrn->scrnIndex, X_WARNING,
 	       	   "CRT2: Unable to retrieve Sync polarity information\n");
-   	 }
+   	    }
+	 }
+	 
       }
 
       if(paneltype && checkexpand) {
@@ -9916,10 +9944,14 @@ SiS_SenseLCDDDC(SiS_Private *SiS_Pr, SISPtr pSiS)
 		buffer[0x41]);
 	 return 0;
       }
-
+      
+      SiS_Pr->CP_Vendor = panelvendor = buffer[2] | (buffer[1] << 8);
+      SiS_Pr->CP_Product = panelproduct = buffer[3] | (buffer[4] << 8);
+      
       paneltype = Panel_Custom;
-      SiS_Pr->CP_MaxX = xres = buffer[0x76] | (buffer[0x77] << 8);
-      SiS_Pr->CP_MaxY = yres = buffer[0x78] | (buffer[0x79] << 8);
+      SiS_Pr->CP_MaxX = SiS_Pr->CP_PreferredX = xres = buffer[0x76] | (buffer[0x77] << 8);
+      SiS_Pr->CP_MaxY = SiS_Pr->CP_PreferredY = yres = buffer[0x78] | (buffer[0x79] << 8);
+      
       switch(xres) {
 #if 0
          case 800:
@@ -9956,7 +9988,6 @@ SiS_SenseLCDDDC(SiS_Private *SiS_Pr, SISPtr pSiS)
 	        }
 	     }
       	     break;
-#if 0    /* Treat this one as custom since we have no timing data yet */
 	 case 1600:
 	     if(pSiS->VGAEngine == SIS_315_VGA) {
 	        if(pSiS->VBFlags & VB_301C) {
@@ -9967,7 +9998,6 @@ SiS_SenseLCDDDC(SiS_Private *SiS_Pr, SISPtr pSiS)
 	        }
 	     }
       	     break;
-#endif
       }
 
       /* Determine if RGB18 or RGB24 */
@@ -9990,7 +10020,25 @@ SiS_SenseLCDDDC(SiS_Private *SiS_Pr, SISPtr pSiS)
 	 lumsize++;  /* luminance header byte */
 	 index += lumsize;
       }
+#if 0 /* "pixel rate" = pixel clock? */     
+      if(buffer[0x7e] & 0x1c) {
+         for(i=0; i<((buffer[0x7e] & 0x1c) >> 2); i++) {
+	    if(buffer[index + (i*8) + 6] && (buffer[index + (i*8) + 7] & 0x0f)) {
+	       int clk = (buffer[index + (i*8) + 6] | ((buffer[index + (i*8) + 7] & 0x0f) << 4)) * 1000;
+	       if(clk > SiS_Pr->CP_MaxClock) SiS_Pr->CP_MaxClock = clk;
+	    }
+	 }
+      } 
+#endif      
       index += (((buffer[0x7e] & 0x1c) >> 2) * 8);   /* skip Frequency Ranges */
+      if(buffer[0x7e] & 0x03) {
+         for(i=0; i<(buffer[0x7e] & 0x03); i++) {
+	    if((buffer[index + (i*27) + 9]) || (buffer[index + (i*27) + 10])) {
+	       int clk = ((buffer[index + (i*27) + 9]) | ((buffer[index + (i*27) + 9]) << 8)) * 10;
+	       if(clk > SiS_Pr->CP_MaxClock) SiS_Pr->CP_MaxClock = clk;
+	    }
+	 }
+      }
       index += ((buffer[0x7e] & 0x03) * 27);         /* skip Detailed Range Limits */
       numcodes = (buffer[0x7f] & 0xf8) >> 3;
       if(numcodes) {
@@ -10009,6 +10057,21 @@ SiS_SenseLCDDDC(SiS_Private *SiS_Pr, SISPtr pSiS)
       } else {
          xf86DrvMsg(pSiS->pScrn->scrnIndex, X_WARNING,
 	     "CRT2: Unable to retrieve Sync polarity information\n");
+      }
+      
+      /* Check against our database; Eg. Sanyo projector reports
+       * 1024x768 in non-HDPC mode, although it supports 1280x720. 
+       * Treat such wrongly reporting panels as custom.
+       */
+      if(paneltype != Panel_Custom) {
+         int maxx, maxy;
+         if((SiS_FindPanelFromDB(pSiS, panelvendor, panelproduct, &maxx, &maxy))) {
+	    paneltype = Panel_Custom;
+	    SiS_Pr->CP_MaxX = maxx;
+	    SiS_Pr->CP_MaxY = maxy;
+	    cr37 |= 0x10;
+	    /* Leave preferred unchanged (MUST be a valid mode!) */
+	 }
       }
 
       /* Now seek the detailed timing descriptions for custom panels */
@@ -10054,7 +10117,8 @@ SiS_SenseLCDDDC(SiS_Private *SiS_Pr, SISPtr pSiS)
 	       (SiS_Pr->CP_VSyncStart[i] > SiS_Pr->CP_VTotal[i])    			||
 	       (SiS_Pr->CP_VSyncEnd[i] > SiS_Pr->CP_VTotal[i])      			||
 	       (((pSiS->VBFlags & VB_301C) && (SiS_Pr->CP_Clock[i] > 162500)) ||
-	        ((!(pSiS->VBFlags & VB_301C)) && (SiS_Pr->CP_Clock[i] > 108200)))	||
+	        ((!(pSiS->VBFlags & VB_301C)) && 
+		 ((SiS_Pr->CP_Clock[i] > 108200) || (SiS_Pr->CP_VDisplay[i] > 1024))))	||
 	       (buffer[index + 17] & 0x80)) {
 
 	       SiS_Pr->CP_DataValid[i] = FALSE;
@@ -10065,7 +10129,7 @@ SiS_SenseLCDDDC(SiS_Private *SiS_Pr, SISPtr pSiS)
 
 	       if(SiS_Pr->CP_Clock[i] > SiS_Pr->CP_MaxClock) SiS_Pr->CP_MaxClock = SiS_Pr->CP_Clock[i];
 
-	       if((SiS_Pr->CP_MaxX == xres) && (SiS_Pr->CP_MaxY == yres)) {
+	       if((SiS_Pr->CP_PreferredX == xres) && (SiS_Pr->CP_PreferredY == yres)) {
 	          SiS_Pr->CP_PreferredIndex = i;
 	       }
 
@@ -10073,17 +10137,11 @@ SiS_SenseLCDDDC(SiS_Private *SiS_Pr, SISPtr pSiS)
 	       SiS_Pr->CP_VSync_P[i] = (buffer[index + 17] & 0x04) ? TRUE : FALSE;
 	       SiS_Pr->CP_SyncValid[i] = TRUE;
 
-	       SiS_Pr->CP_Vendor = buffer[2] | (buffer[1] << 8);
-	       SiS_Pr->CP_Product = buffer[3] | (buffer[4] << 8);
-
-	       /* We must assume the panel can scale, since we have
-	        * no scaling data
-    	        */
-	       cr37 |= 0x10;
-
 	    }
 	 }
 
+	 cr37 |= 0x10;
+	 
       }
 
       break;

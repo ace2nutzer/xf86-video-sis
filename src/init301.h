@@ -411,4 +411,8 @@ extern void     SiS_LoadDAC(SiS_Private *SiS_Pr, PSIS_HW_INFO,USHORT ModeNo,
 
 extern void	SiS_CalcLCDACRT1Timing(SiS_Private *SiS_Pr,USHORT ModeNo,USHORT ModeIdIndex);
 
+#ifdef LINUX_XF86
+extern int 	SiS_FindPanelFromDB(SISPtr pSiS, USHORT panelvendor, USHORT panelproduct, int *maxx, int *maxy);
+#endif
+
 #endif
