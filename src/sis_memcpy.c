@@ -358,13 +358,14 @@ static void SiS_libc_memcpy(UChar *dst, const UChar *src, int size)
 
 #ifndef __GNUC__
 
-unsigned int SiSGetCPUFlags(ScreenPtr pScreen)
+unsigned int SiSGetCPUFlags(ScrnInfoPtr pScrn)
 {
     return 0;
 }
 
-vidCopyFunc SiSVidCopyInit(ScreenPtr pScreen)
+vidCopyFunc SiSVidCopyInit(ScreenPtr pScreen, vidCopyFunc *UMemCpy)
 {
+    *UMemCpy = SiS_libc_memcpy;
     return SiS_libc_memcpy;
 }
 
