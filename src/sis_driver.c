@@ -1235,6 +1235,15 @@ SiSCopyModeNLink(ScrnInfoPtr pScrn, DisplayModePtr dest,
     mode->VSyncEnd += dy;
     mode->VTotal += dy;
     
+    mode->type = M_T_DEFAULT;
+#if XF86_VERSION_CURRENT >= XF86_VERSION_NUMERIC(4,2,99,2,0) 
+    /* Set up as user defined (ie fake that the mode has been named in the
+     * Modes-list in the screen section; corrects cycling with CTRL-ALT-[-+]
+     * when source mode has not been listed there.) 
+     */   
+    mode->type |= M_T_USERDEF;
+#endif
+    
     /* Provide a sophisticated fake DotClock in order to trick the vidmode 
      * extension to allow selecting among a number of modes whose merged result
      * looks identical but consists of different modes for CRT1 and CRT2
@@ -5657,6 +5666,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
     /* Copy to CurrentLayout */
     pSiS->CurrentLayout.mode = pScrn->currentMode;
     pSiS->CurrentLayout.displayWidth = pScrn->displayWidth;
+    pSiS->CurrentLayout.displayHeight = pScrn->virtualY;
 
 #ifdef SISMERGED
     if(pSiS->MergedFB) {
@@ -5829,6 +5839,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
        /* Update CurrentLayout */
        pSiS->CurrentLayout.mode = pScrn->currentMode;
        pSiS->CurrentLayout.displayWidth = pScrn->displayWidth;
+       pSiS->CurrentLayout.displayHeight = pScrn->virtualY;
 
     }
 #endif
@@ -7363,8 +7374,6 @@ SISScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
     if(!pSiS->ShadowFB) SISDGAInit(pScreen);
 
     xf86SetBlackWhitePixels(pScreen);
-           
-
 
     /* Initialize the accelerators */
     switch(pSiS->VGAEngine) {
@@ -8200,6 +8209,24 @@ SISMergePointerMoved(int scrnIndex, int x, int y)
   int 		deltax, deltay;
   int           temp1, temp2;
   int		old1x0, old1y0, old2x0, old2y0;
+  int 	 	CRT1XOffs = 0, CRT1YOffs = 0, CRT2XOffs = 0, CRT2YOffs = 0;
+  int 		HVirt = pScrn1->virtualX;
+  int 		VVirt = pScrn1->virtualY;
+    
+  if(pSiS->DGAactive) {
+     /* DGA: No panning, since all DGA modes match a screen mode */
+     return;
+     /* HVirt = pSiS->CurrentLayout.displayWidth;
+        VVirt = pSiS->CurrentLayout.displayHeight;
+        BOUND(x, pSiS->CurrentLayout.DGAViewportX, HVirt);
+        BOUND(y, pSiS->CurrentLayout.DGAViewportY, VVirt);
+     */
+  } else {
+     CRT1XOffs = pSiS->CRT1XOffs;
+     CRT1YOffs = pSiS->CRT1YOffs;
+     CRT2XOffs = pSiS->CRT2XOffs;
+     CRT2YOffs = pSiS->CRT2YOffs;
+  }
 
   f1.x0 = old1x0 = pSiS->CRT1frameX0;
   f1.x1 = pSiS->CRT1frameX1;
@@ -8323,22 +8350,22 @@ SISMergePointerMoved(int scrnIndex, int x, int y)
      switch(((SiSMergedDisplayModePtr)pSiS->CurrentLayout.mode->Private)->CRT2Position) {
         case sisLeftOf:
         case sisRightOf:
-	   if(pSiS->CRT1YOffs || pSiS->CRT2YOffs) {
+	   if(CRT1YOffs || CRT2YOffs) {
 	      if(pSiS->CRT1frameY0 != old1y0) {
-	         if(pSiS->CRT1frameY0 < pSiS->CRT1YOffs) 
-	            pSiS->CRT1frameY0 = pSiS->CRT1YOffs;
+	         if(pSiS->CRT1frameY0 < CRT1YOffs) 
+	            pSiS->CRT1frameY0 = CRT1YOffs;
 	   
 	         temp1 = pSiS->CRT1frameY0 + CDMPTR->CRT1->VDisplay;
-	         temp2 = pScrn1->virtualY - pSiS->CRT2YOffs;
+	         temp2 = VVirt - CRT2YOffs;
 	         if(temp1 > temp2) 
 	            pSiS->CRT1frameY0 -= (temp1 - temp2);
 	      }
 	      if(pScrn2->frameY0 != old2y0) {
-	         if(pScrn2->frameY0 < pSiS->CRT2YOffs) 
-	            pScrn2->frameY0 = pSiS->CRT2YOffs;
+	         if(pScrn2->frameY0 < CRT2YOffs) 
+	            pScrn2->frameY0 = CRT2YOffs;
 	   
 	         temp1 = pScrn2->frameY0   + CDMPTR->CRT2->VDisplay;
-	         temp2 = pScrn1->virtualY - pSiS->CRT1YOffs;
+	         temp2 = VVirt - CRT1YOffs;
 	         if(temp1 > temp2) 
 	            pScrn2->frameY0 -= (temp1 - temp2);
 	      }
@@ -8346,22 +8373,22 @@ SISMergePointerMoved(int scrnIndex, int x, int y)
            break;
         case sisBelow:
         case sisAbove:
-	   if(pSiS->CRT1XOffs || pSiS->CRT2XOffs) {
+	   if(CRT1XOffs || CRT2XOffs) {
 	      if(pSiS->CRT1frameX0 != old1x0) {
-	         if(pSiS->CRT1frameX0 < pSiS->CRT1XOffs) 
-	            pSiS->CRT1frameX0 = pSiS->CRT1XOffs;
+	         if(pSiS->CRT1frameX0 < CRT1XOffs) 
+	            pSiS->CRT1frameX0 = CRT1XOffs;
 	   
 	         temp1 = pSiS->CRT1frameX0 + CDMPTR->CRT1->HDisplay;
-	         temp2 = pScrn1->virtualX - pSiS->CRT2XOffs;
+	         temp2 = HVirt - CRT2XOffs;
 	         if(temp1 > temp2) 
 	            pSiS->CRT1frameX0 -= (temp1 - temp2);
 	      }
 	      if(pScrn2->frameX0 != old2x0) {
-	         if(pScrn2->frameX0 < pSiS->CRT2XOffs) 
-	            pScrn2->frameX0 = pSiS->CRT2XOffs;
+	         if(pScrn2->frameX0 < CRT2XOffs) 
+	            pScrn2->frameX0 = CRT2XOffs;
 	   
 	         temp1 = pScrn2->frameX0   + CDMPTR->CRT2->HDisplay;
-	         temp2 = pScrn1->virtualX - pSiS->CRT1XOffs;
+	         temp2 = HVirt - CRT1XOffs;
 	         if(temp1 > temp2) 
 	            pScrn2->frameX0 -= (temp1 - temp2);
 	      }
@@ -8376,10 +8403,7 @@ SISMergePointerMoved(int scrnIndex, int x, int y)
      pScrn2->frameX1   = pScrn2->frameX0   + CDMPTR->CRT2->HDisplay - 1;
      pScrn2->frameY1   = pScrn2->frameY0   + CDMPTR->CRT2->VDisplay - 1;
      
-#if 0     
-     pScrn1->frameX1   = pScrn1->frameX0   + pSiS->CurrentLayout.mode->HDisplay  - 1;
-     pScrn1->frameY1   = pScrn1->frameY0   + pSiS->CurrentLayout.mode->VDisplay  - 1;
-#endif
+     /* No need to update pScrn1->frame?1, done above */     
 
      SISAdjustFrameHW_CRT1(pScrn1, pSiS->CRT1frameX0, pSiS->CRT1frameY0);
      SISAdjustFrameHW_CRT2(pScrn1, pScrn2->frameX0, pScrn2->frameY0);
@@ -8392,21 +8416,34 @@ SISAdjustFrameMerged(int scrnIndex, int x, int y, int flags)
     ScrnInfoPtr pScrn1 = xf86Screens[scrnIndex];
     SISPtr pSiS = SISPTR(pScrn1);
     ScrnInfoPtr pScrn2 = pSiS->CRT2pScrn;
-    int VTotal = pSiS->CurrentLayout.mode->VDisplay;
     int HTotal = pSiS->CurrentLayout.mode->HDisplay;
-    int VMax = VTotal;
+    int VTotal = pSiS->CurrentLayout.mode->VDisplay;
     int HMax = HTotal;
+    int VMax = VTotal;
+    int HVirt = pScrn1->virtualX;
+    int VVirt = pScrn1->virtualY;
     int x1 = x, x2 = x;
     int y1 = y, y2 = y;
+    int CRT1XOffs = 0, CRT1YOffs = 0, CRT2XOffs = 0, CRT2YOffs = 0;
+    
+    if(pSiS->DGAactive) {
+       HVirt = pSiS->CurrentLayout.displayWidth;
+       VVirt = pSiS->CurrentLayout.displayHeight;
+    } else {
+       CRT1XOffs = pSiS->CRT1XOffs;
+       CRT1YOffs = pSiS->CRT1YOffs;
+       CRT2XOffs = pSiS->CRT2XOffs;
+       CRT2YOffs = pSiS->CRT2YOffs;
+    } 
 
-    BOUND(x, 0, pScrn1->virtualX - HTotal);
-    BOUND(y, 0, pScrn1->virtualY - VTotal);
+    BOUND(x, 0, HVirt - HTotal);
+    BOUND(y, 0, VVirt - VTotal);
     if(SDMPTR(pScrn1)->CRT2Position != sisClone) {
-       BOUND(x1, pSiS->CRT1XOffs, pScrn1->virtualX - HTotal - pSiS->CRT2XOffs);
-       BOUND(y1, pSiS->CRT1YOffs, pScrn1->virtualY - VTotal - pSiS->CRT2YOffs);
-       BOUND(x2, pSiS->CRT2XOffs, pScrn1->virtualX - HTotal - pSiS->CRT1XOffs);
-       BOUND(y2, pSiS->CRT2YOffs, pScrn1->virtualY - VTotal - pSiS->CRT1YOffs);
-    }
+       BOUND(x1, CRT1XOffs, HVirt - HTotal - CRT2XOffs);
+       BOUND(y1, CRT1YOffs, VVirt - VTotal - CRT2YOffs);
+       BOUND(x2, CRT2XOffs, HVirt - HTotal - CRT1XOffs);
+       BOUND(y2, CRT2YOffs, VVirt - VTotal - CRT1YOffs);
+    } 
 
     switch(SDMPTR(pScrn1)->CRT2Position) {
         case sisLeftOf:
@@ -8441,10 +8478,10 @@ SISAdjustFrameMerged(int scrnIndex, int x, int y, int flags)
             break;
     }
 
-    BOUND(pSiS->CRT1frameX0, 0, pScrn1->virtualX - CDMPTR->CRT1->HDisplay);
-    BOUND(pSiS->CRT1frameY0, 0, pScrn1->virtualY - CDMPTR->CRT1->VDisplay);
-    BOUND(pScrn2->frameX0,   0, pScrn1->virtualX - CDMPTR->CRT2->HDisplay);
-    BOUND(pScrn2->frameY0,   0, pScrn1->virtualY - CDMPTR->CRT2->VDisplay);
+    BOUND(pSiS->CRT1frameX0, 0, HVirt - CDMPTR->CRT1->HDisplay);
+    BOUND(pSiS->CRT1frameY0, 0, VVirt - CDMPTR->CRT1->VDisplay);
+    BOUND(pScrn2->frameX0,   0, HVirt - CDMPTR->CRT2->HDisplay);
+    BOUND(pScrn2->frameY0,   0, VVirt - CDMPTR->CRT2->VDisplay);
     
     pScrn1->frameX0 = x;
     pScrn1->frameY0 = y;
@@ -8457,8 +8494,8 @@ SISAdjustFrameMerged(int scrnIndex, int x, int y, int flags)
     pScrn1->frameX1   = pScrn1->frameX0   + pSiS->CurrentLayout.mode->HDisplay  - 1;
     pScrn1->frameY1   = pScrn1->frameY0   + pSiS->CurrentLayout.mode->VDisplay  - 1;
     if(SDMPTR(pScrn1)->CRT2Position != sisClone) {
-       pScrn1->frameX1 += pSiS->CRT1XOffs + pSiS->CRT2XOffs;
-       pScrn1->frameY1 += pSiS->CRT1YOffs + pSiS->CRT2YOffs;
+       pScrn1->frameX1 += CRT1XOffs + CRT2XOffs;
+       pScrn1->frameY1 += CRT1YOffs + CRT2YOffs;
     }
 
     SISAdjustFrameHW_CRT1(pScrn1, pSiS->CRT1frameX0, pSiS->CRT1frameY0);
@@ -8524,7 +8561,7 @@ SISAdjustFrame(int scrnIndex, int x, int y, int flags)
 	  /* Head 1 (master) is always CRT2 */
           SISSetStartAddressCRT2(pSiS, base);
        } else {
-          /* TW: Head 2 (slave) is always CRT1 */
+          /* Head 2 (slave) is always CRT1 */
 	  base += (pSiS->dhmOffset/4);
 	  SISSetStartAddressCRT1(pSiS, base);
        }

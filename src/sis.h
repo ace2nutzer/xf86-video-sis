@@ -37,8 +37,8 @@
 
 #define SISDRIVERVERSIONYEAR    4
 #define SISDRIVERVERSIONMONTH   12
-#define SISDRIVERVERSIONDAY     03
-#define SISDRIVERREVISION       2
+#define SISDRIVERVERSIONDAY     6
+#define SISDRIVERREVISION       1
 
 #define SISDRIVERIVERSION ((SISDRIVERVERSIONYEAR << 16) |  \
 			   (SISDRIVERVERSIONMONTH << 8) |  \
@@ -580,10 +580,13 @@ typedef struct _sisModeInfoPtr {
  * driver modules should read these values instead of pScrn's.
  */
 typedef struct {
-    int                bitsPerPixel;   	/* = pScrn->bitsPerPixel */
-    int                depth;		/* = pScrn->depth */
-    int                displayWidth;	/* = pScrn->displayWidth */
-    DisplayModePtr     mode;		/* = pScrn->currentMode */
+    int             bitsPerPixel;    /* = pScrn->bitsPerPixel */
+    int             depth;	     /* = pScrn->depth */
+    int             displayWidth;    /* = pScrn->displayWidth */
+    int		    displayHeight;   /* = imageHeight from DGA mode; ONLY WHEN DGA IS ACTIVE!!! */
+    int		    DGAViewportX;
+    int		    DGAViewportY;
+    DisplayModePtr  mode;	     /* = pScrn->currentMode */
 } SISFBLayout;
 
 /* For extended memcpy() */

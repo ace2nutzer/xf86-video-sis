@@ -5842,7 +5842,7 @@ SiS_SetGroup1_LVDS(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
      else if(issis)                   tempbx++;
   }
 
-  if(tempbx >= SiS_Pr->SiS_VT) tempbx -= SiS_Pr->SiS_VT;	/* BPLVRS  */
+  if(tempbx >= SiS_Pr->SiS_VT) tempbx -= SiS_Pr->SiS_VT;	
 
   temp = tempbx & 0x00FF;
   if(SiS_Pr->SiS_IF_DEF_TRUMPION) {
@@ -5850,7 +5850,7 @@ SiS_SetGroup1_LVDS(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
         if(ModeNo == 0x10) temp = 0xa9;
      }
   }
-  SiS_SetReg(SiS_Pr->SiS_Part1Port,0x18,temp);
+  SiS_SetReg(SiS_Pr->SiS_Part1Port,0x18,temp);			/* BPLVRS */
 
   tempcx >>= 3;
   tempcx++;
@@ -5879,7 +5879,7 @@ SiS_SetGroup1_LVDS(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
      if((SiS_Pr->SiS_IF_DEF_CH70xx == 1) && (SiS_Pr->SiS_VBInfo & SetCRT2ToTV)) {
 	if(SiS_GetReg(SiS_Pr->SiS_Part1Port,0x00) & 0x03)    temp |= 0x80;
      }
-     /* Chrontel 701x operates in 24bit mode (8-8-8, 2x12bit mutliplexed) via VGA2 */
+     /* Chrontel 701x operates in 24bit mode (8-8-8, 2x12bit multiplexed) via VGA2 */
      if(SiS_Pr->SiS_LCDInfo & LCDRGB18Bit) {
 	if(SiS_Pr->SiS_VBInfo & SetCRT2ToLCDA) {
 	   if(SiS_GetReg(SiS_Pr->SiS_P3c4,0x06) & 0x10)      temp |= 0x80;
@@ -5890,7 +5890,7 @@ SiS_SetGroup1_LVDS(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
   }
   SiS_SetRegANDOR(SiS_Pr->SiS_Part1Port,0x1A,tempbx,temp);
 
-  tempbx = push2;                                      		/* BPLVDEE */
+  tempbx = push2;                                      		/* BPLVDEE */ 
 
   tempcx = SiS_Pr->SiS_LCDVDES;                        		/* BPLVDES */
 
@@ -9725,6 +9725,7 @@ SiS_SenseLCDDDC(SiS_Private *SiS_Pr, SISPtr pSiS)
    BOOLEAN havesync = FALSE;
    BOOLEAN indb = FALSE;
    int retry, i;
+   int panel1280x960 = (pSiS->VGAEngine == SIS_315_VGA) ? Panel310_1280x960 : Panel300_1280x960;
    unsigned char buffer[256];
 
    for(i=0; i<7; i++) SiS_Pr->CP_DataValid[i] = FALSE;
@@ -9837,14 +9838,6 @@ SiS_SenseLCDDDC(SiS_Private *SiS_Pr, SISPtr pSiS)
          if(!yres) SiS_Pr->CP_PreferredY = yres = buffer[0x3b] | ((buffer[0x3d] & 0xf0) << 4);
 	 
          switch(xres) {
-#if 0	    /* Treat as custom */
-            case 800:
-	        if(yres == 600) {
-	     	   paneltype = Panel_800x600;
-	     	   checkexpand = TRUE;
-	        }
-	        break;
-#endif
             case 1024:
 	        if(yres == 768) {
 	     	   paneltype = Panel_1024x768;
@@ -9856,11 +9849,7 @@ SiS_SenseLCDDDC(SiS_Private *SiS_Pr, SISPtr pSiS)
 	     	   paneltype = Panel_1280x1024;
 		   checkexpand = TRUE;
 	        } else if(yres == 960) {
-	           if(pSiS->VGAEngine == SIS_300_VGA) {
-		      paneltype = Panel300_1280x960;
-		   } else {
-		      paneltype = Panel310_1280x960;
-		   }
+		   paneltype = panel1280x960;
 	        } else if(yres == 768) {
 		   if( (pclk == 8100) &&
 		       (phb == (1688 - 1280)) &&
@@ -9886,13 +9875,15 @@ SiS_SenseLCDDDC(SiS_Private *SiS_Pr, SISPtr pSiS)
 	        }
       	        break;
 	    case 1600:
-	        if(pSiS->VGAEngine == SIS_315_VGA) {
-		   if(pSiS->VBFlags & VB_301C) {
-	              if(yres == 1200) {
+	        if((pSiS->VGAEngine == SIS_315_VGA) && (pSiS->VBFlags & VB_301C)) {
+	           if(yres == 1200) {
+		      if( (pclk == 16200) &&
+		          (phb == (2160 - 1600)) &&
+		          (pvb == (1250 - 1200)) ) {
 	                 paneltype = Panel310_1600x1200;
 		         checkexpand = TRUE;
 		      }
-	           }
+		   }
 	        }
       	        break;
          }
@@ -10029,7 +10020,7 @@ SiS_SenseLCDDDC(SiS_Private *SiS_Pr, SISPtr pSiS)
 	          (SiS_Pr->CP_VSyncEnd[i] > SiS_Pr->CP_VTotal[i])      			  ||
 		  (((pSiS->VBFlags & VB_301C) && (SiS_Pr->CP_Clock[i] > 162500)) ||
 	           ((!(pSiS->VBFlags & VB_301C)) && 
-		    ((SiS_Pr->CP_Clock[i] > 108200) || (SiS_Pr->CP_VDisplay[i] > 1024) ||
+		    ((SiS_Pr->CP_Clock[i] > 110500) || (SiS_Pr->CP_VDisplay[i] > 1024) ||
 		     (SiS_Pr->CP_HDisplay[i] > 1600)))) 				  ||
 		  (buffer[base+17] & 0x80)) {
 
@@ -10136,14 +10127,6 @@ SiS_SenseLCDDDC(SiS_Private *SiS_Pr, SISPtr pSiS)
       SiS_Pr->CP_MaxY = SiS_Pr->CP_PreferredY = yres = buffer[0x78] | (buffer[0x79] << 8);
       
       switch(xres) {
-#if 0
-         case 800:
-	     if(yres == 600) {
-	     	paneltype = Panel_800x600;
-	     	checkexpand = TRUE;
-	     }
-	     break;
-#endif
          case 1024:
 	     if(yres == 768) {
 	     	paneltype = Panel_1024x768;
@@ -10152,16 +10135,12 @@ SiS_SenseLCDDDC(SiS_Private *SiS_Pr, SISPtr pSiS)
 	     break;
 	 case 1280:
 	     if(yres == 960) {
-	        if(pSiS->VGAEngine == SIS_315_VGA) {
-	     	   paneltype = Panel310_1280x960;
-		} else {
-		   paneltype = Panel300_1280x960;
-		}
+	        paneltype = panel1280x960;
 	     } else if(yres == 1024) {
 	     	paneltype = Panel_1280x1024;
 		checkexpand = TRUE;
 	     }
-	     /* 1280x768 treated as custom here */
+	     /* 1280x768, 1280x800 treated as custom here */
 	     break;
 	 case 1400:
 	     if(pSiS->VGAEngine == SIS_315_VGA) {
@@ -10171,16 +10150,7 @@ SiS_SenseLCDDDC(SiS_Private *SiS_Pr, SISPtr pSiS)
 	        }
 	     }
       	     break;
-	 case 1600:
-	     if(pSiS->VGAEngine == SIS_315_VGA) {
-	        if(pSiS->VBFlags & VB_301C) {
-	           if(yres == 1200) {
-	              paneltype = Panel310_1600x1200;
-		      checkexpand = TRUE;
-		   }
-	        }
-	     }
-      	     break;
+	 /* 1600x1200 treated as custom */
       }
 
       /* Determine if RGB18 or RGB24 */
@@ -10302,7 +10272,8 @@ SiS_SenseLCDDDC(SiS_Private *SiS_Pr, SISPtr pSiS)
 	       (SiS_Pr->CP_VSyncEnd[i] > SiS_Pr->CP_VTotal[i])      			||
 	       (((pSiS->VBFlags & VB_301C) && (SiS_Pr->CP_Clock[i] > 162500)) ||
 	        ((!(pSiS->VBFlags & VB_301C)) && 
-		 ((SiS_Pr->CP_Clock[i] > 108200) || (SiS_Pr->CP_VDisplay[i] > 1024))))	||
+		 ((SiS_Pr->CP_Clock[i] > 110500) || (SiS_Pr->CP_VDisplay[i] > 1024) ||
+		  (SiS_Pr->CP_HDisplay[i] > 1600))))	||
 	       (buffer[index + 17] & 0x80)) {
 
 	       SiS_Pr->CP_DataValid[i] = FALSE;
@@ -10339,13 +10310,10 @@ SiS_SenseLCDDDC(SiS_Private *SiS_Pr, SISPtr pSiS)
    }
 
    /* 1280x960 panels are always RGB24, unable to scale and use
-    * high active sync polarity
+    * high active sync polarity. (Check is save, other panel types
+    * for other chipset series not being set up)
     */
-   if(pSiS->VGAEngine == SIS_315_VGA) {
-      if(paneltype == Panel310_1280x960) cr37 &= 0x0e;
-   } else {
-      if(paneltype == Panel300_1280x960) cr37 &= 0x0e;
-   }
+   if(paneltype == panel1280x960) cr37 &= 0x0e;
 
    for(i = 0; i < 7; i++) {
       if(SiS_Pr->CP_DataValid[i]) {
@@ -10362,7 +10330,7 @@ SiS_SenseLCDDDC(SiS_Private *SiS_Pr, SISPtr pSiS)
          xf86DrvMsg(pSiS->pScrn->scrnIndex, X_PROBED,
 	    "   Pixel clock: %3.3fMhz\n", (float)SiS_Pr->CP_Clock[i] / 1000);
 	 xf86DrvMsg(pSiS->pScrn->scrnIndex, X_INFO,
-	    "   To use this, add \"%dx%d\" to the list of Modes in the Screen section\n",
+	    "   To use this, add \"%dx%d\" to the Modes list in the Screen section\n",
 	    SiS_Pr->CP_HDisplay[i],
 	    SiS_Pr->CP_VDisplay[i]);
       }
