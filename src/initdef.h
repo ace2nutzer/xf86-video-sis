@@ -452,6 +452,7 @@
 #define SIS_RI_1280x800  30
 #define SIS_RI_1920x1080 31
 #define SIS_RI_960x540   32
+#define SIS_RI_960x600   33
 
 /* CR5F */
 #define IsM650                  0x80

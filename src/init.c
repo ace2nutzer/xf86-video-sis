@@ -670,7 +670,8 @@ SiS_GetModeID(int VGAEngine, ULONG VBFlags, int HDisplay, int VDisplay,
 	  break;
      case 960:
 	  if(VGAEngine == SIS_315_VGA) {
-	     if(VDisplay == 540) ModeIndex = ModeIndex_960x540[Depth];
+	     if(VDisplay == 540)      ModeIndex = ModeIndex_960x540[Depth];
+	     else if(VDisplay == 600) ModeIndex = ModeIndex_960x600[Depth];
 	  }
 	  break;
      case 1024:
@@ -901,7 +902,8 @@ SiS_GetModeID_LCD(int VGAEngine, ULONG VBFlags, int HDisplay, int VDisplay,
 	     break;
 	case 960:
 	     if(VGAEngine == SIS_315_VGA) {
-	        if(VDisplay == 540) ModeIndex = ModeIndex_960x540[Depth];
+	        if(VDisplay == 540)      ModeIndex = ModeIndex_960x540[Depth];
+		else if(VDisplay == 600) ModeIndex = ModeIndex_960x600[Depth];
 	     }
 	     break;
 	case 1024:
@@ -1050,6 +1052,15 @@ SiS_GetModeID_TV(int VGAEngine, ULONG VBFlags, int HDisplay, int VDisplay, int D
 		}
 	     }
 	     break;
+	case 960:
+	     if(VGAEngine == SIS_315_VGA) {
+	        if(VDisplay == 600) {
+		   if((VBFlags & TV_HIVISION) || ((VBFlags & TV_YPBPR) && (VBFlags & TV_YPBPR1080I))) {
+		      ModeIndex = ModeIndex_960x600[Depth];
+		   }
+		}
+	     }
+	     break;
 	case 1024:
 	     if(VDisplay == 768) {
 		if(VBFlags & (VB_301B|VB_301C|VB_302B|VB_301LV|VB_302LV|VB_302ELV)) {
@@ -1121,7 +1132,8 @@ SiS_GetModeID_VGA2(int VGAEngine, ULONG VBFlags, int HDisplay, int VDisplay, int
 		break;
 	case 960:
 		if(VGAEngine == SIS_315_VGA) {
-		   if(VDisplay == 540) ModeIndex = ModeIndex_960x540[Depth];
+		   if(VDisplay == 540)      ModeIndex = ModeIndex_960x540[Depth];
+		   else if(VDisplay == 600) ModeIndex = ModeIndex_960x600[Depth];
 		}
 		break;
 	case 1024:
