@@ -285,11 +285,13 @@ static const char *driSymbols[] = {
     "DRILock",
     "DRIQueryVersion",
     "DRIScreenInit",
-    "DRIUnlock",
-#if 0  /* Wait for DRI update */    
-    "DRICreatePCIBusID",
-#endif    
+    "DRIUnlock",  
     "GlxSetVisualConfigs",
+    NULL
+};
+
+static const char *driRefSymbols[] = {
+    "DRICreatePCIBusID",  /* not REQUIRED */
     NULL
 };
 #endif
@@ -330,7 +332,7 @@ sisSetup(pointer module, pointer opts, int *errmaj, int *errmin)
 			 shadowSymbols, ramdacSymbols,
 			 vbeSymbols, int10Symbols,
 #ifdef XF86DRI
-			 drmSymbols, driSymbols,
+			 drmSymbols, driSymbols, driRefSymbols,
 #endif
 			 NULL);
        return (pointer)TRUE;
@@ -1051,6 +1053,37 @@ SiSSetSyncRangeFromEdid(ScrnInfoPtr pScrn, int flag)
     }
 }
 #endif
+
+static BOOLEAN
+SiSAllowSyncOverride(SISPtr pSiS)
+{
+#ifdef SISDUALHEAD
+   if(pSiS->DualHeadMode) {
+      if(pSiS->SecondHead) {
+         if(pSiS->VBFlags & CRT1_LCDA) return TRUE;
+      } else {
+         if(pSiS->VBFlags & (CRT2_LCD | CRT2_TV)) return TRUE;
+      }
+      return FALSE;
+   } else
+#endif       
+#ifdef SISMERGED
+          if(pSiS->MergedFB) {
+      if(pSiS->VBFlags & CRT1_LCDA) return TRUE;
+      return FALSE;
+   }
+#endif
+
+   if(!(pSiS->VBFlags & DISPTYPE_CRT1)) {
+      if(pSiS->VBFlags & (CRT2_LCD | CRT2_TV)) {
+         return TRUE;
+      }
+   } else if(pSiS->VBFlags & CRT1_LCDA) {
+      return TRUE;
+   }
+   
+   return FALSE;
+}
 
 /* Some helper functions for MergedFB mode */
 
@@ -2351,6 +2384,8 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
     static const char *subshstr = "Substituting missing CRT%d monitor HSync data by DDC data\n";
     static const char *subsvstr = "Substituting missing CRT%d monitor VRefresh data by DDC data\n";
 #endif
+    static const char *saneh = "Substituting missing monitor HSync range by suitable data\n";
+    static const char *sanev = "Substituting missing monitor VRefresh range by suitable data\n";
 #ifdef SISMERGED
     static const char *mergednocrt1 = "CRT1 not detected or forced off. %s.\n";
     static const char *mergednocrt2 = "No CRT2 output selected or no bridge detected. %s.\n";
@@ -4427,8 +4462,16 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
        }
     }
 
-    /* SCART only supported for PAL */
+    
     if((pSiS->VGAEngine == SIS_300_VGA) || (pSiS->VGAEngine == SIS_315_VGA)) {
+       /* Default to PAL */
+       if(pSiS->VBFlags & (TV_SVIDEO | TV_AVIDEO)) {
+          if(!(pSiS->VBFlags & (TV_PAL | TV_NTSC))) {
+	     pSiS->VBFlags &= ~(TV_PAL | TV_NTSC | TV_PALN | TV_PALM | TV_NTSCJ);
+	     pSiS->VBFlags |= TV_PAL;
+	  }
+       }
+       /* SCART only supported for PAL */
        if((pSiS->VBFlags & VB_SISBRIDGE) && (pSiS->VBFlags & TV_SCART)) {
 	  pSiS->VBFlags &= ~(TV_NTSC | TV_PALN | TV_PALM | TV_NTSCJ);
 	  pSiS->VBFlags |= TV_PAL;
@@ -5008,45 +5051,93 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
     }
 #endif
 
-    /* If there is no HSync or VRefresh data for the monitor,
-     * derive it from DDC data. Done by common layer since
-     * 4.3.99.14.
-     */
+   /* If there is no HSync or VRefresh data for the monitor,
+    * derive it from DDC data. Done by common layer since
+    * 4.3.99.14.
+    */
+    if(pScrn->monitor->nHsync <= 0) {
 #if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,3,99,14,0)
-    if(pScrn->monitor->DDC) {
-       if(pScrn->monitor->nHsync <= 0) {
-         xf86DrvMsg(pScrn->scrnIndex, X_INFO, subshstr,
+       if(pScrn->monitor->DDC) {
+          xf86DrvMsg(pScrn->scrnIndex, X_INFO, subshstr,
 #ifdef SISDUALHEAD
 			pSiS->DualHeadMode ? (pSiS->SecondHead ? 1 : 2) :
 #endif
 		 		pSiS->CRT1off ? 2 : 1);
-         SiSSetSyncRangeFromEdid(pScrn, 1);
+          SiSSetSyncRangeFromEdid(pScrn, 1); 
        }
-       if(pScrn->monitor->nVrefresh <= 0) {
-         xf86DrvMsg(pScrn->scrnIndex, X_INFO, subsvstr,
+#endif       
+       if(pScrn->monitor->nHsync <= 0) {   
+          if(SiSAllowSyncOverride(pSiS)) {
+             /* Set sane ranges for LCD and TV 
+	      * (our strict checking will filter out invalid ones anyway)
+	      */
+	     pScrn->monitor->nHsync = 1;
+	     pScrn->monitor->hsync[0].lo = 28;
+	     pScrn->monitor->hsync[0].hi = 80;
+	     xf86DrvMsg(pScrn->scrnIndex, X_INFO, saneh);
+	  }
+       }
+    }
+       
+    if(pScrn->monitor->nVrefresh <= 0) {
+#if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,3,99,14,0)
+       if(pScrn->monitor->DDC) {    
+          xf86DrvMsg(pScrn->scrnIndex, X_INFO, subsvstr,
 #ifdef SISDUALHEAD
 			pSiS->DualHeadMode ? (pSiS->SecondHead ? 1 : 2) :
 #endif
 		  		pSiS->CRT1off ? 2 : 1);
-         SiSSetSyncRangeFromEdid(pScrn, 0);
+          SiSSetSyncRangeFromEdid(pScrn, 0);  
+       }
+#endif       
+       if(pScrn->monitor->nVrefresh <= 0) {
+          if(SiSAllowSyncOverride(pSiS)) {
+             /* Set sane ranges for LCD and TV */
+	     pScrn->monitor->nVrefresh = 1;
+	     pScrn->monitor->vrefresh[0].lo = 59;
+	     pScrn->monitor->vrefresh[0].hi = 71;  /* 71 for 640x400 */
+	     xf86DrvMsg(pScrn->scrnIndex, X_INFO, sanev);
+	  }
        }
     }
-#endif
+
 
 #ifdef SISMERGED
     if(pSiS->MergedFB) {
+       if(pSiS->CRT2pScrn->monitor->nHsync <= 0) {
 #if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,3,99,14,0)
-       if(pSiS->CRT2pScrn->monitor->DDC) {
-          if(pSiS->CRT2pScrn->monitor->nHsync <= 0) {
+          if(pSiS->CRT2pScrn->monitor->DDC) {
              xf86DrvMsg(pScrn->scrnIndex, X_INFO, subshstr, 2);
              SiSSetSyncRangeFromEdid(pSiS->CRT2pScrn, 1);
           }
-          if(pSiS->CRT2pScrn->monitor->nVrefresh <= 0) {
+#endif
+          if(pSiS->CRT2pScrn->monitor->nHsync <= 0) {
+	     if(pSiS->VBFlags & (CRT2_TV | CRT2_LCD)) {
+	        /* Set sane ranges for LCD and TV */
+	        pSiS->CRT2pScrn->monitor->nHsync = 1;
+	        pSiS->CRT2pScrn->monitor->hsync[0].lo = 28;
+	        pSiS->CRT2pScrn->monitor->hsync[0].hi = 80;
+		xf86DrvMsg(pScrn->scrnIndex, X_INFO, saneh);
+	     }
+	  }
+       }	  
+       if(pSiS->CRT2pScrn->monitor->nVrefresh <= 0) {
+#if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,3,99,14,0)       
+          if(pSiS->CRT2pScrn->monitor->DDC) {
              xf86DrvMsg(pScrn->scrnIndex, X_INFO, subsvstr, 2);
              SiSSetSyncRangeFromEdid(pSiS->CRT2pScrn, 0);
           }
+#endif	
+          if(pSiS->CRT2pScrn->monitor->nVrefresh <= 0) {
+	     if(pSiS->VBFlags & (CRT2_TV | CRT2_LCD)) {
+	        /* Set sane ranges for LCD and TV */
+	        pSiS->CRT2pScrn->monitor->nVrefresh = 1;
+	        pSiS->CRT2pScrn->monitor->vrefresh[0].lo = 59;
+	        pSiS->CRT2pScrn->monitor->vrefresh[0].hi = 71; /* 71 for 640x400 */
+		xf86DrvMsg(pScrn->scrnIndex, X_INFO, sanev);
+	     }
+          }  
        }
-#endif
 
        xf86DrvMsg(pScrn->scrnIndex, X_INFO, crtsetupstr, 1);
     }
@@ -5354,7 +5445,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
     xf86PruneDriverModes(pScrn);
 
     if(i == 0 || pScrn->modes == NULL) {
-        SISErrorLog(pScrn, "No valid modes found\n");
+        SISErrorLog(pScrn, "No valid modes found - check VertRefresh/HorizSync\n");
 #ifdef SISDUALHEAD
 	if(pSiSEnt) pSiSEnt->ErrorAfterFirst = TRUE;
 #endif
