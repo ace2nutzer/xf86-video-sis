@@ -364,15 +364,31 @@ void SISLCDPreInit(ScrnInfoPtr pScrn, Bool quiet)
 	  xf86DrvMsg(pScrn->scrnIndex, X_CONFIG,
 	  	"Assuming LCD/plasma panel (848x480, expanding, RGB24)\n");
        } else {
-	  if((pSiS->VGAEngine == SIS_315_VGA) && (!CR36)) {
-	     /* Old 650/301LV BIOS version "forgot" to set CR36, CR37 */
-	     xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
-	        "BIOS-provided LCD information invalid, probing myself...\n");
-	     if(pSiS->VBFlags & VB_LVDS) pSiS->SiS_Pr->SiS_IF_DEF_LVDS = 1;
-	     else pSiS->SiS_Pr->SiS_IF_DEF_LVDS = 0;
-	     SiS_GetPanelID(pSiS->SiS_Pr, &pSiS->sishw_ext);
-	     inSISIDXREG(SISCR, 0x36, CR36);
-	     inSISIDXREG(SISCR, 0x37, CR37);
+	  if(CR36 == 0) {
+	     /* Old 650/301LV and ECS A907 BIOS versions "forget" to set CR36, CR37 */
+	     if(pSiS->VGAEngine == SIS_315_VGA) {
+	        if(pSiS->sishw_ext.jChipType < SIS_661) {
+	           xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
+	              "BIOS provided invalid panel size, probing...\n");
+	           if(pSiS->VBFlags & VB_LVDS) pSiS->SiS_Pr->SiS_IF_DEF_LVDS = 1;
+	           else pSiS->SiS_Pr->SiS_IF_DEF_LVDS = 0;
+	           SiS_GetPanelID(pSiS->SiS_Pr, &pSiS->sishw_ext);
+	           inSISIDXREG(SISCR, 0x36, CR36);
+	           inSISIDXREG(SISCR, 0x37, CR37);
+		} else {
+		   xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
+	              "Broken BIOS, unable to determine panel size, disabling LCD\n");
+		   pSiS->VBFlags &= ~CRT2_LCD;
+		   return;
+		}
+	     } else if(pSiS->VGAEngine == SIS_300_VGA) {
+	        xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
+	           "BIOS provided invalid panel size, assuming 1024x768, RGB18\n");
+	        setSISIDXREG(SISCR,0x36,0xf0,0x02);
+		setSISIDXREG(SISCR,0x37,0xee,0x01);
+		CR36 = 0x02;
+		inSISIDXREG(SISCR,0x37,CR37);
+	     }
 	  }
 	  if(((CR36 & 0x0f) == 0x0f) && (pSiS->SiS_Pr->CP_HaveCustomData)) {
 	     pSiS->VBLCDFlags |= VB_LCD_CUSTOM;

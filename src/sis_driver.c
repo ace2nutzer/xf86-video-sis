@@ -4126,7 +4126,8 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 
     if((pSiS->VGAEngine != SIS_300_VGA) || (!(pSiS->VBFlags & VB_TRUMPION))) {
        pSiS->SiS_SD_Flags |= SiS_SD_SUPPORTSCALE;
-       if(pSiS->VBFlags & (VB_301|VB_301B|VB_302B|VB_301C)) {
+       if((pSiS->VBFlags & (VB_301|VB_301B|VB_302B|VB_301C)) &&
+          (!(pSiS->VBFlags & VB_30xBDH))) {
           pSiS->SiS_SD_Flags |= SiS_SD_SUPPORTCENTER;
        }
     }

@@ -1537,7 +1537,9 @@ SiS_GetLCDResInfo(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
   }
 
   temp = SiS_GetReg(SiS_Pr->SiS_P3d4,0x36);
-  if(!temp) return;
+  
+  /* For broken BIOSes: Assume 1024x768 */
+  if(temp == 0) temp = 0x02;
 
   if((HwInfo->jChipType >= SIS_661) || (SiS_Pr->SiS_ROMNew)) {
      SiS_Pr->SiS_LCDTypeInfo = (SiS_GetReg(SiS_Pr->SiS_P3d4,0x39) & 0x7c) >> 2;
@@ -1782,7 +1784,7 @@ SiS_GetLCDResInfo(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
   }
 #endif
 
-  if(SiS_Pr->SiS_IF_DEF_LVDS == 1) {
+  if((SiS_Pr->SiS_IF_DEF_LVDS == 1) || (SiS_Pr->SiS_VBType & VB_NoLCD)) {
      /* Always center screen on LVDS (if scaling is disabled) */
      SiS_Pr->SiS_LCDInfo &= ~LCDPass11;
   } else if(SiS_Pr->SiS_VBType & VB_SISVB) {
@@ -1802,7 +1804,7 @@ SiS_GetLCDResInfo(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
      }
   }
 
-  if(SiS_Pr->SiS_VBType & VB_SISVB) {
+  if((SiS_Pr->SiS_VBType & VB_SISVB) && (!(SiS_Pr->SiS_VBType & VB_NoLCD))) {
      if(SiS_Pr->SiS_VBInfo & (SetCRT2ToLCD | SetCRT2ToLCDA)) {
         if(modeflag & NoSupportLCDScale) {
 	   /* No scaling for this mode on any panel */
@@ -1952,7 +1954,7 @@ SiS_GetLCDResInfo(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
 
   if(!((HwInfo->jChipType < SIS_315H) && (SiS_Pr->SiS_SetFlag & SetDOSMode))) {
 
-     if(SiS_Pr->SiS_IF_DEF_LVDS == 1) {
+     if((SiS_Pr->SiS_IF_DEF_LVDS == 1) || (SiS_Pr->SiS_VBType & VB_NoLCD)) {
 	if(SiS_Pr->SiS_IF_DEF_TRUMPION == 0) {
 	   if(ModeNo == 0x12) {
 	      if(SiS_Pr->SiS_LCDInfo & LCDPass11) {
@@ -5522,9 +5524,8 @@ SiS_SetGroup1_LVDS(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
 #endif
   }
 
-  /* is lvds if really LVDS, or SiS 301B-DH with external LVDS transmitter */
-  if((SiS_Pr->SiS_IF_DEF_LVDS == 1) ||
-     ((SiS_Pr->SiS_VBType & VB_SISVB) && (SiS_Pr->SiS_VBType & VB_NoLCD))) {
+  /* is lvds if really LVDS, or 301B-DH with external LVDS transmitter */
+  if((SiS_Pr->SiS_IF_DEF_LVDS == 1) || (SiS_Pr->SiS_VBType & VB_NoLCD)) {
      islvds = TRUE;
   }
 

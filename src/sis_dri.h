@@ -37,7 +37,7 @@
 
 #include "xf86drm.h"
 
-/* Hack: Since the types were changed, the typedefs
+/* Hack: When the types were changed, the typedefs
  * went into drm.h. This file did not exist earlier.
  */
 #ifndef _DRM_H_
