@@ -4153,7 +4153,7 @@ SISPutImage(
    pPriv->bufAddr[1] = pPriv->bufAddr[0] + totalSize;
 
    /* copy data */
-   if(pSiS->XvUseMemcpy) {
+   if((pSiS->XvUseMemcpy) || (totalSize < 16)) {
       if((totalSize < 64) || (!pSiS->SiSFastVidCopy)) {
          memcpy(pSiS->FbBase + pPriv->bufAddr[pPriv->currentBuf], buf, totalSize);
       } else {

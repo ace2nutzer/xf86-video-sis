@@ -155,9 +155,14 @@ static CARD32 get_scanline_CRT1(SISPtr pSiS)
 void SIS6326InitVideo(ScreenPtr pScreen)
 {
     ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum];
+    SISPtr pSiS = SISPTR(pScrn);
     XF86VideoAdaptorPtr *adaptors, *newAdaptors = NULL;
     XF86VideoAdaptorPtr newAdaptor = NULL;
     int num_adaptors;
+    
+    if(!pSiS->SiSFastVidCopy) {
+       pSiS->SiSFastVidCopy = SiSVidCopyInit(pScreen);
+    }
 
     newAdaptor = SIS6326SetupImageVideo(pScreen);
     if(newAdaptor)
@@ -1341,7 +1346,11 @@ SIS6326PutImage(
 
    /* copy data */
    if((pSiS->XvUseMemcpy) || (totalSize < 16)) {
-      memcpy(pSiS->FbBase + pPriv->bufAddr[pPriv->currentBuf], buf, totalSize);
+      if((totalSize < 64) || (!pSiS->SiSFastVidCopy)) {
+         memcpy(pSiS->FbBase + pPriv->bufAddr[pPriv->currentBuf], buf, totalSize);
+      } else {
+         (*pSiS->SiSFastVidCopy)(pSiS->FbBase + pPriv->bufAddr[pPriv->currentBuf], buf, totalSize);
+      }
    } else {
       dest = (CARD32 *)(pSiS->FbBase + pPriv->bufAddr[pPriv->currentBuf]);
       src  = (CARD32 *)buf;
