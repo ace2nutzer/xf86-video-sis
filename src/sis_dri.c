@@ -150,6 +150,7 @@ SISInitVisualConfigs(ScreenPtr pScreen)
 	     pConfigs[i].redSize   = 5;
              pConfigs[i].greenSize = 6;
              pConfigs[i].blueSize  = 5;
+	     pConfigs[i].alphaSize = 0;
              pConfigs[i].redMask   = 0x0000F800;
              pConfigs[i].greenMask = 0x000007E0;
              pConfigs[i].blueMask  = 0x0000001F;
@@ -158,6 +159,7 @@ SISInitVisualConfigs(ScreenPtr pScreen)
 	     pConfigs[i].redSize   = 8;
              pConfigs[i].greenSize = 8;
              pConfigs[i].blueSize  = 8;
+	     pConfigs[i].alphaSize = 8;
              pConfigs[i].redMask   = 0x00FF0000;
              pConfigs[i].greenMask = 0x0000FF00;
              pConfigs[i].blueMask  = 0x000000FF;
