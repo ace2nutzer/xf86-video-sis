@@ -112,9 +112,9 @@ typedef enum {
     OPTION_XVDEFDISABLEGFXLR,
     OPTION_XVMEMCPY,
     OPTION_XVBENCHCPY,
-#ifndef SISCHECKOSSSE    
+#ifndef SISCHECKOSSSE
     OPTION_XVSSECOPY,
-#endif    
+#endif
     OPTION_XVUSECHROMAKEY,
     OPTION_XVCHROMAMIN,
     OPTION_XVCHROMAMAX,
@@ -149,14 +149,14 @@ typedef enum {
     OPTION_PSEUDO
 } SISOpts;
 
-static const OptionInfoRec SISOptions[] = {   
+static const OptionInfoRec SISOptions[] = {
     { OPTION_NOACCEL,           	"NoAccel",                OPTV_BOOLEAN,   {0}, FALSE },
     { OPTION_TURBOQUEUE,        	"TurboQueue",             OPTV_BOOLEAN,   {0}, FALSE },
     { OPTION_FAST_VRAM,         	"FastVram",               OPTV_BOOLEAN,   {0}, FALSE },
     { OPTION_NOHOSTBUS,         	"NoHostBus",              OPTV_BOOLEAN,   {0}, FALSE },
     { OPTION_RENDER,        		"RenderAcceleration",     OPTV_BOOLEAN,   {0}, FALSE },
     { OPTION_FORCE_CRT1TYPE,    	"ForceCRT1Type",          OPTV_STRING,    {0}, FALSE },
-    { OPTION_FORCE_CRT2TYPE,    	"ForceCRT2Type",          OPTV_STRING,    {0}, FALSE },   
+    { OPTION_FORCE_CRT2TYPE,    	"ForceCRT2Type",          OPTV_STRING,    {0}, FALSE },
     { OPTION_SHADOW_FB,         	"ShadowFB",               OPTV_BOOLEAN,   {0}, FALSE },
     { OPTION_DRI,         		"DRI",               	  OPTV_BOOLEAN,   {0}, FALSE },
     { OPTION_AGP_SIZE,			"AGPSize",      	  OPTV_INTEGER,   {0}, FALSE },
@@ -173,7 +173,7 @@ static const OptionInfoRec SISOptions[] = {
     { OPTION_NOINTERNALMODES,   	"NoInternalModes",        OPTV_BOOLEAN,   {0}, FALSE },
     { OPTION_OVERRULERANGES,		"OverruleFrequencyRanges",OPTV_BOOLEAN,   {0}, FALSE },
     { OPTION_RESTOREBYSET,		"RestoreBySetMode", 	  OPTV_BOOLEAN,   {0}, FALSE },
-    { OPTION_FORCECRT1,         	"ForceCRT1",              OPTV_BOOLEAN,   {0}, FALSE },      
+    { OPTION_FORCECRT1,         	"ForceCRT1",              OPTV_BOOLEAN,   {0}, FALSE },
     { OPTION_XVONCRT2,          	"XvOnCRT2",               OPTV_BOOLEAN,   {0}, FALSE },
     { OPTION_PDC,               	"PanelDelayCompensation", OPTV_INTEGER,   {0}, FALSE },
     { OPTION_PDC,               	"PDC", 			  OPTV_INTEGER,   {0}, FALSE },
@@ -214,9 +214,9 @@ static const OptionInfoRec SISOptions[] = {
     { OPTION_SIS6326YFILTERSTRONG,	"SIS6326TVYFilterStrong", OPTV_BOOLEAN,   {0}, FALSE },
     { OPTION_SIS6326FORCETVPPLUG,	"SIS6326TVForcePlug",     OPTV_STRING,    {0}, FALSE },
     { OPTION_SIS6326FSCADJUST,		"SIS6326FSCAdjust", 	  OPTV_INTEGER,   {0}, FALSE },
-    { OPTION_YPBPRAR,  		  	"YPbPrAspectRatio",       OPTV_STRING,    {0}, FALSE },    
+    { OPTION_YPBPRAR,  		  	"YPbPrAspectRatio",       OPTV_STRING,    {0}, FALSE },
     { OPTION_USERGBCURSORBLEND,		"ColorHWCursorBlending",  OPTV_BOOLEAN,   {0}, FALSE },
-    { OPTION_USERGBCURSORBLENDTH,	"ColorHWCursorBlendThreshold", OPTV_INTEGER,{0},FALSE},    
+    { OPTION_USERGBCURSORBLENDTH,	"ColorHWCursorBlendThreshold", OPTV_INTEGER,{0},FALSE},
     { OPTION_NODDCFORCRT2,		"NoCRT2Detection", 	  OPTV_BOOLEAN,   {0}, FALSE },
     { OPTION_FORCECRT2REDETECTION,	"ForceCRT2ReDetection",   OPTV_BOOLEAN,   {0}, FALSE },
     { OPTION_SENSEYPBPR,		"SenseYPbPr",   	  OPTV_BOOLEAN,   {0}, FALSE },
@@ -240,12 +240,12 @@ static const OptionInfoRec SISOptions[] = {
     { OPTION_XVUSECHROMAKEY,		"XvUseChromaKey",         OPTV_BOOLEAN,   {0}, FALSE },
     { OPTION_XVINSIDECHROMAKEY,		"XvInsideChromaKey",      OPTV_BOOLEAN,   {0}, FALSE },
     { OPTION_XVYUVCHROMAKEY,		"XvYUVChromaKey",         OPTV_BOOLEAN,   {0}, FALSE },
-    { OPTION_XVDISABLECOLORKEY,		"XvDisableColorKey",      OPTV_BOOLEAN,   {0}, FALSE }, 
+    { OPTION_XVDISABLECOLORKEY,		"XvDisableColorKey",      OPTV_BOOLEAN,   {0}, FALSE },
     { OPTION_XVMEMCPY,			"XvUseMemcpy",  	  OPTV_BOOLEAN,   {0}, FALSE },
     { OPTION_XVBENCHCPY,		"BenchmarkMemcpy",  	  OPTV_BOOLEAN,   {0}, FALSE },
-#ifndef SISCHECKOSSSE    
+#ifndef SISCHECKOSSSE
     { OPTION_XVSSECOPY, 		"UseSSE",  	  	  OPTV_BOOLEAN,   {0}, FALSE },
-#endif    
+#endif
     { OPTION_XVDEFAULTADAPTOR,		"XvDefaultAdaptor",  	  OPTV_STRING,    {0}, FALSE },
     { OPTION_SCALELCD,			"ScaleLCD",	   	  OPTV_BOOLEAN,   {0}, FALSE },
     { OPTION_CENTERLCD,			"CenterLCD",	   	  OPTV_BOOLEAN,   {0}, FALSE },
@@ -290,9 +290,9 @@ static void
 SiS_PrintBadOpt(ScrnInfoPtr pScrn, char *strptr, int token)
 {
     SISPtr pSiS = SISPTR(pScrn);
-    
-    xf86DrvMsg(pScrn->scrnIndex, X_WARNING, 
-    	"\"%s\" is is not a valid parameter for option \"%s\"\n", 
+
+    xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
+    	"\"%s\" is is not a valid parameter for option \"%s\"\n",
 	strptr, pSiS->Options[SiS_FIFT(pSiS->Options, token)].name);
 }
 
@@ -302,8 +302,8 @@ SiS_PrintIlRange(ScrnInfoPtr pScrn, int token, int min, int max, UChar showhex)
     SISPtr pSiS = SISPTR(pScrn);
     static const char *ilparmd = "Invalid parameter for \"%s\". Valid range is %d - %d\n";
     static const char *ilparmh = "Invalid parameter for \"%s\". Valid range is 0x%x - 0x%x\n";
-    
-    xf86DrvMsg(pScrn->scrnIndex, X_WARNING, 
+
+    xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
         showhex ? ilparmh : ilparmd,
 	pSiS->Options[SiS_FIFT(pSiS->Options, token)].name, min, max);
 }
@@ -313,7 +313,7 @@ static void
 SiS_PrintOverruleDHM(ScrnInfoPtr pScrn, int token1, int token2)
 {
     SISPtr pSiS = SISPTR(pScrn);
-    
+
     xf86DrvMsg(pScrn->scrnIndex, X_INFO,
     	"\"%s\" overrules \"%s\" in CRT2 (Master) device section\n",
 	pSiS->Options[SiS_FIFT(pSiS->Options, token1)].name,
@@ -322,7 +322,7 @@ SiS_PrintOverruleDHM(ScrnInfoPtr pScrn, int token1, int token2)
 #endif
 
 static Bool
-SiS_StrIsBoolOff(char *strptr) 
+SiS_StrIsBoolOff(char *strptr)
 {
     if( (!xf86NameCmp(strptr,"off"))   ||
         (!xf86NameCmp(strptr,"false")) ||
@@ -332,7 +332,7 @@ SiS_StrIsBoolOff(char *strptr)
 }
 
 static Bool
-SiS_StrIsBoolOn(char *strptr) 
+SiS_StrIsBoolOn(char *strptr)
 {
     if( (!xf86NameCmp(strptr,"on"))   ||
         (!xf86NameCmp(strptr,"true")) ||
@@ -342,8 +342,8 @@ SiS_StrIsBoolOn(char *strptr)
 }
 
 static Bool
-SiS_EvalOneOrThreeFloats(ScrnInfoPtr pScrn, int token, const char *myerror, 
-                         char *strptr, int *v1, int *v2, int *v3)	   
+SiS_EvalOneOrThreeFloats(ScrnInfoPtr pScrn, int token, const char *myerror,
+                         char *strptr, int *v1, int *v2, int *v3)
 {
     SISPtr pSiS = SISPTR(pScrn);
     float val1 = 0.0, val2 = 0.0, val3 = 0.0;
@@ -365,7 +365,7 @@ SiS_EvalOneOrThreeFloats(ScrnInfoPtr pScrn, int token, const char *myerror,
        }
     }
     if(!valid) {
-       xf86DrvMsg(pScrn->scrnIndex, X_WARNING, myerror, 
+       xf86DrvMsg(pScrn->scrnIndex, X_WARNING, myerror,
                   pSiS->Options[SiS_FIFT(pSiS->Options, token)].name);
     }
     return (valid);
@@ -384,7 +384,7 @@ SiSOptions(ScrnInfoPtr pScrn)
     static const char *enabledstr = "enabled";
     static const char *gammaopt   = "%s expects either a boolean, or 1 or 3 real numbers (0.1 - 10.0)\n";
     static const char *briopt     = "%s expects 1 or 3 real numbers (0.1 - 10.0)\n";
-    Bool        val, IsDHM = FALSE;   
+    Bool        val, IsDHM = FALSE;
     Bool	IsSecondHead = FALSE;
 
     /* Collect all of the relevant option flags (fill in pScrn->options) */
@@ -398,7 +398,7 @@ SiSOptions(ScrnInfoPtr pScrn)
     xf86ProcessOptions(pScrn->scrnIndex, pScrn->options, pSiS->Options);
 
     /* Set defaults */
-    
+
     pSiS->newFastVram = -1;
     pSiS->NoHostBus = FALSE;
     pSiS->TurboQueue = TRUE;
@@ -409,7 +409,7 @@ SiSOptions(ScrnInfoPtr pScrn)
 #endif
     pSiS->doRender = TRUE;
     pSiS->HWCursor = TRUE;
-    pSiS->Rotate = 0; 
+    pSiS->Rotate = 0;
     pSiS->RotateMouse = FALSE;
     pSiS->NoAccel = FALSE;
     pSiS->ShadowFB = FALSE;
@@ -460,7 +460,7 @@ SiSOptions(ScrnInfoPtr pScrn)
     pSiS->chtvtype = -1;
     pSiS->restorebyset = TRUE;
     pSiS->nocrt2ddcdetection = FALSE;
-    pSiS->forcecrt2redetection = TRUE;  
+    pSiS->forcecrt2redetection = TRUE;
     pSiS->SenseYPbPr = TRUE;
     pSiS->ForceCRT1Type = CRT1_VGA;
     pSiS->ForceCRT2Type = CRT2_DEFAULT;
@@ -479,7 +479,7 @@ SiSOptions(ScrnInfoPtr pScrn)
        pSiS->XvDefBri = 0;
        pSiS->XvDefCon = 4;
     }
-    pSiS->XvDefHue = 0; 
+    pSiS->XvDefHue = 0;
     pSiS->XvDefSat = 0;
     pSiS->XvDefDisableGfx = FALSE;
     pSiS->XvDefDisableGfxLR = FALSE;
@@ -505,9 +505,9 @@ SiSOptions(ScrnInfoPtr pScrn)
     pSiS->HWCursorIsVisible = FALSE;
     pSiS->OverruleRanges = TRUE;
     pSiS->BenchMemCpy = TRUE;
-#ifndef SISCHECKOSSSE    
+#ifndef SISCHECKOSSSE
     pSiS->XvSSEMemcpy = FALSE;
-#endif    
+#endif
 #ifdef SISMERGED
     pSiS->MergedFB = pSiS->MergedFBAuto = FALSE;
     pSiS->CRT2Position = sisRightOf;
@@ -585,7 +585,7 @@ SiSOptions(ScrnInfoPtr pScrn)
     }
 
     /* NoHostBus (5597/5598 only)
-     */     
+     */
     if(pSiS->Chipset == PCI_CHIP_SIS5597) {
        from = X_DEFAULT;
        if(xf86GetOptValBool(pSiS->Options, OPTION_NOHOSTBUS, &pSiS->NoHostBus)) {
@@ -603,7 +603,7 @@ SiSOptions(ScrnInfoPtr pScrn)
      * between 8 and 16MB are available, otherwise at 4MB. So, if the amount
      * of memory X uses, a clash between the framebuffer's memory heap
      * and X is avoided. The amount is to be specified in KB.
-     */    
+     */
     if(xf86GetOptValULong(pSiS->Options, OPTION_MAXXFBMEM, &pSiS->maxxfbmem)) {
        xf86DrvMsg(pScrn->scrnIndex, X_CONFIG,
                     "MaxXFBMem: Framebuffer memory shall be limited to %ld KB\n",
@@ -613,7 +613,7 @@ SiSOptions(ScrnInfoPtr pScrn)
 
     /* NoAccel
      * Turns off 2D acceleration
-     */    
+     */
     if(xf86ReturnOptValBool(pSiS->Options, OPTION_NOACCEL, FALSE)) {
        pSiS->NoAccel = TRUE;
 #if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,2,99,0,0)
@@ -626,7 +626,7 @@ SiSOptions(ScrnInfoPtr pScrn)
 
     /* RenderAcceleration
      * En/Disables RENDER acceleration (315/330 series only)
-     */   
+     */
     if((pSiS->VGAEngine == SIS_315_VGA) && (!pSiS->NoAccel)) {
        if(xf86GetOptValBool(pSiS->Options, OPTION_RENDER, &pSiS->doRender)) {
           if(!pSiS->doRender) {
@@ -664,14 +664,14 @@ SiSOptions(ScrnInfoPtr pScrn)
 #ifdef ARGB_CURSOR
 #ifdef SIS_ARGB_CURSOR
     if((pSiS->HWCursor) && ((pSiS->VGAEngine == SIS_300_VGA) || (pSiS->VGAEngine == SIS_315_VGA))) {
-       
+
        from = X_DEFAULT;
        if(xf86GetOptValBool(pSiS->Options, OPTION_USERGBCURSOR, &pSiS->OptUseColorCursor)) {
     	  from = X_CONFIG;
        }
        xf86DrvMsg(pScrn->scrnIndex, from, "Color HW cursor is %s\n",
                     pSiS->OptUseColorCursor ? enabledstr : disabledstr);
-		    
+
        if(pSiS->VGAEngine == SIS_300_VGA) {
           from = X_DEFAULT;
           if(xf86GetOptValBool(pSiS->Options, OPTION_USERGBCURSORBLEND, &pSiS->OptUseColorCursorBlend)) {
@@ -700,13 +700,13 @@ SiSOptions(ScrnInfoPtr pScrn)
 	           "HW cursor color blending emulation threshold is %d\n", ival);
  	     }
 	  }
-       }      
+       }
     }
 #endif
 #endif
 #endif
 
-    /* OverruleFrequencyRanges 
+    /* OverruleFrequencyRanges
      *
      * Enable/disable overruling bogus frequency ranges for TV and LCD(A)
      */
@@ -718,13 +718,13 @@ SiSOptions(ScrnInfoPtr pScrn)
 	  }
        }
     }
-    
+
 #ifdef SISDUALHEAD
     if(pSiS->DualHeadMode) {
        IsDHM = TRUE;
        if(pSiS->SecondHead) IsSecondHead = TRUE;
     }
-#endif        
+#endif
 
     /*
      * MergedFB
@@ -751,7 +751,7 @@ SiSOptions(ScrnInfoPtr pScrn)
 	     pSiS->MergedFB = TRUE;
 	     pSiS->MergedFBAuto = FALSE;
 	  }
-       } 
+       }
        if(xf86GetOptValBool(pSiS->Options, OPTION_MERGEDFBAUTO, &val)) {
           if(!pSiS->MergedFB) {
 	     if(val) pSiS->MergedFB = pSiS->MergedFBAuto = TRUE;
@@ -813,7 +813,7 @@ SiSOptions(ScrnInfoPtr pScrn)
 #ifdef SISXINERAMA
 		   pSiS->CRT2IsScrn0 = TRUE;
 #endif
-	        } 
+	        }
 	     }
 	     if(!valid) {
 	        SiS_PrintBadOpt(pScrn, strptr, OPTION_CRT2POS);
@@ -877,7 +877,7 @@ SiSOptions(ScrnInfoPtr pScrn)
 		OPTION_YPBPRAR, OPTION_SCALELCD, OPTION_CENTERLCD, OPTION_PDC,
 		OPTION_PDCA, OPTION_EMI, OPTION_SPECIALTIMING, OPTION_LVDSHL,
 		OPTION_TVSTANDARD, OPTION_CHTVTYPE, OPTION_CHTVOVERSCAN,
-		OPTION_CHTVSOVERSCAN, OPTION_CHTVLUMABANDWIDTHCVBS, 
+		OPTION_CHTVSOVERSCAN, OPTION_CHTVLUMABANDWIDTHCVBS,
 		OPTION_CHTVLUMABANDWIDTHSVIDEO, OPTION_CHTVLUMAFLICKERFILTER,
 		OPTION_CHTVCHROMABANDWIDTH, OPTION_CHTVCHROMAFLICKERFILTER,
 		OPTION_CHTVCVBSCOLOR, OPTION_CHTVTEXTENHANCE, OPTION_CHTVCONTRAST,
@@ -886,26 +886,26 @@ SiSOptions(ScrnInfoPtr pScrn)
 		OPTION_SISTVCOLCALIBFINE, OPTION_TVXPOSOFFSET, OPTION_TVYPOSOFFSET,
 		OPTION_TVXSCALE, OPTION_TVYSCALE, OPTION_CRT2GAMMA, OPTION_XVONCRT2,
 		OPTION_XVDEFAULTADAPTOR, OPTION_XVMEMCPY, OPTION_XVBENCHCPY,
-#ifndef SISCHECKOSSSE		
+#ifndef SISCHECKOSSSE
  		OPTION_XVSSECOPY,
-#endif		
+#endif
 #ifdef SIS_CP
 		SIS_CP_OPT_DH_WARN
 #endif
 		-1
        };
-		
+
        i = 0;
        while(forbiddenopts[i] >= 0) {
           if(xf86IsOptionSet(pSiS->Options, (int)forbiddenopts[i])) {
-	     xf86DrvMsg(pScrn->scrnIndex, X_WARNING, mystring, 
+	     xf86DrvMsg(pScrn->scrnIndex, X_WARNING, mystring,
 	     		pSiS->Options[SiS_FIFT(pSiS->Options, (int)forbiddenopts[i])].name);
 	  }
           i++;
        }
 
     } else
-#endif    
+#endif
     {
        if(pSiS->VGAEngine == SIS_315_VGA) {
 
@@ -948,7 +948,7 @@ SiSOptions(ScrnInfoPtr pScrn)
 	   * However, although the driver disables the hotkey as
 	   * BIOS developers intented to do that, some buggy BIOSes
 	   * still cause the machine to freeze. Hence the warning.
-	   */	   
+	   */
 	  ival = 0;
 	  from = X_DEFAULT;
 #ifdef SISDUALHEAD
@@ -978,7 +978,7 @@ SiSOptions(ScrnInfoPtr pScrn)
            * specific data from the BIOS ROM. This option can - and
            * should - be used in case the driver makes problems
            * because SiS changed the location of this data.
-           */	   
+           */
 	  if(xf86GetOptValBool(pSiS->Options, OPTION_USEROMDATA, &val)) {
 	     pSiS->OptROMUsage = val ? 1 : 0;
 	     xf86DrvMsg(pScrn->scrnIndex, X_CONFIG,
@@ -992,7 +992,7 @@ SiSOptions(ScrnInfoPtr pScrn)
            * If this data is incorrect, the TV may lose color and
            * the LCD panel might show some strange effects. Use this
            * option to disable the usage of this data.
-           */	   
+           */
 	  if(xf86GetOptValBool(pSiS->Options, OPTION_USEOEM, &val)) {
 	     pSiS->OptUseOEM = val ? 1 : 0;
 	     xf86DrvMsg(pScrn->scrnIndex, X_CONFIG,
@@ -1006,7 +1006,7 @@ SiSOptions(ScrnInfoPtr pScrn)
            * VGA monitors connected to the secondary VGA plug. Since LCD and
            * VGA share the same DDC channel, it might in some cases be impossible
            * to determine if the device is a CRT monitor or a flat panel.
-           */	   
+           */
           if(xf86GetOptValBool(pSiS->Options, OPTION_NODDCFORCRT2, &val)) {
              pSiS->nocrt2ddcdetection = val ? TRUE : FALSE;
           }
@@ -1019,7 +1019,7 @@ SiSOptions(ScrnInfoPtr pScrn)
 	   * to the established timings, resulting in only a very vague idea
 	   * about the panels real resolution. As for secondary VGA, this
 	   * enables us to include a Plasma panel's proprietary modes.
-           */	   
+           */
           if(xf86GetOptValBool(pSiS->Options, OPTION_FORCECRT2REDETECTION, &val)) {
              if(val) {
 	             pSiS->forcecrt2redetection = TRUE;
@@ -1033,7 +1033,7 @@ SiSOptions(ScrnInfoPtr pScrn)
 	   * time, because this condition will be detected as YPbPr (since
 	   * the TV output pins are shared). "False" will not sense for
 	   * YPbPr and detect SVideo or CVBS only.
-           */	   
+           */
           if(xf86GetOptValBool(pSiS->Options, OPTION_SENSEYPBPR, &val)) {
              if(val) pSiS->SenseYPbPr = TRUE;
 	     else    pSiS->SenseYPbPr = FALSE;
@@ -1043,7 +1043,7 @@ SiSOptions(ScrnInfoPtr pScrn)
 	   * Used for forcing the driver to initialize CRT1 as
 	   * VGA (analog) or LCDA (for simultanious LCD and TV
            * display) - on M650/651 and 661 or later with 301C/30xLV only!
-           */	   
+           */
 	  if(pSiS->VGAEngine == SIS_315_VGA) {
              if((strptr = (char *)xf86GetOptValString(pSiS->Options, OPTION_FORCE_CRT1TYPE))) {
                 if((!xf86NameCmp(strptr,"VGA")) || (!xf86NameCmp(strptr,"CRT"))) {
@@ -1068,7 +1068,7 @@ SiSOptions(ScrnInfoPtr pScrn)
            * intention is mainly for old monitors that can't be detected
            * automatically. This is only useful on machines with a video bridge.
            * In normal cases, this option won't be necessary.
-           */	   
+           */
 	  if(xf86GetOptValBool(pSiS->Options, OPTION_FORCECRT1, &val)) {
 	     pSiS->forceCRT1 = val ? 1 : 0;
 	     xf86DrvMsg(pScrn->scrnIndex, X_CONFIG,
@@ -1081,7 +1081,7 @@ SiSOptions(ScrnInfoPtr pScrn)
 	   * Used for forcing the driver to initialize a given
 	   * CRT2 device type.
            * (SVIDEO, COMPOSITE and SCART for overriding detection)
-           */	   
+           */
           strptr = (char *)xf86GetOptValString(pSiS->Options, OPTION_FORCE_CRT2TYPE);
           if(strptr != NULL) {
              if(!xf86NameCmp(strptr,"TV"))
@@ -1111,7 +1111,7 @@ SiSOptions(ScrnInfoPtr pScrn)
 		   xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
 		      "Can't set both CRT1 and CRT2 type to LCD; CRT2 disabled\n");
 		}
-             } else if((!xf86NameCmp(strptr,"VGA")) || 
+             } else if((!xf86NameCmp(strptr,"VGA")) ||
 	               (!xf86NameCmp(strptr,"DVI-A")) ||
 		       (!xf86NameCmp(strptr,"CRT"))) {
 	        if(pSiS->ForceCRT1Type == CRT1_VGA) {
@@ -1175,7 +1175,7 @@ SiSOptions(ScrnInfoPtr pScrn)
                 xf86DrvMsg(pScrn->scrnIndex, X_CONFIG,
                     "CRT2 type shall be %s\n", strptr);
           }
-	    
+
 	  if(pSiS->ForceTVType == TV_YPBPR) {
 	     strptr = (char *)xf86GetOptValString(pSiS->Options, OPTION_YPBPRAR);
              if(strptr != NULL) {
@@ -1246,7 +1246,7 @@ SiSOptions(ScrnInfoPtr pScrn)
           * Setting this to TRUE will force the bridge/panel link
 	  * to scale; FALSE will rely on the panel's capabilities.
 	  * Not supported on all machines.
-          */  
+          */
 	  if(xf86GetOptValBool(pSiS->Options, OPTION_SCALELCD, &val)) {
 	     pSiS->UsePanelScaler = val ? 0 : 1;
 	     xf86DrvMsg(pScrn->scrnIndex, X_CONFIG, "LCD scaling is %s\n",
@@ -1261,7 +1261,7 @@ SiSOptions(ScrnInfoPtr pScrn)
 	  * selectable. Non-centered means that the driver will pass
 	  * 1:1 data to the output and that the panel will have to
 	  * scale by itself (if supported by the panel).
-          */	  
+          */
 	  if(xf86GetOptValBool(pSiS->Options, OPTION_CENTERLCD, &val)) {
 	     pSiS->CenterLCD = val ? 1 : 0;
 	     xf86DrvMsg(pScrn->scrnIndex, X_CONFIG, "Non-scaled LCD output will %sbe centered\n",
@@ -1280,7 +1280,7 @@ SiSOptions(ScrnInfoPtr pScrn)
           * a different setting. For 300 series, the value given must
 	  * be within the mask 0x3c. For 661 and later, if must be
 	  * within the range of 0 to 31.
-          */	  
+          */
 	  ival = -1;
           xf86GetOptValInteger(pSiS->Options, OPTION_PDC, &ival);
 	  if(ival != -1) {
@@ -1299,7 +1299,7 @@ SiSOptions(ScrnInfoPtr pScrn)
 
 	 /* PanelDelayCompensation1 (315 series only)
           * Same as above, but for LCD-via-CRT1 ("LCDA")
-          */	  
+          */
 	  if(pSiS->VGAEngine == SIS_315_VGA) {
 	     ival = -1;
              xf86GetOptValInteger(pSiS->Options, OPTION_PDCA, &ival);
@@ -1319,7 +1319,7 @@ SiSOptions(ScrnInfoPtr pScrn)
 	 /* LVDSHL (300/315/330 series + 30xLV bridge only)
           * This might be required if the LCD panel is too dark.
           * The parameter is an integer from 0 to 3.
-          */	  
+          */
           if(xf86GetOptValInteger(pSiS->Options, OPTION_LVDSHL, &pSiS->SiS_Pr->LVDSHL)) {
 	     if((pSiS->SiS_Pr->LVDSHL < 0) || (pSiS->SiS_Pr->LVDSHL > 3)) {
 	        SiS_PrintIlRange(pScrn, OPTION_LVDSHL, 0, 3, 0);
@@ -1340,7 +1340,7 @@ SiSOptions(ScrnInfoPtr pScrn)
 	  * 1400x1050, or some Inventec(Compaq) machines with a
 	  * 1280x1024 panel.
           * The parameter is an integer from 0 to 0x60ffffff.
-          */	  
+          */
           if(xf86GetOptValInteger(pSiS->Options, OPTION_EMI, &pSiS->EMI)) {
 	     if((pSiS->EMI < 0) || (pSiS->EMI > 0x60ffffff)) {
 	        SiS_PrintIlRange(pScrn, OPTION_LVDSHL, 0, 0x60ffffff, 1);
@@ -1358,7 +1358,7 @@ SiSOptions(ScrnInfoPtr pScrn)
 	  * where the BIOS carries incorrect information (such as in
 	  * the case of the MSI m250).
 	  */
-	  if(xf86GetOptValInteger(pSiS->Options, OPTION_EMI, &pSiS->PRGB)) {
+	  if(xf86GetOptValInteger(pSiS->Options, OPTION_PRGB, &pSiS->PRGB)) {
 	     if((pSiS->PRGB != 18 && pSiS->PRGB != 24)) {
 	        pSiS->PRGB = -1;
 		SiS_PrintBadOpt(pScrn, strptr, OPTION_PRGB);
@@ -1375,7 +1375,7 @@ SiSOptions(ScrnInfoPtr pScrn)
       /* TVStandard (300/315/330 series and 6326 w/ TV only)
        * This option is for overriding the autodetection of
        * the BIOS/Jumper option for PAL / NTSC
-       */   
+       */
        if((pSiS->VGAEngine == SIS_300_VGA) ||
           (pSiS->VGAEngine == SIS_315_VGA) ||
           ((pSiS->Chipset == PCI_CHIP_SIS6326) && (pSiS->SiS6326Flags & SIS6326_HASTV))) {
@@ -1424,7 +1424,7 @@ SiSOptions(ScrnInfoPtr pScrn)
       /* CHTVType  (315/330 series + Chrontel only)
        * Used for telling the driver if the TV output shall
        * be 525i YPbPr or SCART.
-       */     
+       */
        if(pSiS->VGAEngine == SIS_315_VGA) {
           strptr = (char *)xf86GetOptValString(pSiS->Options, OPTION_CHTVTYPE);
           if(strptr != NULL) {
@@ -1451,7 +1451,7 @@ SiSOptions(ScrnInfoPtr pScrn)
         * Both options are only effective on machines with a
         * CHRONTEL TV encoder. SuperOverscan is only available
         * on the 700x.
-        */	
+        */
        if((pSiS->VGAEngine == SIS_300_VGA) || (pSiS->VGAEngine == SIS_315_VGA)) {
 	  if(xf86GetOptValBool(pSiS->Options, OPTION_CHTVOVERSCAN, &val)) {
 	     pSiS->OptTVOver = val ? 1 : 0;
@@ -1598,11 +1598,11 @@ SiSOptions(ScrnInfoPtr pScrn)
        }
 
        /* CRT2Gamma - enable/disable/set gamma correction for CRT2
-        * Since 2004/11/26, this option is a boolean and string option 
+        * Since 2004/11/26, this option is a boolean and string option
 	* simulaniously. "TRUE" (or other valid bool values) have the
 	* same effect as before: The driver uses the (global) Gamma
-	* for both CRT1 and CRT2. Otherwise, this option takes one or 
-	* three floats between 0.1 and 10.0 which define a separate 
+	* for both CRT1 and CRT2. Otherwise, this option takes one or
+	* three floats between 0.1 and 10.0 which define a separate
 	* gamma correction for CRT2. (SiS video bridges only.)
         */
        if((pSiS->VGAEngine == SIS_300_VGA) || (pSiS->VGAEngine == SIS_315_VGA)) {
@@ -1613,7 +1613,7 @@ SiSOptions(ScrnInfoPtr pScrn)
 	        pSiS->CRT2gamma = TRUE;
 		pSiS->CRT2SepGamma = FALSE;
 	     } else {
-	        if(SiS_EvalOneOrThreeFloats(pScrn, OPTION_CRT2GAMMA, gammaopt, strptr, 
+	        if(SiS_EvalOneOrThreeFloats(pScrn, OPTION_CRT2GAMMA, gammaopt, strptr,
 		   		&pSiS->GammaR2i, &pSiS->GammaG2i, &pSiS->GammaB2i)) {
                    pSiS->GammaR2 = (float)pSiS->GammaR2i / 1000;
 		   pSiS->GammaG2 = (float)pSiS->GammaG2i / 1000;
@@ -1630,13 +1630,13 @@ SiSOptions(ScrnInfoPtr pScrn)
 			 pScrn->monitor->gamma.green = pSiS->GammaG2;
 			 pScrn->monitor->gamma.blue = pSiS->GammaB2;
 		      }
-#endif		      
+#endif
 		   }
 		}
              }
           }
        }
-       
+
        /* Default adaptor: Overlay (default) or blitter */
        if(pSiS->VGAEngine == SIS_315_VGA) {
           if((strptr = (char *)xf86GetOptValString(pSiS->Options, OPTION_XVDEFAULTADAPTOR))) {
@@ -1648,31 +1648,31 @@ SiSOptions(ScrnInfoPtr pScrn)
 	        SiS_PrintBadOpt(pScrn, strptr, OPTION_XVDEFAULTADAPTOR);
                 xf86DrvMsg(pScrn->scrnIndex, X_INFO,
              		"%s \"OVERLAY\" or \"BLITTER\"\n", validparm);
-	     }    
+	     }
 	  }
-       } 
-            
+       }
+
        if(xf86GetOptValBool(pSiS->Options, OPTION_XVMEMCPY, &val)) {
 	  pSiS->XvUseMemcpy = val ? TRUE : FALSE;
 	  xf86DrvMsg(pScrn->scrnIndex, X_CONFIG, "Xv will %suse memcpy()\n",
 	     	val ? "" : "not ");
-       }     
-	  
+       }
+
        if(xf86GetOptValBool(pSiS->Options, OPTION_XVBENCHCPY, &val)) {
 	  pSiS->BenchMemCpy = val ? TRUE : FALSE;
-	  xf86DrvMsg(pScrn->scrnIndex, X_CONFIG, 
+	  xf86DrvMsg(pScrn->scrnIndex, X_CONFIG,
 	   	"Will %sbenchmark methods for system RAM to video RAM transfers\n",
-		val ? "" : "not ");		
-       }   
-	
-#ifndef SISCHECKOSSSE			
+		val ? "" : "not ");
+       }
+
+#ifndef SISCHECKOSSSE
        if(xf86GetOptValBool(pSiS->Options, OPTION_XVSSECOPY, &val)) {
 	  pSiS->XvSSEMemcpy = val ? TRUE : FALSE;
 	  xf86DrvMsg(pScrn->scrnIndex, X_CONFIG,
-		"Will %s use SSE CPU instructions\n", 
+		"Will %s use SSE CPU instructions\n",
 		val ? "eventually" : "not");
        }
-#endif	     
+#endif
 
 #ifdef SIS_CP
        SIS_CP_OPT_DOOPT
@@ -1690,7 +1690,7 @@ SiSOptions(ScrnInfoPtr pScrn)
     /* VESA - DEPRECATED
      * This option is for forcing the driver to use
      * the VESA BIOS extension for mode switching.
-     */    
+     */
     if(xf86GetOptValBool(pSiS->Options, OPTION_VESA, &val)) {
        if(IsDHM) {
           xf86DrvMsg(pScrn->scrnIndex, X_WARNING, baddhm,
@@ -1718,12 +1718,12 @@ SiSOptions(ScrnInfoPtr pScrn)
        if(xf86GetOptValBool(pSiS->Options, OPTION_NOINTERNALMODES, &pSiS->noInternalModes)) {
 	  if(pSiS->noInternalModes) {
 	     xf86DrvMsg(pScrn->scrnIndex, X_CONFIG, "Usage of built-in modes is %s\n", disabledstr);
-          }	
+          }
        }
-       
+
     }
 
-    /* ShadowFB */   
+    /* ShadowFB */
     from = X_DEFAULT;
     if(xf86GetOptValBool(pSiS->Options, OPTION_SHADOW_FB, &pSiS->ShadowFB)) {
 #ifdef SISMERGED
@@ -1780,7 +1780,7 @@ SiSOptions(ScrnInfoPtr pScrn)
 	     pSiS->RotateMouse = val ? TRUE : FALSE;
 	     xf86DrvMsg(pScrn->scrnIndex, X_CONFIG,
 	     	"Rotation of mouse movements %s\n", pSiS->RotateMouse ? enabledstr : disabledstr);
-	  }  
+	  }
        }
     }
 
@@ -1817,7 +1817,7 @@ SiSOptions(ScrnInfoPtr pScrn)
        }
 
        if(!pSiS->NoXvideo) {
-      
+
 	  if((pSiS->VGAEngine == SIS_300_VGA) || (pSiS->VGAEngine == SIS_315_VGA)) {
       	     /* XvOnCRT2
 	      * On chipsets with only one overlay (315, 650, 740, 330), the user can
@@ -1917,7 +1917,7 @@ SiSOptions(ScrnInfoPtr pScrn)
                 else SiS_PrintIlRange(pScrn, OPTION_XVCHROMAMAX, 0, 0xffffff, 1);
              }
           }
-	  
+
           if(pSiS->VGAEngine == SIS_315_VGA) {
 	     /* XvGamma - enable/disable gamma correction for Xv
 	      * Supported for CRT1 only
@@ -1929,7 +1929,7 @@ SiSOptions(ScrnInfoPtr pScrn)
 	        } else if(SiS_StrIsBoolOn(strptr)) {
 		   pSiS->XvGamma = pSiS->XvGammaGiven = TRUE;
                 } else {
-		   if(SiS_EvalOneOrThreeFloats(pScrn, OPTION_XVGAMMA, gammaopt, strptr, 
+		   if(SiS_EvalOneOrThreeFloats(pScrn, OPTION_XVGAMMA, gammaopt, strptr,
 		   		&pSiS->XvGammaRed, &pSiS->XvGammaGreen, &pSiS->XvGammaBlue)) {
 		      pSiS->XvGamma = pSiS->XvGammaGiven = TRUE;
 		      pSiS->XvGammaRedDef = pSiS->XvGammaRed;
@@ -1945,39 +1945,39 @@ SiSOptions(ScrnInfoPtr pScrn)
     if((pSiS->VGAEngine == SIS_300_VGA) || (pSiS->VGAEngine == SIS_315_VGA)) {
        Bool GotBri = FALSE, GotPBri = FALSE;
        if((strptr = (char *)xf86GetOptValString(pSiS->Options, OPTION_STOREDBRI))) {
-          SiS_EvalOneOrThreeFloats(pScrn, OPTION_STOREDBRI, briopt, strptr, 
-	  	&pSiS->GammaBriR, &pSiS->GammaBriG, &pSiS->GammaBriB); 
+          SiS_EvalOneOrThreeFloats(pScrn, OPTION_STOREDBRI, briopt, strptr,
+	  	&pSiS->GammaBriR, &pSiS->GammaBriG, &pSiS->GammaBriB);
 	  GotBri = TRUE;
        }
        if((strptr = (char *)xf86GetOptValString(pSiS->Options, OPTION_STOREDPBRI))) {
-          SiS_EvalOneOrThreeFloats(pScrn, OPTION_STOREDPBRI, briopt, strptr, 
+          SiS_EvalOneOrThreeFloats(pScrn, OPTION_STOREDPBRI, briopt, strptr,
 	  	&pSiS->GammaPBriR, &pSiS->GammaPBriG, &pSiS->GammaPBriB);
 	  GotPBri = TRUE;
-       }    
+       }
        if((!IsDHM) || (IsDHM && !IsSecondHead)) {
           if((strptr = (char *)xf86GetOptValString(pSiS->Options, OPTION_STOREDBRI2))) {
-	     if(SiS_EvalOneOrThreeFloats(pScrn, OPTION_STOREDBRI2, briopt, strptr, 
+	     if(SiS_EvalOneOrThreeFloats(pScrn, OPTION_STOREDBRI2, briopt, strptr,
 	     	    &pSiS->GammaBriR2, &pSiS->GammaBriG2, &pSiS->GammaBriB2)) {
 	        if(IsDHM) {
-#ifdef SISDUALHEAD		
+#ifdef SISDUALHEAD
 	           if(GotBri) SiS_PrintOverruleDHM(pScrn, OPTION_STOREDBRI2, OPTION_STOREDBRI);
 		   pSiS->GammaBriR = pSiS->GammaBriR2;
 		   pSiS->GammaBriG = pSiS->GammaBriG2;
 		   pSiS->GammaBriB = pSiS->GammaBriB2;
-#endif		   
+#endif
                 } else pSiS->CRT2SepGamma = TRUE;
 	     }
           }
           if((strptr = (char *)xf86GetOptValString(pSiS->Options, OPTION_STOREDPBRI2))) {
-	     if(SiS_EvalOneOrThreeFloats(pScrn, OPTION_STOREDPBRI2, briopt, strptr, 
+	     if(SiS_EvalOneOrThreeFloats(pScrn, OPTION_STOREDPBRI2, briopt, strptr,
 	     	    &pSiS->GammaPBriR2, &pSiS->GammaPBriG2, &pSiS->GammaPBriB2)) {
 	        if(IsDHM) {
-#ifdef SISDUALHEAD				
-	           if(GotPBri) SiS_PrintOverruleDHM(pScrn, OPTION_STOREDPBRI2, OPTION_STOREDPBRI); 
+#ifdef SISDUALHEAD
+	           if(GotPBri) SiS_PrintOverruleDHM(pScrn, OPTION_STOREDPBRI2, OPTION_STOREDPBRI);
 	     	   pSiS->GammaPBriR = pSiS->GammaPBriR2;
 		   pSiS->GammaPBriG = pSiS->GammaPBriG2;
 		   pSiS->GammaPBriB = pSiS->GammaPBriB2;
-#endif		   
+#endif
 	        } else pSiS->CRT2SepGamma = TRUE;
 	     }
           }
