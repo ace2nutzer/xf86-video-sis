@@ -1,12 +1,38 @@
-/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/sis/sis_dri.c,v 1.32 2003/08/29 08:50:54 twini Exp $ */
+/* $XFree86$ */
 /*
- *  DRI wrapper for 300 and 315 series
+ * DRI wrapper for 300 and 315 series
  *
- *  Preliminary 315/330 support by Thomas Winischhofer
- *  Mesa 4/5 changes by Eric Anholt
+ * Copyright (C) 2001-2004 by Thomas Winischhofer, Vienna, Austria
  *
- *  Taken and modified from tdfx_dri.c, mga_dri.c
+ * Preliminary 315/330 support by Thomas Winischhofer
+ * Portions of Mesa 4/5 changes by Eric Anholt
  *
+ * Licensed under the following terms:
+ *
+ * Permission to use, copy, modify, distribute, and sell this software and its
+ * documentation for any purpose is hereby granted without fee, provided that
+ * the above copyright notice appears in all copies and that both that copyright
+ * notice and this permission notice appear in supporting documentation, and
+ * and that the name of the copyright holder not be used in advertising
+ * or publicity pertaining to distribution of the software without specific,
+ * written prior permission. The copyright holder makes no representations
+ * about the suitability of this software for any purpose.  It is provided
+ * "as is" without expressed or implied warranty.
+ *
+ * THE COPYRIGHT HOLDER DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
+ * INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO
+ * EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+ * CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE,
+ * DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+ * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+ * PERFORMANCE OF THIS SOFTWARE.
+ *
+ * Previously taken and modified from tdfx_dri.c, mga_dri.c
+ *
+ * Authors:	Can-Ru Yeou, SiS Inc.
+ *		Alan Hourihane, Wigan, England,
+ *		Thomas Winischhofer <thomas@winischhofer.net>
+ *		others.
  */
 
 #include "xf86.h"
@@ -21,12 +47,11 @@
 #include "GL/glxtokens.h"
 
 #include "sis.h"
-#include "sis_dri.h"
 #if XF86_VERSION_CURRENT >= XF86_VERSION_NUMERIC(4,2,99,0,0)
 #include "xf86drmCompat.h"
 #endif
 
-#if XF86_VERSION_CURRENT >= XF86_VERSION_NUMERIC(4,3,0,0,0)
+#ifdef SISNEWDRI
 #include "sis_common.h"
 #endif
 
@@ -51,16 +76,6 @@ extern void GlxSetVisualConfigs(
     __GLXvisualConfig *configs,
     void **configprivs
 );
-
-#define AGP_PAGE_SIZE 4096
-#define AGP_PAGES 2048
-#define AGP_SIZE (AGP_PAGE_SIZE * AGP_PAGES)
-#define AGP_CMDBUF_PAGES 256
-#define AGP_CMDBUF_SIZE (AGP_PAGE_SIZE * AGP_CMDBUF_PAGES)
-
-/* 315/330 */
-#define AGP_VTXBUF_PAGES 512
-#define AGP_VTXBUF_SIZE (AGP_PAGE_SIZE * AGP_VTXBUF_PAGES)
 
 static char SISKernelDriverName[] = "sis";
 static char SISClientDriverName[] = "sis";
@@ -205,7 +220,7 @@ SISInitVisualConfigs(ScreenPtr pScreen)
     }
     if(i != numConfigs) {
        xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
-                 "[dri] Incorrect initialization of visuals.  Disabling DRI.\n");
+                 "[dri] Incorrect initialization of visuals. Disabling DRI.\n");
        return FALSE;
     }
     break;
@@ -225,7 +240,7 @@ Bool SISDRIScreenInit(ScreenPtr pScreen)
   SISPtr pSIS = SISPTR(pScrn);
   DRIInfoPtr pDRIInfo;
   SISDRIPtr pSISDRI;
-#if XF86_VERSION_CURRENT >= XF86_VERSION_NUMERIC(4,3,0,0,0)
+#ifdef SISNEWDRI
   drmVersionPtr version;
 #endif
 
@@ -235,7 +250,8 @@ Bool SISDRIScreenInit(ScreenPtr pScreen)
 #endif
 
    /* Check that the GLX, DRI, and DRM modules have been loaded by testing
-    * for canonical symbols in each module. */
+    * for canonical symbols in each module.
+    */
    if(!xf86LoaderCheckSymbol("GlxSetVisualConfigs")) return FALSE;
    if(!xf86LoaderCheckSymbol("DRIScreenInit"))       return FALSE;
    if(!xf86LoaderCheckSymbol("drmAvailable"))        return FALSE;
@@ -252,8 +268,8 @@ Bool SISDRIScreenInit(ScreenPtr pScreen)
       if(major != 4 || minor < 0) {
          xf86DrvMsg(pScreen->myNum, X_ERROR,
                     "[dri] SISDRIScreenInit failed because of a version mismatch.\n"
-                    "[dri] libDRI version is %d.%d.%d but version 4.0.x is needed.\n"
-                    "[dri] Disabling DRI.\n",
+                    "\t[dri] libDRI version is %d.%d.%d but version 4.0.x is needed.\n"
+                    "\t[dri] Disabling DRI.\n",
                     major, minor, patch);
          return FALSE;
       }
@@ -265,15 +281,19 @@ Bool SISDRIScreenInit(ScreenPtr pScreen)
 
   pDRIInfo->drmDriverName = SISKernelDriverName;
   pDRIInfo->clientDriverName = SISClientDriverName;
-  if (xf86LoaderCheckSymbol("DRICreatePCIBusID")) {
-    pDRIInfo->busIdString = DRICreatePCIBusID(pSIS->PciInfo);
+#ifdef SISNEWDRI2
+  if(xf86LoaderCheckSymbol("DRICreatePCIBusID")) {
+     pDRIInfo->busIdString = DRICreatePCIBusID(pSiS->PciInfo);
   } else {
-    pDRIInfo->busIdString = xalloc(64);
-    sprintf(pDRIInfo->busIdString, "PCI:%d:%d:%d",
-	    ((pciConfigPtr)pSIS->PciInfo->thisCard)->busnum,
-	    ((pciConfigPtr)pSIS->PciInfo->thisCard)->devnum,
-	    ((pciConfigPtr)pSIS->PciInfo->thisCard)->funcnum);
+#endif
+     pDRIInfo->busIdString = xalloc(64);
+     sprintf(pDRIInfo->busIdString, "PCI:%d:%d:%d",
+             ((pciConfigPtr)pSIS->PciInfo->thisCard)->busnum,
+      	     ((pciConfigPtr)pSIS->PciInfo->thisCard)->devnum,
+      	     ((pciConfigPtr)pSIS->PciInfo->thisCard)->funcnum);
+#ifdef SISNEWDRI2
   }
+#endif
   /* Hack to keep old DRI working -- checked for major==1 and
    * minor==1.
    */
@@ -347,7 +367,7 @@ Bool SISDRIScreenInit(ScreenPtr pScreen)
 
   if(!DRIScreenInit(pScreen, pDRIInfo, &pSIS->drmSubFD)) {
      xf86DrvMsg(pScreen->myNum, X_ERROR,
-               "[dri] DRIScreenInit failed.  Disabling DRI.\n");
+               "[dri] DRIScreenInit failed. Disabling DRI.\n");
      xfree(pDRIInfo->devPrivate);
      pDRIInfo->devPrivate = 0;
      DRIDestroyInfoRec(pSIS->pDRIInfo);
@@ -356,7 +376,7 @@ Bool SISDRIScreenInit(ScreenPtr pScreen)
      return FALSE;
   }
 
-#if XF86_VERSION_CURRENT >= XF86_VERSION_NUMERIC(4,3,0,0,0)
+#ifdef SISNEWDRI
   /* Check DRM kernel version */
   version = drmGetVersion(pSIS->drmSubFD);
   if(version) {
@@ -381,9 +401,9 @@ Bool SISDRIScreenInit(ScreenPtr pScreen)
       fb.size = pSIS->DRIheapend - pSIS->DRIheapstart;
       drmCommandWrite(pSIS->drmSubFD, DRM_SIS_FB_INIT, &fb, sizeof(fb));
       xf86DrvMsg(pScreen->myNum, X_INFO,
-                 "[dri] DRI video RAM memory heap: 0x%x to 0x%x (%dKB)\n",
+                 "[dri] DRI video RAM memory heap: 0x%lx to 0x%lx (%dKB)\n",
                  pSIS->DRIheapstart, pSIS->DRIheapend,
-                 (pSIS->DRIheapend - pSIS->DRIheapstart) >> 10);
+                 (int)((pSIS->DRIheapend - pSIS->DRIheapstart) >> 10));
     }
     drmFreeVersion(version);
   }
@@ -403,15 +423,16 @@ Bool SISDRIScreenInit(ScreenPtr pScreen)
 
   /* AGP */
   do {
+    pSIS->agpWantedSize = pSIS->agpWantedPages * AGP_PAGE_SIZE;
     pSIS->agpSize = 0;
     pSIS->agpCmdBufSize = 0;
     pSISDRI->AGPCmdBufSize = 0;
 
     if(!pSIS->IsAGPCard)
        break;
-    
+
     if(drmAgpAcquire(pSIS->drmSubFD) < 0) {
-       xf86DrvMsg(pScreen->myNum, X_ERROR, "[drm] drmAgpAcquire failed\n");
+       xf86DrvMsg(pScreen->myNum, X_ERROR, "[drm] Failed to acquire AGP, AGP disabled\n");
        break;
     }
 
@@ -419,34 +440,70 @@ Bool SISDRIScreenInit(ScreenPtr pScreen)
 #ifdef SIS315DRI
        /* Default to 1X agp mode in SIS315 */
        if(drmAgpEnable(pSIS->drmSubFD, drmAgpGetMode(pSIS->drmSubFD) & ~0x00000002) < 0) {
-          xf86DrvMsg(pScreen->myNum, X_ERROR, "[drm] drmAgpEnable failed\n");
+          xf86DrvMsg(pScreen->myNum, X_ERROR, "[drm] Failed to enable AGP, AGP disabled\n");
           break;
        }
 #endif
     } else {
        /* TODO: default value is 2x? */
        if(drmAgpEnable(pSIS->drmSubFD, drmAgpGetMode(pSIS->drmSubFD) & ~0x0) < 0) {
-          xf86DrvMsg(pScreen->myNum, X_ERROR, "[drm] drmAgpEnable failed\n");
+          xf86DrvMsg(pScreen->myNum, X_ERROR, "[drm] Failed to enable AGP, AGP disabled\n");
           break;
        }
     }
 
-    xf86DrvMsg(pScreen->myNum, X_INFO, "[drm] drmAgpEnabled succeeded\n");
+    xf86DrvMsg(pScreen->myNum, X_INFO, "[drm] AGP enabled\n");
 
-    if(drmAgpAlloc(pSIS->drmSubFD, AGP_SIZE, 0, NULL, &pSIS->agpHandle) < 0) {
-       xf86DrvMsg(pScreen->myNum, X_ERROR, "[drm] drmAgpAlloc failed\n");
-       drmAgpRelease(pSIS->drmSubFD);
-       break;
+#define AGP_DEFAULT_SIZE_MB 8
+#define AGP_DEFAULT_SIZE    (AGP_DEFAULT_SIZE_MB * 1024 * 1024)
+
+    if(drmAgpAlloc(pSIS->drmSubFD, pSIS->agpWantedSize, 0, NULL, &pSIS->agpHandle) < 0) {
+       xf86DrvMsg(pScreen->myNum, X_ERROR, "[drm] Failed to allocate %dMB AGP memory\n",
+                  (int)(pSIS->agpWantedSize / (1024 * 1024)));
+       if(pSIS->agpWantedSize > AGP_DEFAULT_SIZE) {
+          xf86DrvMsg(pScreen->myNum, X_INFO, "[drm] Retrying with %dMB\n", AGP_DEFAULT_SIZE_MB);
+          pSIS->agpWantedSize = AGP_DEFAULT_SIZE;
+          if(drmAgpAlloc(pSIS->drmSubFD, pSIS->agpWantedSize, 0, NULL, &pSIS->agpHandle) < 0) {
+             xf86DrvMsg(pScreen->myNum, X_ERROR, "[drm] Failed to allocate %dMB AGP memory, AGP disabled\n",
+	  	        AGP_DEFAULT_SIZE_MB);
+             drmAgpRelease(pSIS->drmSubFD);
+             break;
+	  }
+       } else {
+          drmAgpRelease(pSIS->drmSubFD);
+          break;
+       }
     }
-   
+
+    xf86DrvMsg(pScreen->myNum, X_INFO, "[drm] Allocated %dMB AGP memory\n",
+    		(int)(pSIS->agpWantedSize / (1024 * 1024)));
+
     if(drmAgpBind(pSIS->drmSubFD, pSIS->agpHandle, 0) < 0) {
-       xf86DrvMsg(pScreen->myNum, X_ERROR, "[drm] drmAgpBind failed\n");
+       xf86DrvMsg(pScreen->myNum, X_ERROR, "[drm] Failed to bind AGP memory\n");
        drmAgpFree(pSIS->drmSubFD, pSIS->agpHandle);
-       drmAgpRelease(pSIS->drmSubFD);
-       break;
+       if(pSIS->agpWantedSize > AGP_DEFAULT_SIZE) {
+          xf86DrvMsg(pScreen->myNum, X_INFO, "[drm] Retrying with %dMB\n", AGP_DEFAULT_SIZE_MB);
+          pSIS->agpWantedSize = AGP_DEFAULT_SIZE;
+          if(drmAgpAlloc(pSIS->drmSubFD, pSIS->agpWantedSize, 0, NULL, &pSIS->agpHandle) < 0) {
+	     xf86DrvMsg(pScreen->myNum, X_ERROR, "[drm] Failed to re-allocate AGP memory, AGP disabled\n");
+	     drmAgpRelease(pSIS->drmSubFD);
+             break;
+	  } else if(drmAgpBind(pSIS->drmSubFD, pSIS->agpHandle, 0) < 0) {
+	     xf86DrvMsg(pScreen->myNum, X_ERROR, "[drm] Failed to bind AGP memory again, AGP disabled\n");
+             drmAgpFree(pSIS->drmSubFD, pSIS->agpHandle);
+	     drmAgpRelease(pSIS->drmSubFD);
+             break;
+	  }
+       } else {
+          drmAgpRelease(pSIS->drmSubFD);
+          break;
+       }
     }
 
-    pSIS->agpSize = AGP_SIZE;
+    xf86DrvMsg(pScreen->myNum, X_INFO, "[drm] Bound %dMB AGP memory\n",
+	       (int)(pSIS->agpWantedSize / (1024 * 1024)));
+
+    pSIS->agpSize = pSIS->agpWantedSize;
     pSIS->agpAddr = drmAgpBase(pSIS->drmSubFD);
     /* pSIS->agpBase = */
 
@@ -470,7 +527,7 @@ Bool SISDRIScreenInit(ScreenPtr pScreen)
        pSISDRI->AGPVtxBufOffset = pSIS->agpVtxBufAddr - pSIS->agpAddr;
        pSISDRI->AGPVtxBufSize = pSIS->agpVtxBufSize;
 
-       drmSiSAgpInit(pSIS->drmSubFD, AGP_VTXBUF_SIZE,(AGP_SIZE - AGP_VTXBUF_SIZE));
+       drmSiSAgpInit(pSIS->drmSubFD, AGP_VTXBUF_SIZE,(pSIS->agpSize - AGP_VTXBUF_SIZE));
 #endif
     } else {
 
@@ -482,7 +539,7 @@ Bool SISDRIScreenInit(ScreenPtr pScreen)
        pSISDRI->AGPCmdBufOffset = pSIS->agpCmdBufAddr - pSIS->agpAddr;
        pSISDRI->AGPCmdBufSize = pSIS->agpCmdBufSize;
 
-       drmSiSAgpInit(pSIS->drmSubFD, AGP_CMDBUF_SIZE,(AGP_SIZE - AGP_CMDBUF_SIZE));
+       drmSiSAgpInit(pSIS->drmSubFD, AGP_CMDBUF_SIZE,(pSIS->agpSize - AGP_CMDBUF_SIZE));
     }
   }
   while(0);
@@ -495,7 +552,7 @@ Bool SISDRIScreenInit(ScreenPtr pScreen)
 
   if((drmCtlInstHandler(pSIS->drmSubFD, pSIS->irq)) != 0) {
      xf86DrvMsg(pScrn->scrnIndex, X_INFO,
-         "[drm] failure adding irq %d handler, stereo disabled\n",
+         "[drm] Failed to add IRQ %d handler, stereo disabled\n",
          pSIS->irq);
      pSIS->irqEnabled = FALSE;
   } else {
@@ -509,7 +566,7 @@ Bool SISDRIScreenInit(ScreenPtr pScreen)
      return FALSE;
   }
 
-  xf86DrvMsg(pScrn->scrnIndex, X_INFO, "[dri] visual configs initialized.\n" );
+  xf86DrvMsg(pScrn->scrnIndex, X_INFO, "[dri] Visual configs initialized.\n" );
 
   return TRUE;
 }
@@ -547,9 +604,9 @@ SISDRICloseScreen(ScreenPtr pScreen)
   if(pSIS->pVisualConfigsPriv) xfree(pSIS->pVisualConfigsPriv);
 
   if(pSIS->agpSize){
-     xf86DrvMsg(pScreen->myNum, X_INFO, "[drm] Freeing agp memory\n");
+     xf86DrvMsg(pScreen->myNum, X_INFO, "[drm] Freeing AGP memory\n");
      drmAgpFree(pSIS->drmSubFD, pSIS->agpHandle);
-     xf86DrvMsg(pScreen->myNum, X_INFO, "[drm] Releasing agp module\n");
+     xf86DrvMsg(pScreen->myNum, X_INFO, "[drm] Releasing AGP module\n");
      drmAgpRelease(pSIS->drmSubFD);
   }
 }
