@@ -1,30 +1,39 @@
-/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/sis/sis_regs.h,v 1.22 2003/09/04 15:32:44 twini Exp $ */
+/* $XFree86$ */
+/* $XdotOrg$ */
 /*
- * 2D Acceleration for SiS300, SiS540, SiS630, SiS730, SiS530, SiS620
+ * Register definitions for old and 300 series
  *
- * Copyright 1998,1999 by Alan Hourihane, Wigan, England.
- * Copyright 2002, 2003 by Thomas Winischhofer, Vienna, Austria
+ * Copyright (C) 2001-2004 by Thomas Winischhofer, Vienna, Austria
  *
- * Permission to use, copy, modify, distribute, and sell this software and its
- * documentation for any purpose is hereby granted without fee, provided that
- * the above copyright notice appear in all copies and that both that
- * copyright notice and this permission notice appear in supporting
- * documentation, and that the name of the copyright holder not be used in
- * advertising or publicity pertaining to distribution of the software without
- * specific, written prior permission.  The copyright holder makes no representations
- * about the suitability of this software for any purpose.  It is provided
- * "as is" without express or implied warranty.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1) Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2) Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3) The name of the author may not be used to endorse or promote products
+ *    derived from this software without specific prior written permission.
  *
- * THE COPYRIGHT HOLDER DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
- * INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO
- * EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY SPECIAL, INDIRECT OR
- * CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE,
- * DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
- * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
- * PERFORMANCE OF THIS SOFTWARE.
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESSED OR
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+ * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Old series register definitions
+ * Copyright (C) 1998, 1999 by Alan Hourihane, Wigan, England.
+ *
+ * Authors:	Thomas Winischhofer <thomas@winischhofer.net>
+ *		Alan Hourihane
  *
  */
- 
 
 /* For general use --------------------------------------------------------------- */
 
@@ -64,16 +73,16 @@
                       outSISIDXREG(base,idx,__Temp); \
                     } while (0)
 
-#define BITMASK(h,l)    (((unsigned)(1U << ((h)-(l)+1))-1)<<(l))
-#define GENMASK(mask)   BITMASK(1?mask,0?mask)
+#define BITMASK(h,l)    	(((unsigned)(1U << ((h)-(l)+1))-1)<<(l))
+#define GENMASK(mask)   	BITMASK(1?mask,0?mask)
 
 #define GETBITS(var,mask)   	(((var) & GENMASK(mask)) >> (0?mask))
 #define SETBITS(val,mask)   	((val) << (0?mask))
 #define SETBIT(n)       	(1<<(n))
 
-#define GETBITSTR(val,from,to)  ((GETBITS(val,from)) << (0?to))
-#define SETVARBITS(var,val,from,to) (((var)&(~(GENMASK(to)))) | \
-                                    GETBITSTR(val,from,to))
+#define GETBITSTR(val,from,to)  	((GETBITS(val,from)) << (0?to))
+#define SETVARBITS(var,val,from,to) 	(((var)&(~(GENMASK(to)))) | \
+                                    		GETBITSTR(val,from,to))
 #define GETVAR8(var)        ((var)&0xFF)
 #define SETVAR8(var,val)    (var) =  GETVAR8(val)
 
@@ -283,13 +292,13 @@
 #define  Index_VI_SubPict_Scale_Control		0x3D
 /* (0x40 = enable/disable subpicture) */
 
-/* TW: Subpicture line buffer control */
+/* Subpicture line buffer control */
 #define  Index_VI_SubPict_Threshold		0x3E
 
-/* TW: What is this? */
+/* What is this? */
 #define  Index_VI_FIFO_Max			0x3F
 
-/* TW: Subpicture palette; 16 colors, total 32 bytes address space */
+/* Subpicture palette; 16 colors, total 32 bytes address space */
 #define  Index_VI_SubPict_Pal_Base_Low		0x40
 #define  Index_VI_SubPict_Pal_Base_High		0x41
 
@@ -299,7 +308,7 @@
 #define  Index_MPEG_Read_Ctrl2                  0x62	/* MPEG auto flip */
 #define  Index_MPEG_Read_Ctrl3                  0x63	/* MPEG auto flip */
 
-/* TW: MPEG AutoFlip scale */
+/* MPEG AutoFlip scale */
 #define  Index_MPEG_Ver_Up_Scale_Low            0x64
 #define  Index_MPEG_Ver_Up_Scale_High           0x65
 
@@ -309,9 +318,9 @@
 #define  Index_MPEG_UV_Buf_Preset_Middle	0x69
 #define  Index_MPEG_Y_UV_Buf_Preset_High	0x6A
 
-/* TW: The following registers only exist on the 315 series */
+/* The following registers only exist on the 315 series */
 
-/* TW: Bit 16:24 of Y_U_V buf start address (?) */
+/* Bit 16:24 of Y_U_V buf start address */
 #define  Index_VI_Y_Buf_Start_Over		0x6B
 #define  Index_VI_U_Buf_Start_Over		0x6C
 #define  Index_VI_V_Buf_Start_Over		0x6D
@@ -328,11 +337,18 @@
 
 #define  Index_VI_Control_Misc3			0x74
 
+/* 340: */
+/* DDA registers 0x75 - 0xb4 */
+/* threshold high 0xb5, 0xb6 */
+#define  Index_VI_Line_Buffer_Size_High		0xb7
+
+
 /* Bits in Scale control (0x1c) */
 #define  VI_Scale_Ctrl_Horiz_DDA                0x20
 #define  VI_Scale_Ctrl_Vert_DDA                 0x40
 
-/* TW: Bits (and helpers) for Index_VI_Control_Misc0 */
+/* Bits (and helpers) for Index_VI_Control_Misc0 */
+#define  VI_Misc0_Enable_Capture_AutoFlip       0x01 /* 340 only? */
 #define  VI_Misc0_Enable_Overlay		0x02
 #define  VI_Misc0_420_Plane_Enable		0x04 /* Select Plane or Packed mode */
 #define  VI_Misc0_422_Enable			0x20 /* Select 422 or 411 mode */
@@ -344,7 +360,7 @@
 #define  VI_Misc0_Fmt_NV12			0x4c /* (330 series only?) */
 #define  VI_Misc0_ChromaKeyRGBYUV               0x40 /* 300 series only: 0 = RGB, 1 = YUV */
 
-/* TW: Bits for Index_VI_Control_Misc1 */
+/* Bits for Index_VI_Control_Misc1 */
 #define  VI_Misc1_DisableGraphicsAtOverlay      0x01 /* Disables graphics display in overlay area */
 #define  VI_Misc1_BOB_Enable			0x02 /* Enable BOB de-interlacer */
 #define	 VI_Misc1_Line_Merge			0x04
@@ -354,7 +370,7 @@
 /* #define  VI_Misc1_?                          0x40  */
 /* #define  VI_Misc1_?                          0x80  */
 
-/* TW: Bits for Index_VI_Control_Misc2 */
+/* Bits for Index_VI_Control_Misc2 */
 #define  VI_Misc2_Select_Video2			0x01
 #define  VI_Misc2_Video2_On_Top			0x02
 #define  VI_Misc2_DisableGraphics              	0x04 /* Disable graphics display entirely (<= 650 only, not >= M650, 651) */
@@ -364,12 +380,12 @@
 #define  VI_Misc2_Auto_Flip_Enable		0x40
 #define  VI_Misc2_Video_Reg_Write_Enable        0x80  /* 315 series only? */
 
-/* TW: Bits for Index_VI_Control_Misc3 */
+/* Bits for Index_VI_Control_Misc3 */
 #define  VI_Misc3_Submit_Video_1		0x01  /* AKA "address ready" */
 #define  VI_Misc3_Submit_Video_2		0x02  /* AKA "address ready" */
 #define  VI_Misc3_Submit_SubPict		0x04  /* AKA "address ready" */
 
-/* TW: Values for Index_VI_Key_Overlay_OP (0x2F) */
+/* Values for Index_VI_Key_Overlay_OP (0x2F) */
 #define  VI_ROP_Never				0x00
 #define  VI_ROP_DestKey				0x03
 #define  VI_ROP_ChromaKey			0x05
@@ -461,10 +477,10 @@
 #define  Index_VI6326_Control_Misc5                 0xBE  /* (Datasheet: 530/620 ONLY - not correct) */
 #define  Index_VI6326_Control_Misc6                 0xB2  /* 5597 and 6326 only! */
 
-/* TW: What is this?  not a register, obviously */
+/* What is this?  not a register, obviously */
 #define  Index_VI6326_FIFO_Max			    0x3F
 
-/* TW: Bits (and helpers) for Index_VI6326_Control_Misc0 */
+/* Bits (and helpers) for Index_VI6326_Control_Misc0 */
 #define  VI6326_Misc0_EnableCapture		0x01  /* 1 = on, 0 = off (6326 only) */
 #define  VI6326_Misc0_EnableOverlay		0x02  /* 1 = on, 0 = off */
 #define  VI6326_Misc0_VideoOnly			0x10  /* 1 = video only, 0 = gfx + video */
@@ -472,7 +488,7 @@
 #define  VI6326_Misc0_VideoFormat		0x40  /* 1 = YUV, 0 = RGB */
 #define  VI6326_Misc0_FieldPolarity		0x80  /* 1 = *Odd / Even, 0 = Odd / *Even (6326 only) */
 
-/* TW: Bits for Index_VI6326_Control_Misc1 (ALL 6326 ONLY) */
+/* Bits for Index_VI6326_Control_Misc1 (ALL 6326 ONLY) */
 #define  VI6326_Misc1_EnableYUVCapture		0x01  /* 0 = RGB, 1 = YUV */
 #define  VI6326_Misc1_EnableCaptureDithering    0x02  /* 0 = disable, 1 = enable */
 #define  VI6326_Misc1_CaptureFormat555		0x04  /* 1 = 555, 0 = 565 */
@@ -485,7 +501,7 @@
 #define  VI6326_Misc1_EnableVBSyncIRQ		0x40  /* 1 = Enable IRQ on vertical blank */
 #define  VI6326_Misc1_ClearVBSyncIRQ		0x80  /* Clear pending irq */
 
-/* TW: Bits for Index_VI6326_Control_Misc3 */
+/* Bits for Index_VI6326_Control_Misc3 */
 #define  VI6326_Misc3_UVCaptureFormat		0x01  /* 1 = 2's complement, 0 = CCIR 601 (6326 only) */
 #define  VI6326_Misc3_UVOverlayFormat		0x02  /* 1 = 2's complement, 0 = CCIR 601 */
 #define  VI6326_Misc3_ChromaKeyFormat		0x04  /* 1 = YUV, 0 = RGB */
@@ -495,7 +511,7 @@
 #define  VI6326_Misc3_BT819A			0x40  /* 1 = enable, 0 = disable (6326 only) */
 #define  VI6326_Misc3_SystemMemFB		0x80  /* 1 = enable, 0 = disable (6326 only) */
 
-/* TW: Bits for Index_VI6326_Control_Misc4 */
+/* Bits for Index_VI6326_Control_Misc4 */
 #define  VI6326_Misc4_CPUVideoFormatMask	0x03
 #define  VI6326_Misc4_CPUVideoFormatRGB555      0x00
 #define  VI6326_Misc4_CPUVideoFormatYUV422      0x01
@@ -503,12 +519,12 @@
 #define  VI6326_Misc4_EnableYUV420		0x04  /* 1 = enable, 0 = disable */
 /** #define WHATISTHIS                          0x40  */
 
-/* TW: Bits for Index_VI6326_Control_Misc5 (all 530/620 only) */
+/* Bits for Index_VI6326_Control_Misc5 (all 530/620 only) */
 #define  VI6326_Misc5_LineBufferMerge           0x10  /* 0 = disable, 1=enable */
 #define  VI6326_Misc5_VPlaneBit20               0x04
 #define  VI6326_Misc5_UPlaneBit20               0x02
 
-/* TW: Bits for Index_VI6326_Control_Misc6  (5597 and 6326 only) */
+/* Bits for Index_VI6326_Control_Misc6  (5597 and 6326 only) */
 #define  VI6326_Misc6_Decimation                0x80  /* 0=disable 1=enable video decimation */
 
 /* Video format selection */
@@ -519,14 +535,14 @@
 #define  VI_6326_VideoRGB555                    0x00
 #define  VI_6326_VideoRGB565                    0x40
 
-/* TW: Values for Index_VI6326_Key_Overlay_OP */
+/* Values for Index_VI6326_Key_Overlay_OP */
 #define  VI6326_ROP_Never			0x00
 #define  VI6326_ROP_DestKey			0x03
 #define  VI6326_ROP_Always			0x0F
 
 /* --- end of 6326 video registers ---------------------------------- */
 
-/* TW register base (6326 only) */
+/* register base (6326 only) */
 #define  Index_TV6326_TVOutIndex		    0xE0
 #define  Index_TV6326_TVOutData		    	    0xE1
 
@@ -561,7 +577,7 @@
 #define _VIN_FIELD_BOTH                            4
 
 
-/* i2c registers (TW; not on 300/315 series) */
+/* i2c registers (not on 300/315 series) */
 #define X_INDEXREG      0x14
 #define X_PORTREG       0x15
 #define X_DATA          0x0f
@@ -572,7 +588,7 @@
 /* mmio registers for video */
 #define REG_PRIM_CRT_COUNTER    0x8514
 
-/* TW: MPEG MMIO registers (630 and later) ----------------------------------------- */
+/* MPEG MMIO registers (630 and later) ----------------------------------------- */
 
 /* Not public (yet?) */
 

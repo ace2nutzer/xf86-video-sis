@@ -1,4 +1,5 @@
 /* $XFree86$ */
+/* $XdotOrg$ */
 /*
  * SiS DRI wrapper
  *
@@ -35,6 +36,19 @@
 #define _SIS_DRI_
 
 #include "xf86drm.h"
+
+#if 0
+#ifndef DRI_VERSION_CURRENT
+#define drm_handle_t drmHandle
+#define drm_context_t drmContext
+#endif
+#ifdef DRI_VERSION_CURRENT
+#if DRI_VERSION_CURRENT < DRI_VERSION_NUMERIC(?,?,?,?)
+#define drm_handle_t drmHandle
+#define drm_context_t drmContext
+#endif
+#endif
+#endif
 
 #define SIS_MAX_DRAWABLES 256
 #define SISIOMAPSIZE (64*1024)
