@@ -38,40 +38,65 @@
 /* For general use --------------------------------------------------------------- */
 
 #define inSISREG(base)          inb(base)
-#define outSISREG(base,val)     outb(base,val)
-#define orSISREG(base,val)      do { \
-                      unsigned char __Temp = inb(base); \
-                      outSISREG(base, __Temp | (val)); \
-                    } while (0)
-#define andSISREG(base,val)     do { \
-                      unsigned char __Temp = inb(base); \
-                      outSISREG(base, __Temp & (val)); \
-                    } while (0)
 
-#define inSISIDXREG(base,idx,var)   do { \
-                      outb(base,idx); var=inb((base)+1); \
+#define outSISREG(base,val)     outb(base,val)
+
+#define orSISREG(base,val)      			\
+		    do { 				\
+                      unsigned char __Temp = inb(base); \
+                      outb(base, __Temp | (val)); 	\
                     } while (0)
-#define outSISIDXREG(base,idx,val)  do { \
-                      outb(base,idx); outb((base)+1,val); \
+		    
+#define andSISREG(base,val)     			\
+		    do { 				\
+                      unsigned char __Temp = inb(base); \
+                      outb(base, __Temp & (val)); 	\
                     } while (0)
-#define orSISIDXREG(base,idx,val)   do { \
-                      unsigned char __Temp; \
-                      outb(base,idx);   \
-                      __Temp = inb((base)+1)|(val); \
-                      outSISIDXREG(base,idx,__Temp); \
+		    
+#define inSISIDXREG(base,idx,var)   		\
+		    do { 			\
+                      outb(base, idx); 		\
+		      var = inb((base)+1);	\
                     } while (0)
-#define andSISIDXREG(base,idx,and)  do { \
-                      unsigned char __Temp; \
-                      outb(base,idx);   \
-                      __Temp = inb((base)+1)&(and); \
-                      outSISIDXREG(base,idx,__Temp); \
+		    
+#define outSISIDXREG(base,idx,val)  		\
+		    do { 			\
+                      outb(base, idx); 		\
+		      outb((base)+1, val); 	\
+                    } while (0)	
+		    
+#define orSISIDXREG(base,idx,val)   			\
+		    do { 				\
+                      unsigned char __Temp; 		\
+                      outb(base, idx);   		\
+                      __Temp = inb((base)+1) | (val); 	\
+		      outb((base)+1, __Temp);		\
                     } while (0)
-#define setSISIDXREG(base,idx,and,or)   do { \
-                      unsigned char __Temp; \
-                      outb(base,idx);   \
-                      __Temp = (inb((base)+1)&(and))|(or); \
-                      outSISIDXREG(base,idx,__Temp); \
+		    
+#define andSISIDXREG(base,idx,and)  			\
+		    do { 				\
+                      unsigned char __Temp; 		\
+                      outb(base, idx);   		\
+                      __Temp = inb((base)+1) & (and); 	\
+		      outb((base)+1, __Temp);		\
                     } while (0)
+		    
+#define setSISIDXREG(base,idx,and,or)   		   	\
+		    do { 				   	\
+                      unsigned char __Temp; 		   	\
+                      outb(base, idx);   		   	\
+                      __Temp = (inb((base)+1) & (and)) | (or); 	\
+		      outb((base)+1, __Temp);			\
+                    } while (0)
+		    
+#define setSISIDXREGmask(base,idx,data,mask)		   \
+		    do {				   \
+		      unsigned char __Temp;		   \
+		      outb(base, idx);			   \
+		      __Temp = (inb((base)+1)) & (~(mask));\
+		      __Temp |= ((data) & (mask));	   \
+		      outb((base)+1, __Temp);		   \
+		    } while(0)
 
 #define BITMASK(h,l)    	(((unsigned)(1U << ((h)-(l)+1))-1)<<(l))
 #define GENMASK(mask)   	BITMASK(1?mask,0?mask)

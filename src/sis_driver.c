@@ -683,10 +683,9 @@ SISIdentify(int flags)
     xf86PrintChipsets(SIS_NAME, "driver for SiS chipsets", SISChipsets);
 }
 
-#if 0
-/* This won't work as long as noone added the symbols to the symlist */
+#ifdef SISGAMMARAMP
 static void
-SISCalculateGammaRamp(ScrnInfoPtr pScrn)
+SISCalculateGammaRamp(ScreenPtr pScreen, ScrnInfoPtr pScrn)
 {
    SISPtr pSiS = SISPTR(pScrn);
    int i, j, nramp;
@@ -700,7 +699,7 @@ SISCalculateGammaRamp(ScrnInfoPtr pScrn)
    gamma_prescale[1] = (float)pSiS->GammaPBriG / 1000;
    gamma_prescale[2] = (float)pSiS->GammaPBriB / 1000;
 
-   if(!(nramp = xf86GetGammaRampSize(pScrn->pScreen))) return;
+   if(!(nramp = xf86GetGammaRampSize(pScreen))) return;
 
    for(i=0; i<3; i++) {
       ramp[i] = (unsigned short *)xalloc(nramp * sizeof(unsigned short));
@@ -733,7 +732,7 @@ SISCalculateGammaRamp(ScrnInfoPtr pScrn)
       }
    }
 
-   xf86ChangeGammaRamp(pScrn->pScreen, nramp, ramp[0], ramp[1], ramp[2]);
+   xf86ChangeGammaRamp(pScreen, nramp, ramp[0], ramp[1], ramp[2]);
 
    xfree(ramp[0]);
    xfree(ramp[1]);
@@ -7522,11 +7521,11 @@ SISScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
        return FALSE;
     }
 
-#if 0
+#ifdef SISGAMMARAMP
     if((pSiS->GammaBriR != 1000) || (pSiS->GammaBriG != 1000) ||
        (pSiS->GammaBriB != 1000) || (pSiS->GammaPBriR != 1000) ||
        (pSiS->GammaPBriG != 1000) || (pSiS->GammaPBriB != 1000)) {
-       SISCalculateGammaRamp(pScrn);
+       SISCalculateGammaRamp(pScreen, pScrn);
     }
 #endif
 

@@ -40,7 +40,7 @@
 
 #define SISDRIVERVERSIONYEAR    4
 #define SISDRIVERVERSIONMONTH   10
-#define SISDRIVERVERSIONDAY     27
+#define SISDRIVERVERSIONDAY     29
 #define SISDRIVERREVISION       1
 
 #define SISDRIVERIVERSION (SISDRIVERVERSIONYEAR << 16) |  \
@@ -116,7 +116,12 @@
 #endif
 
 #if 1				/* Include code for gamma correction */
-#define SISGAMMA		
+#define SISGAMMA
+#ifdef XORG_VERSION_CURRENT
+#if XORG_VERSION_CURRENT >= XORG_VERSION_NUMERIC(6,8,2,0,0)
+#define SISGAMMARAMP
+#endif
+#endif		
 #endif
 
 #if 1				/* Include code for color hardware cursors */

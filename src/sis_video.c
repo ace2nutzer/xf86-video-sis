@@ -826,19 +826,12 @@ static __inline void setvideoreg(SISPtr pSiS, CARD8 reg, CARD8 data)
 
 static __inline void setvideoregmask(SISPtr pSiS, CARD8 reg, CARD8 data, CARD8 mask)
 {
-    CARD8   old;
-    inSISIDXREG(SISVID, reg, old);
-    data = (data & mask) | (old & (~mask));
-    outSISIDXREG(SISVID, reg, data);
+    setSISIDXREGmask(SISVID, reg, data, mask);
 }
 
 static void setsrregmask(SISPtr pSiS, CARD8 reg, CARD8 data, CARD8 mask)
 {
-    CARD8   old;
-
-    inSISIDXREG(SISSR, reg, old);
-    data = (data & mask) | (old & (~mask));
-    outSISIDXREG(SISSR, reg, data);
+    setSISIDXREGmask(SISSR, reg, data, mask);
 }
 
 /* VBlank */

@@ -223,6 +223,8 @@ static const OptionInfoRec SISOptions[] = {
     { OPTION_CRT2GAMMA,			"CRT2Gamma", 	  	  OPTV_BOOLEAN,   {0}, -1    },
     { OPTION_STOREDBRI,			"StoredGammaBrightness",  OPTV_STRING,    {0}, -1    },
     { OPTION_STOREDPBRI,		"StoredGammaPreBrightness",OPTV_STRING,   {0}, -1    },
+    { OPTION_STOREDBRI,			"GammaBrightness",  	  OPTV_STRING,    {0}, -1    },
+    { OPTION_STOREDPBRI,		"GammaPreBrightness",	  OPTV_STRING,    {0}, -1    },
     { OPTION_XVGAMMA,			"XvGamma", 	  	  OPTV_STRING,    {0}, -1    },
     { OPTION_XVDEFCONTRAST,		"XvDefaultContrast", 	  OPTV_INTEGER,   {0}, -1    },
     { OPTION_XVDEFBRIGHTNESS,		"XvDefaultBrightness", 	  OPTV_INTEGER,   {0}, -1    },
