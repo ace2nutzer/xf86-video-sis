@@ -37,17 +37,12 @@
 
 #include "xf86drm.h"
 
-#if 0
-#ifndef DRI_VERSION_CURRENT
+/* Hack: Since the types were changed, the typedefs
+ * went into drm.h. This file did not exist earlier.
+ */
+#ifndef _DRM_H_
 #define drm_handle_t drmHandle
 #define drm_context_t drmContext
-#endif
-#ifdef DRI_VERSION_CURRENT
-#if DRI_VERSION_CURRENT < DRI_VERSION_NUMERIC(?,?,?,?)
-#define drm_handle_t drmHandle
-#define drm_context_t drmContext
-#endif
-#endif
 #endif
 
 #define SIS_MAX_DRAWABLES 256

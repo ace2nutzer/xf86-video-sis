@@ -5594,18 +5594,22 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
         xf86LoaderReqSymLists(shadowSymbols, NULL);
     }
 
-    /* Load the dri module if requested. */
+    /* Load the dri and glx modules if requested. */
 #ifdef XF86DRI
     if(pSiS->loadDRI) {
-       if(xf86LoadSubModule(pScrn, "dri")) {
-          xf86LoaderReqSymLists(driSymbols, drmSymbols, NULL);
-       } else {
-#ifdef SISDUALHEAD
-          if(!pSiS->DualHeadMode)
-#endif
-             xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
-	  	 "Remove >Load \"dri\"< from the Module section of your XF86Config file\n");
-       }
+       if(!xf86LoaderCheckSymbol("DRIScreenInit")) {
+          if(xf86LoadSubModule(pScrn, "dri")) {
+	     if(!xf86LoaderCheckSymbol("GlxSetVisualConfigs")) {
+	        if(xf86LoadSubModule(pScrn, "glx")) {
+                   xf86LoaderReqSymLists(driSymbols, drmSymbols, NULL);
+		} else {
+		   SISErrorLog(pScrn, "Failed to load glx module\n");
+		}
+	     }
+	  } else {
+	     SISErrorLog(pScrn, "Failed to load dri module\n");
+	  }
+       } 
     }
 #endif    
 
