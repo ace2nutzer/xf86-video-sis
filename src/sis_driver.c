@@ -1,4 +1,4 @@
-/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/sis/sis_driver.c,v 1.187 2004/03/06 16:29:05 twini Exp $ */
+/* $XFree86$ */
 /*
  * SiS driver main code
  *
@@ -300,7 +300,7 @@ static XF86ModuleVersionInfo sisVersRec =
     MODULEVENDORSTRING,
     MODINFOSTRING1,
     MODINFOSTRING2,
-    XF86_VERSION_CURRENT,
+    XORG_VERSION_CURRENT,
     SIS_MAJOR_VERSION, SIS_MINOR_VERSION, SIS_PATCHLEVEL,
     ABI_CLASS_VIDEODRV,         /* This is a video driver */
     ABI_VIDEODRV_VERSION,
@@ -2347,13 +2347,13 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
     xf86DrvMsg(pScrn->scrnIndex, X_INFO,
 	"Copyright (C) 2001-2004 Thomas Winischhofer <thomas@winischhofer.net> and others\n");
     xf86DrvMsg(pScrn->scrnIndex, X_INFO,
-        "Compiled for XFree86 %d.%d.%d.%d\n",
+        "Compiled for X.Org %d.%d.%d.%d\n",
 	XF86_VERSION_MAJOR, XF86_VERSION_MINOR,
 	XF86_VERSION_PATCH, XF86_VERSION_SNAP);
 #if XF86_VERSION_CURRENT >= XF86_VERSION_NUMERIC(4,2,99,0,0)
     if(xf86GetVersion() != XF86_VERSION_CURRENT) {
        xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
-         "This version of the driver is not compiled for this version of XFree86!\n");
+         "This version of the driver is not compiled for this version of X.Org!\n");
     }
 #endif
     xf86DrvMsg(pScrn->scrnIndex, X_INFO,
@@ -2835,8 +2835,6 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 
     /*
      * The first thing we should figure out is the depth, bpp, etc.
-     * Set SupportConvert... flags since we use the fb layer which
-     * supports this conversion. (24to32 seems not implemented though)
      * Additionally, determine the size of the HWCursor memory area.
      */
     switch(pSiS->VGAEngine) {
@@ -2850,15 +2848,12 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	break;
       case SIS_530_VGA:
         pSiS->CursorSize = 2048;
-    	pix24flags = Support32bppFb 	  |
-	             Support24bppFb 	  |
-		     SupportConvert32to24;
+    	pix24flags = Support32bppFb |
+	             Support24bppFb;
         break;
       default:
         pSiS->CursorSize = 2048;
-        pix24flags = Support24bppFb 	  |
-		     SupportConvert32to24 |
-		     PreferConvert32to24;
+        pix24flags = Support24bppFb;
 	break;
     }
 
@@ -5001,7 +4996,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 #endif
           } else {
 	     xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
-	   	"Building list of built-in modes failed, using XFree86 defaults\n");
+	   	"Building list of built-in modes failed, using X.Org defaults\n");
 	  }
        } else {
           pSiS->HaveCustomModes = TRUE;

@@ -1,4 +1,4 @@
-/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/sis/sis_vb.c,v 1.45 2004/02/25 23:22:20 twini Exp $ */
+/* $XFree86$ */
 /*
  * Video bridge detection and configuration for 300, 315 and 330 series
  *

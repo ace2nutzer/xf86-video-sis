@@ -1,4 +1,4 @@
-/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/sis/vstruct.h,v 1.35 2004/02/25 22:40:46 twini Exp $ */
+/* $XFree86$ */
 /*
  * General structure definitions for universal mode switching modules
  *

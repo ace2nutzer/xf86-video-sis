@@ -1,4 +1,4 @@
-/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/sis/sis_vga.c,v 1.46 2004/02/26 15:07:02 twini Exp $ */
+/* $XFree86$ */
 /*
  * Mode setup and basic video bridge detection
  *

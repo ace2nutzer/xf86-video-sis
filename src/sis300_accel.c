@@ -1,4 +1,4 @@
-/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/sis/sis300_accel.c,v 1.29 2004/02/25 17:45:11 twini Exp $ */
+/* $XFree86$ */
 /*
  * 2D Acceleration for SiS 530, 620, 300, 540, 630, 730.
  *

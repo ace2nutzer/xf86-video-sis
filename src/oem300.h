@@ -1,4 +1,4 @@
-/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/sis/oem300.h,v 1.16 2004/02/25 17:45:11 twini Exp $ */
+/* $XFree86$ */
 /*
  * OEM Data for 300 series
  *
