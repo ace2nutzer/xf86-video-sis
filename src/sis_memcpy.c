@@ -33,17 +33,8 @@
 
 extern FBLinearPtr SISAllocateOverlayMemory(ScrnInfoPtr pScrn, FBLinearPtr linear, int size);
 
-#define FL_LIBC  0x001
-#define FL_BI    0x002
-#define FL_SSE   0x004
-#define FL_MMX   0x008
-#define FL_3DNOW 0x010
-#define FL_MMX2  0x020
-#define FL_BI2   0x040
-
 #define CPUBUFSIZE 2048      /* Size of /proc/cpuinfo buffer */
 #define BUFSIZ (576 * 1152)  /* Matches 720x576 YUV420 */
-
 
 /************************************************************************/
 /*                   arch specific memcpy() routines                    */
@@ -301,8 +292,7 @@ extern FBLinearPtr SISAllocateOverlayMemory(ScrnInfoPtr pScrn, FBLinearPtr linea
 typedef struct {
     vidCopyFunc mFunc;
     char *mName;
-    char **cpuFlag;
-    int mycpuflag;
+    unsigned int mycpuflag;
 } SISMCFuncData;
 
 /************************************************************************/
@@ -321,12 +311,17 @@ static void SiS_libc_memcpy(unsigned char *dst, const unsigned char *src, int si
 
 #ifndef __GNUC__
 
+unsigned int SiSGetCPUFlags(ScreenPtr pScreen)
+{   
+    return 0;
+}
+
 vidCopyFunc SiSVidCopyInit(ScreenPtr pScreen) 
 {
     return SiS_libc_memcpy;
 }
 
-#else /* Everything below is gcc specific */
+#else /* ! Everything below is gcc specific ! */
 
 /************************************************************************/
 /*                   Built-in memcpy() - arch specific                  */
@@ -465,7 +460,7 @@ static void SiS_builtin_memcp2(unsigned char *to, const unsigned char *from, int
 
 static __inline void * __memcpy(void * to, const void * from, size_t n)
 {
-    memcpy(dst, src, size);  /* placeholder */
+    memcpy(to, from, n);  /* placeholder */
 }
 
 #endif
@@ -483,11 +478,13 @@ static void SiS_builtin_memcpy(unsigned char *dst, const unsigned char *src, int
 /*                    Definitions for archs and OSes                    */
 /************************************************************************/
 
+#undef SiS_checkosforsse
 #undef SiS_canBenchmark
 #undef SiS_haveProc
 
 #if defined(__i386__) /* ***************************************** i386 */
 
+#define SiS_checkosforsse 	/* Does this cpu support sse and do we need to check os? */
 #define SiS_canBenchmark	/* Can we perform a benchmark? */
 #ifdef linux
 #define SiS_haveProc		/* Do we have /proc/cpuinfo or similar? */
@@ -511,6 +508,7 @@ static unsigned int taketime(void)	/* get current time (for benchmarking) */
 
 #elif defined(__AMD64__) /*************************************** AMD64 */
 
+#define SiS_checkosforsse	/* Does this cpu support sse and do we need to check os? */
 #define SiS_canBenchmark	/* Can we perform a benchmark? */
 #ifdef linux
 #define SiS_haveProc		/* Do we have /proc/cpuinfo or similar? */
@@ -659,7 +657,7 @@ static int SiS_BenchmarkMemcpy(ScrnInfoPtr pScrn, SISMCFuncData *MCFunctions,
     
     return bestSoFar;
 }
-#endif
+#endif /* canBenchmark */
 
 /**********************************************************************/
 /*      Generic routines if /proc filesystem is available (Linux)     */
@@ -712,46 +710,14 @@ static char *SiS_GetCPUFreq(ScrnInfoPtr pScrn, char *buf, double *cpuFreq)
     
     return frqBuf;
 }
-
-/* Linux: Parse "flags:" field from /proc/cpuinfo */
-static unsigned int SiS_ParseCPUFlags(char *cpuinfo, SISMCFuncData *MCFunctions)
-{
-   unsigned int flags = 0;
-   int i = 0, flagIdx, flagEnd;
-   unsigned char bufbackup, bufbackup2; 
-   char **sflags;
-   char *flagLoc;
-   
-   if(!(cpuinfo = strstr(cpuinfo, "processor\t:"))) return 0;
-   if(!(flagLoc = strstr(cpuinfo, "flags\t\t:"))) return 0;
-   flagLoc += 8;
-   flagIdx = flagEnd = (int)(flagLoc - cpuinfo);
-   while((cpuinfo[flagEnd] != '\n') && (cpuinfo[flagEnd] != 0)) flagEnd++;
-   bufbackup = cpuinfo[flagEnd];    cpuinfo[flagEnd]   = ' ';
-   bufbackup2 = cpuinfo[flagEnd+1]; cpuinfo[flagEnd+1] =  0;
-   
-   while(MCFunctions[i].mFunc) {
-      if((sflags = MCFunctions[i].cpuFlag)) {
-         for(; *sflags != 0; sflags++) {
-	    if(strstr(&cpuinfo[flagIdx], *sflags)) flags |= MCFunctions[i].mycpuflag;
-	 }
-      } else {
-         flags |= MCFunctions[i].mycpuflag;
-      }
-      i++;
-   }
-   
-   cpuinfo[flagEnd] = bufbackup; cpuinfo[flagEnd+1] = bufbackup2;
-   
-   return(flags);
-}
-#endif
+#endif /* haveProc */
 
 /**********************************************************************/
 /*                      Arch-specific routines                        */
 /**********************************************************************/
 
-#if defined(__i386__) || defined (__AMD64__)   /* Common i386, AMD64  */
+#ifdef SiS_checkosforsse   /* Common i386, AMD64  */
+
 #ifdef SISCHECKOSSSE
 static jmp_buf sigill_return;
 
@@ -761,9 +727,11 @@ static void sigill_handler(void)
 }
 #endif
 
-static Bool CheckOSforSSE(ScrnInfoPtr pScrn)
+static Bool CheckOSforSSE(ScreenPtr pScreen)
 {
-#ifdef SISCHECKOSSSE
+    ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum];
+    
+#ifdef SISCHECKOSSSE  /* Check OS for SSE possible: */
     int signo = -1;
     
 #ifdef SISDGBMC
@@ -791,48 +759,47 @@ static Bool CheckOSforSSE(ScrnInfoPtr pScrn)
     }
     
     return (signo >= 0) ? FALSE : TRUE;
-#else
+
+#else  /* no check for SSE possible: */
+    
     SISPtr pSiS = SISPTR(pScrn);
     
-    xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
-    	"Checking OS for SSE support is not supported in this version of" SISMYSERVERNAME "\n");
+    xf86DrvMsg(pScrn->scrnIndex, pSiS->XvSSEMemcpy ? X_WARNING : X_INFO,
+    	"Checking OS for SSE support is not supported in this version of " SISMYSERVERNAME "\n");
+	
     if(pSiS->XvSSEMemcpy) {
        xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
-    	"If you get a signal 4 here, set the option \"XvSSEMemcpy\" to \"off\".\n");	
+    	"If you get a signal 4 here, set the option \"UseSSE\" to \"off\".\n");	
        return TRUE;
     } else {
        xf86DrvMsg(pScrn->scrnIndex, X_INFO,
-    	"If your OS supports SSE, set the option \"XvSSEMemcpy\" to \"on\".\n");
+    	"If your OS supports SSE, set the option \"UseSSE\" to \"on\".\n");
        return FALSE;
     }
 #endif    
 }
-#endif /* i386, AMD64 */
 
-#ifdef __i386__   /* i386 *************************************/
+#endif /* SiS_checkosforsse */
+
+#ifdef __i386__   /* i386 specific *************************************/
 
 PREFETCH_FUNC(SiS_sse,SSE,SSE,,FENCE,small_memcpy_i386) 
 PREFETCH_FUNC(SiS_mmxext,MMXEXT,SSE,EMMS,FENCEMMS,small_memcpy_i386)
 PREFETCH_FUNC(SiS_now,MMX,NOW,FEMMS,FEMMS,small_memcpy_i386)
 NOPREFETCH_FUNC(SiS_mmx,MMX,EMMS,EMMS,small_memcpy_i386)
 
-char *sse_cpuflags[]    = {" sse ", 0};
-char *mmx_cpuflags[]    = {" mmx ", 0};
-char *now_cpuflags[]    = {" 3dnow ", 0};
-char *mmx2_cpuflags[]   = {" mmxext ", " sse ", 0};
-
 static SISMCFuncData MCFunctions_i386[] = {
-    {SiS_libc_memcpy,   "libc",      NULL,         FL_LIBC},
-    {SiS_builtin_memcpy,"built-in-1",NULL,         FL_BI},    
-    {SiS_builtin_memcp2,"built-in-2",NULL, 	   FL_BI2},
-    {SiS_mmx_memcpy,    "MMX",       mmx_cpuflags, FL_MMX},
-    {SiS_sse_memcpy,    "SSE",       sse_cpuflags, FL_SSE}, 
-    {SiS_now_memcpy,    "3DNow!",    now_cpuflags, FL_3DNOW}, 
-    {SiS_mmxext_memcpy, "MMX2",      mmx2_cpuflags,FL_MMX2},
-    {NULL,              "",          NULL,         0}
+    {SiS_libc_memcpy,   "libc",      SIS_CPUFL_LIBC},
+    {SiS_builtin_memcpy,"built-in-1",SIS_CPUFL_BI},    
+    {SiS_builtin_memcp2,"built-in-2",SIS_CPUFL_BI2},
+    {SiS_mmx_memcpy,    "MMX",       SIS_CPUFL_MMX},
+    {SiS_sse_memcpy,    "SSE",       SIS_CPUFL_SSE}, 
+    {SiS_now_memcpy,    "3DNow!",    SIS_CPUFL_3DNOW}, 
+    {SiS_mmxext_memcpy, "MMX2",      SIS_CPUFL_MMX2},
+    {NULL,              "",          0}
 }; 
 
-#define Def_FL  (FL_LIBC | FL_BI | FL_BI2)  /* Default methods */
+#define Def_FL  (SIS_CPUFL_LIBC | SIS_CPUFL_BI | SIS_CPUFL_BI2)  /* Default methods */
 
 #define cpuid(op, eax, ebx, ecx, edx) 		\
     __asm__ __volatile__ (			\
@@ -845,8 +812,9 @@ static SISMCFuncData MCFunctions_i386[] = {
 		: "a" (op)			\
 		: "cc")			
 
-static Bool cpuIDSupported(ScrnInfoPtr pScrn)
+static Bool cpuIDSupported(ScreenPtr pScreen)
 {
+    ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum];
     int eax, ebx, ecx, edx;
        
     /* Check for cpuid instruction */
@@ -885,10 +853,15 @@ static Bool cpuIDSupported(ScrnInfoPtr pScrn)
     return TRUE;
 }
 
-static int SiS_GetCpuFeatures(void)
+static unsigned int SiS_GetCpuFeatures(ScreenPtr pScreen)
 {
     unsigned int flags = 0, eax, ebx, ecx, edx;
     Bool IsAMD;
+    
+    /* Check if cpuid and rdtsc instructions are supported */
+    if(!cpuIDSupported(pScreen)) {
+       return 0;
+    }    
     
     cpuid(0x00000000, eax, ebx, ecx, edx);
     
@@ -896,46 +869,53 @@ static int SiS_GetCpuFeatures(void)
     
     cpuid(0x00000001, eax, ebx, ecx, edx);
     /* MMX */
-    if(edx & 0x00800000) flags |= FL_MMX;
+    if(edx & 0x00800000) flags |= SIS_CPUFL_MMX;
     /* SSE, MMXEXT */
-    if(edx & 0x02000000) flags |= (FL_SSE | FL_MMX2);
+    if(edx & 0x02000000) flags |= (SIS_CPUFL_SSE | SIS_CPUFL_MMX2);
     /* SSE2 - don't need this one directly, set SSE instead */
-    if(edx & 0x04000000) flags |= FL_SSE; 
+    if(edx & 0x04000000) flags |= (SIS_CPUFL_SSE | SIS_CPUFL_SSE2); 
     
     cpuid(0x80000000, eax, ebx, ecx, edx);
     if(eax >= 0x80000001) {
        cpuid(0x80000001, eax, ebx, ecx, edx);
        /* 3DNow! */
-       if(edx & 0x80000000) flags |= FL_3DNOW;
+       if(edx & 0x80000000) flags |= SIS_CPUFL_3DNOW;
        /* AMD MMXEXT */
-       if(IsAMD && (edx & 0x00400000)) flags |= FL_MMX2;
+       if(IsAMD && (edx & 0x00400000)) flags |= SIS_CPUFL_MMX2;
     }
 
     return flags;
 }
 
-#elif defined(__AMD64__) /* AMD64 ************************* */
+#elif defined(__AMD64__) /* AMD64 specific ************************* */
 
 PREFETCH_FUNC(SiS_sse,SSE,SSE,,FENCE,small_memcpy_amd64) 
 
 static SISMCFuncData MCFunctions_AMD64[] = {
-    {SiS_libc_memcpy,   "libc",      NULL, FL_LIBC},
-    {SiS_builtin_memcpy,"built-in-1",NULL, FL_BI}, 
-    {SiS_builtin_memcp2,"built-in-2",NULL, FL_BI2}, 
-    {SiS_sse_memcpy,    "SSE",       NULL, FL_SSE}, 
-    {NULL,              "",          NULL, 0}
+    {SiS_libc_memcpy,   "libc",      SIS_CPUFL_LIBC},
+    {SiS_builtin_memcpy,"built-in-1",SIS_CPUFL_BI}, 
+    {SiS_builtin_memcp2,"built-in-2",SIS_CPUFL_BI2}, 
+    {SiS_sse_memcpy,    "SSE",       SIS_CPUFL_SSE}, 
+    {NULL,              "",          0}
 }; 
 
-#define Def_FL  (FL_LIBC | FL_BI | FL_BI2 | FL_SSE)
+#define Def_FL  (SIS_CPUFL_LIBC | SIS_CPUFL_BI | SIS_CPUFL_BI2)
 
-static int SiS_GetCpuFeatures(void)
+static unsigned int SiS_GetCpuFeatures(ScreenPtr pScreen)
 {
-    return((int)(FL_SSE));
+    return((unsigned int)(SIS_CPUFL_SSE|SIS_CPUFL_SSE2));
 }
 
-#else  /* Other archs ************************************* */
+#else  /* Specific for other archs ******************************** */
 
 /* Fill in here */
+
+#define Def_FL  (SIS_CPUFL_LIBC)
+
+static unsigned int SiS_GetCpuFeatures(ScreenPtr pScreen)
+{
+    return((unsigned int)(0));
+}
 
 #endif
 
@@ -952,14 +932,14 @@ static vidCopyFunc SiSVidCopyInitGen(ScreenPtr pScreen, SISMCFuncData *MCFunctio
     char *frqBuf = NULL;
     unsigned char *buf1, *buf2, *buf3;
     double cpuFreq = 0.0;
-    unsigned int myCPUflags = 0;
+    unsigned int myCPUflags = pSiS->CPUFlags | Def_FL;
     int best;
 #ifdef SiS_haveProc   
     char buf[CPUBUFSIZE];
 #endif    
     
-    /* Bail out if user disabled benchmarking or acceleration in general */
-    if((!pSiS->BenchMemCpy) && (pSiS->NoAccel)) {
+    /* Bail out if user disabled benchmarking */
+    if(!pSiS->BenchMemCpy) {
        return SiS_libc_memcpy;
     }
 
@@ -969,34 +949,9 @@ static vidCopyFunc SiSVidCopyInitGen(ScreenPtr pScreen, SISMCFuncData *MCFunctio
        
        /* Extract CPU frequency */ 
        frqBuf = SiS_GetCPUFreq(pScrn, buf, &cpuFreq);
-          
-       /* Parse the CPU flags and convert them to our internal value */
-       myCPUflags = SiS_ParseCPUFlags(buf, MCFunctions);
-#ifdef SISDGBMC
-       xf86DrvMsg(pScrn->scrnIndex, X_PROBED, "CPU flags from /proc: 0x%x\n", myCPUflags);
-#endif       
        
     }   
 #endif       
-      
-    if(!myCPUflags) {
-     
-       /* If no /proc or parsing failed, get features from cpuid */
-       myCPUflags = SiS_GetCpuFeatures() | Def_FL;
-#ifdef SISDGBMC
-       xf86DrvMsg(pScrn->scrnIndex, X_PROBED, "CPU flags from cpuid: 0x%x\n", myCPUflags);
-#endif              
-    
-    }
-    
-    if(myCPUflags & FL_SSE) {
-    
-       /* Check if OS supports usage of SSE instructions */
-       if(!(CheckOSforSSE(pScrn))) {
-          myCPUflags &= ~(FL_SSE);
-       }
-       
-    }
 	
     /* Allocate buffers */
     if(!(tmpFbBuffer = SiS_AllocBuffers(pScrn, &buf1, &buf2, &buf3))) {
@@ -1017,52 +972,49 @@ static vidCopyFunc SiSVidCopyInitGen(ScreenPtr pScreen, SISMCFuncData *MCFunctio
 	       
     return MCFunctions[best].mFunc; 
 }
+#endif /* canBenchmark */
+
+/**********************************************************************/
+/*    		       main(): Get CPU capabilities    	      	      */
+/* 			    (called externally)			      */
+/**********************************************************************/
+
+unsigned int SiSGetCPUFlags(ScreenPtr pScreen)
+{
+      
+    unsigned int myCPUflags = SiS_GetCpuFeatures(pScreen);
+    
+#ifdef SiS_checkosforsse    
+    if(myCPUflags & (SIS_CPUFL_SSE | SIS_CPUFL_SSE2)) {
+    
+       /* Check if OS supports usage of SSE instructions */
+       if(!(CheckOSforSSE(pScreen))) {
+          myCPUflags &= ~(SIS_CPUFL_SSE | SIS_CPUFL_SSE2);
+       }
+       
+    }
+#endif
+    
+    return myCPUflags;
+}
 
 /**********************************************************************/
 /*                       main(): SiSVidCopyInit()                     */
+/* 			    (called externally)			      */
+/*		(SiSGetCPUFlags must be called before this one)       */
 /**********************************************************************/
 
-#ifdef __i386__
-
 vidCopyFunc SiSVidCopyInit(ScreenPtr pScreen)
-{
-    ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum];
-    
-    /* Check if cpuid and rdtsc instructions are supported */
-    if(!cpuIDSupported(pScrn)) {
-       return SiS_libc_memcpy;
-    }
-    
+{    
+#if defined(__i386__) && defined(SiS_canBenchmark)
     return(SiSVidCopyInitGen(pScreen, MCFunctions_i386));
-}
-
-#elif defined(__AMD64__)
-
-vidCopyFunc SiSVidCopyInit(ScreenPtr pScreen)
-{   
+#elif defined(__AMD64__) && defined(SiS_canBenchmark)   
     return(SiSVidCopyInitGen(pScreen, MCFunctions_AMD64));
-}
-
-#else /* Other archs: For now, use libc memcpy() */
-
-vidCopyFunc SiSVidCopyInit(ScreenPtr pScreen) 
-{
+#else /* Other cases: Use libc memcpy() */    
     return SiS_libc_memcpy;
+#endif    
 }
 
-#endif
-
-/**********************************************************************/
-/*                   No benchmark: Return libc memcpy()               */
-/**********************************************************************/
-
-#else   /* cenBenchmark */
- 
-vidCopyFunc SiSVidCopyInit(ScreenPtr pScreen) 
-{
-    return SiS_libc_memcpy;
-}
-
-#endif  /* cenBenchmark */
 
 #endif /* GNU C */
+

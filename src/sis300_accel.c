@@ -49,7 +49,7 @@
 #include "sis300_accel.h"
 
 #ifdef SISDUALHEAD
-/* TW: This is the offset to the memory for each head */
+/* This is the offset to the memory for each head */
 #define HEADOFFSET 	(pSiS->dhmOffset)
 #endif
 
@@ -153,150 +153,163 @@ SiSInitializeAccelerator(ScrnInfoPtr pScrn)
 Bool
 SiS300AccelInit(ScreenPtr pScreen)
 {
-	XAAInfoRecPtr   infoPtr;
 	ScrnInfoPtr     pScrn = xf86Screens[pScreen->myNum];
 	SISPtr          pSiS = SISPTR(pScrn);
-	int		topFB;
-	int             reservedFbSize;
-	int             UsableFbSize;
+	XAAInfoRecPtr   infoPtr = NULL;
 	unsigned char   *AvailBufBase;
+	int		topFB, reservedFbSize, usableFbSize, i;
 	BoxRec          Avail;
-	int             i;
 
-	pSiS->AccelInfoPtr = infoPtr = XAACreateInfoRec();
-	if (!infoPtr)  return FALSE;
+	pSiS->ColorExpandBufferNumber = 0;
+	pSiS->PerColorExpandBufferSize = 0;
+	pSiS->RenderAccelArray = NULL;
+	pSiS->AccelInfoPtr = NULL;
+	
+	if((pScrn->bitsPerPixel != 8)  && 
+	   (pScrn->bitsPerPixel != 16) &&
+	   (pScrn->bitsPerPixel != 32)) {
+	   pSiS->NoAccel = TRUE;
+	}
+	
+	if(!pSiS->NoAccel) {
+	   pSiS->AccelInfoPtr = infoPtr = XAACreateInfoRec();
+	   if(!infoPtr) pSiS->NoAccel = TRUE;
+	}
+	
+	if(!pSiS->NoAccel) {
 
-	SiSInitializeAccelerator(pScrn);
+	   SiSInitializeAccelerator(pScrn);
 
-	infoPtr->Flags = LINEAR_FRAMEBUFFER |
-			 OFFSCREEN_PIXMAPS |
-			 PIXMAP_CACHE;
+	   infoPtr->Flags = LINEAR_FRAMEBUFFER |
+			    OFFSCREEN_PIXMAPS |
+			    PIXMAP_CACHE;
 
-	/* sync */
-	infoPtr->Sync = SiSSync;
+	   /* sync */
+	   infoPtr->Sync = SiSSync;
 
-	/* Acceleration only supported at 8, 16 and 32 bpp */
-	if((pScrn->bitsPerPixel != 8) && (pScrn->bitsPerPixel != 16) &&
-	         (pScrn->bitsPerPixel != 32))
-	    return FALSE;
+	   /* Although SiS states that the 300 series supports a
+	    * virtual framebuffer of 4096x4096, the 2D accelerator
+	    * does not seem to know that. If the destination bitmap
+	    * pitch is > 8192 (which easily happens in 32bpp mode),
+	    * the accelerator engine collapses.
+	    * TODO: Find out about the 530 and 620
+	    */
 
-	/* Although SiS states that the 300 series supports a
-	 * virtual framebuffer of 4096x4096, the 2D accelerator
-	 * does not seem to know that. If the destination bitmap
-	 * pitch is > 8192 (which easily happens in 32bpp mode),
-	 * the accelerator engine collapses.
-	 * TODO: Find out about the 530 and 620
-	 */
+	   if(pSiS->scrnOffset < 8192) {
 
-	if(pSiS->scrnOffset < 8192) {
+	      /* screen to screen copy */
+	      infoPtr->SetupForScreenToScreenCopy = SiSSetupForScreenToScreenCopy;
+	      infoPtr->SubsequentScreenToScreenCopy = SiSSubsequentScreenToScreenCopy;
+	      infoPtr->ScreenToScreenCopyFlags = NO_PLANEMASK |
+	                                         TRANSPARENCY_GXCOPY_ONLY;
 
-	   /* screen to screen copy */
-	   infoPtr->SetupForScreenToScreenCopy = SiSSetupForScreenToScreenCopy;
-	   infoPtr->SubsequentScreenToScreenCopy = SiSSubsequentScreenToScreenCopy;
-	   infoPtr->ScreenToScreenCopyFlags = NO_PLANEMASK |
-	                                      TRANSPARENCY_GXCOPY_ONLY;
-
-	   /* solid fills */
-	   infoPtr->SetupForSolidFill = SiSSetupForSolidFill;
-	   infoPtr->SubsequentSolidFillRect = SiSSubsequentSolidFillRect;
+	      /* solid fills */
+	      infoPtr->SetupForSolidFill = SiSSetupForSolidFill;
+	      infoPtr->SubsequentSolidFillRect = SiSSubsequentSolidFillRect;
 #ifdef TRAP
-	   infoPtr->SubsequentSolidFillTrap = SiSSubsequentSolidFillTrap;
+	      infoPtr->SubsequentSolidFillTrap = SiSSubsequentSolidFillTrap;
 #endif
-	   infoPtr->SolidFillFlags = NO_PLANEMASK;
+	      infoPtr->SolidFillFlags = NO_PLANEMASK;
 
-	   /* solid line */
-	   infoPtr->SetupForSolidLine = SiSSetupForSolidLine;
-	   infoPtr->SubsequentSolidTwoPointLine = SiSSubsequentSolidTwoPointLine;
-	   infoPtr->SubsequentSolidHorVertLine = SiSSubsequentSolidHorzVertLine;
-	   infoPtr->SolidLineFlags = NO_PLANEMASK;
+	      /* solid line */
+	      infoPtr->SetupForSolidLine = SiSSetupForSolidLine;
+	      infoPtr->SubsequentSolidTwoPointLine = SiSSubsequentSolidTwoPointLine;
+	      infoPtr->SubsequentSolidHorVertLine = SiSSubsequentSolidHorzVertLine;
+	      infoPtr->SolidLineFlags = NO_PLANEMASK;
 
-	   /* dashed line */
-	   infoPtr->SetupForDashedLine = SiSSetupForDashedLine;
-	   infoPtr->SubsequentDashedTwoPointLine = SiSSubsequentDashedTwoPointLine;
-	   infoPtr->DashPatternMaxLength = 64;
-	   infoPtr->DashedLineFlags = NO_PLANEMASK |
-	  			      LINE_PATTERN_MSBFIRST_LSBJUSTIFIED;
+	      /* dashed line */
+	      infoPtr->SetupForDashedLine = SiSSetupForDashedLine;
+	      infoPtr->SubsequentDashedTwoPointLine = SiSSubsequentDashedTwoPointLine;
+	      infoPtr->DashPatternMaxLength = 64;
+	      infoPtr->DashedLineFlags = NO_PLANEMASK |
+	  			         LINE_PATTERN_MSBFIRST_LSBJUSTIFIED;
 
-	   /* 8x8 mono pattern fill */
-	   infoPtr->SetupForMono8x8PatternFill = SiSSetupForMonoPatternFill;
-	   infoPtr->SubsequentMono8x8PatternFillRect = SiSSubsequentMonoPatternFill;
+	      /* 8x8 mono pattern fill */
+	      infoPtr->SetupForMono8x8PatternFill = SiSSetupForMonoPatternFill;
+	      infoPtr->SubsequentMono8x8PatternFillRect = SiSSubsequentMonoPatternFill;
 #ifdef TRAP
-	   infoPtr->SubsequentMono8x8PatternFillTrap = SiSSubsequentMonoPatternFillTrap;
+	      infoPtr->SubsequentMono8x8PatternFillTrap = SiSSubsequentMonoPatternFillTrap;
 #endif
-	   infoPtr->Mono8x8PatternFillFlags = NO_PLANEMASK |
-					      HARDWARE_PATTERN_SCREEN_ORIGIN |
-					      HARDWARE_PATTERN_PROGRAMMED_BITS |
-					      /* NO_TRANSPARENCY | */
-					      BIT_ORDER_IN_BYTE_MSBFIRST ;
+	      infoPtr->Mono8x8PatternFillFlags = NO_PLANEMASK |
+					         HARDWARE_PATTERN_SCREEN_ORIGIN |
+					         HARDWARE_PATTERN_PROGRAMMED_BITS |
+					         /* NO_TRANSPARENCY | */
+					         BIT_ORDER_IN_BYTE_MSBFIRST ;
 
 #ifdef STSCE
-	   /* Screen To Screen Color Expand */
-	   /* The hardware does support this the way we need it */
-	   infoPtr->SetupForScreenToScreenColorExpandFill =
+	      /* Screen To Screen Color Expand */
+	      /* The hardware does support this the way we need it */
+	      infoPtr->SetupForScreenToScreenColorExpandFill =
 	    			SiSSetupForScreenToScreenColorExpand;
-	   infoPtr->SubsequentScreenToScreenColorExpandFill =
+	      infoPtr->SubsequentScreenToScreenColorExpandFill =
 	    			SiSSubsequentScreenToScreenColorExpand;
-	   infoPtr->ScreenToScreenColorExpandFillFlags = NO_PLANEMASK |
+	      infoPtr->ScreenToScreenColorExpandFillFlags = NO_PLANEMASK |
 	                                              BIT_ORDER_IN_BYTE_MSBFIRST ;
 #endif
 
 #if 0
-	   /* CPU To Screen Color Expand --- implement another instead of this one! */
-	   infoPtr->SetupForCPUToScreenColorExpandFill =
-	       SiSSetupForCPUToScreenColorExpand;
-	   infoPtr->SubsequentCPUToScreenColorExpandFill =
-	       SiSSubsequentCPUToScreenColorExpand;
-	   infoPtr->ColorExpandRange = PATREGSIZE;
-	   infoPtr->ColorExpandBase = pSiS->IOBase+PBR(0);
-	   infoPtr->CPUToScreenColorExpandFillFlags = NO_PLANEMASK |
-	   					      BIT_ORDER_IN_BYTE_MSBFIRST |
-	    					      NO_TRANSPARENCY |
-	    					      SYNC_AFTER_COLOR_EXPAND;
+	      /* CPU To Screen Color Expand --- implement another instead of this one! */
+	      infoPtr->SetupForCPUToScreenColorExpandFill =
+	          SiSSetupForCPUToScreenColorExpand;
+	     infoPtr->SubsequentCPUToScreenColorExpandFill =
+	          SiSSubsequentCPUToScreenColorExpand;
+	      infoPtr->ColorExpandRange = PATREGSIZE;
+	      infoPtr->ColorExpandBase = pSiS->IOBase+PBR(0);
+	      infoPtr->CPUToScreenColorExpandFillFlags = NO_PLANEMASK |
+	   					         BIT_ORDER_IN_BYTE_MSBFIRST |
+	    					         NO_TRANSPARENCY |
+	    					         SYNC_AFTER_COLOR_EXPAND;
 #endif
 
-	   /* per-scanline color expansion (using indirect method) */
-	   if(pSiS->VGAEngine == SIS_530_VGA) {
-	      pSiS->ColorExpandBufferNumber = 4;
-	      pSiS->ColorExpandBufferCountMask = 0x03;
-	   } else {
-	      pSiS->ColorExpandBufferNumber = 16;
-	      pSiS->ColorExpandBufferCountMask = 0x0F;
-	   }
-	   pSiS->PerColorExpandBufferSize = ((pScrn->virtualX + 31)/32) * 4;
-	   infoPtr->NumScanlineColorExpandBuffers = pSiS->ColorExpandBufferNumber;
-	   infoPtr->ScanlineColorExpandBuffers = (unsigned char **)&pSiS->ColorExpandBufferAddr[0];
+	      /* per-scanline color expansion (using indirect method) */
+	      if(pSiS->VGAEngine == SIS_530_VGA) {
+	         pSiS->ColorExpandBufferNumber = 4;
+	         pSiS->ColorExpandBufferCountMask = 0x03;
+	      } else {
+	         pSiS->ColorExpandBufferNumber = 16;
+	         pSiS->ColorExpandBufferCountMask = 0x0F;
+	      }
+	      
+	      pSiS->PerColorExpandBufferSize = ((pScrn->virtualX + 31)/32) * 4;
+	      infoPtr->NumScanlineColorExpandBuffers = pSiS->ColorExpandBufferNumber;
+	      infoPtr->ScanlineColorExpandBuffers = (unsigned char **)&pSiS->ColorExpandBufferAddr[0];
 
-	   infoPtr->SetupForScanlineCPUToScreenColorExpandFill =
+	      infoPtr->SetupForScanlineCPUToScreenColorExpandFill =
 	                            SiSSetupForScanlineCPUToScreenColorExpandFill;
-	   infoPtr->SubsequentScanlineCPUToScreenColorExpandFill =
+	      infoPtr->SubsequentScanlineCPUToScreenColorExpandFill =
 	                            SiSSubsequentScanlineCPUToScreenColorExpandFill;
-	   infoPtr->SubsequentColorExpandScanline =
+	      infoPtr->SubsequentColorExpandScanline =
 	                            SiSSubsequentColorExpandScanline;
-	   infoPtr->ScanlineCPUToScreenColorExpandFillFlags = NO_PLANEMASK |
+	      infoPtr->ScanlineCPUToScreenColorExpandFillFlags = NO_PLANEMASK |
 	    						      CPU_TRANSFER_PAD_DWORD |
 	    						      SCANLINE_PAD_DWORD |
 	    						      BIT_ORDER_IN_BYTE_MSBFIRST |
 	    						      LEFT_EDGE_CLIPPING;
-        } else {
-	   xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
-	   	"Virtual screen width too large for accelerator engine\n");
-           xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
-	   	"2D acceleration and Xv disabled\n");
-           pSiS->NoXvideo = TRUE;
-	}
+           } else {
+	   
+	      xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
+  	   	   "Virtual screen width too large for accelerator engine\n");
+              xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
+ 	   	   "\t2D acceleration and Xv disabled\n");
+              pSiS->NoXvideo = TRUE;
+	      
+	   }
 
 #ifdef SISDUALHEAD
-	if(pSiS->DualHeadMode) {
-	   infoPtr->RestoreAccelState = SiSRestoreAccelState;
-	}
+	   if(pSiS->DualHeadMode) {
+   	      infoPtr->RestoreAccelState = SiSRestoreAccelState;
+	   }
 #endif
 
-	/* init Frame Buffer Manager */
+   	}  /* NoAccel */
+	
+	/* Init framebuffer memory manager */
+	
 	topFB = pSiS->maxxfbmem;
 
 	reservedFbSize = pSiS->ColorExpandBufferNumber * pSiS->PerColorExpandBufferSize;
 
-	UsableFbSize = topFB - reservedFbSize;
+	usableFbSize = topFB - reservedFbSize;
 
 	/* Layout: (Sizes do not reflect correct proportions)
 	 * |--------------++++++++++++++++++++^************==========~~~~~~~~~~~~|
@@ -306,41 +319,46 @@ SiS300AccelInit(ScreenPtr pScreen)
 	 *                                  topFB
 	 */
 
-	AvailBufBase = pSiS->FbBase + UsableFbSize;
+	AvailBufBase = pSiS->FbBase + usableFbSize;
 	for(i = 0; i < pSiS->ColorExpandBufferNumber; i++) {
 	   pSiS->ColorExpandBufferAddr[i] = AvailBufBase +
 	 	    i * pSiS->PerColorExpandBufferSize;
-	   pSiS->ColorExpandBufferScreenOffset[i] = UsableFbSize +
+	   pSiS->ColorExpandBufferScreenOffset[i] = usableFbSize +
 		    i * pSiS->PerColorExpandBufferSize;
 	}
+	
 	Avail.x1 = 0;
 	Avail.y1 = 0;
 	Avail.x2 = pScrn->displayWidth;
-	Avail.y2 = (UsableFbSize / (pScrn->displayWidth * pScrn->bitsPerPixel/8)) - 1;
+	Avail.y2 = (usableFbSize / (pScrn->displayWidth * pScrn->bitsPerPixel/8)) - 1;
 
 	if(Avail.y2 < 0)  Avail.y2 = 32767;
 
 	if(Avail.y2 < pScrn->currentMode->VDisplay) {
-		xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
-			"Not enough video RAM for accelerator. At least "
-			"%dKB needed, %ldKB available\n",
-			((((pScrn->displayWidth * pScrn->bitsPerPixel/8)   /* TW: +8 for make it sure */
-			     * pScrn->currentMode->VDisplay) + reservedFbSize) / 1024) + 8,
-			pSiS->maxxfbmem/1024);
-		pSiS->NoAccel = TRUE;
-		pSiS->NoXvideo = TRUE;
-		XAADestroyInfoRec(pSiS->AccelInfoPtr);
-		pSiS->AccelInfoPtr = NULL;
-		return FALSE;
+	   xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
+		"Not enough video RAM for accelerator. At least "
+		"%dKB needed, %ldKB available\n",
+		((((pScrn->displayWidth * pScrn->bitsPerPixel/8)   /* TW: +8 for make it sure */
+		     * pScrn->currentMode->VDisplay) + reservedFbSize) / 1024) + 8,
+		pSiS->maxxfbmem/1024);
+	   pSiS->NoAccel = TRUE;
+	   pSiS->NoXvideo = TRUE;
+	   XAADestroyInfoRec(pSiS->AccelInfoPtr);
+	   pSiS->AccelInfoPtr = NULL;
+	   return FALSE;
 	}
 
 	xf86DrvMsg(pScrn->scrnIndex, X_INFO,
-		   "Frame Buffer From (%d,%d) To (%d,%d)\n",
-		   Avail.x1, Avail.y1, Avail.x2, Avail.y2);
-
+		   "Framebuffer from (%d,%d) fo (%d,%d)\n",
+		   Avail.x1, Avail.y1, Avail.x2 - 1, Avail.y2 - 1);
+ 
 	xf86InitFBManager(pScreen, &Avail);
 
-	return(XAAInit(pScreen, infoPtr));
+	if(pSiS->NoAccel) {
+	   return TRUE;
+	} else {
+	   return(XAAInit(pScreen, infoPtr));
+	}
 }
 
 

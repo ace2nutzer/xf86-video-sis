@@ -39,8 +39,8 @@
 #define UNLOCK_ALWAYS
 
 #define SISDRIVERVERSIONYEAR    4
-#define SISDRIVERVERSIONMONTH   10
-#define SISDRIVERVERSIONDAY     29
+#define SISDRIVERVERSIONMONTH   11
+#define SISDRIVERVERSIONDAY     4
 #define SISDRIVERREVISION       1
 
 #define SISDRIVERIVERSION (SISDRIVERVERSIONYEAR << 16) |  \
@@ -160,6 +160,12 @@
 #endif
 
 #undef SIS315DRI		/* define this if dri is adapted for 315/330 series */
+
+#ifdef TWDEBUG
+#define SISVERBLEVEL 3
+#else
+#define SISVERBLEVEL 4
+#endif
 
 /* For SiS315/550/650/740/330/660 - these should be moved elsewhere! */
 #ifndef PCI_CHIP_SIS315H
@@ -487,6 +493,17 @@ typedef unsigned char UChar;
 #define SIS_USE_BIOS_SCRATCH
 #endif
 
+/* CPU flags (for memcpy() etc.) */
+#define SIS_CPUFL_LIBC  0x001
+#define SIS_CPUFL_BI    0x002
+#define SIS_CPUFL_SSE   0x004
+#define SIS_CPUFL_MMX   0x008
+#define SIS_CPUFL_3DNOW 0x010
+#define SIS_CPUFL_MMX2  0x020
+#define SIS_CPUFL_BI2   0x040
+#define SIS_CPUFL_SSE2  0x080
+
+
 /* For backup of register contents */
 typedef struct {
     unsigned char sisRegs3C4[0x50];
@@ -643,6 +660,7 @@ typedef struct {
     Bool		XvUseMemcpy;
     Bool		BenchMemCpy;
     vidCopyFunc 	SiSFastVidCopy;
+    unsigned int	CPUFlags;
 #ifdef SIS_NEED_MAP_IOP   
     CARD32              IOPAddress;      	/* I/O port physical address */
     unsigned char *     IOPBase;         	/* I/O port linear address */
@@ -1032,6 +1050,7 @@ typedef struct {
     Bool		OverruleRanges;
     Bool		BenchMemCpy;
     vidCopyFunc 	SiSFastVidCopy;
+    unsigned int	CPUFlags;
 #ifndef SISCHECKOSSSE    
     Bool		XvSSEMemcpy;
 #endif
@@ -1203,6 +1222,7 @@ extern void  SIS6326InitVideo(ScreenPtr pScreen);
 /* For extended mempy() support */
 
 extern vidCopyFunc SiSVidCopyInit(ScreenPtr pScreen);
+extern unsigned int SiSGetCPUFlags(ScreenPtr pScreen);
 
 extern void  SiS_SetCHTVlumabandwidthcvbs(ScrnInfoPtr pScrn, int val);
 extern void  SiS_SetCHTVlumabandwidthsvideo(ScrnInfoPtr pScrn, int val);

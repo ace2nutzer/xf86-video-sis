@@ -242,9 +242,9 @@ static const OptionInfoRec SISOptions[] = {
     { OPTION_XVYUVCHROMAKEY,		"XvYUVChromaKey",         OPTV_BOOLEAN,   {0}, -1    },
     { OPTION_XVDISABLECOLORKEY,		"XvDisableColorKey",      OPTV_BOOLEAN,   {0}, -1    },
     { OPTION_XVMEMCPY,			"XvUseMemcpy",  	  OPTV_BOOLEAN,   {0}, -1    },
-    { OPTION_XVBENCHCPY,		"XvBenchmarkMemcpy",  	  OPTV_BOOLEAN,   {0}, -1    },
+    { OPTION_XVBENCHCPY,		"BenchmarkMemcpy",  	  OPTV_BOOLEAN,   {0}, -1    },
 #ifndef SISCHECKOSSSE    
-    { OPTION_XVSSECOPY, 		"XvSSEMemcpy",  	  OPTV_BOOLEAN,   {0}, -1    },
+    { OPTION_XVSSECOPY, 		"UseSSE",  	  	  OPTV_BOOLEAN,   {0}, -1    },
 #endif    
     { OPTION_XVDEFAULTADAPTOR,		"XvDefaultAdaptor",  	  OPTV_STRING,    {0}, -1    },
     { OPTION_SCALELCD,			"ScaleLCD",	   	  OPTV_BOOLEAN,   {0}, -1    },
@@ -865,11 +865,11 @@ SiSOptions(ScrnInfoPtr pScrn)
 	  xf86DrvMsg(pScrn->scrnIndex, X_WARNING, mystring, "XvUseMemcpy");
        }
        if(xf86GetOptValBool(pSiS->Options, OPTION_XVBENCHCPY, &val)) {
-	  xf86DrvMsg(pScrn->scrnIndex, X_WARNING, mystring, "XvBenchmarkMemcpy");
+	  xf86DrvMsg(pScrn->scrnIndex, X_WARNING, mystring, "BenchmarkMemcpy");
        }
 #ifndef SISCHECKOSSSE
        if(xf86GetOptValBool(pSiS->Options, OPTION_XVSSECOPY, &val)) {
-	  xf86DrvMsg(pScrn->scrnIndex, X_WARNING, mystring, "XvSSEMemcpy");
+	  xf86DrvMsg(pScrn->scrnIndex, X_WARNING, mystring, "UseSSE");
        }
 #endif       
 #ifdef SIS_CP
@@ -1584,30 +1584,28 @@ SiSOptions(ScrnInfoPtr pScrn)
        
        {
           Bool val;
+	  
           if(xf86GetOptValBool(pSiS->Options, OPTION_XVMEMCPY, &val)) {
 	     pSiS->XvUseMemcpy = val ? TRUE : FALSE;
 	     xf86DrvMsg(pScrn->scrnIndex, X_CONFIG, "Xv will %suse memcpy()\n",
 	     	val ? "" : "not ");
 	  }
 	  
-	  if(pSiS->XvUseMemcpy) {
-	     if(xf86GetOptValBool(pSiS->Options, OPTION_XVBENCHCPY, &val)) {
-	        pSiS->BenchMemCpy = val ? TRUE : FALSE;
-	        xf86DrvMsg(pScrn->scrnIndex, X_CONFIG, 
-	   		"Xv: Will %sbenchmark memcpy() methods\n",
-			val ? "" : "not ");		
-	     }
+	  if(xf86GetOptValBool(pSiS->Options, OPTION_XVBENCHCPY, &val)) {
+	     pSiS->BenchMemCpy = val ? TRUE : FALSE;
+	     xf86DrvMsg(pScrn->scrnIndex, X_CONFIG, 
+	   	"Will %sbenchmark methods for system RAM to video RAM transfers\n",
+		val ? "" : "not ");		
+	  }
+	  
 #ifndef SISCHECKOSSSE			
-	     if(pSiS->BenchMemCpy) {
-		if(xf86GetOptValBool(pSiS->Options, OPTION_XVSSECOPY, &val)) {
-		   pSiS->XvSSEMemcpy = val ? TRUE : FALSE;
-		   xf86DrvMsg(pScrn->scrnIndex, X_CONFIG,
-		      		"Xv: Will %scheck SSE memcpy()\n", 
-			val ? "" : "not ");
-		}
-	     }
+	  if(xf86GetOptValBool(pSiS->Options, OPTION_XVSSECOPY, &val)) {
+	     pSiS->XvSSEMemcpy = val ? TRUE : FALSE;
+	     xf86DrvMsg(pScrn->scrnIndex, X_CONFIG,
+		"Will %s use SSE/SSE2 CPU instructions\n", 
+		val ? "eventually" : "not");
+  	  }
 #endif	     
-	  } else pSiS->BenchMemCpy = FALSE;
        }
 
 #ifdef SIS_CP
@@ -1668,7 +1666,7 @@ SiSOptions(ScrnInfoPtr pScrn)
        if(pSiS->MergedFB) {
           pSiS->ShadowFB = FALSE;
 	  xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
-	      "Shadow Frame Buffer not supported in MergedFB mode\n");
+	      "Shadow Framebuffer not supported in MergedFB mode\n");
        } else
 #endif
           from = X_CONFIG;
@@ -1678,10 +1676,10 @@ SiSOptions(ScrnInfoPtr pScrn)
 #if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,2,99,0,0)
 	pSiS->NoXvideo = TRUE;
     	xf86DrvMsg(pScrn->scrnIndex, from,
-	   "Using \"Shadow Frame Buffer\" - 2D acceleration and Xv disabled\n");
+	   "Using \"Shadow Framebuffer\" - 2D acceleration and Xv disabled\n");
 #else
     	xf86DrvMsg(pScrn->scrnIndex, from,
-	   "Using \"Shadow Frame Buffer\" - 2D acceleration disabled\n");
+	   "Using \"Shadow Framebuffer\" - 2D acceleration disabled\n");
 #endif
     }
 

@@ -261,12 +261,10 @@ SiSInitializeAccelerator(ScrnInfoPtr pScrn)
 Bool
 SiS315AccelInit(ScreenPtr pScreen)
 {
-	XAAInfoRecPtr   infoPtr;
 	ScrnInfoPtr     pScrn = xf86Screens[pScreen->myNum];
 	SISPtr          pSiS = SISPTR(pScrn);
-	int		topFB;
-	int             reservedFbSize;
-	int             UsableFbSize;
+	XAAInfoRecPtr   infoPtr = NULL;
+	int		topFB, reservedFbSize, usableFbSize;
 	BoxRec          Avail;
 #ifdef SISDUALHEAD
         SISEntPtr       pSiSEnt = NULL;
@@ -278,245 +276,249 @@ SiS315AccelInit(ScreenPtr pScreen)
 #endif
 #endif
 
-	pSiS->AccelInfoPtr = infoPtr = XAACreateInfoRec();
-	if(!infoPtr) return FALSE;
+	pSiS->ColorExpandBufferNumber = 0;
+	pSiS->PerColorExpandBufferSize = 0;
+	pSiS->RenderAccelArray = NULL;
+	pSiS->AccelInfoPtr = NULL;
+	
+	if((pScrn->bitsPerPixel != 8)  && 
+	   (pScrn->bitsPerPixel != 16) &&
+	   (pScrn->bitsPerPixel != 32)) {
+	   pSiS->NoAccel = TRUE;
+	}
+	
+	if(!pSiS->NoAccel) {
+	   pSiS->AccelInfoPtr = infoPtr = XAACreateInfoRec();
+	   if(!infoPtr) pSiS->NoAccel = TRUE;
+	}
+	
+	if(!pSiS->NoAccel) {
 
-	SiSInitializeAccelerator(pScrn);
+	   SiSInitializeAccelerator(pScrn);
 
-	infoPtr->Flags = LINEAR_FRAMEBUFFER |
-			 OFFSCREEN_PIXMAPS |
-			 PIXMAP_CACHE;
+	   infoPtr->Flags = LINEAR_FRAMEBUFFER |
+			    OFFSCREEN_PIXMAPS |
+			    PIXMAP_CACHE;
 
-	/* sync */
-	infoPtr->Sync = SiSSync;
-
-	if((pScrn->bitsPerPixel != 8) && (pScrn->bitsPerPixel != 16) &&
-		(pScrn->bitsPerPixel != 32))
-			return FALSE;
+	   /* sync */
+	   infoPtr->Sync = SiSSync;
 
 #ifdef SISDUALHEAD
-	pSiSEnt = pSiS->entityPrivate;
+	   pSiSEnt = pSiS->entityPrivate;
 #endif
 
-	/* BitBlt */
-	infoPtr->SetupForScreenToScreenCopy = SiSSetupForScreenToScreenCopy;
-	infoPtr->SubsequentScreenToScreenCopy = SiSSubsequentScreenToScreenCopy;
-	infoPtr->ScreenToScreenCopyFlags = NO_PLANEMASK | TRANSPARENCY_GXCOPY_ONLY;
+	   /* BitBlt */
+	   infoPtr->SetupForScreenToScreenCopy = SiSSetupForScreenToScreenCopy;
+	   infoPtr->SubsequentScreenToScreenCopy = SiSSubsequentScreenToScreenCopy;
+	   infoPtr->ScreenToScreenCopyFlags = NO_PLANEMASK | TRANSPARENCY_GXCOPY_ONLY;
 
-	/* solid fills */
-	infoPtr->SetupForSolidFill = SiSSetupForSolidFill;
-	infoPtr->SubsequentSolidFillRect = SiSSubsequentSolidFillRect;
+	   /* solid fills */
+	   infoPtr->SetupForSolidFill = SiSSetupForSolidFill;
+	   infoPtr->SubsequentSolidFillRect = SiSSubsequentSolidFillRect;
 #ifdef TRAP
-	if((pSiS->Chipset != PCI_CHIP_SIS660) &&
-	   (pSiS->Chipset != PCI_CHIP_SIS330) &&
-	   (pSiS->Chipset != PCI_CHIP_SIS340)) {
-	   infoPtr->SubsequentSolidFillTrap = SiSSubsequentSolidFillTrap;
-	}
+	   if((pSiS->Chipset != PCI_CHIP_SIS660) &&
+	      (pSiS->Chipset != PCI_CHIP_SIS330) &&
+	      (pSiS->Chipset != PCI_CHIP_SIS340)) {
+	      infoPtr->SubsequentSolidFillTrap = SiSSubsequentSolidFillTrap;
+	   }
 #endif
-	infoPtr->SolidFillFlags = NO_PLANEMASK;
+	   infoPtr->SolidFillFlags = NO_PLANEMASK;
 
-	/* solid line */
-	infoPtr->SetupForSolidLine = SiSSetupForSolidLine;
-	infoPtr->SubsequentSolidTwoPointLine = SiSSubsequentSolidTwoPointLine;
-	infoPtr->SubsequentSolidHorVertLine = SiSSubsequentSolidHorzVertLine;
-	infoPtr->SolidLineFlags = NO_PLANEMASK;
+	   /* solid line */
+	   infoPtr->SetupForSolidLine = SiSSetupForSolidLine;
+	   infoPtr->SubsequentSolidTwoPointLine = SiSSubsequentSolidTwoPointLine;
+	   infoPtr->SubsequentSolidHorVertLine = SiSSubsequentSolidHorzVertLine;
+	   infoPtr->SolidLineFlags = NO_PLANEMASK;
 
-	/* dashed line */
-	infoPtr->SetupForDashedLine = SiSSetupForDashedLine;
-	infoPtr->SubsequentDashedTwoPointLine = SiSSubsequentDashedTwoPointLine;
-	infoPtr->DashPatternMaxLength = 64;
-	infoPtr->DashedLineFlags = NO_PLANEMASK |
-				   LINE_PATTERN_MSBFIRST_LSBJUSTIFIED;
+	   /* dashed line */
+	   infoPtr->SetupForDashedLine = SiSSetupForDashedLine;
+	   infoPtr->SubsequentDashedTwoPointLine = SiSSubsequentDashedTwoPointLine;
+	   infoPtr->DashPatternMaxLength = 64;
+	   infoPtr->DashedLineFlags = NO_PLANEMASK |
+	  			      LINE_PATTERN_MSBFIRST_LSBJUSTIFIED;
 
-	/* 8x8 mono pattern fill */
-	infoPtr->SetupForMono8x8PatternFill = SiSSetupForMonoPatternFill;
-	infoPtr->SubsequentMono8x8PatternFillRect = SiSSubsequentMonoPatternFill;
+	   /* 8x8 mono pattern fill */
+	   infoPtr->SetupForMono8x8PatternFill = SiSSetupForMonoPatternFill;
+	   infoPtr->SubsequentMono8x8PatternFillRect = SiSSubsequentMonoPatternFill;
 #ifdef TRAP
-        if((pSiS->Chipset != PCI_CHIP_SIS660) &&
-	   (pSiS->Chipset != PCI_CHIP_SIS330) &&
-	   (pSiS->Chipset != PCI_CHIP_SIS340)) {
-	   infoPtr->SubsequentMono8x8PatternFillTrap = SiSSubsequentMonoPatternFillTrap;
-	}
+           if((pSiS->Chipset != PCI_CHIP_SIS660) &&
+	      (pSiS->Chipset != PCI_CHIP_SIS330) &&
+	      (pSiS->Chipset != PCI_CHIP_SIS340)) {
+	      infoPtr->SubsequentMono8x8PatternFillTrap = SiSSubsequentMonoPatternFillTrap;
+	   }
 #endif
-	infoPtr->Mono8x8PatternFillFlags = NO_PLANEMASK |
-					   HARDWARE_PATTERN_SCREEN_ORIGIN |
-					   HARDWARE_PATTERN_PROGRAMMED_BITS |
-					   BIT_ORDER_IN_BYTE_MSBFIRST;
+	   infoPtr->Mono8x8PatternFillFlags = NO_PLANEMASK |
+					      HARDWARE_PATTERN_SCREEN_ORIGIN |
+					      HARDWARE_PATTERN_PROGRAMMED_BITS |
+					      BIT_ORDER_IN_BYTE_MSBFIRST;
 
 #ifdef SISVRAMQ
-	/* 8x8 color pattern fill (MMIO support not implemented) */
-	infoPtr->SetupForColor8x8PatternFill = SiSSetupForColor8x8PatternFill;
-	infoPtr->SubsequentColor8x8PatternFillRect = SiSSubsequentColor8x8PatternFillRect;
-	infoPtr->Color8x8PatternFillFlags = NO_PLANEMASK |
-	 				    HARDWARE_PATTERN_SCREEN_ORIGIN |
-					    NO_TRANSPARENCY;
+	   /* 8x8 color pattern fill (MMIO support not implemented) */
+	   infoPtr->SetupForColor8x8PatternFill = SiSSetupForColor8x8PatternFill;
+	   infoPtr->SubsequentColor8x8PatternFillRect = SiSSubsequentColor8x8PatternFillRect;
+	   infoPtr->Color8x8PatternFillFlags = NO_PLANEMASK |
+	 				       HARDWARE_PATTERN_SCREEN_ORIGIN |
+					       NO_TRANSPARENCY;
 #endif
 
 #ifdef STSCE
-	/* Screen To Screen Color Expand */
-	/* The hardware does not support this the way we need it, because
-	 * the mono-bitmap is not provided with a pitch of (width), but
-	 * with a pitch of scrnOffset (= width * bpp / 8).
-	 */
-	infoPtr->SetupForScreenToScreenColorExpandFill =
+	   /* Screen To Screen Color Expand */
+	   /* The hardware does not support this the way we need it, because
+	    * the mono-bitmap is not provided with a pitch of (width), but
+	    * with a pitch of scrnOffset (= width * bpp / 8).
+	    */
+	   infoPtr->SetupForScreenToScreenColorExpandFill =
 	    			SiSSetupForScreenToScreenColorExpand;
-	infoPtr->SubsequentScreenToScreenColorExpandFill =
+	   infoPtr->SubsequentScreenToScreenColorExpandFill =
 	    			SiSSubsequentScreenToScreenColorExpand;
-	infoPtr->ScreenToScreenColorExpandFillFlags = NO_PLANEMASK |
-	                                              BIT_ORDER_IN_BYTE_MSBFIRST ;
+	   infoPtr->ScreenToScreenColorExpandFillFlags = NO_PLANEMASK |
+	                                                 BIT_ORDER_IN_BYTE_MSBFIRST ;
 #endif
 
 #ifdef CTSCE
 #ifdef CTSCE_DIRECT
-	/* CPU color expansion - direct method
-	 *
-	 * We somewhat fake this function here in the following way:
-	 * XAA copies its mono-bitmap data not into an aperture, but
-	 * into our video RAM buffer. We then do a ScreenToScreen
-	 * color expand.
-	 * Unfortunately, XAA sends the data to the aperture AFTER
-	 * the call to Subsequent(), therefore we do not execute the
-	 * command in Subsequent, but in the following call to Sync().
-	 * (Hence, the SYNC_AFTER_COLOR_EXPAND flag MUST BE SET)
-	 *
-	 * This is slower than doing it by the CPU.
-	 */
+	   /* CPU color expansion - direct method
+	    *
+	    * We somewhat fake this function here in the following way:
+	    * XAA copies its mono-bitmap data not into an aperture, but
+	    * into our video RAM buffer. We then do a ScreenToScreen
+	    * color expand.
+	    * Unfortunately, XAA sends the data to the aperture AFTER
+	    * the call to Subsequent(), therefore we do not execute the
+	    * command in Subsequent, but in the following call to Sync().
+	    * (Hence, the SYNC_AFTER_COLOR_EXPAND flag MUST BE SET)
+	    * 
+	    * This is slower than doing it by the CPU.
+	    */
 
-	 pSiS->ColorExpandBufferNumber = 48;
-	 pSiS->PerColorExpandBufferSize = ((pScrn->virtualX + 31)/32) * 4;
-	 infoPtr->SetupForCPUToScreenColorExpandFill = SiSSetupForCPUToScreenColorExpandFill;
-	 infoPtr->SubsequentCPUToScreenColorExpandFill = SiSSubsequentCPUToScreenColorExpandFill;
-	 infoPtr->ColorExpandRange = pSiS->ColorExpandBufferNumber * pSiS->PerColorExpandBufferSize;
-	 infoPtr->CPUToScreenColorExpandFillFlags =
-	     NO_PLANEMASK |
-	     CPU_TRANSFER_PAD_DWORD |
-	     SCANLINE_PAD_DWORD |
-	     BIT_ORDER_IN_BYTE_MSBFIRST |
-	     LEFT_EDGE_CLIPPING |
-	     SYNC_AFTER_COLOR_EXPAND;
+	    pSiS->ColorExpandBufferNumber = 48;
+	    pSiS->PerColorExpandBufferSize = ((pScrn->virtualX + 31)/32) * 4;
+	    infoPtr->SetupForCPUToScreenColorExpandFill = SiSSetupForCPUToScreenColorExpandFill;
+	    infoPtr->SubsequentCPUToScreenColorExpandFill = SiSSubsequentCPUToScreenColorExpandFill;
+	    infoPtr->ColorExpandRange = pSiS->ColorExpandBufferNumber * pSiS->PerColorExpandBufferSize;
+	    infoPtr->CPUToScreenColorExpandFillFlags =
+	        NO_PLANEMASK |
+	        CPU_TRANSFER_PAD_DWORD |
+	        SCANLINE_PAD_DWORD |
+	        BIT_ORDER_IN_BYTE_MSBFIRST |
+	        LEFT_EDGE_CLIPPING |
+	        SYNC_AFTER_COLOR_EXPAND;
 #else
-        /* CPU color expansion - per-scanline / indirect method
-	 *
-	 * SLOW! SLOWER! SLOWEST!
-	 *
-	 * Does not work on 330 series, hangs the engine (both VRAM and MMIO).
-	 * Does not work in VRAM queue mode.
-	 */
+           /* CPU color expansion - per-scanline / indirect method
+	    *
+	    * SLOW! SLOWER! SLOWEST!
+	    *
+	    * Does not work on 330 series, hangs the engine (both VRAM and MMIO).
+	    * Does not work in VRAM queue mode.
+	    */
 #ifndef SISVRAMQ
-        if((pSiS->Chipset != PCI_CHIP_SIS650) &&
-	   (pSiS->Chipset != PCI_CHIP_SIS660) &&
-	   (pSiS->Chipset != PCI_CHIP_SIS330) &&
-	   (pSiS->Chipset != PCI_CHIP_SIS340)) {
-	   pSiS->ColorExpandBufferNumber = 16;
-	   pSiS->ColorExpandBufferCountMask = 0x0F;
-	   pSiS->PerColorExpandBufferSize = ((pScrn->virtualX + 31)/32) * 4;
-	   infoPtr->NumScanlineColorExpandBuffers = pSiS->ColorExpandBufferNumber;
-	   infoPtr->ScanlineColorExpandBuffers = (unsigned char **)&pSiS->ColorExpandBufferAddr[0];
-	   infoPtr->SetupForScanlineCPUToScreenColorExpandFill = SiSSetupForScanlineCPUToScreenColorExpandFill;
-	   infoPtr->SubsequentScanlineCPUToScreenColorExpandFill = SiSSubsequentScanlineCPUToScreenColorExpandFill;
-	   infoPtr->SubsequentColorExpandScanline = SiSSubsequentColorExpandScanline;
-	   infoPtr->ScanlineCPUToScreenColorExpandFillFlags =
-	     NO_PLANEMASK |
-	     CPU_TRANSFER_PAD_DWORD |
-	     SCANLINE_PAD_DWORD |
-	     BIT_ORDER_IN_BYTE_MSBFIRST |
-	     LEFT_EDGE_CLIPPING;
-	} else {
-#endif
-	   pSiS->ColorExpandBufferNumber = 0;
-	   pSiS->PerColorExpandBufferSize = 0;
-#ifndef SISVRAMQ
-	}
+           if((pSiS->Chipset != PCI_CHIP_SIS650) &&
+   	      (pSiS->Chipset != PCI_CHIP_SIS660) &&
+	      (pSiS->Chipset != PCI_CHIP_SIS330) &&
+	      (pSiS->Chipset != PCI_CHIP_SIS340)) {
+	      pSiS->ColorExpandBufferNumber = 16;
+	      pSiS->ColorExpandBufferCountMask = 0x0F;
+	      pSiS->PerColorExpandBufferSize = ((pScrn->virtualX + 31)/32) * 4;
+	      infoPtr->NumScanlineColorExpandBuffers = pSiS->ColorExpandBufferNumber;
+	      infoPtr->ScanlineColorExpandBuffers = (unsigned char **)&pSiS->ColorExpandBufferAddr[0];
+	      infoPtr->SetupForScanlineCPUToScreenColorExpandFill = SiSSetupForScanlineCPUToScreenColorExpandFill;
+	      infoPtr->SubsequentScanlineCPUToScreenColorExpandFill = SiSSubsequentScanlineCPUToScreenColorExpandFill;
+	      infoPtr->SubsequentColorExpandScanline = SiSSubsequentColorExpandScanline;
+	      infoPtr->ScanlineCPUToScreenColorExpandFillFlags =
+	        NO_PLANEMASK |
+	        CPU_TRANSFER_PAD_DWORD |
+	        SCANLINE_PAD_DWORD |
+	        BIT_ORDER_IN_BYTE_MSBFIRST |
+	        LEFT_EDGE_CLIPPING;
+	   } 
 #endif
 #endif
-#else
-        pSiS->ColorExpandBufferNumber = 0;
-	pSiS->PerColorExpandBufferSize = 0;
 #endif
-
-	pSiS->RenderAccelArray = NULL;
 
 #ifdef INCL_RENDER
 #ifdef RENDER
-        /* Render */
-        if(((pScrn->bitsPerPixel == 16) || (pScrn->bitsPerPixel == 32)) && pSiS->doRender) {
-	   int i, j;
+           /* Render */
+           if(((pScrn->bitsPerPixel == 16) || (pScrn->bitsPerPixel == 32)) && pSiS->doRender) {
+  	      int i, j;
 #ifdef SISDUALHEAD
-	   if(pSiSEnt) pSiS->RenderAccelArray = pSiSEnt->RenderAccelArray;
+	      if(pSiSEnt) pSiS->RenderAccelArray = pSiSEnt->RenderAccelArray;
 #endif
-	   if(!pSiS->RenderAccelArray) {
-	      if((pSiS->RenderAccelArray = xnfcalloc(65536, 1))) {
+	      if(!pSiS->RenderAccelArray) {
+	         if((pSiS->RenderAccelArray = xnfcalloc(65536, 1))) {
 #ifdef SISDUALHEAD
-  	         if(pSiSEnt) pSiSEnt->RenderAccelArray = pSiS->RenderAccelArray;
+  	            if(pSiSEnt) pSiSEnt->RenderAccelArray = pSiS->RenderAccelArray;
 #endif
-	         for(i = 0; i < 256; i++) {
-	            for(j = 0; j < 256; j++) {
-	               pSiS->RenderAccelArray[(i << 8) + j] = (i * j) / 255;
-		    }
+	            for(i = 0; i < 256; i++) {
+	               for(j = 0; j < 256; j++) {
+	                  pSiS->RenderAccelArray[(i << 8) + j] = (i * j) / 255;
+		       }
+	            }
 	         }
 	      }
-	   }
-	   if(pSiS->RenderAccelArray) {
-	      pSiS->AccelLinearScratch = NULL;
+	      if(pSiS->RenderAccelArray) {
+	         pSiS->AccelLinearScratch = NULL;
 
 #ifdef SISNEWRENDER
-	      infoPtr->SetupForCPUToScreenAlphaTexture2 = SiSSetupForCPUToScreenAlphaTexture;
-	      infoPtr->CPUToScreenAlphaTextureDstFormats = (pScrn->bitsPerPixel == 16) ?
+	         infoPtr->SetupForCPUToScreenAlphaTexture2 = SiSSetupForCPUToScreenAlphaTexture;
+	         infoPtr->CPUToScreenAlphaTextureDstFormats = (pScrn->bitsPerPixel == 16) ?
 	      		SiSDstTextureFormats16 : SiSDstTextureFormats32;
 #else	      
-	      infoPtr->SetupForCPUToScreenAlphaTexture = SiSSetupForCPUToScreenAlphaTexture;
+	         infoPtr->SetupForCPUToScreenAlphaTexture = SiSSetupForCPUToScreenAlphaTexture;
 #endif	      
-	      infoPtr->SubsequentCPUToScreenAlphaTexture = SiSSubsequentCPUToScreenTexture;
-	      infoPtr->CPUToScreenAlphaTextureFormats = SiSAlphaTextureFormats;
-	      infoPtr->CPUToScreenAlphaTextureFlags = XAA_RENDER_NO_TILE;
+	         infoPtr->SubsequentCPUToScreenAlphaTexture = SiSSubsequentCPUToScreenTexture;
+	         infoPtr->CPUToScreenAlphaTextureFormats = SiSAlphaTextureFormats;
+	         infoPtr->CPUToScreenAlphaTextureFlags = XAA_RENDER_NO_TILE;
 
 #ifdef SISNEWRENDER
-	      infoPtr->SetupForCPUToScreenTexture2 = SiSSetupForCPUToScreenTexture;
-	      infoPtr->CPUToScreenTextureDstFormats = (pScrn->bitsPerPixel == 16) ?
+	         infoPtr->SetupForCPUToScreenTexture2 = SiSSetupForCPUToScreenTexture;
+	         infoPtr->CPUToScreenTextureDstFormats = (pScrn->bitsPerPixel == 16) ?
 	      		SiSDstTextureFormats16 : SiSDstTextureFormats32;
 #else	      
-              infoPtr->SetupForCPUToScreenTexture = SiSSetupForCPUToScreenTexture;
+                 infoPtr->SetupForCPUToScreenTexture = SiSSetupForCPUToScreenTexture;
 #endif	      
-	      infoPtr->SubsequentCPUToScreenTexture = SiSSubsequentCPUToScreenTexture;
-              infoPtr->CPUToScreenTextureFormats = SiSTextureFormats;
-	      infoPtr->CPUToScreenTextureFlags = XAA_RENDER_NO_TILE;
+	         infoPtr->SubsequentCPUToScreenTexture = SiSSubsequentCPUToScreenTexture;
+                 infoPtr->CPUToScreenTextureFormats = SiSTextureFormats;
+	         infoPtr->CPUToScreenTextureFlags = XAA_RENDER_NO_TILE;
 	      
-	      xf86DrvMsg(pScrn->scrnIndex, X_INFO, "RENDER acceleration enabled\n");
+	         xf86DrvMsg(pScrn->scrnIndex, X_INFO, "RENDER acceleration enabled\n");
+	      }
 	   }
-	}
 #endif
 #endif
 
 #ifdef SISDUALHEAD
-	if(pSiS->DualHeadMode) {
-	   infoPtr->RestoreAccelState = SiSRestoreAccelState;
-	}
+	   if(pSiS->DualHeadMode) {
+	      infoPtr->RestoreAccelState = SiSRestoreAccelState;
+	   }
 #endif
 
-	/* Init Frame Buffer Manager */
+        }  /* NoAccel */
+
+	/* Init framebuffer memory manager */
 
 	topFB = pSiS->maxxfbmem;
 
-	reservedFbSize = (pSiS->ColorExpandBufferNumber
-			   * pSiS->PerColorExpandBufferSize);
+	reservedFbSize = pSiS->ColorExpandBufferNumber * pSiS->PerColorExpandBufferSize;
 
-	UsableFbSize = topFB - reservedFbSize;
+	usableFbSize = topFB - reservedFbSize;
+	
 	/* Layout:
 	 * |--------------++++++++++++++++++++^************==========~~~~~~~~~~~~|
 	 *   UsableFbSize  ColorExpandBuffers |  DRI-Heap   HWCursor  CommandQueue
 	 *                                 topFB
 	 */
+	 
 #ifdef CTSCE
-	AvailBufBase = pSiS->FbBase + UsableFbSize;
+	AvailBufBase = pSiS->FbBase + usableFbSize;
 	if(pSiS->ColorExpandBufferNumber) {
 #ifdef CTSCE_DIRECT
 	   infoPtr->ColorExpandBase = (unsigned char *)AvailBufBase;
-	   pSiS->ColorExpandBase = UsableFbSize;
+	   pSiS->ColorExpandBase = usableFbSize;
 #else
 	   for(i = 0; i < pSiS->ColorExpandBufferNumber; i++) {
 	      pSiS->ColorExpandBufferAddr[i] = AvailBufBase +
 		    i * pSiS->PerColorExpandBufferSize;
-	      pSiS->ColorExpandBufferScreenOffset[i] = UsableFbSize +
+	      pSiS->ColorExpandBufferScreenOffset[i] = usableFbSize +
 		    i * pSiS->PerColorExpandBufferSize;
 	   }
 #endif
@@ -526,9 +528,10 @@ SiS315AccelInit(ScreenPtr pScreen)
 	Avail.x1 = 0;
 	Avail.y1 = 0;
 	Avail.x2 = pScrn->displayWidth;
-	Avail.y2 = (UsableFbSize / (pScrn->displayWidth * pScrn->bitsPerPixel/8)) - 1;
+	Avail.y2 = (usableFbSize / (pScrn->displayWidth * pScrn->bitsPerPixel/8)) - 1;
 
 	if(Avail.y2 < 0) Avail.y2 = 32767;
+	
 	if(Avail.y2 < pScrn->currentMode->VDisplay) {
 	   xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
 		"Not enough video RAM for accelerator. At least "
@@ -540,16 +543,20 @@ SiS315AccelInit(ScreenPtr pScreen)
 	   pSiS->NoXvideo = TRUE;
 	   XAADestroyInfoRec(pSiS->AccelInfoPtr);
 	   pSiS->AccelInfoPtr = NULL;
-	   return FALSE;
+	   return FALSE;   /* Don't even init fb manager */
 	}
 
 	xf86DrvMsg(pScrn->scrnIndex, X_INFO,
-		   "Frame Buffer From (%d,%d) To (%d,%d)\n",
-		   Avail.x1, Avail.y1, Avail.x2, Avail.y2);
+		   "Framebuffer from (%d,%d) to (%d,%d)\n",
+		   Avail.x1, Avail.y1, Avail.x2 - 1, Avail.y2 - 1);
 	
 	xf86InitFBManager(pScreen, &Avail);
-
-	return(XAAInit(pScreen, infoPtr));
+	
+	if(pSiS->NoAccel) {
+	   return TRUE;
+	} else {
+	   return(XAAInit(pScreen, infoPtr));
+	}
 }
 
 static void

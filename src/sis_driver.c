@@ -7481,20 +7481,42 @@ SISScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
     if(!pSiS->ShadowFB) SISDGAInit(pScreen);
 
     xf86SetBlackWhitePixels(pScreen);
-
-    if(!pSiS->NoAccel) {
-       switch(pSiS->VGAEngine) {
-	  case SIS_530_VGA:
-	  case SIS_300_VGA:
-            SiS300AccelInit(pScreen);
-	    break;
-	  case SIS_315_VGA:
-	    SiS315AccelInit(pScreen);
-	    break;
-          default:
-            SiSAccelInit(pScreen);
+    
+    /* Probe CPU features */
+#ifdef SISDUALHEAD
+    if(pSiS->DualHeadMode) {
+       if(!pSiS->SecondHead) {
+          pSiSEnt->CPUFlags = SiSGetCPUFlags(pScreen);
        }
+       pSiS->CPUFlags = pSiSEnt->CPUFlags;
+    } else 
+#endif    
+       pSiS->CPUFlags = SiSGetCPUFlags(pScreen);
+
+    /* Initialize the accelerators */
+    switch(pSiS->VGAEngine) {
+    case SIS_530_VGA:
+    case SIS_300_VGA:
+       SiS300AccelInit(pScreen);
+       break;
+    case SIS_315_VGA:
+       SiS315AccelInit(pScreen);
+       break;
+    default:
+       SiSAccelInit(pScreen);
     }
+    
+    /* Benchmark memcpy() methods (needs FB manager initialized) */
+#ifdef SISDUALHEAD
+    if(pSiS->DualHeadMode) {
+       if(!pSiS->SecondHead) {
+	  pSiSEnt->SiSFastVidCopy = SiSVidCopyInit(pScreen);
+       }
+       pSiS->SiSFastVidCopy = pSiSEnt->SiSFastVidCopy;
+    } else 
+#endif    
+       pSiS->SiSFastVidCopy = SiSVidCopyInit(pScreen);
+    
     miInitializeBackingStore(pScreen);
     xf86SetBackingStore(pScreen);
     xf86SetSilkenMouse(pScreen);
@@ -9275,7 +9297,7 @@ void SiSPreSetMode(ScrnInfoPtr pScrn, DisplayModePtr mode, int viewmode)
        inSISIDXREG(SISCR, 0x38, CR38);
        inSISIDXREG(SISCR, 0x39, CR39);
 
-       xf86DrvMsgVerb(pScrn->scrnIndex, X_PROBED, 4,
+       xf86DrvMsgVerb(pScrn->scrnIndex, X_PROBED, SISVERBLEVEL,
 	   "Before: CR30=0x%02x,CR31=0x%02x,CR32=0x%02x,CR33=0x%02x,CR35=0x%02x,CR38=0x%02x\n",
               CR30, CR31, CR32, CR33, CR35, CR38);
 	      
@@ -9296,12 +9318,12 @@ void SiSPreSetMode(ScrnInfoPtr pScrn, DisplayModePtr mode, int viewmode)
        }
        inSISIDXREG(SISCR, 0x3b, CR3B);
        
-       xf86DrvMsgVerb(pScrn->scrnIndex, X_PROBED, 4,
+       xf86DrvMsgVerb(pScrn->scrnIndex, X_PROBED, SISVERBLEVEL,
 	   "Before: CR30=0x%02x, CR31=0x%02x, CR32=0x%02x, CR33=0x%02x, CR%02x=0x%02x\n",
               CR30, CR31, CR32, CR33, temp, CR38);
     }
 
-    xf86DrvMsgVerb(pScrn->scrnIndex, X_INFO, 4, "VBFlags=0x%lx\n", pSiS->VBFlags);
+    xf86DrvMsgVerb(pScrn->scrnIndex, X_INFO, SISVERBLEVEL, "VBFlags=0x%lx\n", pSiS->VBFlags);
 
     CR30 = 0x00;
     CR31 &= ~0x60;  /* Clear VB_Drivermode & VB_OutputDisable */
@@ -9526,7 +9548,7 @@ void SiSPreSetMode(ScrnInfoPtr pScrn, DisplayModePtr mode, int viewmode)
 	setSISIDXREG(SISCR, 0x38, 0xf8, CR38);
 	outSISIDXREG(SISCR, 0x39, CR39);
 	
-	xf86DrvMsgVerb(pScrn->scrnIndex, X_INFO, 4,
+	xf86DrvMsgVerb(pScrn->scrnIndex, X_INFO, SISVERBLEVEL,
 		"After:  CR30=0x%02x,CR31=0x%02x,CR33=0x%02x,CR35=0x%02x,CR38=%02x\n",
 		    CR30, CR31, CR33, CR35, CR38);
 
@@ -9543,7 +9565,7 @@ void SiSPreSetMode(ScrnInfoPtr pScrn, DisplayModePtr mode, int viewmode)
 	   outSISIDXREG(SISCR, 0x79, CR79);
 	}
 	
-	xf86DrvMsgVerb(pScrn->scrnIndex, X_INFO, 4,
+	xf86DrvMsgVerb(pScrn->scrnIndex, X_INFO, SISVERBLEVEL,
 		"After:  CR30=0x%02x,CR31=0x%02x,CR33=0x%02x,CR%02x=%02x\n",
 		    CR30, CR31, CR33, temp, CR38);
      }

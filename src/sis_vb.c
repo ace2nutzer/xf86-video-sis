@@ -449,7 +449,7 @@ void SISLCDPreInit(ScrnInfoPtr pScrn, Bool quiet)
 /* Detect CRT2-TV connector type and PAL/NTSC flag */
 void SISTVPreInit(ScrnInfoPtr pScrn, Bool quiet)
 {
-    SISPtr  pSiS = SISPTR(pScrn);
+    SISPtr pSiS = SISPTR(pScrn);
     unsigned char SR16, SR38, CR32, CR35=0, CR38=0, CR79, CR39;
     int temp = 0;
     
@@ -473,8 +473,8 @@ void SISTVPreInit(ScrnInfoPtr pScrn, Bool quiet)
 
 #ifdef TWDEBUG
     xf86DrvMsg(pScrn->scrnIndex, X_PROBED, 
-    	"(vb.c: CR32=%02x SR16=%02x SR38=%02x)\n", 
-	CR32, SR16, SR38);
+    	"(vb.c: SISTVPreInit 1: CR32=%02x SR16=%02x SR38=%02x VBFlags 0x%x)\n", 
+	CR32, SR16, SR38, pSiS->VBFlags);
 #endif
 
     if(CR32 & 0x47) pSiS->VBFlags |= CRT2_TV;
@@ -577,6 +577,11 @@ void SISTVPreInit(ScrnInfoPtr pScrn, Bool quiet)
 	     pSiS->VBFlags |= TV_NTSC;
        }
     }
+    
+#ifdef TWDEBUG
+    xf86DrvMsg(pScrn->scrnIndex, X_PROBED, 
+    	"(vb.c: SISTVPreInit 2: VBFlags 0x%x)\n", pSiS->VBFlags);
+#endif    
 
     if((pSiS->VBFlags & (TV_SCART|TV_SVIDEO|TV_AVIDEO)) && !quiet) {
        xf86DrvMsg(pScrn->scrnIndex, X_PROBED, "Detected default TV standard %s\n",
@@ -606,7 +611,7 @@ void SISTVPreInit(ScrnInfoPtr pScrn, Bool quiet)
 /* Detect CRT2-VGA */
 void SISCRT2PreInit(ScrnInfoPtr pScrn, Bool quiet)
 {
-    SISPtr  pSiS = SISPTR(pScrn);
+    SISPtr pSiS = SISPTR(pScrn);
     unsigned char CR32; 
 
     /* CRT2-VGA only supported on these bridges */
@@ -709,6 +714,12 @@ SISSense30x(ScrnInfoPtr pScrn, Bool quiet)
     int myflag, result; /* , i; */
     
     if(!(pSiS->VBFlags & VB_SISBRIDGE)) return;
+    
+#ifdef TWDEBUG
+    inSISIDXREG(SISCR,0x32,backupP2_4d);
+    xf86DrvMsg(pScrn->scrnIndex, X_PROBED, 
+    	"(vb.c: SISSense30c 1: CR32=%02x, VBFlags 0x%x)\n", backupP2_4d, pSiS->VBFlags);
+#endif    
     
     if(pSiS->VBFlags & VB_301) {
        svhs = 0x00b9; cvbs = 0x00b3; vga2 = 0x00d1;
@@ -905,6 +916,12 @@ SISSense30x(ScrnInfoPtr pScrn, Bool quiet)
     }
     
     outSISIDXREG(SISPART2,0x00,backupP2_00);
+    
+#ifdef TWDEBUG
+    inSISIDXREG(SISCR,0x32,backupP2_4d);
+    xf86DrvMsg(pScrn->scrnIndex, X_PROBED, 
+    	"(vb.c: SISSense30c 2: CR32=0x%02x, VBFlags 0x%x)\n", backupP2_4d, pSiS->VBFlags);
+#endif    
 }
 
 void

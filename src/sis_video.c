@@ -954,32 +954,17 @@ void SISInitVideo(ScreenPtr pScreen)
     XF86VideoAdaptorPtr *adaptors, *newAdaptors = NULL;
     XF86VideoAdaptorPtr newAdaptor = NULL, newBlitAdaptor = NULL;
     int num_adaptors;
-    
-#ifdef SISDUALHEAD    
-    if(pSiS->DualHeadMode) {
-       pSiS->SiSFastVidCopy = pSiS->entityPrivate->SiSFastVidCopy;
-    }
-#endif
-    
-    if(!pSiS->SiSFastVidCopy) {
-       pSiS->SiSFastVidCopy = SiSVidCopyInit(pScreen);
-#ifdef SISDUALHEAD    
-       if(pSiS->DualHeadMode) {  
-          pSiS->entityPrivate->SiSFastVidCopy = pSiS->SiSFastVidCopy;     
-       }
-#endif       
-    }
 
     newAdaptor = SISSetupImageVideo(pScreen);
     if(newAdaptor) {
-	SISInitOffscreenImages(pScreen);
+       SISInitOffscreenImages(pScreen);
     }
 
 #ifdef INCL_YUV_BLIT_ADAPTOR
     if( ( (pSiS->ChipFlags & SiSCF_Is65x) || 
           (pSiS->sishw_ext.jChipType >= SIS_330) ) &&
         (pScrn->bitsPerPixel != 8) ) {
-        newBlitAdaptor = SISSetupBlitVideo(pScreen);
+       newBlitAdaptor = SISSetupBlitVideo(pScreen);
     }
 #endif
 
@@ -4147,11 +4132,7 @@ SISPutImage(
 
    /* copy data */
    if((pSiS->XvUseMemcpy) || (totalSize < 16)) {
-      if((totalSize < 64) || (!pSiS->SiSFastVidCopy)) {
-         memcpy(pSiS->FbBase + pPriv->bufAddr[pPriv->currentBuf], buf, totalSize);
-      } else {
-         (*pSiS->SiSFastVidCopy)(pSiS->FbBase + pPriv->bufAddr[pPriv->currentBuf], buf, totalSize);
-      }
+      (*pSiS->SiSFastVidCopy)(pSiS->FbBase + pPriv->bufAddr[pPriv->currentBuf], buf, totalSize);
    } else {
       unsigned long i;
       CARD32 *src = (CARD32 *)buf;
@@ -4859,11 +4840,7 @@ SISPutImageBlit(
    case PIXEL_FMT_I420:
       MyPacket.P12_Command = YUV_FORMAT_NV12;
       /* Copy y plane */
-      if((bytesize < 64) || (!pSiS->SiSFastVidCopy)) {
-         memcpy(ybased, ybases, bytesize); 
-      } else {
-         (*pSiS->SiSFastVidCopy)(ybased, ybases, bytesize);
-      }      
+      (*pSiS->SiSFastVidCopy)(ybased, ybases, bytesize);
       /* Copy u/v planes */
       wb = srcPitch >> 1;
       h = height >> 1;
@@ -4888,11 +4865,7 @@ SISPutImageBlit(
       }
       break;
    default:
-      if((totalSize < 64) || (!pSiS->SiSFastVidCopy)) {
-         memcpy(ybased, ybases, totalSize); 
-      } else {
-         (*pSiS->SiSFastVidCopy)(ybased, ybases, totalSize);
-      }
+      (*pSiS->SiSFastVidCopy)(ybased, ybases, totalSize);
    }
 
 #ifdef SISDUALHEAD

@@ -35,8 +35,8 @@
  */
 
 #if 0
-#define CTSCE		/* TW: Include enhanced color expansion code */
-#endif			/*     This produces drawing errors sometimes */
+#define CTSCE		/* Include enhanced color expansion code */
+#endif			/* This produces drawing errors sometimes */
 
 #include "xf86.h"
 #include "xf86_OSproc.h"
@@ -100,144 +100,149 @@ extern unsigned char SiSGetPatternROP(int rop);
 Bool
 SiSAccelInit(ScreenPtr pScreen)
 {
-    XAAInfoRecPtr  infoPtr;
     ScrnInfoPtr    pScrn = xf86Screens[pScreen->myNum];
     SISPtr         pSiS = SISPTR(pScrn);
-    BoxRec         AvailFBArea;
-    int            topFB, i;
-    int            reservedFbSize;
-    int            UsableFbSize;
+    XAAInfoRecPtr  infoPtr = NULL;
+    int            topFB, reservedFbSize, usableFbSize, i;
     unsigned char  *AvailBufBase;
-
-    pSiS->AccelInfoPtr = infoPtr = XAACreateInfoRec();
-    if (!infoPtr)  return FALSE;
-
-    infoPtr->Flags = LINEAR_FRAMEBUFFER |
-  		     OFFSCREEN_PIXMAPS |
-  		     PIXMAP_CACHE;
-
-    /* Sync */
-    infoPtr->Sync = SiSSync;
-
-    /* Screen To Screen copy */
-    infoPtr->SetupForScreenToScreenCopy =  SiSSetupForScreenToScreenCopy;
-    infoPtr->SubsequentScreenToScreenCopy = SiSSubsequentScreenToScreenCopy;
-    infoPtr->ScreenToScreenCopyFlags = NO_TRANSPARENCY | NO_PLANEMASK;
-
-    /* Solid fill */
-    infoPtr->SetupForSolidFill = SiSSetupForFillRectSolid;
-    infoPtr->SubsequentSolidFillRect = SiSSubsequentFillRectSolid;
-    infoPtr->SolidFillFlags = NO_PLANEMASK;
-
-    /* On 5597/5598 and 6326, clipping and lines only work
-       for 1024, 2048, 4096 logical width */
-    if(pSiS->ValidWidth) {
-        /* Clipping */
-        infoPtr->SetClippingRectangle = SiSSetClippingRectangle;
-        infoPtr->DisableClipping = SiSDisableClipping;
-        infoPtr->ClippingFlags =  
-                    HARDWARE_CLIP_SOLID_LINE | 
-                    HARDWARE_CLIP_SCREEN_TO_SCREEN_COPY |
-                    HARDWARE_CLIP_MONO_8x8_FILL |
-                    HARDWARE_CLIP_SOLID_FILL  ;
-
-    	/* Solid Lines */
-    	infoPtr->SetupForSolidLine = SiSSetupForSolidLine;
-    	infoPtr->SubsequentSolidTwoPointLine = SiSSubsequentSolidTwoPointLine;
-    	infoPtr->SubsequentSolidHorVertLine = SiSSubsequentSolidHorVertLine;
-	infoPtr->SolidLineFlags = NO_PLANEMASK;
+    BoxRec         Avail;
+    
+    pSiS->ColorExpandBufferNumber = 0;
+    pSiS->PerColorExpandBufferSize = 0;
+    pSiS->RenderAccelArray = NULL;
+    pSiS->AccelInfoPtr = NULL;
+    
+    if(!pSiS->NoAccel) {
+       pSiS->AccelInfoPtr = infoPtr = XAACreateInfoRec();
+       if(!infoPtr) pSiS->NoAccel = TRUE;
     }
+	
+    if(!pSiS->NoAccel) {
 
-    if(pScrn->bitsPerPixel != 24) {
-        /* 8x8 mono pattern */
-        infoPtr->SetupForMono8x8PatternFill = SiSSetupForMono8x8PatternFill;
-        infoPtr->SubsequentMono8x8PatternFillRect = SiSSubsequentMono8x8PatternFillRect;
-	infoPtr->Mono8x8PatternFillFlags =
-                    NO_PLANEMASK |
-                    HARDWARE_PATTERN_PROGRAMMED_BITS |
-                    HARDWARE_PATTERN_PROGRAMMED_ORIGIN |
-                    BIT_ORDER_IN_BYTE_MSBFIRST;
-    }
+       infoPtr->Flags = LINEAR_FRAMEBUFFER |
+   		        OFFSCREEN_PIXMAPS |
+  		        PIXMAP_CACHE;
+
+       /* Sync */
+       infoPtr->Sync = SiSSync;
+
+       /* Screen To Screen copy */
+       infoPtr->SetupForScreenToScreenCopy =  SiSSetupForScreenToScreenCopy;
+       infoPtr->SubsequentScreenToScreenCopy = SiSSubsequentScreenToScreenCopy;
+       infoPtr->ScreenToScreenCopyFlags = NO_TRANSPARENCY | NO_PLANEMASK;
+
+       /* Solid fill */
+       infoPtr->SetupForSolidFill = SiSSetupForFillRectSolid;
+       infoPtr->SubsequentSolidFillRect = SiSSubsequentFillRectSolid;
+       infoPtr->SolidFillFlags = NO_PLANEMASK;
+
+       /* On 5597/5598 and 6326, clipping and lines only work
+          for 1024, 2048, 4096 logical width */
+       if(pSiS->ValidWidth) {
+          /* Clipping */
+          infoPtr->SetClippingRectangle = SiSSetClippingRectangle;
+          infoPtr->DisableClipping = SiSDisableClipping;
+          infoPtr->ClippingFlags = HARDWARE_CLIP_SOLID_LINE | 
+                    		   HARDWARE_CLIP_SCREEN_TO_SCREEN_COPY |
+                    		   HARDWARE_CLIP_MONO_8x8_FILL |
+                    		   HARDWARE_CLIP_SOLID_FILL  ;
+
+    	  /* Solid Lines */
+    	  infoPtr->SetupForSolidLine = SiSSetupForSolidLine;
+    	  infoPtr->SubsequentSolidTwoPointLine = SiSSubsequentSolidTwoPointLine;
+    	  infoPtr->SubsequentSolidHorVertLine = SiSSubsequentSolidHorVertLine;
+	  infoPtr->SolidLineFlags = NO_PLANEMASK;
+       }
+
+       if(pScrn->bitsPerPixel != 24) {
+          /* 8x8 mono pattern */
+          infoPtr->SetupForMono8x8PatternFill = SiSSetupForMono8x8PatternFill;
+          infoPtr->SubsequentMono8x8PatternFillRect = SiSSubsequentMono8x8PatternFillRect;
+	  infoPtr->Mono8x8PatternFillFlags = NO_PLANEMASK |
+                    			     HARDWARE_PATTERN_PROGRAMMED_BITS |
+                    			     HARDWARE_PATTERN_PROGRAMMED_ORIGIN |
+                    			     BIT_ORDER_IN_BYTE_MSBFIRST;
+       }
 
 #ifdef CTSCE
-    if(pScrn->bitsPerPixel != 24) {
-       /* TW: per-scanline color expansion (using indirect method) */
-       pSiS->ColorExpandBufferNumber = 4;
-       pSiS->ColorExpandBufferCountMask = 0x03;
-       pSiS->PerColorExpandBufferSize = ((pScrn->virtualX + 31) / 32) * 4;
+       if(pScrn->bitsPerPixel != 24) {
+          /* per-scanline color expansion (using indirect method) */
+          pSiS->ColorExpandBufferNumber = 4;
+          pSiS->ColorExpandBufferCountMask = 0x03;
+          pSiS->PerColorExpandBufferSize = ((pScrn->virtualX + 31) / 32) * 4;
 
-       infoPtr->NumScanlineColorExpandBuffers = pSiS->ColorExpandBufferNumber;
-       infoPtr->ScanlineColorExpandBuffers = (unsigned char **)&pSiS->ColorExpandBufferAddr[0];
+          infoPtr->NumScanlineColorExpandBuffers = pSiS->ColorExpandBufferNumber;
+          infoPtr->ScanlineColorExpandBuffers = (unsigned char **)&pSiS->ColorExpandBufferAddr[0];
 
-       infoPtr->SetupForScanlineCPUToScreenColorExpandFill =
+          infoPtr->SetupForScanlineCPUToScreenColorExpandFill =
 	                            SiSSetupForScanlineCPUToScreenColorExpandFill;
-       infoPtr->SubsequentScanlineCPUToScreenColorExpandFill =
+          infoPtr->SubsequentScanlineCPUToScreenColorExpandFill =
 	                            SiSSubsequentScanlineCPUToScreenColorExpandFill;
-       infoPtr->SubsequentColorExpandScanline =
+          infoPtr->SubsequentColorExpandScanline =
 	                            SiSSubsequentColorExpandScanline;
-       infoPtr->ScanlineCPUToScreenColorExpandFillFlags =
-	    NO_PLANEMASK |
-	    CPU_TRANSFER_PAD_DWORD |
-	    SCANLINE_PAD_DWORD |
-	    BIT_ORDER_IN_BYTE_MSBFIRST |
-	    LEFT_EDGE_CLIPPING;
-    } else {
-       pSiS->ColorExpandBufferNumber = 0;
-    }
-#else
-    pSiS->ColorExpandBufferNumber = 0;
+          infoPtr->ScanlineCPUToScreenColorExpandFillFlags = NO_PLANEMASK |
+	    						     CPU_TRANSFER_PAD_DWORD |	
+	    						     SCANLINE_PAD_DWORD |
+	    						     BIT_ORDER_IN_BYTE_MSBFIRST |
+	    						     LEFT_EDGE_CLIPPING;
+       }
 #endif
 
+    }  /* NoAccel */
+    
     topFB = pSiS->maxxfbmem;
 
     reservedFbSize = pSiS->ColorExpandBufferNumber * pSiS->PerColorExpandBufferSize;
 
-    UsableFbSize = topFB - reservedFbSize;
+    usableFbSize = topFB - reservedFbSize;
 
-    /* Layout: (Sizes do not reflect correct proportions)
+    /* Layout: (Sizes here do not reflect correct proportions)
      * |--------------++++++++++++++++++++|  ====================~~~~~~~~~~~~|
      *   UsableFbSize  ColorExpandBuffers |        TurboQueue     HWCursor
      *                                  topFB
      */
 
     if(pSiS->ColorExpandBufferNumber) {
-      AvailBufBase = pSiS->FbBase + UsableFbSize;
-      for (i = 0; i < pSiS->ColorExpandBufferNumber; i++) {
+       AvailBufBase = pSiS->FbBase + usableFbSize;
+       for(i = 0; i < pSiS->ColorExpandBufferNumber; i++) {
 	  pSiS->ColorExpandBufferAddr[i] = AvailBufBase +
 		    i * pSiS->PerColorExpandBufferSize;
-	  pSiS->ColorExpandBufferScreenOffset[i] = UsableFbSize +
+	  pSiS->ColorExpandBufferScreenOffset[i] = usableFbSize +
 		    i * pSiS->PerColorExpandBufferSize;
-      }
+       }
     }
-    AvailFBArea.x1 = 0;
-    AvailFBArea.y1 = 0;
-    AvailFBArea.x2 = pScrn->displayWidth;
-    AvailFBArea.y2 = UsableFbSize / (pScrn->displayWidth * pScrn->bitsPerPixel / 8) - 1;
+    
+    Avail.x1 = 0;
+    Avail.y1 = 0;
+    Avail.x2 = pScrn->displayWidth;
+    Avail.y2 = usableFbSize / (pScrn->displayWidth * pScrn->bitsPerPixel / 8) - 1;
 
-    if (AvailFBArea.y2 < 0)
-	AvailFBArea.y2 = 32767;
+    if(Avail.y2 < 0) Avail.y2 = 32767;
 
-    if(AvailFBArea.y2 < pScrn->currentMode->VDisplay) {
-	xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
-	 	"Not enough video RAM for accelerator. At least "
-		"%dKB needed, %ldKB available\n",
-		((((pScrn->displayWidth * pScrn->bitsPerPixel/8)   /* TW: +8 for make it sure */
+    if(Avail.y2 < pScrn->currentMode->VDisplay) {
+       xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
+	 	"Not enough video RAM for accelerator: %dKB needed, %ldKB available\n",
+		((((pScrn->displayWidth * pScrn->bitsPerPixel/8)   /* +8 for make it sure */
 		     * pScrn->currentMode->VDisplay) + reservedFbSize) / 1024) + 8,
 		pSiS->maxxfbmem/1024);
-	pSiS->NoAccel = TRUE;
-	pSiS->NoXvideo = TRUE;
-	XAADestroyInfoRec(pSiS->AccelInfoPtr);
-	pSiS->AccelInfoPtr = NULL;
-	return FALSE;
+       pSiS->NoAccel = TRUE;
+       pSiS->NoXvideo = TRUE;
+       XAADestroyInfoRec(pSiS->AccelInfoPtr);
+       pSiS->AccelInfoPtr = NULL;
+       return FALSE;
     }
 
     xf86DrvMsg(pScrn->scrnIndex, X_INFO,
-	   "Frame Buffer From (%d,%d) To (%d,%d)\n",
-	   AvailFBArea.x1, AvailFBArea.y1, AvailFBArea.x2, AvailFBArea.y2);
+	   "Framebuffer from (%d,%d) to (%d,%d)\n",
+	   Avail.x1, Avail.y1, Avail.x2 - 1, Avail.y2 - 1);
 
-    xf86InitFBManager(pScreen, &AvailFBArea);
+    xf86InitFBManager(pScreen, &Avail);
 
-    return(XAAInit(pScreen, infoPtr));
+    if(pSiS->NoAccel) {
+       return TRUE;
+    } else {
+       return(XAAInit(pScreen, infoPtr));
+    }
 }
 
 /* sync */
@@ -272,6 +277,7 @@ SiSSetupForScreenToScreenCopy(ScrnInfoPtr pScrn, int xdir, int ydir,
                 int transparency_color)
 {
     SISPtr pSiS = SISPTR(pScrn);
+    
     sisBLTSync;
     sisSETPITCH(pSiS->scrnOffset, pSiS->scrnOffset);
 
@@ -285,36 +291,38 @@ SiSSubsequentScreenToScreenCopy(ScrnInfoPtr pScrn, int x1, int y1, int x2,
                 int y2, int w, int h)
 {
     SISPtr pSiS = SISPTR(pScrn);
-    int srcaddr, destaddr;
-    int op ;
+    int srcaddr, destaddr, op;
 
     op = sisCMDBLT | sisSRCVIDEO;
+    
     if(pSiS->Ydirection == -1) {
-        op |= sisBOTTOM2TOP;
-	srcaddr = (y1 + h - 1) * pSiS->CurrentLayout.displayWidth;
-        destaddr = (y2 + h - 1) * pSiS->CurrentLayout.displayWidth;
+       op |= sisBOTTOM2TOP;
+       srcaddr = (y1 + h - 1) * pSiS->CurrentLayout.displayWidth;
+       destaddr = (y2 + h - 1) * pSiS->CurrentLayout.displayWidth;
     } else {
-        op |= sisTOP2BOTTOM;
-	srcaddr = y1 * pSiS->CurrentLayout.displayWidth;
-        destaddr = y2 * pSiS->CurrentLayout.displayWidth;
+       op |= sisTOP2BOTTOM;
+       srcaddr = y1 * pSiS->CurrentLayout.displayWidth;
+       destaddr = y2 * pSiS->CurrentLayout.displayWidth;
     }
+    
     if(pSiS->Xdirection == -1) {
-        op |= sisRIGHT2LEFT;
-        srcaddr += x1 + w - 1;
-        destaddr += x2 + w - 1;
+       op |= sisRIGHT2LEFT;
+       srcaddr += x1 + w - 1;
+       destaddr += x2 + w - 1;
     } else {
-        op |= sisLEFT2RIGHT;
-        srcaddr += x1;
-        destaddr += x2;
+       op |= sisLEFT2RIGHT;
+       srcaddr += x1;
+       destaddr += x2;
     }
-    if (pSiS->ClipEnabled)
-        op |= sisCLIPINTRN | sisCLIPENABL;
+    
+    if(pSiS->ClipEnabled)
+       op |= sisCLIPINTRN | sisCLIPENABL;
 
     srcaddr *= (pSiS->CurrentLayout.bitsPerPixel/8);
     destaddr *= (pSiS->CurrentLayout.bitsPerPixel/8);
     if(((pSiS->CurrentLayout.bitsPerPixel / 8) > 1) && (pSiS->Xdirection == -1)) {
-        srcaddr += (pSiS->CurrentLayout.bitsPerPixel/8)-1;
-        destaddr += (pSiS->CurrentLayout.bitsPerPixel/8)-1;
+       srcaddr += (pSiS->CurrentLayout.bitsPerPixel/8)-1;
+       destaddr += (pSiS->CurrentLayout.bitsPerPixel/8)-1;
     }
 
     sisBLTSync;
@@ -348,7 +356,7 @@ SiSSubsequentFillRectSolid(ScrnInfoPtr pScrn, int x, int y, int w, int h)
     op = sisCMDBLT | sisSRCBG | sisTOP2BOTTOM | sisLEFT2RIGHT;
 
     if(pSiS->ClipEnabled)
-        op |= sisCLIPINTRN | sisCLIPENABL;
+       op |= sisCLIPINTRN | sisCLIPENABL;
 
     destaddr *= (pSiS->CurrentLayout.bitsPerPixel / 8);
 
@@ -371,9 +379,9 @@ SiSSetupForMono8x8PatternFill(ScrnInfoPtr pScrn, int patternx, int patterny,
 
     sisBLTSync;
     if(bg != -1) {
-        sisSETBGROPCOL(0xcc, bg);  /* copy */
+       sisSETBGROPCOL(0xcc, bg);  /* copy */
     } else {
-        sisSETBGROPCOL(0xAA, bg);  /* noop */
+       sisSETBGROPCOL(0xAA, bg);  /* noop */
     }
     sisSETFGROPCOL(rop, fg);
     sisSETPITCH(0, pSiS->scrnOffset);
@@ -381,9 +389,9 @@ SiSSetupForMono8x8PatternFill(ScrnInfoPtr pScrn, int patternx, int patterny,
     patternRegPtr =  (unsigned int *)sisSETPATREG();
     pSiS->sisPatternReg[0] = pSiS->sisPatternReg[2] = patternx ;
     pSiS->sisPatternReg[1] = pSiS->sisPatternReg[3] = patterny ;
-    for( i = 0 ; i < 16 /* sisPatternHeight */ ; ) {
-        patternRegPtr[i++] = patternx ;
-        patternRegPtr[i++] = patterny ;
+    for(i = 0 ; i < 16 /* sisPatternHeight */ ; ) {
+       patternRegPtr[i++] = patternx ;
+       patternRegPtr[i++] = patterny ;
     }
 }
 
@@ -392,21 +400,19 @@ SiSSubsequentMono8x8PatternFillRect(ScrnInfoPtr pScrn, int patternx,
                 int patterny, int x, int y, int w, int h)
 {
     SISPtr                  pSiS = SISPTR(pScrn);
-    int                     dstaddr;
     register unsigned char  *patternRegPtr;
     register unsigned char  *srcPatternRegPtr;
     register unsigned int   *patternRegPtrL;
-    int                     i, k;
     unsigned short          tmp;
-    int                     shift;
+    int                     dstaddr, i, k, shift;
     int                     op  = sisCMDCOLEXP |
                                   sisTOP2BOTTOM |
 		                  sisLEFT2RIGHT |
                                   sisPATFG |
 		                  sisSRCBG;
 
-    if (pSiS->ClipEnabled)
-        op |= sisCLIPINTRN | sisCLIPENABL;
+    if(pSiS->ClipEnabled)
+       op |= sisCLIPINTRN | sisCLIPENABL;
 
     dstaddr = ( y * pSiS->CurrentLayout.displayWidth + x ) *
                            pSiS->CurrentLayout.bitsPerPixel / 8;
@@ -416,15 +422,15 @@ SiSSubsequentMono8x8PatternFillRect(ScrnInfoPtr pScrn, int patternx,
     patternRegPtr = sisSETPATREG();
     srcPatternRegPtr = (unsigned char *)pSiS->sisPatternReg ;
     shift = 8 - patternx ;
-    for ( i = 0, k = patterny ; i < 8 ; i++, k++ ) {
-        tmp = srcPatternRegPtr[k]<<8 | srcPatternRegPtr[k] ;
-        tmp >>= shift ;
-        patternRegPtr[i] = tmp & 0xff;
+    for(i = 0, k = patterny ; i < 8 ; i++, k++ ) {
+       tmp = srcPatternRegPtr[k]<<8 | srcPatternRegPtr[k] ;
+       tmp >>= shift ;
+       patternRegPtr[i] = tmp & 0xff;
     }
     patternRegPtrL = (unsigned int *)sisSETPATREG();
-    for ( i = 2 ; i < 16 /* sisPatternHeight */; ) {
-        patternRegPtrL[i++] = patternRegPtrL[0];
-        patternRegPtrL[i++] = patternRegPtrL[1];
+    for(i = 2 ; i < 16 /* sisPatternHeight */; ) {
+       patternRegPtrL[i++] = patternRegPtrL[0];
+       patternRegPtrL[i++] = patternRegPtrL[1];
     }
 
     sisSETDSTADDR(dstaddr);
@@ -448,37 +454,36 @@ static void SiSSubsequentSolidTwoPointLine(ScrnInfoPtr pScrn,
 
 {
     SISPtr pSiS = SISPTR(pScrn);
-    int op ;
-    int major, minor, err,K1,K2, tmp;
+    int op, major, minor, err, K1, K2, tmp;
 
     op = sisCMDLINE  | sisSRCFG;
 
-    if ((flags & OMIT_LAST))
-        op |= sisLASTPIX;
+    if((flags & OMIT_LAST))
+       op |= sisLASTPIX;
 
-    if (pSiS->ClipEnabled)
-        op |= sisCLIPINTRN | sisCLIPENABL;
+    if(pSiS->ClipEnabled)
+       op |= sisCLIPINTRN | sisCLIPENABL;
 
-    if ((major = x2 - x1) <= 0) {
+    if((major = x2 - x1) <= 0) 
        major = -major;
-    } else
-        op |= sisXINCREASE;
+    else
+       op |= sisXINCREASE;
 
-    if ((minor = y2 - y1) <= 0) {
+    if((minor = y2 - y1) <= 0)
        minor = -minor;
-    } else
-        op |= sisYINCREASE;
+    else
+       op |= sisYINCREASE;
 
-    if (minor >= major) {
+    if(minor >= major) {
        tmp = minor; 
        minor = major; 
        major = tmp;
     } else
-        op |= sisXMAJOR;
+       op |= sisXMAJOR;
 
-    K1 = (minor - major)<<1;
-    K2 = minor<<1;
-    err = (minor<<1) - major;
+    K1 = (minor - major) << 1;
+    K2 = minor << 1;
+    err = (minor << 1) - major;
 
     sisBLTSync;
     sisSETXStart(x1);
@@ -499,7 +504,7 @@ static void SiSSubsequentSolidHorVertLine(ScrnInfoPtr pScrn,
 
     op = sisCMDBLT | sisSRCFG | sisTOP2BOTTOM | sisLEFT2RIGHT;
 
-    if (pSiS->ClipEnabled)
+    if(pSiS->ClipEnabled)
         op |= sisCLIPINTRN | sisCLIPENABL;
 
     destaddr *= (pSiS->CurrentLayout.bitsPerPixel / 8);
@@ -534,16 +539,16 @@ SiSSetupForScanlineCPUToScreenColorExpandFill(ScrnInfoPtr pScrn,
 
     sisBLTSync;
 
-    /* TW: The combination of flags in the following
-     *     is not understandable. However, this is the
-     *     only combination that seems to work.
+    /* The combination of flags in the following
+     * is not understandable. However, this is the
+     * only combination that seems to work.
      */
     if(bg == -1) {
-        sisSETROPBG(0xAA);             /* dst = dst (=noop) */
-	pSiS->CommandReg |= sisSRCFG;
+       sisSETROPBG(0xAA);             /* dst = dst (=noop) */
+       pSiS->CommandReg |= sisSRCFG;
     } else {
-        sisSETBGROPCOL(SiSGetPatternROP(rop), bg);
-	pSiS->CommandReg |= sisSRCFG | sisPATBG;
+       sisSETBGROPCOL(SiSGetPatternROP(rop), bg);
+       pSiS->CommandReg |= sisSRCFG | sisPATBG;
     }
 
     sisSETFGROPCOL(SiSGetCopyROP(rop), fg);
@@ -562,18 +567,18 @@ SiSSubsequentScanlineCPUToScreenColorExpandFill(
     int op = pSiS->CommandReg;
 
     if(skipleft > 0) {
-	_x0 = x + skipleft;
-	_y0 = y;
-	_x1 = x + w;
-	_y1 = y + h;
-	sisSETCLIPTOP(_x0, _y0);
-	sisSETCLIPBOTTOM(_x1, _y1);
-	op |= sisCLIPENABL;
+       _x0 = x + skipleft;
+       _y0 = y;
+       _x1 = x + w;
+       _y1 = y + h;
+       sisSETCLIPTOP(_x0, _y0);
+       sisSETCLIPBOTTOM(_x1, _y1);
+       op |= sisCLIPENABL;
     } else {
-	op &= (~(sisCLIPINTRN | sisCLIPENABL));
+       op &= (~(sisCLIPINTRN | sisCLIPENABL));
     }
 
-    sisSETSRCPITCH(((((w+7)/8)+3) >> 2) * 4);
+    sisSETSRCPITCH(((((w + 7) / 8) + 3) >> 2) * 4);
 
     sisSETHEIGHTWIDTH(1-1, (w * (pSiS->CurrentLayout.bitsPerPixel/8)) - 1);
 
@@ -594,7 +599,7 @@ SiSSubsequentColorExpandScanline(ScrnInfoPtr pScrn, int bufno)
     destaddr = (pSiS->ycurrent * pSiS->CurrentLayout.displayWidth) + pSiS->xcurrent;
     destaddr *= (pSiS->CurrentLayout.bitsPerPixel / 8);
 
-    /* TW: Wait until there is no color expansion command in queue */
+    /* Wait until there is no color expansion command in queue */
     /* sisBLTSync; */
 
     sisSETSRCADDR(cbo);
@@ -605,7 +610,7 @@ SiSSubsequentColorExpandScanline(ScrnInfoPtr pScrn, int bufno)
 
     pSiS->ycurrent++;
 
-    /* TW: Wait for eventual color expand commands to finish */
+    /* Wait for eventual color expand commands to finish */
     /* (needs to be done, otherwise the data in the buffer may
      *  be overwritten while accessed by the hardware)
      */
