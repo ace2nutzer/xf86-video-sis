@@ -1530,7 +1530,7 @@ SiS_GetLCDResInfo(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
 #ifdef SIS315H
   UCHAR  *myptr = NULL;
 #endif  
-  USHORT temp,modeflag,resinfo=0;
+  USHORT temp,modeflag,resinfo=0,modexres=0,modeyres=0;
   const unsigned char SiS300SeriesLCDRes[] =
          { 0,  1,  2,  3,  7,  4,  5,  8,
 	   0,  0, 10,  0,  0,  0,  0, 15 };
@@ -1553,6 +1553,8 @@ SiS_GetLCDResInfo(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
   } else {
      modeflag = SiS_Pr->SiS_EModeIDTable[ModeIdIndex].Ext_ModeFlag;
      resinfo = SiS_Pr->SiS_EModeIDTable[ModeIdIndex].Ext_RESINFO;
+     modexres = SiS_Pr->SiS_ModeResInfo[resinfo].HTotal;
+     modeyres = SiS_Pr->SiS_ModeResInfo[resinfo].VTotal;
   }
 
   temp = SiS_GetReg(SiS_Pr->SiS_P3d4,0x36);
@@ -1880,11 +1882,13 @@ SiS_GetLCDResInfo(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
      }
      
      switch(SiS_Pr->SiS_LCDResInfo) {
+     
      case Panel_Custom:
      case Panel_1152x864:
      case Panel_1280x768:	/* TMDS only */
         SiS_Pr->SiS_LCDInfo |= DontExpandLCD;
 	break;
+	
      case Panel_800x600: {
         static const UCHAR nonscalingmodes[] = {
 	   SIS_RI_720x480, SIS_RI_720x576, SIS_RI_768x576, SIS_RI_800x480, SIS_RI_848x480,
@@ -2027,6 +2031,11 @@ SiS_GetLCDResInfo(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
 #endif
 
   /* Special cases */
+  
+  if(modexres == SiS_Pr->PanelXRes && modeyres == SiS_Pr->PanelYRes) {
+     SiS_Pr->SiS_LCDInfo &= ~LCDPass11;
+  }
+  
   if(SiS_Pr->SiS_IF_DEF_TRUMPION) {
      SiS_Pr->SiS_LCDInfo |= (DontExpandLCD | LCDPass11);
   }
@@ -2039,7 +2048,8 @@ SiS_GetLCDResInfo(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
      SiS_Pr->SiS_LCDInfo &= ~LCDPass11;
      break;
   case Panel_Custom:
-     if(!SiS_Pr->CP_PrefClock) {
+     if((!SiS_Pr->CP_PrefClock) || 
+        (modexres > SiS_Pr->PanelXRes) || (modeyres > SiS_Pr->PanelYRes)) {
         SiS_Pr->SiS_LCDInfo |= LCDPass11;
      }
      break;
@@ -2155,9 +2165,8 @@ SiS_GetVCLK2Ptr(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
 	   } else {
 	      VCLKIndex = SiS_Pr->PanelVCLKIdx315;
 	      if((SiS_Pr->SiS_LCDInfo & DontExpandLCD) && (SiS_Pr->SiS_LCDInfo & LCDPass11)) {
-	         VCLKIndex = VCLKIndexGEN;
 		 switch(resinfo) {
-		 /* Only those whose IndexGEN doesn't match VBVCLK array: */
+		 /* Only those whose IndexGEN doesn't match VBVCLK array */
 		 case SIS_RI_1280x720: VCLKIndex = VCLK_1280x720; break;
 		 case SIS_RI_720x480:  VCLKIndex = VCLK_720x480;  break;
 		 case SIS_RI_720x576:  VCLKIndex = VCLK_720x576;  break;
@@ -2168,6 +2177,7 @@ SiS_GetVCLK2Ptr(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
 		 case SIS_RI_1024x576: VCLKIndex = VCLK_1024x576; break;
 		 case SIS_RI_1152x864: VCLKIndex = VCLK_1152x864; break;
 		 case SIS_RI_1360x768: VCLKIndex = VCLK_1360x768; break;
+		 default:              VCLKIndex = VCLKIndexGEN;
 		 }
 		 
 		 if(ModeNo <= 0x13) {
@@ -2934,20 +2944,6 @@ SiS_GetCRT2Ptr(SiS_Private *SiS_Pr,USHORT ModeNo,USHORT ModeIdIndex,
 	   tempbx = 100;
 	   if(ModeNo >= 0x13) {
 	      tempal = SiS_Pr->SiS_RefIndex[RefreshRateTableIndex].Ext_CRT2CRTC_NS;
-	      if((SiS_Pr->SiS_RefIndex[RefreshRateTableIndex].XRes == 1280) &&
-	         (SiS_Pr->SiS_RefIndex[RefreshRateTableIndex].YRes ==  768)) {
-	         /* Special for Fujitsu 7911 (VL-17WDX8), others custom */
-	         if(SiS_Pr->SiS_LCDResInfo == Panel_1280x768)        tempal = 0x08;
-		 else if(SiS_Pr->SiS_LCDResInfo == Panel_1280x768_2) tempal = 0x0f;
-		 else if(SiS_Pr->SiS_LCDResInfo == Panel_1280x768_3) tempal = 0x10;
-	      }
-	      /* Special for 1280x720 TMDS <> LVDS */
-	      if((SiS_Pr->SiS_RefIndex[RefreshRateTableIndex].XRes == 1280) &&
-	         (SiS_Pr->SiS_RefIndex[RefreshRateTableIndex].YRes ==  720)) {
-	         if(SiS_Pr->SiS_LCDResInfo == Panel_1280x720) {
-		    if(SiS_Pr->PanelHT != 1650) tempal = 0x12;
-		 }
-	      }
 	   }
 	}
 
@@ -3178,20 +3174,6 @@ SiS_GetCRT2DataLVDS(SiS_Private *SiS_Pr,USHORT ModeNo,USHORT ModeIdIndex,
 	          ResIndex = SiS_Pr->SiS_SModeIDTable[ModeIdIndex].St_CRT2CRTC;
 	       } else {
 	          ResIndex = SiS_Pr->SiS_RefIndex[RefreshRateTableIndex].Ext_CRT2CRTC_NS;
-		  /* Special for our 3 types, others custom (works with default) */
-		  if((SiS_Pr->SiS_RefIndex[RefreshRateTableIndex].XRes == 1280) &&
-	             (SiS_Pr->SiS_RefIndex[RefreshRateTableIndex].YRes ==  768)) {
-	             if(SiS_Pr->SiS_LCDResInfo == Panel_1280x768)        ResIndex = 0x08;
-		     else if(SiS_Pr->SiS_LCDResInfo == Panel_1280x768_2) ResIndex = 0x0f;
-		     else if(SiS_Pr->SiS_LCDResInfo == Panel_1280x768_3) ResIndex = 0x10;
-	          }
-		  /* Special for 1280x720 TMDS <> LVDS */
-		  if((SiS_Pr->SiS_RefIndex[RefreshRateTableIndex].XRes == 1280) &&
-	             (SiS_Pr->SiS_RefIndex[RefreshRateTableIndex].YRes ==  720)) {
-		     if(SiS_Pr->SiS_LCDResInfo == Panel_1280x720) {
-		        if(SiS_Pr->PanelHT != 1650) ResIndex = 0x12;
-		     }
-	          }
 	       }
 	       SiS_Pr->SiS_VGAHT = SiS_Pr->SiS_NoScaleData[ResIndex].VGAHT;
                SiS_Pr->SiS_VGAVT = SiS_Pr->SiS_NoScaleData[ResIndex].VGAVT;
@@ -11355,7 +11337,9 @@ SetDelayComp661(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo, USHORT ModeNo,
 	    switch(SiS_Pr->SiS_LCDResInfo) {
 	    case Panel_1024x768:  delay = 0x0008; break;
 	    case Panel_1280x720:  delay = 0x0004; break;
-	    case Panel_1280x768:  delay = 0x0004; break;
+	    case Panel_1280x768:  
+	    case Panel_1280x768_2:  
+	    case Panel_1280x768_3:delay = 0x0004; break;
 	    case Panel_1280x800:  delay = 0x0004; break;
 	    case Panel_1280x1024: delay = 0x1e04; break;
 	    case Panel_1400x1050: delay = 0x0004; break;
