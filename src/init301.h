@@ -1,4 +1,4 @@
-/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/sis/init301.h,v 1.35 2003/12/02 12:15:32 twini Exp $ */
+/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/sis/init301.h,v 1.36 2003/12/16 17:59:08 twini Exp $ */
 /*
  * Data and prototypes for init301.c
  *

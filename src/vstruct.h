@@ -1,4 +1,4 @@
-/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/sis/vstruct.h,v 1.25 2003/12/02 12:15:33 twini Exp $ */
+/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/sis/vstruct.h,v 1.26 2003/12/16 17:35:07 twini Exp $ */
 /*
  * General structure definitions for universal mode switching modules
  *
@@ -229,7 +229,8 @@ typedef UCHAR DRAM4Type[4];
 #define CUT_ACER1280      14
 #define CUT_COMPAL1400_1  15
 #define CUT_COMPAL1400_2  16
-#define CUT_ASUSA2H       17
+#define CUT_ASUSA2H_1     17
+#define CUT_ASUSA2H_2     18
 
 typedef struct _SiS_Private
 {

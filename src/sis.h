@@ -1,4 +1,4 @@
-/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/sis/sis.h,v 1.93 2003/12/02 12:15:32 twini Exp $ */
+/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/sis/sis.h,v 1.99 2003/12/16 17:45:19 twini Exp $ */
 /*
  * Main global data and definitions
  *
@@ -24,8 +24,8 @@
  *
  * Authors:
  *
- *      ?
  *      Thomas Winischhofer <thomas@winischhofer.net>
+ *      ?
  *
  */
 #ifndef _SIS_H
@@ -36,7 +36,7 @@
 
 #define SISDRIVERVERSIONYEAR    3
 #define SISDRIVERVERSIONMONTH   12
-#define SISDRIVERVERSIONDAY     2
+#define SISDRIVERVERSIONDAY     15
 #define SISDRIVERREVISION       1
 
 #define SISDRIVERIVERSION (SISDRIVERVERSIONYEAR << 16) | (SISDRIVERVERSIONMONTH << 8) \
@@ -516,6 +516,7 @@ typedef struct {
     unsigned char       *RenderAccelArray;
     unsigned char *	FbBase1;
     unsigned long	OnScreenSize1;
+    unsigned char       OldMode;
 #ifdef SIS_CP
     SIS_CP_H_ENT
 #endif
@@ -592,7 +593,8 @@ typedef struct {
     int			forceCRT1;
     Bool		CRT1changed;
     unsigned char       oldCR17, oldCR63, oldSR1F;
-    unsigned char       oldCR32;
+    unsigned char       oldCR32, oldCR36, oldCR37;
+    unsigned char       myCR32, myCR36, myCR37;
     unsigned char       newCR32;
     unsigned long   	VBFlags;		/* Video bridge configuration */
     unsigned long       VBFlags_backup;         /* Backup for SlaveMode-modes */
@@ -795,7 +797,7 @@ typedef struct {
     unsigned char       sisfblcda;
     int			sisfbscalelcd;
     unsigned long	sisfbspecialtiming;
-    BOOL		sisfb_haveemi;
+    BOOL		sisfb_haveemi, sisfb_haveemilcd;
     unsigned char	sisfb_emi30,sisfb_emi31,sisfb_emi32,sisfb_emi33;
     int			EMI;
     int			NoYV12;			/* Disable Xv YV12 support (old series) */
@@ -1062,7 +1064,7 @@ extern void  SiS_SetTVyposoffset(ScrnInfoPtr pScrn, int val);
 extern void  SiS_SetTVxscale(ScrnInfoPtr pScrn, int val);
 extern void  SiS_SetTVyscale(ScrnInfoPtr pScrn, int val);
 extern Bool  SISSwitchCRT2Type(ScrnInfoPtr pScrn, unsigned long newvbflags);
-extern Bool  SISCheckModeIndexForCRT2Type(ScrnInfoPtr pScrn, unsigned short cond,
+extern int   SISCheckModeIndexForCRT2Type(ScrnInfoPtr pScrn, unsigned short cond,
 					  unsigned short index, Bool quiet);
 extern Bool  SISSwitchCRT1Status(ScrnInfoPtr pScrn, int onoff);
 extern int   SiS_GetCHTVlumabandwidthcvbs(ScrnInfoPtr pScrn);

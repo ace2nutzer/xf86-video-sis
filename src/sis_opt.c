@@ -1,4 +1,4 @@
-/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/sis/sis_opt.c,v 1.49 2003/12/02 12:15:33 twini Exp $ */
+/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/sis/sis_opt.c,v 1.50 2003/12/09 17:49:26 twini Exp $ */
 /*
  * SiS driver option evaluation
  *
@@ -339,7 +339,7 @@ SiSOptions(ScrnInfoPtr pScrn)
     pSiS->enablesisctrl = FALSE;
     if((pSiS->VGAEngine == SIS_300_VGA) || (pSiS->VGAEngine == SIS_315_VGA)) {
        pSiS->XvDefBri = 10;
-       pSiS->XvDefCon = 5;
+       pSiS->XvDefCon = 2;
     } else {
        pSiS->XvDefBri = 0;
        pSiS->XvDefCon = 4;

@@ -1,4 +1,4 @@
-/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/sis/init.c,v 1.39 2003/12/02 16:44:36 twini Exp $ */
+/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/sis/init.c,v 1.40 2003/12/03 23:07:47 twini Exp $ */
 /*
  * Mode initializing code (CRT1 section) for
  * for SiS 300/305/540/630/730 and
@@ -887,7 +887,7 @@ SiS_GetModeID_LCD(int VGAEngine, ULONG VBFlags, int HDisplay, int VDisplay,
 	        if(VDisplay == 1200) ModeIndex = ModeIndex_1600x1200[Depth];
 	     }
 	     break;
-          }
+      }
 
    } else if(VBFlags & VB_SISBRIDGE) {
 
