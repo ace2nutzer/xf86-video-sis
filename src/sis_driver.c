@@ -55,6 +55,9 @@
 #include "xf86_ansic.h"
 #include "dixstruct.h"
 #include "xf86Version.h"
+#ifdef XORG_VERSION_CURRENT
+#include "xorgVersion.h"
+#endif
 #include "xf86PciInfo.h"
 #include "xf86Pci.h"
 #include "xf86cmap.h"
@@ -2455,13 +2458,28 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	"Copyright (C) 2001-2004 Thomas Winischhofer <thomas@winischhofer.net> and others\n");
     xf86DrvMsg(pScrn->scrnIndex, X_INFO,
         "Compiled for " SISMYSERVERNAME " version %d.%d.%d.%d\n",
+#ifdef XORG_VERSION_CURRENT
+ 	XORG_VERSION_MAJOR, XORG_VERSION_MINOR,
+	XORG_VERSION_PATCH, XORG_VERSION_SNAP);
+#else	
 	XF86_VERSION_MAJOR, XF86_VERSION_MINOR,
 	XF86_VERSION_PATCH, XF86_VERSION_SNAP);
+#endif	
+
+#ifdef XORG_VERSION_CURRENT
+#if 0  /* no prototype yet */
+    if(xorgGetVersion() != XORG_VERSION_CURRENT) {
+       xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
+         "This version of the driver is not compiled for this version of " SISMYSERVERNAME "\n");
+    }
+#endif    
+#else
 #if XF86_VERSION_CURRENT >= XF86_VERSION_NUMERIC(4,2,99,0,0)
     if(xf86GetVersion() != XF86_VERSION_CURRENT) {
        xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
          "This version of the driver is not compiled for this version of " SISMYSERVERNAME "\n");
     }
+#endif
 #endif
     xf86DrvMsg(pScrn->scrnIndex, X_INFO,
         "See http://www.winischhofer.net/linuxsisvga.shtml "
