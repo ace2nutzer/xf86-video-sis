@@ -89,7 +89,6 @@
 #  include "dixstruct.h"
 #  undef SISNEWRENDER
 #  ifdef XORG_VERSION_CURRENT
-#   include "xorgVersion.h"
 #   if XORG_VERSION_CURRENT > XORG_VERSION_NUMERIC(6,7,0,0,0)
 #    define SISNEWRENDER
 #   endif
@@ -205,10 +204,27 @@ static void SiSSubsequentCPUToScreenTexture(ScrnInfoPtr	pScrn,
 				int width, int height);
 
 static CARD32 SiSAlphaTextureFormats[2] = { PICT_a8      , 0 };
-static CARD32 SiSTextureFormats[2]      = { PICT_a8r8g8b8, 0 };
+static CARD32 SiSTextureFormats[2]      = { PICT_a8r8g8b8, 0 }; 
+#ifdef SISVRAMQ
+#define SiSRenderOpsMAX 0x2b
+static const CARD8 SiSRenderOps[] = {	/* PictOpXXX 1 = supported, 0 = unsupported */
+     1, 1, 1, 1,			
+     0, 0, 0, 0,
+     0, 0, 0, 0,
+     0, 0, 0, 0,
+     1, 1, 1, 0,
+     0, 0, 0, 0,
+     0, 0, 0, 0,
+     0, 0, 0, 0,
+     1, 1, 1, 0,
+     0, 0, 0, 0,
+     0, 0, 0, 0,
+     0, 0, 0, 0
+};    
+#endif
 #ifdef SISNEWRENDER
 static CARD32 SiSDstTextureFormats16[2] = { PICT_r5g6b5  , 0 };
-static CARD32 SiSDstTextureFormats32[2] = { PICT_x8r8g8b8, 0 };
+static CARD32 SiSDstTextureFormats32[3] = { PICT_x8r8g8b8, PICT_a8r8g8b8, 0 }; 
 #endif
 #endif
 #endif
@@ -1740,28 +1756,40 @@ SiSSetupForCPUToScreenAlphaTexture(ScrnInfoPtr pScrn,
    			int height, int	flags)
 {
     	SISPtr pSiS = SISPTR(pScrn);
-    	int x, pitch, sizeNeeded, offset;
-	CARD8  myalpha;
-	CARD32 *dstPtr;
 	unsigned char *renderaccelarray;
+	CARD32 *dstPtr;
+    	int    x, pitch, sizeNeeded;
+	int    sbpp = pSiS->CurrentLayout.bitsPerPixel >> 3;
+	int    sbppshift = sbpp >> 1;	/* 8->0, 16->1, 32->2 */
+	CARD8  myalpha;
+	BOOLEAN docopy = TRUE;
 
 #ifdef ACCELDEBUG
-	xf86DrvMsg(0, X_INFO, "AT: op %d type %d ARGB %x %x %x %x, w %d h %d A-pitch %d\n",
-		op, alphaType, alpha, red, green, blue, width, height, alphaPitch);
+	xf86DrvMsg(0, X_INFO, "AT: op %d t %x/%x ARGB %x %x %x %x, w %d h %d pch %d\n",
+		op, alphaType, dstType, alpha, red, green, blue, width, height, alphaPitch);
 #endif
 
+	if((width > 2048) || (height > 2048)) return FALSE;
+	
+#ifdef SISVRAMQ
+        if(op > SiSRenderOpsMAX) return FALSE;
+    	if(!SiSRenderOps[op])    return FALSE;
+#else	
     	if(op != PictOpOver) return FALSE;
-
-    	if((width > 2048) || (height > 2048)) return FALSE;
-
-    	pitch = (width + 31) & ~31;
-    	sizeNeeded = pitch * height;
-    	if(pScrn->bitsPerPixel == 16) sizeNeeded <<= 1;
+#endif	
 
 	if(!((renderaccelarray = pSiS->RenderAccelArray)))
 	   return FALSE;
+	   
+#ifdef ACCELDEBUG
+	xf86DrvMsg(0, X_INFO, "AT: op %d t %x/%x ARGB %x %x %x %x, w %d h %d pch %d\n",
+		op, alphaType, dstType, alpha, red, green, blue, width, height, alphaPitch);
+#endif	   
 
-	if(!SiSAllocateLinear(pScrn, sizeNeeded))
+    	pitch = (width + 31) & ~31;
+    	sizeNeeded = (pitch << 2) * height; /* Source a8 (=8bit), expand to A8R8G8B8 (=32bit) */
+
+	if(!SiSAllocateLinear(pScrn, (sizeNeeded + sbpp - 1) >> sbppshift))
 	   return FALSE;
 
 	red &= 0xff00;
@@ -1770,8 +1798,35 @@ SiSSetupForCPUToScreenAlphaTexture(ScrnInfoPtr pScrn,
 
 #ifdef SISVRAMQ
         SiSSetupDSTColorDepth(pSiS->SiS310_AccelDepth);
-	SiSSetupSRCPitchDSTRect((pitch << 2), pSiS->scrnOffset, -1);
-	SiSSetupCMDFlag(ALPHA_BLEND | SRCVIDEO | A_PERPIXELALPHA)
+	switch(op) {
+	case PictOpClear:
+	case PictOpDisjointClear:
+	case PictOpConjointClear:   
+	   SiSSetupPATFGDSTRect(0, pSiS->scrnOffset, -1)
+	   /* SiSSetupROP(0x00) - is already 0 */
+	   SiSSetupCMDFlag(PATFG)
+	   docopy = FALSE;
+	   break;
+	case PictOpSrc:
+	case PictOpDisjointSrc:
+	case PictOpConjointSrc:
+	   SiSSetupSRCPitchDSTRect((pitch << 2), pSiS->scrnOffset, -1);
+	   SiSSetupAlpha(0xff)
+	   SiSSetupCMDFlag(ALPHA_BLEND | SRCVIDEO | A_NODESTALPHA)
+	   break;
+	case PictOpDst:
+	case PictOpDisjointDst:
+	case PictOpConjointDst:
+	   SiSSetupSRCPitchDSTRect((pitch << 2), pSiS->scrnOffset, -1);
+	   SiSSetupAlpha(0x00)
+	   SiSSetupCMDFlag(ALPHA_BLEND | SRCVIDEO | A_CONSTANTALPHA)
+	   docopy = FALSE;
+	   break;
+	case PictOpOver:
+	   SiSSetupSRCPitchDSTRect((pitch << 2), pSiS->scrnOffset, -1);
+	   SiSSetupCMDFlag(ALPHA_BLEND | SRCVIDEO | A_PERPIXELALPHA)
+	   break;
+	}
         SiSSyncWP
 #else
 	SiSSetupDSTColorDepth(pSiS->DstColor);
@@ -1781,19 +1836,18 @@ SiSSetupForCPUToScreenAlphaTexture(ScrnInfoPtr pScrn,
 	SiSSetupCMDFlag(ALPHA_BLEND | SRCVIDEO | A_PERPIXELALPHA | pSiS->SiS310_AccelDepth)
 #endif
 
-    	offset = pSiS->AccelLinearScratch->offset << 1;
-    	if(pScrn->bitsPerPixel == 32) offset <<= 1;
+	/* Don't need source for clear and dest */
+        if(!docopy) return TRUE;
 
-	dstPtr = (CARD32*)(pSiS->FbBase + offset);
+	dstPtr = (CARD32*)(pSiS->FbBase + (pSiS->AccelLinearScratch->offset << sbppshift));
 
 	if(pSiS->alphaBlitBusy) {
 	   pSiS->alphaBlitBusy = FALSE;
 	   SiSIdle
 	}
 
-
 	if(alpha == 0xffff) {
-
+  
            while(height--) {
 	      for(x = 0; x < width; x++) {
 	         myalpha = alphaPtr[x];
@@ -1839,34 +1893,76 @@ SiSSetupForCPUToScreenTexture(ScrnInfoPtr pScrn,
    			int texPitch, int width,
    			int height, int	flags)
 {
-    	SISPtr pSiS = SISPTR(pScrn);
-    	int pitch, sizeNeeded, offset;
-	CARD8 *dst;
+    	SISPtr  pSiS = SISPTR(pScrn);
+	CARD8   *dst;
+    	int     pitch, sizeNeeded; 
+	int     sbpp = pSiS->CurrentLayout.bitsPerPixel >> 3;
+	int     sbppshift = sbpp >> 1;	          	  /* 8->0, 16->1, 32->2 */
+	int     bppshift = PICT_FORMAT_BPP(texType) >> 4; /* 8->0, 16->1, 32->2 */
+	BOOLEAN docopy = TRUE;
 
 #ifdef ACCELDEBUG
-	xf86DrvMsg(0, X_INFO, "T: type %d op %d w %d h %d T-pitch %d\n",
-		texType, op, width, height, texPitch);
+	xf86DrvMsg(0, X_INFO, "T: type %x/%x op %d w %d h %d T-pitch %d\n",
+		texType, dstType, op, width, height, texPitch);
 #endif
-
+	
+#ifdef SISVRAMQ
+	if(op > SiSRenderOpsMAX) return FALSE;
+    	if(!SiSRenderOps[op])    return FALSE;
+#else	
     	if(op != PictOpOver) return FALSE;
+#endif	
 
-    	if((width > 2048) || (height > 2048)) return FALSE;
-
+	if((width > 2048) || (height > 2048)) return FALSE;
+	
     	pitch = (width + 31) & ~31;
-    	sizeNeeded = pitch * height;
-    	if(pScrn->bitsPerPixel == 16) sizeNeeded <<= 1;
+    	sizeNeeded = (pitch << bppshift) * height;
+	
+#ifdef ACCELDEBUG
+	xf86DrvMsg(0, X_INFO, "T: %x/%x op %x w %d h %d T-pitch %d size %d (%d %d %d)\n",
+		texType, dstType, op, width, height, texPitch, sizeNeeded, sbpp, sbppshift, bppshift);
+#endif	
 
-	width <<= 2;
-	pitch <<= 2;
-
-	if(!SiSAllocateLinear(pScrn, sizeNeeded))
+	if(!SiSAllocateLinear(pScrn, (sizeNeeded + sbpp - 1) >> sbppshift))
 	   return FALSE;
+	   
+	width <<= bppshift;  /* -> bytes (for engine and memcpy) */
+	pitch <<= bppshift;  /* -> bytes */
 
 #ifdef SISVRAMQ
         SiSSetupDSTColorDepth(pSiS->SiS310_AccelDepth);
-	SiSSetupSRCPitchDSTRect(pitch, pSiS->scrnOffset, -1);
-	SiSSetupAlpha(0x00)
-	SiSSetupCMDFlag(ALPHA_BLEND | SRCVIDEO | A_PERPIXELALPHA)
+	switch(op) {
+	case PictOpClear:
+	case PictOpDisjointClear:
+	case PictOpConjointClear:   
+	   SiSSetupPATFGDSTRect(0, pSiS->scrnOffset, -1)
+	   /* SiSSetupROP(0x00) - is already zero */
+	   SiSSetupCMDFlag(PATFG)
+	   docopy = FALSE;
+	   break;
+	case PictOpSrc:
+	case PictOpDisjointSrc:
+	case PictOpConjointSrc:	
+	   SiSSetupSRCPitchDSTRect(pitch, pSiS->scrnOffset, -1);
+	   SiSSetupAlpha(0xff)
+	   SiSSetupCMDFlag(ALPHA_BLEND | SRCVIDEO | A_NODESTALPHA)
+	   break;
+	case PictOpDst:
+	case PictOpDisjointDst:
+	case PictOpConjointDst:
+	   SiSSetupSRCPitchDSTRect(pitch, pSiS->scrnOffset, -1);
+	   SiSSetupAlpha(0x00)
+	   SiSSetupCMDFlag(ALPHA_BLEND | SRCVIDEO | A_CONSTANTALPHA)
+	   docopy = FALSE;
+	   break;
+	case PictOpOver:
+	   SiSSetupSRCPitchDSTRect(pitch, pSiS->scrnOffset, -1);
+	   SiSSetupAlpha(0x00)
+	   SiSSetupCMDFlag(ALPHA_BLEND | SRCVIDEO | A_PERPIXELALPHA)
+	   break;
+	default:
+	   return FALSE;
+ 	}
         SiSSyncWP
 #else
 	SiSSetupDSTColorDepth(pSiS->DstColor);
@@ -1876,12 +1972,12 @@ SiSSetupForCPUToScreenTexture(ScrnInfoPtr pScrn,
 	SiSSetupCMDFlag(ALPHA_BLEND | SRCVIDEO | A_PERPIXELALPHA | pSiS->SiS310_AccelDepth)
 #endif
 
-    	offset = pSiS->AccelLinearScratch->offset << 1;
-    	if(pScrn->bitsPerPixel == 32) offset <<= 1;
-
-	dst = (CARD8*)(pSiS->FbBase + offset);
-
-	if(pSiS->alphaBlitBusy) {
+	/* Don't need source for clear and dest */
+	if(!docopy) return TRUE;
+	
+	dst = (CARD8*)(pSiS->FbBase + (pSiS->AccelLinearScratch->offset << sbppshift));
+	
+	if(pSiS->alphaBlitBusy) { 
 	   pSiS->alphaBlitBusy = FALSE;
 	   SiSIdle
 	}
@@ -1890,7 +1986,7 @@ SiSSetupForCPUToScreenTexture(ScrnInfoPtr pScrn,
 	   memcpy(dst, texPtr, width);
 	   texPtr += texPitch;
 	   dst += pitch;
-        }
+	}
 
 	return TRUE;
 }

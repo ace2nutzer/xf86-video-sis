@@ -1212,7 +1212,7 @@ static FBLinearPtr
 SIS6326AllocateOverlayMemory(
   ScrnInfoPtr pScrn,
   FBLinearPtr linear,
-  int size
+  int size	/* in pixels */
 ){
    ScreenPtr pScreen;
    FBLinearPtr new_linear;
@@ -1246,7 +1246,7 @@ SIS6326AllocateOverlayMemory(
    }
    if (!new_linear)
         xf86DrvMsg(pScrn->scrnIndex, X_INFO,
-	           "Xv: Failed to allocate %dK of video memory\n", size/1024);
+	           "Xv: Failed to allocate %d pixels of linear video memory\n", size/1024);
 
    return new_linear;
 }
@@ -1367,14 +1367,14 @@ SIS6326PutImage(
 
    /* make it a multiple of 16 to simplify to copy loop */
    totalSize += 15;
-   totalSize &= ~15;
+   totalSize &= ~15; /* in bytes */
 
    pPriv->totalSize = totalSize;
 
-   /* allocate memory (we do doublebuffering) */
+   /* allocate memory (we do doublebuffering) - size is in pixels */
    if(!(pPriv->linear = SIS6326AllocateOverlayMemory(pScrn, pPriv->linear,
-						 totalSize<<1)))
-	return BadAlloc;
+					((totalSize + depth - 1) / depth) << 1)))
+      return BadAlloc;
 
    /* fixup pointers */
    pPriv->bufAddr[0] = (pPriv->linear->offset * depth);

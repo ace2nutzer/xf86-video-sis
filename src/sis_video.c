@@ -3984,11 +3984,11 @@ SISAllocateOverlayMemory(
    }
    if(!new_linear)
       xf86DrvMsg(pScrn->scrnIndex, X_INFO,
-	           "Xv: Failed to allocate %dK of video memory\n", size/1024);
+	           "Xv: Failed to allocate %d pixels of linear video memory\n", size/1024);
 #ifdef TWDEBUG 
    else
       xf86DrvMsg(pScrn->scrnIndex, X_INFO,
-	           "Xv: Allocated %dK of video memory\n", size/1024);
+	           "Xv: Allocated %d pixels of linear video memory\n", size/1024);
 #endif 
 
    return new_linear;
@@ -4127,12 +4127,12 @@ SISPutImage(
 
    /* make it a multiple of 16 to simplify to copy loop */
    totalSize += 15;
-   totalSize &= ~15;
+   totalSize &= ~15; /* in bytes */
 
-   /* allocate memory (we do doublebuffering) */
+   /* allocate memory (we do doublebuffering) - size is in pixels! */
    if(!(pPriv->linear = SISAllocateOverlayMemory(pScrn, pPriv->linear,
-						 totalSize<<1)))
-	return BadAlloc;
+					((totalSize + depth - 1) / depth) << 1)))
+      return BadAlloc;
 
    /* fixup pointers */
    pPriv->bufAddr[0] = (pPriv->linear->offset * depth);

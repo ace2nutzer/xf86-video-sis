@@ -40,7 +40,7 @@
 
 #define SISDRIVERVERSIONYEAR    4
 #define SISDRIVERVERSIONMONTH   8
-#define SISDRIVERVERSIONDAY     12
+#define SISDRIVERVERSIONDAY     14
 #define SISDRIVERREVISION       1
 
 #define SISDRIVERIVERSION (SISDRIVERVERSIONYEAR << 16) |  \
@@ -70,6 +70,10 @@
 #include "osdef.h"
 #include "vgatypes.h"
 #include "vstruct.h"
+
+#ifdef XORG_VERSION_CURRENT
+#include "xorgVersion.h"
+#endif
 
 #ifdef XORG_VERSION_CURRENT
 #define SISMYSERVERNAME "X.org"

@@ -59,6 +59,9 @@ extern Bool drmSiSAgpInit(int driSubFD, int offset, int size);
 
 #ifdef XORG_VERSION_CURRENT
 #define SISHAVECREATEBUSID
+#if XORG_VERSION_CURRENT < XORG_VERSION_NUMERIC(6,7,99,1,0)
+extern char *DRICreatePCIBusID(pciVideoPtr PciInfo);
+#endif
 #else
 # if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,4,99,99,0)
 # undef SISHAVECREATEBUSID  /* Waiting, waiting, waiting... */
@@ -107,8 +110,6 @@ static void SISDRISwapContext(ScreenPtr pScreen, DRISyncType syncType,
 static void SISDRIInitBuffers(WindowPtr pWin, RegionPtr prgn, CARD32 index);
 static void SISDRIMoveBuffers(WindowPtr pParent, DDXPointRec ptOldOrg, 
                    RegionPtr prgnSrc, CARD32 index);
-
-extern char *DRICreatePCIBusID(pciVideoPtr PciInfo);		   
 		   
 static Bool
 SISInitVisualConfigs(ScreenPtr pScreen)
