@@ -5081,9 +5081,9 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
     * disable this behavior.
     * This should "fix" the - by far - most common configuration
     * mistakes.
-    * Addendum 2: For LCD, we only do this in case this is a
-    * standard panel. Don't kick out modes provided by the user
-    * for a custom panel.
+    * TODO: For LCD, do this only in case this is a standard panel. 
+    * Hence, don't kick out modes provided by the user for a custom 
+    * panel.
     */
     if((pScrn->monitor->nHsync <= 0) || (pSiS->OverruleRanges)) {
 #if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,3,99,14,0)
