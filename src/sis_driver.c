@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg$ */
+/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/sis_driver.c,v 1.19 2004/08/14 15:26:51 twini Exp $ */
 /*
  * SiS driver main code
  *
@@ -5129,7 +5129,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
           if(SiSAllowSyncOverride(pSiS)) {
              /* Set sane ranges for LCD and TV */
 	     pScrn->monitor->nVrefresh = 1;
-	     pScrn->monitor->vrefresh[0].lo = 59;
+	     pScrn->monitor->vrefresh[0].lo = 56;  /* 56 for 720/768x576 */
 	     pScrn->monitor->vrefresh[0].hi = 71;  /* 71 for 640x400 */
 	     xf86DrvMsg(pScrn->scrnIndex, X_INFO, sanev,
 #ifdef SISDUALHEAD
@@ -5171,7 +5171,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	     if(pSiS->VBFlags & (CRT2_TV | CRT2_LCD)) {
 	        /* Set sane ranges for LCD and TV */
 	        pSiS->CRT2pScrn->monitor->nVrefresh = 1;
-	        pSiS->CRT2pScrn->monitor->vrefresh[0].lo = 59;
+	        pSiS->CRT2pScrn->monitor->vrefresh[0].lo = 56; /* 56 for 768/720x576 */
 	        pSiS->CRT2pScrn->monitor->vrefresh[0].hi = 71; /* 71 for 640x400 */
 		xf86DrvMsg(pScrn->scrnIndex, X_INFO, sanev, 2);
 	     }

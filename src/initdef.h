@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg$ */
+/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/initdef.h,v 1.8 2004/08/12 12:59:25 twini Exp $ */
 /*
  * Global definitions for init.c and init301.c
  *
@@ -406,10 +406,10 @@
 #define Panel_1400x1050         0x09
 #define Panel_1280x768          0x0a    /* 30xB/C and LVDS only (BIOS: all) */
 #define Panel_1600x1200         0x0b
-#define Panel_1280x800		0x0c    /* 661etc  */
+#define Panel_1280x800		0x0c    /* 661etc (TMDS) */
 #define Panel_1680x1050         0x0d    /* 661etc  */
 #define Panel_1280x720		0x0e    /* 661etc  */
-#define Panel_Custom		0x0f	/* MUST BE 0x0f (for DVI DDC detection */
+#define Panel_Custom		0x0f	/* MUST BE 0x0f (for DVI DDC detection) */
 #define Panel_320x480           0x10    /* SiS 550 fstn - TW: This is fake, can be any */
 #define Panel_Barco1366         0x11
 #define Panel_848x480		0x12
@@ -417,6 +417,7 @@
 #define Panel_640x480_3		0x14    /* SiS 550 */
 #define Panel_1280x768_2        0x15	/* 30xLV */
 #define Panel_1280x768_3        0x16    /* 30xLV */
+#define Panel_1280x800_2	0x17    /* 30xLV */
 
 /* Index in ModeResInfo table */
 #define SIS_RI_320x200    0
@@ -489,7 +490,7 @@
 #define VCLK100_315             0x46   /* Index in VBVCLKData table (315) */
 #define VCLK34_315              0x55
 #define VCLK68_315		0x0d
-#define VCLK_1280x800_315	0x5c   /* Index in VBVCLKData table (315) */
+#define VCLK_1280x800_315_2	0x5c   /* Index in VBVCLKData table (315) */
 #define VCLK121_315		0x5d   /* Index in VBVCLKData table (315) */
 #define VCLK_1280x720		0x5f
 #define VCLK_1280x768_2		0x60
@@ -505,6 +506,7 @@
 #define VCLK_1024x576		0x51
 #define VCLK_1152x864		0x64
 #define VCLK_1360x768		0x58
+#define VCLK_1280x800_315	0x6c
 
 #define TVCLKBASE_300		0x21   /* Indices on TV clocks in VCLKData table (300) */
 #define TVCLKBASE_315	        0x3a   /* Indices on TV clocks in (VB)VCLKData table (315) */

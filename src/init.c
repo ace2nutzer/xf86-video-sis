@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg$ */
+/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/init.c,v 1.14 2004/08/12 12:59:25 twini Exp $ */
 /*
  * Mode initializing code (CRT1 section) for
  * for SiS 300/305/540/630/730 and
@@ -135,8 +135,8 @@ InitCommonPointer(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo)
    SiS_Pr->SiS_LCD1280x720Data      = SiS_LCD1280x720Data;
    SiS_Pr->SiS_StLCD1280x768_2Data  = SiS_StLCD1280x768_2Data;
    SiS_Pr->SiS_ExtLCD1280x768_2Data = SiS_ExtLCD1280x768_2Data;
-   SiS_Pr->SiS_LCD1280x768_3Data    = SiS_LCD1280x768_3Data;
    SiS_Pr->SiS_LCD1280x800Data      = SiS_LCD1280x800Data;
+   SiS_Pr->SiS_LCD1280x800_2Data    = SiS_LCD1280x800_2Data;
    SiS_Pr->SiS_LCD1280x960Data      = SiS_LCD1280x960Data;
    SiS_Pr->SiS_StLCD1400x1050Data   = SiS_StLCD1400x1050Data;
    SiS_Pr->SiS_ExtLCD1400x1050Data  = SiS_ExtLCD1400x1050Data;

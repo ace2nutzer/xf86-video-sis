@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg$ */
+/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/sis.h,v 1.17 2004/08/14 15:26:50 twini Exp $ */
 /*
  * Main global data and definitions
  *
@@ -40,7 +40,7 @@
 
 #define SISDRIVERVERSIONYEAR    4
 #define SISDRIVERVERSIONMONTH   8
-#define SISDRIVERVERSIONDAY     14
+#define SISDRIVERVERSIONDAY     20
 #define SISDRIVERREVISION       1
 
 #define SISDRIVERIVERSION (SISDRIVERVERSIONYEAR << 16) |  \

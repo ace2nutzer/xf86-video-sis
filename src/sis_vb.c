@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg$ */
+/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/sis_vb.c,v 1.12 2004/08/11 00:45:43 twini Exp $ */
 /*
  * Video bridge detection and configuration for 300, 315 and 330 series
  *
@@ -313,6 +313,7 @@ void SISLCDPreInit(ScrnInfoPtr pScrn, Bool quiet)
 
           if(pSiS->forcecrt2redetection) {
              pSiS->VBFlags &= ~CRT2_LCD;
+	     /* Do NOT clear CR32[D3] here! */
           }
 
           if(!(pSiS->nocrt2ddcdetection)) {
