@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/init.h,v 1.11 2004/08/12 12:59:25 twini Exp $ */
+/* $XdotOrg$ */
 /*
  * Data and prototypes for init.c
  *
@@ -2294,6 +2294,15 @@ static const SiS_PlasmaTables SiS_PlasmaTable[] = {
      { "PLV-Z2", "", "", "", "" },
      "Sanyo PLV-Z2 (non HDCP-mode)", 	/* HDCP mode would be id 9b06, but not needed */
      1280, 768,				/* as it then advertises correct size */
+     1,   /* 1280x720, no special modes otherwise */
+     { 6|0xc0, 0     , 0     , 0     , 0     , 0     , 0     , 0     , 0     , 0     ,
+       0     , 0     , 0     , 0     , 0     , 0     , 0     , 0     , 0     , 0       }
+   },
+   { 0x34a9, 1,
+     { 0xd034, 0x0000, 0x0000, 0x0000, 0x0000 },
+     { "AE500U", "", "", "", "" },
+     "Panasonic AE500U", 
+     1280, 768,		
      1,   /* 1280x720, no special modes otherwise */
      { 6|0xc0, 0     , 0     , 0     , 0     , 0     , 0     , 0     , 0     , 0     ,
        0     , 0     , 0     , 0     , 0     , 0     , 0     , 0     , 0     , 0       }

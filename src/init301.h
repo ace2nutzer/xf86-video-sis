@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/init301.h,v 1.8 2004/08/10 21:57:20 twini Exp $ */
+/* $XdotOrg$ */
 /*
  * Data and prototypes for init301.c
  *

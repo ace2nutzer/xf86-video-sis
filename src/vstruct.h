@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/vstruct.h,v 1.6 2004/08/10 21:57:20 twini Exp $ */
+/* $XdotOrg$ */
 /*
  * General structure definitions for universal mode switching modules
  *

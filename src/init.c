@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/init.c,v 1.14 2004/08/12 12:59:25 twini Exp $ */
+/* $XdotOrg$ */
 /*
  * Mode initializing code (CRT1 section) for
  * for SiS 300/305/540/630/730 and
@@ -4302,6 +4302,8 @@ SiS_CalcLCDACRT1Timing(SiS_Private *SiS_Pr,USHORT ModeNo,USHORT ModeIdIndex)
 #endif
 }
 
+#ifdef LINUX_XF86
+
 void
 SiS_MakeClockRegs(ScrnInfoPtr pScrn, int clock, UCHAR *p2b, UCHAR *p2c)
 {  
@@ -4343,6 +4345,8 @@ SiS_MakeClockRegs(ScrnInfoPtr pScrn, int clock, UCHAR *p2b, UCHAR *p2c)
 #endif
    }
 }
+
+#endif
 
 /* ================ XFREE86/X.ORG ================= */
 

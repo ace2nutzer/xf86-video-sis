@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/sis_driver.c,v 1.20 2004/08/20 18:57:06 kem Exp $ */
+/* $XdotOrg$ */
 /*
  * SiS driver main code
  *

@@ -206,7 +206,11 @@ static void SiSSubsequentCPUToScreenTexture(ScrnInfoPtr	pScrn,
 static CARD32 SiSAlphaTextureFormats[2] = { PICT_a8      , 0 };
 static CARD32 SiSTextureFormats[2]      = { PICT_a8r8g8b8, 0 }; 
 #ifdef SISVRAMQ
+#if XF86_VERSION_CURRENT >= XF86_VERSION_NUMERIC(4,2,0,0,0)
 #define SiSRenderOpsMAX 0x2b
+#else
+#define SiSRenderOpsMAX 0x0f
+#endif
 static const CARD8 SiSRenderOps[] = {	/* PictOpXXX 1 = supported, 0 = unsupported */
      1, 1, 1, 1,			
      0, 0, 0, 0,
@@ -1800,23 +1804,29 @@ SiSSetupForCPUToScreenAlphaTexture(ScrnInfoPtr pScrn,
         SiSSetupDSTColorDepth(pSiS->SiS310_AccelDepth);
 	switch(op) {
 	case PictOpClear:
+#if XF86_VERSION_CURRENT >= XF86_VERSION_NUMERIC(4,2,0,0,0)	
 	case PictOpDisjointClear:
 	case PictOpConjointClear:   
+#endif	
 	   SiSSetupPATFGDSTRect(0, pSiS->scrnOffset, -1)
 	   /* SiSSetupROP(0x00) - is already 0 */
 	   SiSSetupCMDFlag(PATFG)
 	   docopy = FALSE;
 	   break;
 	case PictOpSrc:
+#if XF86_VERSION_CURRENT >= XF86_VERSION_NUMERIC(4,2,0,0,0)	
 	case PictOpDisjointSrc:
 	case PictOpConjointSrc:
+#endif	
 	   SiSSetupSRCPitchDSTRect((pitch << 2), pSiS->scrnOffset, -1);
 	   SiSSetupAlpha(0xff)
 	   SiSSetupCMDFlag(ALPHA_BLEND | SRCVIDEO | A_NODESTALPHA)
 	   break;
 	case PictOpDst:
+#if XF86_VERSION_CURRENT >= XF86_VERSION_NUMERIC(4,2,0,0,0)	
 	case PictOpDisjointDst:
 	case PictOpConjointDst:
+#endif	
 	   SiSSetupSRCPitchDSTRect((pitch << 2), pSiS->scrnOffset, -1);
 	   SiSSetupAlpha(0x00)
 	   SiSSetupCMDFlag(ALPHA_BLEND | SRCVIDEO | A_CONSTANTALPHA)
@@ -1933,23 +1943,29 @@ SiSSetupForCPUToScreenTexture(ScrnInfoPtr pScrn,
         SiSSetupDSTColorDepth(pSiS->SiS310_AccelDepth);
 	switch(op) {
 	case PictOpClear:
+#if XF86_VERSION_CURRENT >= XF86_VERSION_NUMERIC(4,2,0,0,0)	
 	case PictOpDisjointClear:
 	case PictOpConjointClear:   
+#endif	
 	   SiSSetupPATFGDSTRect(0, pSiS->scrnOffset, -1)
 	   /* SiSSetupROP(0x00) - is already zero */
 	   SiSSetupCMDFlag(PATFG)
 	   docopy = FALSE;
 	   break;
 	case PictOpSrc:
+#if XF86_VERSION_CURRENT >= XF86_VERSION_NUMERIC(4,2,0,0,0)	
 	case PictOpDisjointSrc:
 	case PictOpConjointSrc:	
+#endif	
 	   SiSSetupSRCPitchDSTRect(pitch, pSiS->scrnOffset, -1);
 	   SiSSetupAlpha(0xff)
 	   SiSSetupCMDFlag(ALPHA_BLEND | SRCVIDEO | A_NODESTALPHA)
 	   break;
 	case PictOpDst:
+#if XF86_VERSION_CURRENT >= XF86_VERSION_NUMERIC(4,2,0,0,0)	
 	case PictOpDisjointDst:
 	case PictOpConjointDst:
+#endif	
 	   SiSSetupSRCPitchDSTRect(pitch, pSiS->scrnOffset, -1);
 	   SiSSetupAlpha(0x00)
 	   SiSSetupCMDFlag(ALPHA_BLEND | SRCVIDEO | A_CONSTANTALPHA)

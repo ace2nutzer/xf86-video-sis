@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/init301.c,v 1.12 2004/08/11 18:54:36 twini Exp $ */
+/* $XdotOrg$ */
 /*
  * Mode initializing code (CRT2 section)
  * for SiS 300/305/540/630/730 and
@@ -9776,12 +9776,11 @@ SiS_SenseLCDDDC(SiS_Private *SiS_Pr, SISPtr pSiS)
       
       if((buffer[0x18] & 0x18) != 0x08) {
          xf86DrvMsg(pSiS->pScrn->scrnIndex, X_PROBED,
-	 	"LCD sense: Attached display is not of RGB but of %s type (0x%02x)\n", 
+	 	"LCD sense: Warning: Attached display is not of RGB but of %s type (0x%02x)\n", 
 		((buffer[0x18] & 0x18) == 0x00) ? "monochrome/greyscale" :
 		  ( ((buffer[0x18] & 0x18) == 0x10) ? "non-RGB multicolor" : 
 		     "undefined"),
 		buffer[0x18]);
-	 return 0;
       }
 
       /* Now analyze the first Detailed Timing Block and see
@@ -9999,7 +9998,8 @@ SiS_SenseLCDDDC(SiS_Private *SiS_Pr, SISPtr pSiS)
 	          (SiS_Pr->CP_VSyncEnd[i] > SiS_Pr->CP_VTotal[i])      			  ||
 		  (((pSiS->VBFlags & VB_301C) && (SiS_Pr->CP_Clock[i] > 162500)) ||
 	           ((!(pSiS->VBFlags & VB_301C)) && 
-		    ((SiS_Pr->CP_Clock[i] > 108200) || (SiS_Pr->CP_VDisplay[i] > 1024)))) ||
+		    ((SiS_Pr->CP_Clock[i] > 108200) || (SiS_Pr->CP_VDisplay[i] > 1024) ||
+		     (SiS_Pr->CP_HDisplay[i] > 1600)))) 				  ||
 		  (buffer[base+17] & 0x80)) {
 
 	          SiS_Pr->CP_DataValid[i] = FALSE;
