@@ -158,17 +158,20 @@ SiS_SISDetectCRT1(ScrnInfoPtr pScrn)
     }
     
     if(pSiS->sishw_ext.jChipType >= SIS_330) {
+       int watchdog;
        if(pSiS->sishw_ext.jChipType >= SIS_340) {
           outSISIDXREG(SISCR, 0x57, 0x4a);
        } else {
           outSISIDXREG(SISCR, 0x57, 0x5f);
        }
        orSISIDXREG(SISCR, 0x53, 0x02);
-       while((inSISREG(SISINPSTAT)) & 0x01)    break;
-       while(!((inSISREG(SISINPSTAT)) & 0x01)) break;
+       watchdog = 655360;
+       while((!((inSISREG(SISINPSTAT)) & 0x01)) && --watchdog);
+       watchdog = 655360;
+       while(((inSISREG(SISINPSTAT)) & 0x01) && --watchdog);
        if((inSISREG(SISMISCW)) & 0x10) temp = 1;
        andSISIDXREG(SISCR, 0x53, 0xfd);
-       andSISIDXREG(SISCR, 0x57, 0x00);
+       outSISIDXREG(SISCR, 0x57, 0x00);
 #ifdef TWDEBUG
        xf86DrvMsg(0, X_INFO, "330: Found CRT1: %s\n", (temp == 1) ? "yes" : "no");
 #endif       

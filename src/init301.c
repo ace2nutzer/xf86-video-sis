@@ -181,12 +181,11 @@ GetLCDStructPtr661_2(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo)
 
 static BOOLEAN
 SiS_AdjustCRT2Rate(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
-                   USHORT RefreshRateTableIndex, USHORT *i,
-		   PSIS_HW_INFO HwInfo)
+                   USHORT RRTI, USHORT *i, PSIS_HW_INFO HwInfo)
 {
   USHORT checkmask=0,modeid,infoflag;
 
-  modeid = SiS_Pr->SiS_RefIndex[RefreshRateTableIndex + (*i)].ModeID;
+  modeid = SiS_Pr->SiS_RefIndex[RRTI + (*i)].ModeID;
 
   if(SiS_Pr->SiS_VBType & VB_SISVB) {
 
@@ -247,8 +246,8 @@ SiS_AdjustCRT2Rate(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
   }
 
   /* Look backwards in table for matching CRT2 mode */
-  for(; SiS_Pr->SiS_RefIndex[RefreshRateTableIndex+(*i)].ModeID == modeid; (*i)--) {
-     infoflag = SiS_Pr->SiS_RefIndex[RefreshRateTableIndex + (*i)].Ext_InfoFlag;
+  for(; SiS_Pr->SiS_RefIndex[RRTI + (*i)].ModeID == modeid; (*i)--) {
+     infoflag = SiS_Pr->SiS_RefIndex[RRTI + (*i)].Ext_InfoFlag;
      if(infoflag & checkmask) return TRUE;
      if((*i) == 0) break;
   }
@@ -257,13 +256,11 @@ SiS_AdjustCRT2Rate(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
    * for a matching CRT2 mode if no mode was found yet.
    */
   for((*i) = 0; ; (*i)++) {
-     if(SiS_Pr->SiS_RefIndex[RefreshRateTableIndex + (*i)].ModeID != modeid) {
-     	return FALSE;
-     }
-     infoflag = SiS_Pr->SiS_RefIndex[RefreshRateTableIndex + (*i)].Ext_InfoFlag;
+     if(SiS_Pr->SiS_RefIndex[RRTI + (*i)].ModeID != modeid) break;
+     infoflag = SiS_Pr->SiS_RefIndex[RRTI + (*i)].Ext_InfoFlag;
      if(infoflag & checkmask) return TRUE;
   }
-  return TRUE;
+  return FALSE;
 }
 
 /*********************************************/
@@ -279,7 +276,7 @@ SiS_GetRatePtr(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
 			       0x01, 0x01, 0x01, 0x01,
 			       0x01, 0x01, 0x01, 0x01,
 			       0x00, 0x00, 0x00, 0x00 };
-  USHORT RefreshRateTableIndex,i,backup_i;
+  USHORT RRTI,i,backup_i;
   USHORT modeflag,index,temp,backupindex;
 
   /* Do NOT check for UseCustomMode here, will skrew up FIFO */
@@ -324,22 +321,22 @@ SiS_GetRatePtr(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
      }
   }
 
-  RefreshRateTableIndex = SiS_Pr->SiS_EModeIDTable[ModeIdIndex].REFindex;
-  ModeNo = SiS_Pr->SiS_RefIndex[RefreshRateTableIndex].ModeID;
+  RRTI = SiS_Pr->SiS_EModeIDTable[ModeIdIndex].REFindex;
+  ModeNo = SiS_Pr->SiS_RefIndex[RRTI].ModeID;
 
   if(HwInfo->jChipType >= SIS_315H) {
      if(!(SiS_Pr->SiS_VBInfo & DriverMode)) {
         if( (SiS_Pr->SiS_EModeIDTable[ModeIdIndex].Ext_VESAID == 0x105) ||
             (SiS_Pr->SiS_EModeIDTable[ModeIdIndex].Ext_VESAID == 0x107) ) {
-           if(backupindex <= 1) RefreshRateTableIndex++;
+           if(backupindex <= 1) RRTI++;
         }
      }
   }
 
   i = 0;
   do {
-     if(SiS_Pr->SiS_RefIndex[RefreshRateTableIndex + i].ModeID != ModeNo) break;
-     temp = SiS_Pr->SiS_RefIndex[RefreshRateTableIndex + i].Ext_InfoFlag;
+     if(SiS_Pr->SiS_RefIndex[RRTI + i].ModeID != ModeNo) break;
+     temp = SiS_Pr->SiS_RefIndex[RRTI + i].Ext_InfoFlag;
      temp &= ModeTypeMask;
      if(temp < SiS_Pr->SiS_ModeType) break;
      i++;
@@ -348,7 +345,7 @@ SiS_GetRatePtr(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
 
   if(!(SiS_Pr->SiS_VBInfo & SetCRT2ToRAMDAC)) {
      if(SiS_Pr->SiS_VBInfo & SetInSlaveMode) {
-      	temp = SiS_Pr->SiS_RefIndex[RefreshRateTableIndex + i - 1].Ext_InfoFlag;
+      	temp = SiS_Pr->SiS_RefIndex[RRTI + i - 1].Ext_InfoFlag;
       	if(temp & InterlaceMode) i++;
      }
   }
@@ -357,12 +354,12 @@ SiS_GetRatePtr(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
 
   if((SiS_Pr->SiS_SetFlag & ProgrammingCRT2) && (!(SiS_Pr->SiS_VBInfo & DisableCRT2Display))) {
      backup_i = i;
-     if(!(SiS_AdjustCRT2Rate(SiS_Pr, ModeNo, ModeIdIndex, RefreshRateTableIndex, &i, HwInfo))) {
+     if(!(SiS_AdjustCRT2Rate(SiS_Pr, ModeNo, ModeIdIndex, RRTI, &i, HwInfo))) {
 	i = backup_i;
      }
   }
 
-  return(RefreshRateTableIndex + i);
+  return(RRTI + i);
 }
 
 /*********************************************/
