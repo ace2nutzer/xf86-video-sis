@@ -1559,7 +1559,7 @@ SIS6326AllocSurface (
     w = (w + 1) & ~1;
     pPriv->pitch = ((w << 1) + 63) & ~63; /* Only packed pixel modes supported */
     size = h * pPriv->pitch;
-    pPriv->linear = SIS6326AllocateOverlayMemory(pScrn, pPriv->linear, size);
+    pPriv->linear = SIS6326AllocateOverlayMemory(pScrn, pPriv->linear, ((size + depth - 1) / depth));
     if(!pPriv->linear)
     	return BadAlloc;
 

@@ -4302,8 +4302,9 @@ SISAllocSurface (
     depth = pSiS->CurrentLayout.bitsPerPixel >> 3;
     w = (w + 1) & ~1;
     pPriv->pitch = ((w << 1) + 63) & ~63; /* Only packed pixel modes supported */
-    size = h * pPriv->pitch; /*  / depth;   - Why? */
-    pPriv->linear = SISAllocateOverlayMemory(pScrn, pPriv->linear, size);
+    size = h * pPriv->pitch; 
+    pPriv->linear = SISAllocateOverlayMemory(pScrn, pPriv->linear, ((size + depth - 1) / depth));
+    
     if(!pPriv->linear)
     	return BadAlloc;
 
@@ -4771,7 +4772,8 @@ SISPutImageBlit(
    }
    
    /* allocate memory (we do doublebuffering) */
-   if(!(pPriv->linear[index] = SISAllocateOverlayMemory(pScrn, pPriv->linear[index], totalSize<<1)))
+   if(!(pPriv->linear[index] = SISAllocateOverlayMemory(pScrn, pPriv->linear[index], 
+   			((totalSize + depth - 1) / depth) << 1)))
       return BadAlloc;
 
    /* fixup pointers */
