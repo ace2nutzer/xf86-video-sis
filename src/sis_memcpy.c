@@ -24,6 +24,7 @@
  */
 
 #include "xf86.h"
+#include "xf86_ansic.h"
 #include "compiler.h"
 #include "sis.h"
 
