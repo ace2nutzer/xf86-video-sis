@@ -2385,8 +2385,8 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
     static const char *subshstr = "Substituting missing CRT%d monitor HSync data by DDC data\n";
     static const char *subsvstr = "Substituting missing CRT%d monitor VRefresh data by DDC data\n";
 #endif
-    static const char *saneh = "Substituting missing CRT%d monitor HSync range by suitable data\n";
-    static const char *sanev = "Substituting missing CRT%d monitor VRefresh range by suitable data\n";
+    static const char *saneh = "Correcting bogus or missing CRT%d monitor HSync range\n";
+    static const char *sanev = "Correcting bogus or missing CRT%d monitor VRefresh range\n";
 #ifdef SISMERGED
     static const char *mergednocrt1 = "CRT1 not detected or forced off. %s.\n";
     static const char *mergednocrt2 = "No CRT2 output selected or no bridge detected. %s.\n";
@@ -5058,10 +5058,17 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
    /* If there is no HSync or VRefresh data for the monitor,
     * derive it from DDC data. Done by common layer since
     * 4.3.99.14.
+    * Addendum: I overrule the ranges now in any case unless
+    * it would affect a CRT output device. Hence, for LCD(A) 
+    * and TV, we always get proper ranges. This is entirely
+    * harmless. However, option "NoOverruleRanges" will
+    * disable this behavior.
+    * This should "fix" the - by far - most common configuration
+    * mistakes.
     */
-    if(pScrn->monitor->nHsync <= 0) {
+    if((pScrn->monitor->nHsync <= 0) || (pSiS->OverruleRanges)) {
 #if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,3,99,14,0)
-       if(pScrn->monitor->DDC) {
+       if((pScrn->monitor->nHsync <= 0) && (pScrn->monitor->DDC)) {
           xf86DrvMsg(pScrn->scrnIndex, X_INFO, subshstr,
 #ifdef SISDUALHEAD
 			pSiS->DualHeadMode ? (pSiS->SecondHead ? 1 : 2) :
@@ -5070,7 +5077,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
           SiSSetSyncRangeFromEdid(pScrn, 1); 
        }
 #endif       
-       if(pScrn->monitor->nHsync <= 0) {   
+       if((pScrn->monitor->nHsync <= 0) || (pSiS->OverruleRanges)) {   
           if(SiSAllowSyncOverride(pSiS)) {
              /* Set sane ranges for LCD and TV 
 	      * (our strict checking will filter out invalid ones anyway)
@@ -5087,9 +5094,9 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
        }
     }
        
-    if(pScrn->monitor->nVrefresh <= 0) {
+    if((pScrn->monitor->nVrefresh <= 0) || (pSiS->OverruleRanges)) {
 #if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,3,99,14,0)
-       if(pScrn->monitor->DDC) {    
+       if((pScrn->monitor->nVrefresh <= 0) && (pScrn->monitor->DDC)) {    
           xf86DrvMsg(pScrn->scrnIndex, X_INFO, subsvstr,
 #ifdef SISDUALHEAD
 			pSiS->DualHeadMode ? (pSiS->SecondHead ? 1 : 2) :
@@ -5098,7 +5105,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
           SiSSetSyncRangeFromEdid(pScrn, 0);  
        }
 #endif       
-       if(pScrn->monitor->nVrefresh <= 0) {
+       if((pScrn->monitor->nVrefresh <= 0) || (pSiS->OverruleRanges)) {
           if(SiSAllowSyncOverride(pSiS)) {
              /* Set sane ranges for LCD and TV */
 	     pScrn->monitor->nVrefresh = 1;
@@ -5116,14 +5123,14 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 
 #ifdef SISMERGED
     if(pSiS->MergedFB) {
-       if(pSiS->CRT2pScrn->monitor->nHsync <= 0) {
+       if((pSiS->CRT2pScrn->monitor->nHsync <= 0) || (pSiS->OverruleRanges)) {
 #if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,3,99,14,0)
-          if(pSiS->CRT2pScrn->monitor->DDC) {
+          if((pSiS->CRT2pScrn->monitor->nHsync <= 0) && (pSiS->CRT2pScrn->monitor->DDC)) {
              xf86DrvMsg(pScrn->scrnIndex, X_INFO, subshstr, 2);
              SiSSetSyncRangeFromEdid(pSiS->CRT2pScrn, 1);
           }
 #endif
-          if(pSiS->CRT2pScrn->monitor->nHsync <= 0) {
+          if((pSiS->CRT2pScrn->monitor->nHsync <= 0) || (pSiS->OverruleRanges)) {
 	     if(pSiS->VBFlags & (CRT2_TV | CRT2_LCD)) {
 	        /* Set sane ranges for LCD and TV */
 	        pSiS->CRT2pScrn->monitor->nHsync = 1;
@@ -5133,14 +5140,14 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	     }
 	  }
        }	  
-       if(pSiS->CRT2pScrn->monitor->nVrefresh <= 0) {
+       if((pSiS->CRT2pScrn->monitor->nVrefresh <= 0) || (pSiS->OverruleRanges)) {
 #if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,3,99,14,0)       
-          if(pSiS->CRT2pScrn->monitor->DDC) {
+          if((pSiS->CRT2pScrn->monitor->nVrefresh <= 0) && (pSiS->CRT2pScrn->monitor->DDC)) {
              xf86DrvMsg(pScrn->scrnIndex, X_INFO, subsvstr, 2);
              SiSSetSyncRangeFromEdid(pSiS->CRT2pScrn, 0);
           }
 #endif	
-          if(pSiS->CRT2pScrn->monitor->nVrefresh <= 0) {
+          if((pSiS->CRT2pScrn->monitor->nVrefresh <= 0) || (pSiS->OverruleRanges)) {
 	     if(pSiS->VBFlags & (CRT2_TV | CRT2_LCD)) {
 	        /* Set sane ranges for LCD and TV */
 	        pSiS->CRT2pScrn->monitor->nVrefresh = 1;
@@ -6820,7 +6827,7 @@ SISRestore(ScrnInfoPtr pScrn)
         */
         if( ( (pSiS->restorebyset) ||
 	      (pSiS->VBFlags & (VB_301B|VB_301C|VB_302B|VB_301LV|VB_302LV|VB_302ELV)) ||
-	      ((pSiS->sishw_ext.jChipType == SIS_730) && (pSiS->VBFlags & VB_LVDS)) ) &&
+	      ((pSiS->sishw_ext.jChipType == SIS_730) && (pSiS->VBFlags & VB_LVDS)) )     &&
 	    (pSiS->OldMode) ) {
 
 	   Bool changedmode = FALSE;
@@ -7232,18 +7239,23 @@ SISScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
 	  inSISIDXREG(SISCR, 0x30, cr30);
 	  inSISIDXREG(SISCR, 0x31, cr31);
 
-	  /* What if CR34 is different from the BIOS byte? */
+	  /* What if CR34 is different from the BIOS scratch byte? */
 	  if(pSiS->OldMode != myoldmode) {
-	     /* If no bridge output is active, trust the BIOS byte */
-	     if(!cr31 && !cr30) pSiS->OldMode = myoldmode;
+	     /* If no bridge output is active, trust the BIOS scratch byte */
+	     if( (!(pSiS->VBFlags & VB_VIDEOBRIDGE)) || 
+	         (pSiS->OldMode == 0)                ||
+	         (!cr31 && !cr30)                    ||
+		 (cr31 & 0x20) ) {
+		pSiS->OldMode = myoldmode;
+ 	     }
 	     /* ..else trust CR34 */
 	  }
 
 	  /* Newer 650 BIOSes set CR34 to 0xff if the mode has been
 	   * "patched", for instance for 80x50 text mode. (That mode
 	   * has no number of its own, it's 0x03 like 80x25). In this
-	   * case, we trust the BIOS byte (provided that any of these
-	   * two is valid).
+	   * case, we trust the BIOS scratch byte (provided that any 
+	   * of these two is valid).
 	   */
 	  if(pSiS->OldMode > 0x7f) {
 	     pSiS->OldMode = myoldmode;

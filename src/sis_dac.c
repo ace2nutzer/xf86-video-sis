@@ -587,14 +587,11 @@ SiS300Save(ScrnInfoPtr pScrn, SISRegPtr sisReg)
 #endif
 
     /* Save Mode number */
-#if XF86_VERSION_CURRENT >= XF86_VERSION_NUMERIC(4,2,99,0,0)
-    if(!(pSiS->UseVESA))
-#endif
-       pSiS->BIOSModeSave = SiS_GetSetModeID(pScrn,0xFF);
+    sisReg->BIOSModeSave = SiS_GetSetModeID(pScrn,0xFF);
 	
 #ifdef TWDEBUG	
     xf86DrvMsg(pScrn->scrnIndex, X_INFO,
-    	"BIOS mode ds:449 = 0x%x\n", pSiS->BIOSModeSave);
+    	"BIOS mode ds:449 = 0x%x\n", sisReg->BIOSModeSave);
 #endif	
 }
 
@@ -742,10 +739,7 @@ SiS300Restore(ScrnInfoPtr pScrn, SISRegPtr sisReg)
     outSISIDXREG(SISSR, 0x00, 0x03);    /* End Reset */
 
     /* Restore mode number */
-#if XF86_VERSION_CURRENT >= XF86_VERSION_NUMERIC(4,2,99,0,0)
-    if(!(pSiS->UseVESA))
-#endif
-       SiS_GetSetModeID(pScrn,pSiS->BIOSModeSave);
+    SiS_GetSetModeID(pScrn,sisReg->BIOSModeSave);
 }
 
 /* Save SiS315 series register contents */
@@ -786,16 +780,16 @@ SiS315Save(ScrnInfoPtr pScrn, SISRegPtr sisReg)
     /* Save video capture registers */
     for(i = 0x00; i <= 0x4f; i++)  {
        inSISIDXREG(SISCAP, i, sisReg->sisCapt[i]);
-#ifdef TWDEBUG
+#ifdef TWDEBUG_VID
        xf86DrvMsg(pScrn->scrnIndex, X_INFO,
 		"Capt%02X Contents - %02X \n", i,sisReg->sisCapt[i]);
 #endif
     }
 
     /* Save video playback registers */
-    for(i = 0x00; i <= 0x3f; i++)  {
+    for(i = 0x00; i <= 0x3f; i++) {
        inSISIDXREG(SISVID, i, sisReg->sisVid[i]);
-#ifdef TWDEBUG
+#ifdef TWDEBUG_VID
        xf86DrvMsg(pScrn->scrnIndex, X_INFO,
 		"Vid%02X Contents - %02X \n", i,sisReg->sisVid[i]);
 #endif
@@ -819,14 +813,11 @@ SiS315Save(ScrnInfoPtr pScrn, SISRegPtr sisReg)
 #endif
 
     /* Save mode number */
-#if XF86_VERSION_CURRENT >= XF86_VERSION_NUMERIC(4,2,99,0,0)
-    if(!(pSiS->UseVESA))
-#endif
-       pSiS->BIOSModeSave = SiS_GetSetModeID(pScrn,0xFF);
+    sisReg->BIOSModeSave = SiS_GetSetModeID(pScrn,0xFF);
 
 #ifdef TWDEBUG
     xf86DrvMsg(pScrn->scrnIndex, X_INFO,
-    	"BIOS mode ds:449 = 0x%x\n", pSiS->BIOSModeSave);
+    	"BIOS mode ds:449 = 0x%x\n", sisReg->BIOSModeSave);
 #endif
 }
 
@@ -858,11 +849,12 @@ SiS315Restore(ScrnInfoPtr pScrn, SISRegPtr sisReg)
      * or application is running and which queue mode it
      * uses.
      */
-    outSISIDXREG(SISSR, 0x27, 0x1F);
+    andSISIDXREG(SISCR, 0x55, 0x33);
     outSISIDXREG(SISSR, 0x26, 0x01);
+    outSISIDXREG(SISSR, 0x27, 0x1F);
 
     /* Restore extended CR registers */
-    for(i = 0x19; i < 0x5C; i++)  {
+    for(i = 0x19; i < 0x5C; i++) {
        outSISIDXREG(SISCR, i, sisReg->sisRegs3D4[i]);
     }
     if(pSiS->sishw_ext.jChipType < SIS_661) {
@@ -871,18 +863,27 @@ SiS315Restore(ScrnInfoPtr pScrn, SISRegPtr sisReg)
     outSISIDXREG(SISCR, pSiS->myCR63, sisReg->sisRegs3D4[pSiS->myCR63]);
 
     /* Leave PCI_IO_ENABLE on if accelerators are on (Is this required?) */
-    if(sisReg->sisRegs3C4[0x1e] & 0x50) {  /*0x40=2D, 0x10=3D*/
+    if(sisReg->sisRegs3C4[0x1e] & 0x50) {  /* 0x40=2D, 0x10=3D */
        sisReg->sisRegs3C4[0x20] |= 0x20;
        outSISIDXREG(SISSR, 0x20, sisReg->sisRegs3C4[0x20]);
     }
-
-    /* Restore extended SR registers */
+    
     if(pSiS->sishw_ext.jChipType >= SIS_661) {
        sisReg->sisRegs3C4[0x11] &= 0x0f;
     }
+
+    /* Restore extended SR registers */
     for(i = 0x06; i <= 0x3F; i++) {
-       outSISIDXREG(SISSR, i, sisReg->sisRegs3C4[i]);
+       if(i == 0x26) {
+          continue;
+       } else if(i == 0x27) {
+          outSISIDXREG(SISSR, 0x27, sisReg->sisRegs3C4[0x27]);
+          outSISIDXREG(SISSR, 0x26, sisReg->sisRegs3C4[0x26]);
+       } else {
+          outSISIDXREG(SISSR, i, sisReg->sisRegs3C4[i]);
+       }
     }
+    
     /* Restore VCLK and ECLK */
     andSISIDXREG(SISSR,0x31,0xcf);
     if(pSiS->VBFlags & VB_LVDS) {
@@ -939,10 +940,7 @@ SiS315Restore(ScrnInfoPtr pScrn, SISRegPtr sisReg)
     outSISIDXREG(SISSR, 0x00, 0x03);    /* End Reset */
 
     /* Restore Mode number */
-#if XF86_VERSION_CURRENT >= XF86_VERSION_NUMERIC(4,2,99,0,0)
-    if(!(pSiS->UseVESA))
-#endif
-       SiS_GetSetModeID(pScrn,pSiS->BIOSModeSave);
+    SiS_GetSetModeID(pScrn,sisReg->BIOSModeSave);
 }
 
 static void
@@ -1168,7 +1166,7 @@ SiSLVDSChrontelSave(ScrnInfoPtr pScrn, SISRegPtr sisReg)
     int     i;
 
     /* Save Part1 */
-    for(i=0; i<0x46; i++)  {
+    for(i=0; i<0x46; i++) {
        inSISIDXREG(SISPART1, i, sisReg->VBPart1[i]);
 #ifdef TWDEBUG
        xf86DrvMsg(pScrn->scrnIndex, X_INFO,
@@ -1245,7 +1243,7 @@ SiSLVDSChrontelRestore(ScrnInfoPtr pScrn, SISRegPtr sisReg)
     }
 
     if((!(sisReg->sisRegs3D4[0x30] & 0x03)) &&
-       (sisReg->sisRegs3D4[0x31] & 0x20))  {      /* disable CRT2 */
+       (sisReg->sisRegs3D4[0x31] & 0x20)) {      /* disable CRT2 */
        SiS_LockCRT2(pSiS->SiS_Pr, &pSiS->sishw_ext);
        return;
     }
@@ -1310,11 +1308,11 @@ SiSMclk(SISPtr pSiS)
     case PCI_CHIP_SIS300:
     case PCI_CHIP_SIS540:
     case PCI_CHIP_SIS630:
-    case PCI_CHIP_SIS550:
-    case PCI_CHIP_SIS650:
     case PCI_CHIP_SIS315:
     case PCI_CHIP_SIS315H:
     case PCI_CHIP_SIS315PRO:
+    case PCI_CHIP_SIS550:
+    case PCI_CHIP_SIS650:
     case PCI_CHIP_SIS330:
     case PCI_CHIP_SIS660:
     case PCI_CHIP_SIS340:
@@ -1455,10 +1453,8 @@ int SiSMemBandWidth(ScrnInfoPtr pScrn, BOOLEAN IsForCRT2)
 #ifdef __SUNPRO_C
 #define const
 #endif
-        const float     magic300[4] = { 1.2,      1.368421, 2.263158, 1.2};
-        const float     magic630[4] = { 1.441177, 1.441177, 2.588235, 1.441177 };
-	const float     magic315[4] = { 1.2,      1.368421, 1.368421, 1.2 };
-	const float     magic550[4] = { 1.441177, 1.441177, 2.588235, 1.441177 };
+        const float     magicDED[4] = { 1.2,      1.368421, 2.263158, 1.2};
+        const float     magicINT[4] = { 1.441177, 1.441177, 2.588235, 1.441177 };
 #ifdef __SUNPRO_C
 #undef const
 #endif
@@ -1503,39 +1499,39 @@ int SiSMemBandWidth(ScrnInfoPtr pScrn, BOOLEAN IsForCRT2)
 	case PCI_CHIP_SIS340:
 	        switch(pSiS->Chipset) {
         	case PCI_CHIP_SIS300:
-	            magic = magic300[bus/64];
+	            magic = magicDED[bus/64];
 		    max = 540000;
                     break;
         	case PCI_CHIP_SIS540:
        	 	case PCI_CHIP_SIS630:
-		    magic = magic630[bus/64];
+		    magic = magicINT[bus/64];
 		    max = 540000;
                     break;
 		case PCI_CHIP_SIS315:
 		case PCI_CHIP_SIS315H:
 		case PCI_CHIP_SIS315PRO:
 		case PCI_CHIP_SIS330:
-		    magic = magic315[bus/64];
+		    magic = magicDED[bus/64];
 		    max = 780000;
 		    break;
 		case PCI_CHIP_SIS550:
-		    magic = magic550[bus/64];
+		    magic = magicINT[bus/64];
 		    max = 620000;
 		    break;
 		case PCI_CHIP_SIS650:
-		    magic = magic550[bus/64];
+		    magic = magicINT[bus/64];
 		    max = 680000;
 		    break;
 		case PCI_CHIP_SIS660:
 		    if((pSiS->sishw_ext.jChipType >= SIS_660) &&
 		       (!(pSiS->ChipFlags & SiSCF_760UMA))) {
-		       magic = magic315[bus/64];
+		       magic = magicDED[bus/64];
 		    } else {
-		       magic = magic550[bus/64];
+		       magic = magicINT[bus/64];
 		    }
 		    max = 800000;
 		case PCI_CHIP_SIS340:
-		    magic = magic315[bus/64];
+		    magic = magicDED[bus/64];
 		    max = 800000;
 		    break;
                 }
@@ -1560,7 +1556,7 @@ int SiSMemBandWidth(ScrnInfoPtr pScrn, BOOLEAN IsForCRT2)
 		    crt2used = 0.0;
 		    crt2clock = SiSEstimateCRT2Clock(pScrn, IsForCRT2);
 		    if(crt2clock) {
-		    	crt2used = crt2clock + 2000;
+		       crt2used = crt2clock + 2000;
 		    }
 		    DHM = FALSE;
 		    GetForCRT1 = FALSE;

@@ -260,7 +260,7 @@ void SISCRT1PreInit(ScrnInfoPtr pScrn)
     }
 
     xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
-    		"%sCRT1 (VGA) connection detected\n",
+    		"%sCRT1/VGA detected\n",
 		CRT1Detected ? "" : "No ");
 }
 

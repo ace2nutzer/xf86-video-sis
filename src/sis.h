@@ -39,8 +39,8 @@
 #define UNLOCK_ALWAYS
 
 #define SISDRIVERVERSIONYEAR    4
-#define SISDRIVERVERSIONMONTH   6
-#define SISDRIVERVERSIONDAY     29
+#define SISDRIVERVERSIONMONTH   7
+#define SISDRIVERVERSIONDAY     1
 #define SISDRIVERREVISION       1
 
 #define SISDRIVERIVERSION (SISDRIVERVERSIONYEAR << 16) |  \
@@ -480,6 +480,7 @@ typedef struct {
     unsigned long sisMMIO85C0;
     unsigned char sis6326tv[0x46];
     unsigned long sisRegsPCI50, sisRegsPCIA0;
+    unsigned char BIOSModeSave;
 } SISRegRec, *SISRegPtr;
 
 typedef struct _sisModeInfoPtr {
@@ -1019,6 +1020,7 @@ typedef struct {
     int			maxClone_X1, maxClone_X2, maxClone_Y1, maxClone_Y2;
     int			MergedFBXDPI, MergedFBYDPI;
     IOADDRESS		MyPIOOffset;
+    Bool		OverruleRanges;
 #ifdef SIS_NEED_MAP_IOP   
     CARD32              IOPAddress;      	/* I/O port physical address */
     unsigned char *     IOPBase;         	/* I/O port linear address */   

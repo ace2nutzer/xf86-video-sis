@@ -144,6 +144,7 @@ typedef enum {
     OPTION_ENABLESISCTRL,
     OPTION_STOREDBRI,
     OPTION_STOREDPBRI,
+    OPTION_OVERRULERANGES,
 #ifdef SIS_CP
     SIS_CP_OPT_OPTIONS
 #endif
@@ -240,6 +241,7 @@ static const OptionInfoRec SISOptions[] = {
     { OPTION_CENTERLCD,			"CenterLCD",	   	  OPTV_BOOLEAN,   {0}, -1    },
     { OPTION_ENABLEHOTKEY,		"EnableHotkey",	   	  OPTV_BOOLEAN,   {0}, -1    },
     { OPTION_ENABLESISCTRL,		"EnableSiSCtrl",   	  OPTV_BOOLEAN,   {0}, -1    },
+    { OPTION_OVERRULERANGES,		"OverruleFrequencyRanges",OPTV_BOOLEAN,   {0}, -1    },
 #ifdef SISMERGED
     { OPTION_MERGEDFB,			"MergedFB",		  OPTV_BOOLEAN,	  {0}, FALSE },
     { OPTION_MERGEDFB2,			"TwinView",		  OPTV_BOOLEAN,	  {0}, FALSE },	  /* alias */
@@ -384,6 +386,7 @@ SiSOptions(ScrnInfoPtr pScrn)
     pSiS->GammaPBriR = pSiS->GammaPBriG = pSiS->GammaPBriB = 1000;
     pSiS->HideHWCursor = FALSE;
     pSiS->HWCursorIsVisible = FALSE;
+    pSiS->OverruleRanges = TRUE;
 #ifdef SISMERGED
     pSiS->MergedFB = pSiS->MergedFBAuto = FALSE;
     pSiS->CRT2Position = sisRightOf;
@@ -403,7 +406,7 @@ SiSOptions(ScrnInfoPtr pScrn)
     /* Chipset dependent defaults */
 
     if(pSiS->Chipset == PCI_CHIP_SIS530) {
-    	 /* TW: TQ still broken on 530/620? */
+    	 /* TQ still broken on 530/620? */
 	 pSiS->TurboQueue = FALSE;
     }
 
@@ -586,6 +589,20 @@ SiSOptions(ScrnInfoPtr pScrn)
 #endif
 #endif
 #endif
+
+    /* OverruleFrequencyRanges 
+     *
+     * Enable/disable overruling bogus frequency ranges for TV and LCD(A)
+     */
+    if((pSiS->VGAEngine == SIS_300_VGA) || (pSiS->VGAEngine == SIS_315_VGA)) {
+       Bool val;
+       if(xf86GetOptValBool(pSiS->Options, OPTION_OVERRULERANGES, &val)) {
+          if(!val) {
+	     pSiS->OverruleRanges = FALSE;
+	     xf86DrvMsg(pScrn->scrnIndex, X_CONFIG, "Overruling frequency ranges disabled\n");
+	  }
+       }
+    }
 
     /*
      * MergedFB
@@ -1583,11 +1600,12 @@ SiSOptions(ScrnInfoPtr pScrn)
         * generated out of the known and supported modes. Use
         * this option to disable this. NOT RECOMMENDED.
         */
-       from = X_DEFAULT;
-       if(xf86GetOptValBool(pSiS->Options, OPTION_NOINTERNALMODES, &pSiS->noInternalModes))
-		from = X_CONFIG;
-       xf86DrvMsg(pScrn->scrnIndex, from, "Usage of built-in modes is %s\n",
-		       pSiS->noInternalModes ? disabledstr : enabledstr);
+       if(xf86GetOptValBool(pSiS->Options, OPTION_NOINTERNALMODES, &pSiS->noInternalModes)) {
+	  if(pSiS->noInternalModes) {
+	     xf86DrvMsg(pScrn->scrnIndex, X_CONFIG, "Usage of built-in modes is %s\n", disabledstr);
+          }	
+       }
+       
     }
 
     /* ShadowFB */
