@@ -153,6 +153,10 @@
 #endif
 #endif
 
+#if XORG_VERSION_CURRENT >= XORG_VERSION_NUMERIC(6,8,2,0,0)
+#define SISCHECKOSSSE		/* Check OS for SSE; requires SigIll facility */
+#endif
+
 #undef SIS315DRI		/* define this if dri is adapted for 315/330 series */
 
 /* For SiS315/550/650/740/330/660 - these should be moved elsewhere! */
@@ -1026,6 +1030,9 @@ typedef struct {
     Bool		OverruleRanges;
     Bool		BenchMemCpy;
     vidCopyFunc 	SiSFastVidCopy;
+#ifndef SISCHECKOSSSE    
+    Bool		XvSSEMemcpy;
+#endif
 #ifdef SIS_NEED_MAP_IOP   
     CARD32              IOPAddress;      	/* I/O port physical address */
     unsigned char *     IOPBase;         	/* I/O port linear address */   

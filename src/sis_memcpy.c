@@ -498,11 +498,13 @@ static unsigned int taketime(void)	/* get current time (for benchmarking) */
     unsigned int eax;
     
     __asm__ volatile (
+       	  	" pushl %%ebx\n"
 		" cpuid\n"
-		" .byte 0x0f, 0x31\n" 
+		" rdtsc\n" 
+		" popl %%ebx\n"
 		: "=a" (eax)
-		: "0"(0)
-		: "ebx", "ecx", "edx", "cc");     
+		: "0" (0)
+		: "ecx", "edx", "cc");     
 		
     return(eax); 
 }
@@ -519,11 +521,13 @@ static unsigned int taketime(void)	/* get current time (for benchmarking) */
     unsigned int eax;
     
     __asm__ volatile (
+    		" pushq %%rbx\n"
 		" cpuid\n"
 		" rdtsc\n" 
+		" popq %%rbx\n"
 		: "=a" (eax)
 		: "0" (0)
-		: "rbx", "rcx", "rdx", "cc");     
+		: "rcx", "rdx", "cc");     
 		
     return(eax); 
 }
@@ -747,6 +751,62 @@ static unsigned int SiS_ParseCPUFlags(char *cpuinfo, SISMCFuncData *MCFunctions)
 /*                      Arch-specific routines                        */
 /**********************************************************************/
 
+#if defined(__i386__) || defined (__AMD64__)   /* Common i386, AMD64  */
+#ifdef SISCHECKOSSSE
+static jmp_buf sigill_return;
+
+static void sigill_handler(void)
+{
+    longjmp(sigill_return, 1);
+}
+#endif
+
+static Bool CheckOSforSSE(ScrnInfoPtr pScrn)
+{
+#ifdef SISCHECKOSSSE
+    int signo = -1;
+    
+#ifdef SISDGBMC
+    xf86DrvMsg(pScrn->scrnIndex, X_INFO, "Checking OS SSE support\n");
+#endif                  
+
+    xf86InterceptSigIll(&sigill_handler);  
+    
+    if(setjmp(sigill_return)) {
+       signo = 4;
+    } else {
+       __asm__ __volatile__ (" xorps %xmm0, %xmm0\n"); 
+       /* __asm__ __volatile__ (" .byte 0xff\n"); */  /* For test */
+    }  
+    
+    xf86InterceptSigIll(NULL);  
+    
+#ifdef SISDGBMC
+    xf86DrvMsg(pScrn->scrnIndex, X_INFO, "OS SSE support signal %d\n", signo);
+#endif                      
+    
+    if(signo != -1) {
+       xf86DrvMsg(pScrn->scrnIndex, X_PROBED, 
+       		"OS does not support SSE instructions\n");
+    }
+    
+    return (signo >= 0) ? FALSE : TRUE;
+#else
+    xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
+    	"Checking OS for SSE support is supported in X.org 6.8.2 and later.\n");
+    if(pSiS->XvSSEMemcpy) {
+       xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
+    	"If you get a signal 4 here, set the option \"XvSSEMemcpy\" to \"off\".\n");	
+       return TRUE;
+    } else {
+       xf86DrvMsg(pScrn->scrnIndex, X_INFO,
+    	"If your OS supports SSE, you can set the option \"XvSSEMemcpy\" to \"on\".\n");
+       return FALSE;
+    }
+#endif    
+}
+#endif /* i386, AMD64 */
+
 #ifdef __i386__   /* i386 *************************************/
 
 PREFETCH_FUNC(SiS_sse,SSE,SSE,,FENCE,small_memcpy_i386) 
@@ -852,42 +912,6 @@ static int SiS_GetCpuFeatures(void)
     return flags;
 }
 
-static Bool CheckOSforSSE(ScrnInfoPtr pScrn)
-{
-    int signo;
-    
-#ifdef SISDGBMC
-    xf86DrvMsg(pScrn->scrnIndex, X_INFO, "Checking OS SSE support\n");
-#endif                  
-    
-    /* The following does not work yet: If sig 4 is catched, that
-     * idiotic signal handler just "return"s, and causes an immediate
-     * second sig 4 since the "return" returns to the beginning of the
-     * illegal instruction. Need to find a way to install my own signal
-     * handler here, and use a setjmp/longjmp method...
-     */
-    xf86InterceptSignals(&signo);
-    
-    __asm__ __volatile__ (" xorps %xmm0, %xmm0\n");
-		
-    xf86InterceptSignals(NULL);
-    
-#ifdef SISDGBMC
-    xf86DrvMsg(pScrn->scrnIndex, X_INFO, "OS SSE support signal %d\n", signo);
-#endif                      
-    
-    if(signo == 4) {
-       xf86DrvMsg(pScrn->scrnIndex, X_PROBED, 
-       		"OS does not support SSE instructions\n");
-    } else if(signo >= 0) {
-       xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
-       		"Checking SSE instructions caused signal %d - this should not happen!\n",
-		signo);
-    }
-    
-    return (signo >= 0) ? FALSE : TRUE;
-}
-
 #elif defined(__AMD64__) /* AMD64 ************************* */
 
 PREFETCH_FUNC(SiS_sse,SSE,SSE,,FENCE,small_memcpy_amd64) 
@@ -905,28 +929,6 @@ static SISMCFuncData MCFunctions_AMD64[] = {
 static int SiS_GetCpuFeatures(void)
 {
     return((int)(FL_SSE));
-}
-
-static Bool CheckOSforSSE(ScrnInfoPtr pScrn)
-{
-    int signo;
-    
-    xf86InterceptSignals(&signo);
-    
-    __asm__ __volatile__ (" xorps %xmm0, %xmm0\n");
-		
-    xf86InterceptSignals(NULL);
-    
-    if(signo == 4) {
-       xf86DrvMsg(pScrn->scrnIndex, X_PROBED, 
-       		"OS does not support SSE/MMXEXT instructions\n");
-    } else if(signo >= 0) {
-       xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
-       		"Checking SSE/MMXEXT instructions caused signal %d - this should not happen!\n",
-		signo);
-    }
-    
-    return (signo >= 0) ? FALSE : TRUE;
 }
 
 #else  /* Other archs ************************************* */

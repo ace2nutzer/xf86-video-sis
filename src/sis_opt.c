@@ -116,6 +116,9 @@ typedef enum {
     OPTION_XVDEFDISABLEGFXLR,
     OPTION_XVMEMCPY,
     OPTION_XVBENCHCPY,
+#ifndef SISCHECKOSSSE    
+    OPTION_XVSSECOPY,
+#endif    
     OPTION_XVUSECHROMAKEY,
     OPTION_XVCHROMAMIN,
     OPTION_XVCHROMAMAX,
@@ -240,6 +243,9 @@ static const OptionInfoRec SISOptions[] = {
     { OPTION_XVDISABLECOLORKEY,		"XvDisableColorKey",      OPTV_BOOLEAN,   {0}, -1    },
     { OPTION_XVMEMCPY,			"XvUseMemcpy",  	  OPTV_BOOLEAN,   {0}, -1    },
     { OPTION_XVBENCHCPY,		"XvBenchmarkMemcpy",  	  OPTV_BOOLEAN,   {0}, -1    },
+#ifndef SISCHECKOSSSE    
+    { OPTION_XVSSECOPY, 		"XvSSEMemcpy",  	  OPTV_BOOLEAN,   {0}, -1    },
+#endif    
     { OPTION_XVDEFAULTADAPTOR,		"XvDefaultAdaptor",  	  OPTV_STRING,    {0}, -1    },
     { OPTION_SCALELCD,			"ScaleLCD",	   	  OPTV_BOOLEAN,   {0}, -1    },
     { OPTION_CENTERLCD,			"CenterLCD",	   	  OPTV_BOOLEAN,   {0}, -1    },
@@ -392,6 +398,9 @@ SiSOptions(ScrnInfoPtr pScrn)
     pSiS->HWCursorIsVisible = FALSE;
     pSiS->OverruleRanges = TRUE;
     pSiS->BenchMemCpy = TRUE;
+#ifndef SISCHECKOSSSE    
+    pSiS->XvSSEMemcpy = FALSE;
+#endif    
 #ifdef SISMERGED
     pSiS->MergedFB = pSiS->MergedFBAuto = FALSE;
     pSiS->CRT2Position = sisRightOf;
@@ -858,6 +867,11 @@ SiSOptions(ScrnInfoPtr pScrn)
        if(xf86GetOptValBool(pSiS->Options, OPTION_XVBENCHCPY, &val)) {
 	  xf86DrvMsg(pScrn->scrnIndex, X_WARNING, mystring, "XvBenchmarkMemcpy");
        }
+#ifndef SISCHECKOSSSE
+       if(xf86GetOptValBool(pSiS->Options, OPTION_XVSSECOPY, &val)) {
+	  xf86DrvMsg(pScrn->scrnIndex, X_WARNING, mystring, "XvSSEMemcpy");
+       }
+#endif       
 #ifdef SIS_CP
        SIS_CP_OPT_DH_WARN
 #endif
@@ -1582,6 +1596,16 @@ SiSOptions(ScrnInfoPtr pScrn)
 	        xf86DrvMsg(pScrn->scrnIndex, X_CONFIG, 
 	   		"Xv: Will %sbenchmark memcpy() methods\n",
 			val ? "" : "not ");
+#ifndef SISCHECKOSSSE			
+	  	if(val) {
+		   if(xf86GetOptValBool(pSiS->Options, OPTION_XVSSECOPY, &val)) {
+		      pSiS->XvSSEMemcpy = val ? TRUE : FALSE;
+		      xf86DrvMsg(pScrn->scrnIndex, X_CONFIG,
+		      		"Xv: Will %scheck SSE memcpy()\n", 
+			val ? "" : "not ");
+		   }
+		}
+#endif		
 	     }
 	  } else pSiS->BenchMemCpy = FALSE;
        }
