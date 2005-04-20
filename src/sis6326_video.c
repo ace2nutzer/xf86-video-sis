@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg$ */
+/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/sis6326_video.c,v 1.13 2005/03/11 14:39:48 twini Exp $ */
 /*
  * Xv driver for SiS 5597/5598, 6326 and 530/620.
  *
@@ -36,7 +36,7 @@
 #include "xf86fbman.h"
 #include "xf86xv.h"
 #include "regionstr.h"
-#include "Xv.h"
+#include <X11/extensions/Xv.h>
 #include "dixstruct.h"
 #include "fourcc.h"
 

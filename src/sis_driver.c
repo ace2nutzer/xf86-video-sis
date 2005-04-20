@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg$ */
+/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/sis_driver.c,v 1.35 2005/03/11 14:39:48 twini Exp $ */
 /*
  * SiS driver main code
  *
@@ -56,7 +56,7 @@
 #include "mipointer.h"
 #include "mibstore.h"
 #define _XF86MISC_SERVER_
-#include "xf86misc.h"
+#include <X11/extensions/xf86misc.h>
 #include "edid.h"
 
 #define SIS_NEED_inSISREG
@@ -74,12 +74,12 @@
 #include "sis_driver.h"
 
 #define _XF86DGA_SERVER_
-#include "extensions/xf86dgastr.h"
+#include <X11/extensions/xf86dgastr.h>
 
 #include "globals.h"
 
 #define DPMS_SERVER
-#include "extensions/dpms.h"
+#include <X11/extensions/dpms.h>
 
 #ifdef XF86DRI
 #include "dri.h"

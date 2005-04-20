@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg$ */
+/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/sis.h,v 1.35 2005/03/11 14:39:48 twini Exp $ */
 /*
  * Main global data and definitions
  *
@@ -101,7 +101,7 @@
 
 #if (XF86_VERSION_CURRENT >= XF86_VERSION_NUMERIC(4,3,99,0,0)) || (defined(XvExtension))
 #include "xf86xv.h"
-#include "Xv.h"
+#include <X11/extensions/Xv.h>
 #endif
 
 /* Platform/architecture related definitions: */
@@ -199,7 +199,7 @@
 #define NEED_REPLIES		/* ? */
 #define EXTENSION_PROC_ARGS void *
 #include "extnsionst.h" 	/* required */
-#include "panoramiXproto.h" 	/* required */
+#include <X11/extensions/panoramiXproto.h> 	/* required */
 #endif
 
 #undef SISCHECKOSSSE
