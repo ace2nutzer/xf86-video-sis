@@ -894,12 +894,12 @@ PREFETCH_FUNC(SiS_now,MMX,NOW,FEMMS,FEMMS,small_memcpy_i386)
 NOPREFETCH_FUNC(SiS_mmx,MMX,EMMS,EMMS,small_memcpy_i386)
 
 static SISMCFuncData MCFunctions_i386[] = {
-    {SiS_libc_memcpy,   "libc",      SIS_CPUFL_LIBC,  3, FALSE},
-    {SiS_builtin_memcpy,"built-in-1",SIS_CPUFL_BI,    4, FALSE},
-    {SiS_builtin_memcp2,"built-in-2",SIS_CPUFL_BI2,   5, FALSE},
-    {SiS_mmx_memcpy,    "MMX",       SIS_CPUFL_MMX,   2, FALSE},
-    {SiS_sse_memcpy,    "SSE",       SIS_CPUFL_SSE,   0,  TRUE},
-    {SiS_now_memcpy,    "3DNow!",    SIS_CPUFL_3DNOW, 1, FALSE},
+    {SiS_libc_memcpy,   "libc",      SIS_CPUFL_LIBC,  4, FALSE},
+    {SiS_builtin_memcpy,"built-in-1",SIS_CPUFL_BI,    5, FALSE},
+    {SiS_builtin_memcp2,"built-in-2",SIS_CPUFL_BI2,   6, FALSE},
+    {SiS_mmx_memcpy,    "MMX",       SIS_CPUFL_MMX,   3, FALSE},
+    {SiS_sse_memcpy,    "SSE",       SIS_CPUFL_SSE,   1,  TRUE},
+    {SiS_now_memcpy,    "3DNow!",    SIS_CPUFL_3DNOW, 2, FALSE},
     {SiS_mmxext_memcpy, "MMX2",      SIS_CPUFL_MMX2,  0, FALSE},
     {NULL,              "",          0,              10, FALSE}
 };
