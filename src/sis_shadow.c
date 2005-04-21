@@ -3,6 +3,7 @@
 /*
  * Copyright (C) 1999-2004 by The XFree86 Project, Inc.
  * based on code written by Mark Vojkovich
+ * Copyright (C) 2003-2005 Thomas Winischhofer
  *
  * Licensed under the following terms:
  *

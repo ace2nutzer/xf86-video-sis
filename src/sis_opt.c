@@ -36,8 +36,6 @@
 #include "xf86str.h"
 #include "xf86Cursor.h"
 
-extern const customttable mycustomttable[];
-
 typedef enum {
     OPTION_SW_CURSOR,
     OPTION_HW_CURSOR,
@@ -141,12 +139,11 @@ typedef enum {
     OPTION_MERGEDFBMOUSER,
     OPTION_ENABLESISCTRL,
     OPTION_STOREDBRI,
-    OPTION_STOREDPBRI,
     OPTION_STOREDBRI2,
-    OPTION_STOREDPBRI2,
     OPTION_OVERRULERANGES,
     OPTION_FORCE1ASPECT,
     OPTION_FORCE2ASPECT,
+    OPTION_TVBLUE,
 #ifdef SIS_CP
     SIS_CP_OPT_OPTIONS
 #endif
@@ -221,6 +218,7 @@ static const OptionInfoRec SISOptions[] = {
     { OPTION_SIS6326FORCETVPPLUG,	"SIS6326TVForcePlug",		OPTV_STRING,	{0}, FALSE },
     { OPTION_SIS6326FSCADJUST,		"SIS6326FSCAdjust",		OPTV_INTEGER,	{0}, FALSE },
     { OPTION_YPBPRAR,			"YPbPrAspectRatio",		OPTV_STRING,	{0}, FALSE },
+    { OPTION_TVBLUE,			"TVBlueWorkAround",		OPTV_BOOLEAN,	{0}, FALSE },
     { OPTION_USERGBCURSORBLEND,		"ColorHWCursorBlending",	OPTV_BOOLEAN,	{0}, FALSE },
     { OPTION_USERGBCURSORBLENDTH,	"ColorHWCursorBlendThreshold",	OPTV_INTEGER,	{0},FALSE},
     { OPTION_DDCFORCRT2,		"CRT2Detection", 		OPTV_BOOLEAN,	{0}, FALSE },
@@ -229,11 +227,9 @@ static const OptionInfoRec SISOptions[] = {
     { OPTION_CRT1GAMMA,			"CRT1Gamma",			OPTV_BOOLEAN,	{0}, FALSE },
     { OPTION_CRT2GAMMA,			"CRT2Gamma",			OPTV_ANYSTR,	{0}, FALSE },
     { OPTION_STOREDBRI,			"GammaBrightness",		OPTV_STRING,	{0}, FALSE },
-    { OPTION_STOREDPBRI,		"GammaPreBrightness",		OPTV_STRING,	{0}, FALSE },
     { OPTION_STOREDBRI,			"StoredGammaBrightness",	OPTV_STRING,	{0}, FALSE },
-    { OPTION_STOREDPBRI,		"StoredGammaPreBrightness",	OPTV_STRING,	{0}, FALSE },
     { OPTION_STOREDBRI2,		"GammaBrightnessCRT2",		OPTV_STRING,	{0}, FALSE },
-    { OPTION_STOREDPBRI2,		"GammaPreBrightnessCRT2",	OPTV_STRING,	{0}, FALSE },
+    { OPTION_STOREDBRI2,		"CRT2GammaBrightness",		OPTV_STRING,	{0}, FALSE },
     { OPTION_XVGAMMA,			"XvGamma", 	  		OPTV_ANYSTR,	{0}, FALSE },
     { OPTION_XVDEFCONTRAST,		"XvDefaultContrast", 		OPTV_INTEGER,	{0}, FALSE },
     { OPTION_XVDEFBRIGHTNESS,		"XvDefaultBrightness",		OPTV_INTEGER,	{0}, FALSE },
@@ -805,6 +801,7 @@ SiSOptions(ScrnInfoPtr pScrn)
 #endif
 		} else if(!xf86NameCmp(tempstr,"RightOf")) {
 		   pSiS->CRT2Position = sisRightOf;
+		   valid = TRUE;
 		   if(result == 2) {
 		      if(ival < 0) pSiS->CRT1YOffs = -ival;
 		      else pSiS->CRT2YOffs = ival;
@@ -915,7 +912,7 @@ SiSOptions(ScrnInfoPtr pScrn)
 		OPTION_SISTVEDGEENHANCE, OPTION_SISTVANTIFLICKER, OPTION_SISTVSATURATION,
 		OPTION_SISTVCHROMAFILTER, OPTION_SISTVLUMAFILTER, OPTION_SISTVCOLCALIBCOARSE,
 		OPTION_SISTVCOLCALIBFINE, OPTION_TVXPOSOFFSET, OPTION_TVYPOSOFFSET,
-		OPTION_TVXSCALE, OPTION_TVYSCALE, OPTION_CRT2GAMMA, OPTION_XVONCRT2,
+		OPTION_TVXSCALE, OPTION_TVYSCALE, OPTION_TVBLUE, OPTION_CRT2GAMMA, OPTION_XVONCRT2,
 		OPTION_XVDEFAULTADAPTOR, OPTION_XVMEMCPY, OPTION_XVBENCHCPY, OPTION_FORCE2ASPECT,
 #ifndef SISCHECKOSSSE
 		OPTION_XVSSECOPY,
@@ -1240,13 +1237,13 @@ SiSOptions(ScrnInfoPtr pScrn)
 		xf86DrvMsg(pScrn->scrnIndex, X_CONFIG,
 			"Special timing disabled\n");
 	     } else {
-	        while(mycustomttable[i].chipID != 0) {
-		   if(!xf86NameCmp(strptr,mycustomttable[i].optionName)) {
-		      pSiS->SiS_Pr->SiS_CustomT = mycustomttable[i].SpecialID;
+	        while(SiS_customttable[i].chipID != 0) {
+		   if(!xf86NameCmp(strptr,SiS_customttable[i].optionName)) {
+		      pSiS->SiS_Pr->SiS_CustomT = SiS_customttable[i].SpecialID;
 		      found = TRUE;
 		      xf86DrvMsg(pScrn->scrnIndex, X_CONFIG,
 			  "Special timing for %s %s forced\n",
-			  mycustomttable[i].vendorName, mycustomttable[i].cardName);
+			  SiS_customttable[i].vendorName, SiS_customttable[i].cardName);
 		      break;
 		   }
 		   i++;
@@ -1256,12 +1253,12 @@ SiSOptions(ScrnInfoPtr pScrn)
 		   xf86DrvMsg(pScrn->scrnIndex, X_INFO, "%s:\n", validparm);
 		   xf86DrvMsg(pScrn->scrnIndex, X_INFO, "\t\"NONE\" (to disable special timings)\n");
 		   i = 0;
-		   while(mycustomttable[i].chipID != 0) {
+		   while(SiS_customttable[i].chipID != 0) {
 		      xf86DrvMsg(pScrn->scrnIndex, X_CONFIG,
 				"\t\"%s\" (for %s %s)\n",
-				mycustomttable[i].optionName,
-				mycustomttable[i].vendorName,
-				mycustomttable[i].cardName);
+				SiS_customttable[i].optionName,
+				SiS_customttable[i].vendorName,
+				SiS_customttable[i].cardName);
 		      i++;
 		   }
 		}
@@ -1409,6 +1406,17 @@ SiSOptions(ScrnInfoPtr pScrn)
 		pSiS->EMI &= 0x60ffffff;
 		xf86DrvMsg(pScrn->scrnIndex, X_CONFIG,
 		     "EMI will be 0x%04x\n", pSiS->EMI);
+	     }
+	  }
+
+	 /* TVBlueWorkAround (315 series only)
+	  * TRUE and FALSE are two ways to work around a "blue shade" on
+	  * TV output. This work-around is disabled by not setting the
+	  * option. 315 series + 301B-DH only.
+	  */
+	  if(pSiS->VGAEngine == SIS_315_VGA) {
+	     if(xf86GetOptValBool(pSiS->Options, OPTION_TVBLUE, &val)) {
+	     	pSiS->SiS_Pr->SiS_TVBlue = val ? 1 : 0;
 	     }
 	  }
 
@@ -2065,16 +2073,11 @@ SiSOptions(ScrnInfoPtr pScrn)
     }
 
     if((pSiS->VGAEngine == SIS_300_VGA) || (pSiS->VGAEngine == SIS_315_VGA)) {
-       Bool GotBri = FALSE, GotPBri = FALSE;
+       Bool GotBri = FALSE;
        if((strptr = (char *)xf86GetOptValString(pSiS->Options, OPTION_STOREDBRI))) {
 	  SiS_EvalOneOrThreeFloats(pScrn, OPTION_STOREDBRI, briopt, strptr,
 		&pSiS->GammaBriR, &pSiS->GammaBriG, &pSiS->GammaBriB);
 	  GotBri = TRUE;
-       }
-       if((strptr = (char *)xf86GetOptValString(pSiS->Options, OPTION_STOREDPBRI))) {
-	  SiS_EvalOneOrThreeFloats(pScrn, OPTION_STOREDPBRI, briopt, strptr,
-		&pSiS->GammaPBriR, &pSiS->GammaPBriG, &pSiS->GammaPBriB);
-	  GotPBri = TRUE;
        }
        if((!IsDHM) || (IsDHM && !IsSecondHead)) {
 	  if((strptr = (char *)xf86GetOptValString(pSiS->Options, OPTION_STOREDBRI2))) {
@@ -2086,19 +2089,6 @@ SiSOptions(ScrnInfoPtr pScrn)
 		   pSiS->GammaBriR = pSiS->GammaBriR2;
 		   pSiS->GammaBriG = pSiS->GammaBriG2;
 		   pSiS->GammaBriB = pSiS->GammaBriB2;
-#endif
-		} else pSiS->CRT2SepGamma = TRUE;
-	     }
-	  }
-	  if((strptr = (char *)xf86GetOptValString(pSiS->Options, OPTION_STOREDPBRI2))) {
-	     if(SiS_EvalOneOrThreeFloats(pScrn, OPTION_STOREDPBRI2, briopt, strptr,
-		    &pSiS->GammaPBriR2, &pSiS->GammaPBriG2, &pSiS->GammaPBriB2)) {
-		if(IsDHM) {
-#ifdef SISDUALHEAD
-		   if(GotPBri) SiS_PrintOverruleDHM(pScrn, OPTION_STOREDPBRI2, OPTION_STOREDPBRI);
-		   pSiS->GammaPBriR = pSiS->GammaPBriR2;
-		   pSiS->GammaPBriG = pSiS->GammaPBriG2;
-		   pSiS->GammaPBriB = pSiS->GammaPBriB2;
 #endif
 		} else pSiS->CRT2SepGamma = TRUE;
 	     }

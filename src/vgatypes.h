@@ -118,7 +118,7 @@ typedef IOADDRESS SISIOADDRESS;
 #endif
 #endif
 
-enum _SIS_CHIP_TYPE {
+typedef enum _SIS_CHIP_TYPE {
     SIS_VGALegacy = 0,
     SIS_530,
     SIS_OLD,
@@ -128,7 +128,7 @@ enum _SIS_CHIP_TYPE {
     SIS_540,
     SIS_315H,   /* SiS 310 */
     SIS_315,
-    SIS_315PRO,
+    SIS_315PRO, /* SiS 325 */
     SIS_550,
     SIS_650,
     SIS_740,
@@ -136,16 +136,16 @@ enum _SIS_CHIP_TYPE {
     SIS_661,
     SIS_741,
     SIS_670,
-    SIS_660,
+    SIS_660 = 35,
     SIS_760,
     SIS_761,
     SIS_762,
     SIS_770,
-    SIS_340,
+    SIS_340 = 55,
     SIS_341,
     SIS_342,
     MAX_SIS_CHIP
-};
+} SIS_CHIP_TYPE;
 
 #ifndef SIS_HW_INFO
 typedef struct _SIS_HW_INFO  SIS_HW_INFO, *PSIS_HW_INFO;

@@ -561,21 +561,12 @@ SiS_GetModeID_LCD(int VGAEngine, ULONG VBFlags, int HDisplay, int VDisplay,
 {
    USHORT ModeIndex = 0;
 
-#if 0
-   if(CustomT == CUT_AOP8060) {
-      if(HDisplay == 320 && VDisplay == 240)
-         return ModeIndex_320x240[Depth];
-      else
-         return 0;
-   }
-#endif
-
    if(VBFlags & (VB_LVDS | VB_30xBDH)) {
 
       switch(HDisplay)
       {
 	case 320:
-	     if(CustomT != CUT_PANEL848) {
+	     if((CustomT != CUT_PANEL848) && (CustomT != CUT_PANEL856)) {
 		if(VDisplay == 200) {
 		   if(!FSTN) ModeIndex = ModeIndex_320x200[Depth];
 		} else if(VDisplay == 240) {
@@ -587,14 +578,14 @@ SiS_GetModeID_LCD(int VGAEngine, ULONG VBFlags, int HDisplay, int VDisplay,
 	     }
 	     break;
 	case 400:
-	     if(CustomT != CUT_PANEL848) {
+	     if((CustomT != CUT_PANEL848) && (CustomT != CUT_PANEL856)) {
 		if(!((VGAEngine == SIS_300_VGA) && (VBFlags & VB_TRUMPION))) {
 		   if(VDisplay == 300) ModeIndex = ModeIndex_400x300[Depth];
 		}
 	     }
 	     break;
 	case 512:
-	     if(CustomT != CUT_PANEL848) {
+	     if((CustomT != CUT_PANEL848) && (CustomT != CUT_PANEL856)) {
 		if(!((VGAEngine == SIS_300_VGA) && (VBFlags & VB_TRUMPION))) {
 		   if(LCDwidth >= 1024 && LCDwidth != 1152 && LCDheight >= 768) {
 		      if(VDisplay == 384) {
@@ -605,9 +596,10 @@ SiS_GetModeID_LCD(int VGAEngine, ULONG VBFlags, int HDisplay, int VDisplay,
 	     }
 	     break;
 	case 640:
-	     if(VDisplay == 480)            ModeIndex = ModeIndex_640x480[Depth];
+	     if(VDisplay == 480) ModeIndex = ModeIndex_640x480[Depth];
 	     else if(VDisplay == 400) {
-		if(CustomT != CUT_PANEL848) ModeIndex = ModeIndex_640x400[Depth];
+		if((CustomT != CUT_PANEL848) && (CustomT != CUT_PANEL856))
+		   ModeIndex = ModeIndex_640x400[Depth];
 	     }
 	     break;
 	case 800:
@@ -616,6 +608,11 @@ SiS_GetModeID_LCD(int VGAEngine, ULONG VBFlags, int HDisplay, int VDisplay,
 	case 848:
 	     if(CustomT == CUT_PANEL848) {
 	        if(VDisplay == 480) ModeIndex = ModeIndex_848x480[Depth];
+	     }
+	     break;
+	case 856:
+	     if(CustomT == CUT_PANEL856) {
+	        if(VDisplay == 480) ModeIndex = ModeIndex_856x480[Depth];
 	     }
 	     break;
 	case 1024:
@@ -1815,18 +1812,16 @@ SiS_SetLowModeTest(SiS_Private *SiS_Pr, USHORT ModeNo, PSIS_HW_INFO HwInfo)
 }
 
 /*********************************************/
-/*            HELPER: ENABLE CRT1            */
+/*        HELPER: OPEN/CLOSE CRT1 CRTC       */
 /*********************************************/
 
 static void
 SiS_OpenCRTC(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo)
 {
     if(IS_SIS650) {
-       if(SiS_Pr->SiS_VBType & VB_SIS301BLV302BLV) {
-	  SiS_SetRegAND(SiS_Pr->SiS_P3d4,0x51,0x1f);
-	  if(IS_SIS651) SiS_SetRegOR(SiS_Pr->SiS_P3d4,0x51,0x20);
-	  SiS_SetRegAND(SiS_Pr->SiS_P3d4,0x56,0xe7);
-       }
+       SiS_SetRegAND(SiS_Pr->SiS_P3d4,0x51,0x1f);
+       if(IS_SIS651) SiS_SetRegOR(SiS_Pr->SiS_P3d4,0x51,0x20);
+       SiS_SetRegAND(SiS_Pr->SiS_P3d4,0x56,0xe7);
     } else if(IS_SIS661741660760) {
        SiS_SetRegAND(SiS_Pr->SiS_P3d4,0x61,0xf7);
        SiS_SetRegAND(SiS_Pr->SiS_P3d4,0x51,0x1f);
@@ -1840,6 +1835,7 @@ SiS_OpenCRTC(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo)
 static void
 SiS_CloseCRTC(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo)
 {
+#if 0 /* This locks some CRTC registers. We don't want that. */
     USHORT temp1 = 0, temp2 = 0;
 
     if(IS_SIS661741660760) {
@@ -1849,6 +1845,7 @@ SiS_CloseCRTC(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo)
        SiS_SetRegANDOR(SiS_Pr->SiS_P3d4,0x51,0x1f,temp1);
        SiS_SetRegANDOR(SiS_Pr->SiS_P3d4,0x56,0xe7,temp2);
     }
+#endif
 }
 
 static void
@@ -3451,8 +3448,6 @@ SiSSetMode(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo, USHORT ModeNo)
 
    SiS_HandleCRT1(SiS_Pr);
 
-   SiS_CloseCRTC(SiS_Pr, HwInfo);
-
    SiS_StrangeStuff(SiS_Pr, HwInfo);
 
    SiS_DisplayOn(SiS_Pr);
@@ -3505,6 +3500,8 @@ SiSSetMode(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo, USHORT ModeNo)
       SiS_GetSetModeID(pScrn, ModeNo);
    }
 #endif
+
+   SiS_CloseCRTC(SiS_Pr, HwInfo);
 
 #ifdef LINUX_KERNEL  /* We never lock registers in XF86 */
    if(KeepLockReg == 0xA1) SiS_SetReg(SiS_Pr->SiS_P3c4,0x05,0x86);
@@ -3823,10 +3820,14 @@ SiSBIOSSetModeCRT1(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo, ScrnInfoPtr pScrn,
       SiS_SetCRT2Group(SiS_Pr, HwInfo, ModeNo);
    }
 
-   SiS_CloseCRTC(SiS_Pr, HwInfo);
-
    /* SetPitch: Adapt to virtual size & position */
    SiS_SetPitchCRT1(SiS_Pr, pScrn);
+
+   SiS_HandleCRT1(SiS_Pr);
+
+   SiS_StrangeStuff(SiS_Pr, HwInfo);
+
+   SiS_CloseCRTC(SiS_Pr, HwInfo);
 
 #ifdef SISDUALHEAD
    if(pSiS->DualHeadMode) {
@@ -3884,10 +3885,6 @@ SiSBIOSSetModeCRT1(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo, ScrnInfoPtr pScrn,
    /* Warning: From here, the custom mode entries in SiS_Pr are
     * possibly overwritten
     */
-
-   SiS_HandleCRT1(SiS_Pr);
-
-   SiS_StrangeStuff(SiS_Pr, HwInfo);
 
    SiS_DisplayOn(SiS_Pr);
    SiS_SetRegByte(SiS_Pr->SiS_P3c6,0xFF);

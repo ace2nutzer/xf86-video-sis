@@ -50,7 +50,7 @@ void SISSense30x(ScrnInfoPtr pScrn, Bool quiet);
 void SISSenseChrontel(ScrnInfoPtr pScrn, Bool quiet);
 void SiSSetupPseudoPanel(ScrnInfoPtr pScrn);
 
-extern void   SISDetermineLCDACap(ScrnInfoPtr pScrn);
+extern Bool   SISDetermineLCDACap(ScrnInfoPtr pScrn);
 extern void   SISSaveDetectedDevices(ScrnInfoPtr pScrn);
 extern void   SISWaitRetraceCRT1(ScrnInfoPtr pScrn);
 extern UChar  SiS_GetSetBIOSScratch(ScrnInfoPtr pScrn, UShort offset, UChar value);
@@ -413,6 +413,13 @@ void SISLCDPreInit(ScrnInfoPtr pScrn, Bool quiet)
 	  pSiS->VBLCDFlags |= VB_LCD_EXPANDING;
 	  xf86DrvMsg(pScrn->scrnIndex, X_CONFIG,
 		"Assuming LCD/plasma panel (848x480, expanding, RGB24)\n");
+       } else if(pSiS->SiS_Pr->SiS_CustomT == CUT_PANEL856) {
+	  pSiS->VBLCDFlags |= VB_LCD_856x480;
+	  pSiS->LCDwidth = pSiS->SiS_Pr->CP_MaxX = 856;
+	  pSiS->LCDheight = pSiS->SiS_Pr->CP_MaxY = 480;
+	  pSiS->VBLCDFlags |= VB_LCD_EXPANDING;
+	  xf86DrvMsg(pScrn->scrnIndex, X_CONFIG,
+		"Assuming LCD/plasma panel (856x480, expanding, RGB24)\n");
        } else if(pSiS->FSTN) {
 	  pSiS->VBLCDFlags |= VB_LCD_320x240;
 	  pSiS->LCDwidth = pSiS->SiS_Pr->CP_MaxX = 320;
@@ -1171,7 +1178,10 @@ Bool SISRedetectCRT2Type(ScrnInfoPtr pScrn)
     pSiS->forcecrt2redetection = backup1;
     pSiS->nocrt2ddcdetection = backup2;
 
-    SISDetermineLCDACap(pScrn);
+    pSiS->SiS_SD_Flags &= ~SiS_SD_SUPPORTLCDA;
+    if(SISDetermineLCDACap(pScrn)) {
+       pSiS->SiS_SD_Flags |= SiS_SD_SUPPORTLCDA;
+    }
     SISSaveDetectedDevices(pScrn);
 
     pSiS->VBFlags = VBFlagsBackup;

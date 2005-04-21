@@ -131,7 +131,7 @@ static const chswtable mychswtable[] = {
 
 /*     These machines require special timing/handling
  */
-const customttable mycustomttable[] = {
+const customttable SiS_customttable[] = {
         { SIS_630, "2.00.07", "09/27/2002-13:38:25",
 	  0x3240A8,
 	  { 0x220, 0x227, 0x228, 0x229, 0x0ee },
@@ -259,6 +259,13 @@ const customttable mycustomttable[] = {
 	  { 0, 0, 0, 0, 0 },
 	  0, 0,
 	  "Generic", "LVDS/Parallel 848x480", CUT_PANEL848, "PANEL848x480"
+	},
+	{ 4322, "", "",			/* never autodetected */
+	  0,
+	  { 0, 0, 0, 0, 0 },
+	  { 0, 0, 0, 0, 0 },
+	  0, 0,
+	  "Generic", "LVDS/Parallel 856x480", CUT_PANEL856, "PANEL856x480"
 	},
 	{ 0, "", "",
 	  0,
@@ -1043,10 +1050,10 @@ static const MySiSTVVScale SiSTVVScale[] = {
       },
 };
 
-unsigned const char SiSScalingP1Regs[] = {
+static unsigned const char SiSScalingP1Regs[] = {
 	0x08,0x09,0x0b,0x0c,0x0d,0x0e,0x10,0x11,0x12
 };
-unsigned const char SiSScalingP4Regs[] = {
+static unsigned const char SiSScalingP4Regs[] = {
 	0x13,0x14,0x15,0x16,0x17,0x18,0x19,0x1a,0x1b
 };
 
@@ -1285,23 +1292,19 @@ static void SISLeaveVT(int scrnIndex, int flags);
 static Bool SISCloseScreen(int scrnIndex, ScreenPtr pScreen);
 static Bool SISSaveScreen(ScreenPtr pScreen, int mode);
 static Bool SISSwitchMode(int scrnIndex, DisplayModePtr mode, int flags);
-static void SISAdjustFrame(int scrnIndex, int x, int y, int flags);
-#ifdef SISDUALHEAD
-static Bool SISSaveScreenDH(ScreenPtr pScreen, int mode);
-#endif
-#ifdef X_XF86MiscPassMessage
-static int  SISHandleMessage(int scrnIndex, const char *msgtype,
-		      const char *msgval, char **retmsg);
-static int  SISCheckModeTimingForCRT2Type(ScrnInfoPtr pScrn, UShort cond, UShort hdisplay,
-		      UShort vdisplay, UShort htotal, UShort vtotal,
-		      UShort hsyncstart, UShort hsyncend, UShort vsyncstart,
-		      UShort vsyncend, int clock, Bool quiet);
-#endif
+void	    SISAdjustFrame(int scrnIndex, int x, int y, int flags);
 
 /* Optional functions */
+#ifdef SISDUALHEAD
+static Bool 	  SISSaveScreenDH(ScreenPtr pScreen, int mode);
+#endif
+#ifdef X_XF86MiscPassMessage
+extern int	  SISHandleMessage(int scrnIndex, const char *msgtype,
+				const char *msgval, char **retmsg);
+#endif
 static void       SISFreeScreen(int scrnIndex, int flags);
 static ModeStatus SISValidMode(int scrnIndex, DisplayModePtr mode,
-                               Bool verbose, int flags);
+				Bool verbose, int flags);
 
 /* Internally used functions */
 static Bool    SISMapMem(ScrnInfoPtr pScrn);
@@ -1329,9 +1332,9 @@ UChar  	       SISSearchCRT1Rate(ScrnInfoPtr pScrn, DisplayModePtr mode);
 static void    SISWaitVBRetrace(ScrnInfoPtr pScrn);
 void           SISWaitRetraceCRT1(ScrnInfoPtr pScrn);
 void           SISWaitRetraceCRT2(ScrnInfoPtr pScrn);
-static UShort  SiS_CheckModeCRT1(ScrnInfoPtr pScrn, DisplayModePtr mode,
+UShort         SiS_CheckModeCRT1(ScrnInfoPtr pScrn, DisplayModePtr mode,
 				 ULong VBFlags, Bool hcm);
-static UShort  SiS_CheckModeCRT2(ScrnInfoPtr pScrn, DisplayModePtr mode,
+UShort         SiS_CheckModeCRT2(ScrnInfoPtr pScrn, DisplayModePtr mode,
 				 ULong VBFlags, Bool hcm);
 
 #ifdef SISMERGED
@@ -1344,7 +1347,7 @@ UChar  	       SiS_GetSetBIOSScratch(ScrnInfoPtr pScrn, UShort offset, UChar val
 #ifdef DEBUG
 static void    SiSDumpModeInfo(ScrnInfoPtr pScrn, DisplayModePtr mode);
 #endif
-void           SISDetermineLCDACap(ScrnInfoPtr pScrn);
+Bool           SISDetermineLCDACap(ScrnInfoPtr pScrn);
 void           SISSaveDetectedDevices(ScrnInfoPtr pScrn);
 
 /* Our very own vgaHW functions (sis_vga.c) */
@@ -1376,8 +1379,11 @@ extern void 	SISTVPreInit(ScrnInfoPtr pScrn, Bool quiet);
 extern void 	SISCRT2PreInit(ScrnInfoPtr pScrn, Bool quiet);
 extern void 	SISSense30x(ScrnInfoPtr pScrn, Bool quiet);
 extern void 	SISSenseChrontel(ScrnInfoPtr pScrn, Bool quiet);
-extern Bool 	SISRedetectCRT2Type(ScrnInfoPtr pScrn);
 extern void     SiSSetupPseudoPanel(ScrnInfoPtr pScrn);
+
+/* utility */
+extern void	SiSCtrlExtInit(ScrnInfoPtr pScrn);
+extern void	SiSCtrlExtUnregister(SISPtr pSiS, int index);
 
 /* init.c, init301.c ----- (use their data types!) */
 extern USHORT   SiS_GetModeID(int VGAEngine, ULONG VBFlags, int HDisplay, int VDisplay,

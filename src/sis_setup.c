@@ -273,9 +273,12 @@ sis300Setup(ScrnInfoPtr pScrn)
     inSISIDXREG(SISSR, 0x3A, sr3a);
     ramtype = (sr3a & 0x03) + 4;
 
+    pSiS->IsPCIExpress = FALSE;
+
     switch(pSiS->Chipset) {
     case PCI_CHIP_SIS300:
 	pScrn->videoRam = ((config & 0x3F) + 1) * 1024;
+	pSiS->LFBsize = pScrn->videoRam;
 	pSiS->BusWidth = cpubuswidth;
 	pSiS->IsAGPCard = ((sr3a & 0x30) == 0x30) ? FALSE : TRUE;
 	break;
@@ -297,11 +300,13 @@ sis300Setup(ScrnInfoPtr pScrn)
 		"Shared Memory Area is on DIMM%d\n", ramtype);
 	   ramtype = pciReadByte(0x00000000,(0x60 + ramtype));
 	   if(ramtype & 0x80) ramtype = 9;
-	   else ramtype = 4;
+	   else               ramtype = 4;
+	   pSiS->UMAsize = pScrn->videoRam;
 	} else {
 	   xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
 		"Shared Memory Area is disabled - awaiting doom\n");
 	   pScrn->videoRam = ((config & 0x3F) + 1) * 1024;
+	   pSiS->UMAsize = pScrn->videoRam;
 	   pSiS->BusWidth = 64;
 	   ramtype = 4;
 	   from = X_INFO;
@@ -387,21 +392,21 @@ sis315Setup(ScrnInfoPtr pScrn)
 	""
     };
     char    *dramTypeStr340[] = {
-	"Single channel 1 Rank DDR SDRAM",
-	"Single channel 1 Rank DDR2 SDRAM",
-	"Single channel 1 Rank DDR2x SDRAM",
+	"Single channel DDR SDRAM",
+	"Single channel DDR2 SDRAM",
+	"Single channel DDR2x SDRAM",
 	"",
-	"Single channel 2 Rank DDR SDRAM",
-	"Single channel 2 Rank DDR2 SDRAM",
-	"Single channel 2 Rank DDR2x SDRAM",
+	"Dual channel DDR SDRAM",
+	"Dual channel DDR2 SDRAM",
+	"Dual channel DDR2x SDRAM",
 	"",
-	"Dual channel 1 rank DDR SDRAM",
-	"Dual channel 1 rank DDR2 SDRAM",
-	"Dual channel 1 rank DDR2x SDRAM",
+	"Dual channel DDR SDRAM",
+	"Dual channel DDR2 SDRAM",
+	"Dual channel DDR2x SDRAM",
 	"",
-	"Quad channel 1 rank DDR SDRAM",
-	"Quad channel 1 rank DDR2 SDRAM",
-	"Quad channel 1 rank DDR2x SDRAM",
+	"Quad channel DDR SDRAM",
+	"Quad channel DDR2 SDRAM",
+	"Quad channel DDR2x SDRAM",
 	""
     };
 
@@ -415,12 +420,18 @@ sis315Setup(ScrnInfoPtr pScrn)
 
     pScrn->videoRam = (1 << ((config & 0xf0) >> 4)) * 1024;
 
+    pSiS->IsPCIExpress = FALSE;
+
     switch(pSiS->Chipset) {
 
     case PCI_CHIP_SIS340:
 
        pSiS->IsAGPCard = TRUE;
 
+       if(pSiS->ChipRev == 2) {
+	  if(config1 & 0x01) config1 = 0x02;
+	  else               config1 = 0x00;
+       }
        if(config1 == 0x02)      pScrn->videoRam <<= 1; /* dual rank */
        else if(config1 == 0x03) pScrn->videoRam <<= 2; /* quad rank */
 
@@ -438,6 +449,9 @@ sis315Setup(ScrnInfoPtr pScrn)
 
        pSiS->MemClock *= 2; /* at least DDR */
 
+       pSiS->BusWidth = (config & 0x02) ? 64 : 32;
+
+#if 0
        inSISIDXREG(SISCR,0x97,config);
        if(!(config & 0x10)) {
 	  inSISIDXREG(SISSR,0x39,config);
@@ -445,11 +459,12 @@ sis315Setup(ScrnInfoPtr pScrn)
        } else config &= 0x01;
 
        if(config) {
-	  pSiS->MemClock *= 2; /* DDR2 ? */
-	  pSiS->BusWidth = 32; /* DDR2 ? */
+	  pSiS->MemClock *= 2; /* DDR2, do this ? */
+	  pSiS->BusWidth = 32; /* DDR2, do this ? */
        } else {
 	  pSiS->BusWidth = 64;
        }
+#endif
 
        break;
 
@@ -515,6 +530,8 @@ sis315Setup(ScrnInfoPtr pScrn)
 
     }
 
+    pSiS->LFBsize = pScrn->videoRam;
+
     xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
 		"Memory clock: %3.3f MHz\n",
 		pSiS->MemClock/1000.0);
@@ -535,6 +552,7 @@ sis550Setup(ScrnInfoPtr pScrn)
     Bool	 ddrtimes2 = TRUE;
 
     pSiS->IsAGPCard = TRUE;
+    pSiS->IsPCIExpress = FALSE;
     pSiS->ChipFlags &= ~(SiSCF_760UMA | SiSCF_760LFB);
 
     pSiS->MemClock = SiSMclk(pSiS);
@@ -550,6 +568,7 @@ sis550Setup(ScrnInfoPtr pScrn)
 	     pScrn->videoRam = (1 << (((pciconfig & 0xe0) >> 5) - 2)) * 32768;
 	     pSiS->ChipFlags |= SiSCF_760UMA;
 	     pSiS->SiS76xUMASize = pScrn->videoRam * 1024;
+	     pSiS->UMAsize = pScrn->videoRam;
 	     xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
 		"%dK shared video RAM (UMA)\n",
 		pScrn->videoRam);
@@ -577,6 +596,7 @@ sis550Setup(ScrnInfoPtr pScrn)
 		pScrn->videoRam += i;
 		pSiS->ChipFlags |= SiSCF_760LFB;
 		pSiS->SiS76xLFBSize = i * 1024;
+		pSiS->LFBsize = i;
 	     }
 	  }
 
@@ -604,6 +624,7 @@ sis550Setup(ScrnInfoPtr pScrn)
 	  pciconfig = pciReadByte(0x00000000, 0x64);
 	  if(pciconfig & 0x80) {
 	     pScrn->videoRam = (1 << (((pciconfig & 0x70) >> 4) - 1)) * 32768;
+	     pSiS->UMAsize = pScrn->videoRam;
 	     if((pScrn->videoRam < 32768) || (pScrn->videoRam > (128 * 1024))) {
 		xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
 			"Illegal video RAM size (%dK) detected, using BIOS-provided info\n",
@@ -634,6 +655,7 @@ sis550Setup(ScrnInfoPtr pScrn)
        pciconfig = pciReadByte(0x00000000, 0x64);
        if(pciconfig & 0x80) {
           pScrn->videoRam = (1 << (((pciconfig & 0x70) >> 4) + 22)) / 1024;
+	  pSiS->UMAsize = pScrn->videoRam;
 	  pSiS->BusWidth = 64;
 	  for(i=0; i<=3; i++) {
 	     if(pciconfig & (1 << i)) {
@@ -648,7 +670,7 @@ sis550Setup(ScrnInfoPtr pScrn)
 	  }
 	  pciconfig = pciReadByte(0x00000000, 0x7c);
 	  if(pciconfig & 0x02) ramtype = 8;
-	  else ramtype = 4;
+	  else                 ramtype = 4;
 	  alldone = TRUE;
        }
 
@@ -657,6 +679,7 @@ sis550Setup(ScrnInfoPtr pScrn)
        pciconfig = pciReadByte(0x00000000, 0x63);
        if(pciconfig & 0x80) {
 	  pScrn->videoRam = (1 << (((pciconfig & 0x70) >> 4) + 21)) / 1024;
+	  pSiS->UMAsize = pScrn->videoRam;
 	  pSiS->BusWidth = 64;
 	  ramtype = pciReadByte(0x00000000,0x65);
 	  ramtype &= 0x01;
@@ -673,6 +696,7 @@ sis550Setup(ScrnInfoPtr pScrn)
     if(!alldone) {
 
        pSiS->SiS76xLFBSize = pSiS->SiS76xUMASize = 0;
+       pSiS->UMAsize = pSiS->LFBsize = 0;
 
        if(pSiS->Chipset == PCI_CHIP_SIS660) {
 	  inSISIDXREG(SISCR, 0x79, config);
@@ -682,6 +706,7 @@ sis550Setup(ScrnInfoPtr pScrn)
 	     pScrn->videoRam = 0;
 	     if(config & 0xf0) {
 		pScrn->videoRam = (1 << ((config & 0xf0) >> 4)) * 1024;
+		pSiS->UMAsize = pScrn->videoRam;
 		pSiS->ChipFlags |= SiSCF_760UMA;
 		pSiS->SiS76xUMASize = pScrn->videoRam * 1024;
 		xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
@@ -691,26 +716,29 @@ sis550Setup(ScrnInfoPtr pScrn)
 	     inSISIDXREG(SISCR, 0x78, config);
 	     config &= 0x30;
 	     if(config) {
-		if(config == 0x10) {
-		   pScrn->videoRam += 32768;
-		   pSiS->SiS76xLFBSize = 32768 * 1024;
-		} else {
-		   pScrn->videoRam += 65536;
-		   pSiS->SiS76xLFBSize = 65536 * 1024;
+	        i = 0;
+		if(config == 0x10)      i = 32768;
+		else if(config == 0x30) i = 65536;
+		if(i) {
+		   xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
+				"%dK configured local video RAM (LFB)\n", i);
+		   pScrn->videoRam += i;
+		   pSiS->SiS76xLFBSize = i * 1024;
+		   pSiS->LFBsize = i;
+		   pSiS->ChipFlags |= SiSCF_760LFB;
+
 		}
-		pSiS->ChipFlags |= SiSCF_760LFB;
-		xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
-				"%dK configured local video RAM (LFB)\n",
-				pSiS->SiS76xLFBSize / 1024);
 	     }
 	  } else {
 	     pScrn->videoRam = (1 << ((config & 0xf0) >> 4)) * 1024;
+	     pSiS->UMAsize = pScrn->videoRam;
 	  }
        } else {
 	  xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
 	      "Shared Memory Area is disabled - awaiting doom\n");
 	  inSISIDXREG(SISSR, 0x14, config);
 	  pScrn->videoRam = (((config & 0x3F) + 1) * 4) * 1024;
+	  pSiS->UMAsize = pScrn->videoRam;
 	  if(pSiS->Chipset == PCI_CHIP_SIS650) {
 	     ramtype = (((config & 0x80) >> 7) << 2) + 4;
 	     pSiS->BusWidth = 64;   /* (config & 0x40) ? 128 : 64; */
@@ -758,6 +786,7 @@ SiSSetup(ScrnInfoPtr pScrn)
     pSiS->Flags = 0;
     pSiS->VBFlags = 0;
     pSiS->SiS76xLFBSize = pSiS->SiS76xUMASize = 0;
+    pSiS->UMAsize = pSiS->LFBsize = 0;
 
     switch (SISPTR(pScrn)->Chipset) {
     case PCI_CHIP_SIS300:

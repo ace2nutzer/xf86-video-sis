@@ -1363,7 +1363,7 @@ SiSMclk(SISPtr pSiS)
  * For VGA2, we share the bandwith equally.
  */
 static int
-SiSEstimateCRT2Clock(ScrnInfoPtr pScrn, Bool IsForMergedFBCRT2)
+SiSEstimateCRT2Clock(ScrnInfoPtr pScrn, Bool FakeForCRT2)
 {
 	SISPtr pSiS = SISPTR(pScrn);
 
@@ -1373,48 +1373,51 @@ SiSEstimateCRT2Clock(ScrnInfoPtr pScrn, Bool IsForMergedFBCRT2)
 	   } else if(pSiS->VBLCDFlags & (VB_LCD_1024x768 | VB_LCD_1024x600 | VB_LCD_1152x768)) {
 	      return 65000;
 	   } else if(pSiS->VBLCDFlags & VB_LCD_1280x720) {
-	      return 75000;
+	      /* Fake clock; VGA mode is 108, but uses only 75 for LCD */
+	      if(FakeForCRT2) return 108000;
+	      else            return 75000;
 	   } else if(pSiS->VBLCDFlags & VB_LCD_1280x768) {
-	      return 81000;
+	      /* Fake clock; VGA mode is 108, but uses only 81 for LCD */
+	      if(FakeForCRT2) return 108000;
+	      else            return 81000;
 	   } else if(pSiS->VBLCDFlags & VB_LCD_1280x800) {
-	      return 83000; /* Use this any way; BIOS timing seems wrong */
-#if 0
-	      /* Must fake clock; built-in mode shows 83 for VGA, but uses only 70 for LCD */
-	      if(IsForMergedFBCRT2) return 83000;
-	      else                  return 70000;
-#endif
-	   } else if(pSiS->VBLCDFlags & VB_LCD_1400x1050) {
-	      /* Must fake clock; built-in mode shows 122 for VGA, but uses only 108 for LCD */
-	      if(IsForMergedFBCRT2) return 123000;
-	      else                  return 108000;
+	      /* Fake clock; VGA mode is 108, but uses only 83 for LCD */
+	      if(FakeForCRT2) return 108000;
+	      else            return 83000;
 	   } else if(pSiS->VBLCDFlags & (VB_LCD_1280x1024 | VB_LCD_1280x960)) {
 	      return 108000;
+	   } else if(pSiS->VBLCDFlags & VB_LCD_1400x1050) {
+	      /* Fake clock; VGA mode is 122, but uses only 108 for LCD */
+	      if(FakeForCRT2) return 123000;
+	      else            return 108000;
 	   } else if(pSiS->VBLCDFlags & VB_LCD_1680x1050) {
-	      /* Must fake clock; built-in mode shows 147 for VGA, but uses only 122 for LCD */
-	      if(IsForMergedFBCRT2) return 148000;
-	      else                  return 122000;
+	      /* Fake clock; VGA mode is 147, but uses only 122 for LCD */
+	      if(FakeForCRT2) return 148000;
+	      else            return 122000;
 	   } else if(pSiS->VBLCDFlags & VB_LCD_1600x1200) {
 	      return 162000;
 	   } else if((pSiS->VBLCDFlags & VB_LCD_CUSTOM) && (pSiS->SiS_Pr->CP_MaxClock)) {
 	      return pSiS->SiS_Pr->CP_MaxClock;
 	   } else {
 	      if(pSiS->VBFlags & VB_301C) return 162000;
-	      else return 108000;
+	      else                        return 108000;
 	   }
 	} else if(pSiS->VBFlags & CRT2_TV) {
 	   if(pSiS->VBFlags & VB_CHRONTEL) {
 	      switch(pSiS->VGAEngine) {
 	      case SIS_300_VGA:
-		 return 50000;
+		 return 50000;	/* 700x: <= 800x600 */
 	      case SIS_315_VGA:
 	      default:
-		 return 70000;
+		 return 70000;  /* 701x: <= 1024x768 */
 	      }
 	   } else if(pSiS->VBFlags & VB_SISBRIDGE) {
-	      if(pSiS->SiS_SD_Flags & SiS_SD_SUPPORTYPBPR)
-		 return 75000;
-	      else
+	      if(pSiS->SiS_SD_Flags & (SiS_SD_SUPPORTYPBPR|SiS_SD_SUPPORTHIVISION)) {
+	         if(FakeForCRT2) return 108000;  /* 1280x1024@60 (faked) */
+	         else            return 75000;   /* Really used clock */
+	      } else {
 		 return 70000;
+	      }
 	   }
 	}
 
@@ -1940,8 +1943,14 @@ void
 SISDACPreInit(ScrnInfoPtr pScrn)
 {
     SISPtr pSiS = SISPTR(pScrn);
+    Bool IsForCRT2 = FALSE;
 
-    pSiS->MaxClock = SiSMemBandWidth(pScrn, FALSE);
+#ifdef SISDUALHEAD
+    if((pSiS->DualHeadMode) && (!pSiS->SecondHead))
+       IsForCRT2 = TRUE;
+#endif
+
+    pSiS->MaxClock = SiSMemBandWidth(pScrn, IsForCRT2);
 
     switch (pSiS->Chipset) {
        case PCI_CHIP_SIS550:

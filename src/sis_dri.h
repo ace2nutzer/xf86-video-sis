@@ -51,18 +51,16 @@
 typedef struct {
   int CtxOwner;
   int QueueLength;
-  unsigned int AGPCmdBufNext;
+  unsigned int AGPCmdBufNext;   /* rename to AGPVtxBufNext */
   unsigned int FrameCount;
 #ifdef SIS315DRI
-  /* For 315 series */
-  ULong sharedWPoffset;
-#endif
-#if 0
-  UChar        *AGPCmdBufBase;
-  ULong        AGPCmdBufAddr;
-  ULong        AGPCmdBufOffset;
-  unsigned int AGPCmdBufSize;
-  ULong        AGPCmdBufNext;
+  /* For 315/330 series */
+  unsigned long sharedWPoffset;
+  unsigned char *AGPCmdBufBase;
+  unsigned long AGPCmdBufAddr;
+  unsigned long AGPCmdBufOffset;
+  unsigned int  AGPCmdBufSize;
+  unsigned long AGPCmdBufNext2; /* rename to AGPCmdBufNext */
 #endif
 } SISSAREAPriv, *SISSAREAPrivPtr;
 
@@ -92,8 +90,15 @@ typedef struct {
   int depthOffset;			/* unused in Mesa 3 DRI */
   int textureOffset;			/* unused in Mesa 3 DRI */
   int textureSize;			/* unused in Mesa 3 DRI */
-  unsigned int AGPCmdBufOffset;
-  unsigned int AGPCmdBufSize;
+  unsigned int AGPCmdBufOffset;		/* rename to AGPVtxBufOffset */
+  unsigned int AGPCmdBufSize;		/* rename to AGPVtxBufSize   */
+#ifdef SIS315DRI
+  unsigned char *AGPCmdBufBase;
+  unsigned long AGPCmdBufAddr;
+  unsigned long AGPCmdBufOffset2;	/* rename to AGPCmdBufOffset */
+  unsigned int  AGPCmdBufSize2;		/* rename to AGPCmdBufSize   */
+  unsigned long *pAGPCmdBufNext;
+#endif
   int irqEnabled;			/* unused in Mesa 3 DRI */
   unsigned int scrnX, scrnY;		/* unused in Mesa 3 DRI */
 } SISDRIRec, *SISDRIPtr;

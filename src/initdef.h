@@ -92,6 +92,7 @@
 #define VB_SISYPBPR		(VB_SIS301C|VB_SIS301LV|VB_SIS302LV|VB_SIS302ELV)
 #define VB_SISHIVISION		(VB_SIS301|VB_SIS301B|VB_SIS302B)
 #define VB_SISTMDSLCDA		(VB_SIS301C)
+#define VB_SISDUALLINK		(VB_SIS302LV|VB_SIS302ELV)
 
 /* VBInfo */
 #define SetSimuScanMode         0x0001   /* CR 30 */
@@ -435,6 +436,7 @@
 #define Panel_1280x768_2        0x15	/* 30xLV */
 #define Panel_1280x768_3        0x16    /* (unused) */
 #define Panel_1280x800_2	0x17    /* 30xLV */
+#define Panel_856x480		0x18
 
 /* Index in ModeResInfo table */
 #define SIS_RI_320x200    0

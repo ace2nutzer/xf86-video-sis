@@ -248,6 +248,7 @@ typedef UCHAR DRAM4Type[4];
 #define CUT_ASUSA2H_2     18
 #define CUT_UNKNOWNLCD	  19
 #define CUT_AOP8060	  20
+#define CUT_PANEL856      21
 
 typedef struct _SiS_Private
 {
@@ -296,6 +297,7 @@ typedef struct _SiS_Private
 	int     SiS_UseOEM;
 	ULONG   SiS_CustomT;
 	int	SiS_UseWide, SiS_UseWideCRT2;
+	int	SiS_TVBlue;
 	USHORT  SiS_Backup70xx;
 	BOOLEAN HaveEMI;
 	BOOLEAN HaveEMILCD;

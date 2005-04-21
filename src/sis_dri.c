@@ -712,7 +712,9 @@ SISDRICloseScreen(ScreenPtr pScreen)
   if(pSIS->VGAEngine == SIS_315_VGA) {
 #ifdef SIS315DRI
      if(pSIS->cmdQ_SharedWritePortBackup) {
+        pSiS->cmdQ_SharedWritePort_2D = *(pSiS->cmdQ_SharedWritePort);
         pSIS->cmdQ_SharedWritePort = pSIS->cmdQ_SharedWritePortBackup;
+	pSIS->cmdQ_SharedWritePortBackup = 0;
      }
 #endif
   } else {

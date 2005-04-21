@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/sis.h,v 1.35 2005/03/11 14:39:48 twini Exp $ */
+/* $XdotOrg$ */
 /*
  * Main global data and definitions
  *
@@ -36,8 +36,8 @@
 #define _SIS_H_
 
 #define SISDRIVERVERSIONYEAR    5
-#define SISDRIVERVERSIONMONTH   3
-#define SISDRIVERVERSIONDAY     11
+#define SISDRIVERVERSIONMONTH   4
+#define SISDRIVERVERSIONDAY     21
 #define SISDRIVERREVISION       1
 
 #define SISDRIVERIVERSION ((SISDRIVERVERSIONYEAR << 16) |  \
@@ -86,6 +86,8 @@
 #include "xaa.h"
 #include "vbe.h"
 
+#define SIS_HaveDriverFuncs 0
+
 #ifdef XORG_VERSION_CURRENT
 #include "xorgVersion.h"
 #define SISMYSERVERNAME "X.org"
@@ -93,6 +95,13 @@
 #define XF86_VERSION_NUMERIC(major,minor,patch,snap,dummy) \
 	(((major) * 10000000) + ((minor) * 100000) + ((patch) * 1000) + snap)
 #define XF86_VERSION_CURRENT XF86_VERSION_NUMERIC(4,3,99,902)
+#endif
+#if 0
+#ifdef HaveDriverFuncs
+#define SIS_HAVE_DRIVER_FUNC
+#undef  SIS_HaveDriverFuncs
+#define SIS_HaveDriverFuncs HaveDriverFuncs
+#endif
 #endif
 #else
 #include "xf86Version.h"
@@ -191,16 +200,19 @@
 #define SISDEINT		/* Include Xv deinterlacer code (not functional yet!) */
 #endif
 
+#if 1
+#define XV_SD_DEPRECATED	/* Include deprecated XV SD interface for SiSCtrl */
+#endif
+
 /* End of configurable stuff --------------------------------- */
 
 #define UNLOCK_ALWAYS		/* Always unlock the registers (should be set!) */
 
-#if defined(SISMERGED) && defined(SISXINERAMA)
-#define NEED_REPLIES		/* ? */
+/* Need that for SiSCtrl and Pseudo-Xinerama */
+#define NEED_REPLIES				/* ? */
 #define EXTENSION_PROC_ARGS void *
-#include "extnsionst.h" 	/* required */
+#include "extnsionst.h" 			/* required */
 #include <X11/extensions/panoramiXproto.h> 	/* required */
-#endif
 
 #undef SISCHECKOSSSE
 #ifdef XORG_VERSION_CURRENT
@@ -364,6 +376,7 @@
 #define VB_LCD_1680x1050	0x00020000
 #define VB_LCD_1280x720		0x00040000
 #define VB_LCD_320x240		0x00080000
+#define VB_LCD_856x480		0x00100000
 #define VB_LCD_UNKNOWN		0x10000000
 #define VB_LCD_BARCO1366	0x20000000
 #define VB_LCD_CUSTOM		0x40000000
@@ -524,6 +537,10 @@ typedef unsigned char  UChar;
 					    /*    (If set, utility must re-read SD2 flags after mode change) */
 #define SiS_SD2_SIS760ONEOVL   0x00004000   /* (76x:) Only one overlay currently */
 #define SiS_SD2_MERGEDUCLOCK   0x00008000   /* Provide VRefresh in mode->Clock field in MergedFB mode */
+#define SiS_SD2_SUPPORTXVHUESAT 0x00010000  /* Xv: Support hue & saturation */
+#define SiS_SD2_NEEDUSESSE     0x00020000   /* Need "UseSSE" option to use SSE (otherwise auto) */
+#define SiS_SD2_NODDCSUPPORT   0x00040000   /* No hardware DDC support (USB) */
+#define SiS_SD2_SUPPORTXVDEINT 0x00080000   /* Xv deinterlacing supported (n/a, for future use) */
 /* ... */
 #define SiS_SD2_NOOVERLAY      0x80000000   /* No video overlay */
 
@@ -730,6 +747,8 @@ typedef struct {
     int			XvGammaRed, XvGammaGreen, XvGammaBlue;
     int			GammaBriR, GammaBriG, GammaBriB;	/* strictly for Xinerama */
     int			GammaPBriR, GammaPBriG, GammaPBriB;	/* strictly for Xinerama */
+    unsigned int	CRT1MonGamma, CRT2MonGamma;
+    unsigned int	CRT1VGAMonitorGamma, CRT2LCDMonitorGamma, CRT2VGAMonitorGamma;
     int			curxvcrtnum;
     int			UsePanelScaler, CenterLCD;
     int			AllowHotkey;
@@ -913,7 +932,7 @@ typedef struct {
     Bool		AGPInitOK;
     Bool		irqEnabled;
     int			irq;
-    Bool		IsAGPCard;
+    Bool		IsAGPCard, IsPCIExpress;
     ULong		DRIheapstart, DRIheapend;
     Bool		NeedFlush;	/* Need to flush cmd buf mem (760) */
 
@@ -1076,6 +1095,7 @@ typedef struct {
     Atom		xvdeintmeth;
 #endif
     Atom		xvGammaRed, xvGammaGreen, xvGammaBlue;
+#ifdef XV_SD_DEPRECATED
     Atom		xv_QVF, xv_QVV, xv_USD, xv_SVF, xv_QDD, xv_TAF, xv_TSA, xv_TEE, xv_GSF;
     Atom		xv_TTE, xv_TCO, xv_TCC, xv_TCF, xv_TLF, xv_CMD, xv_CMDR, xv_CT1, xv_SGA;
     Atom		xv_GDV, xv_GHI, xv_OVR, xv_GBI, xv_TXS, xv_TYS, xv_CFI, xv_COC, xv_COF;
@@ -1086,6 +1106,7 @@ typedef struct {
 #ifdef TWDEBUG
     Atom		xv_STR;
 #endif
+#endif /* XV_SD_DEPRECATED */
     int			xv_sisdirectunlocked;
     ULong		xv_sd_result;
     Bool		SiS760VLFB;		/* video area for UMA+LFB reserved in LFB */
@@ -1096,6 +1117,7 @@ typedef struct {
     int			SiS76xLFBSize;
     int			SiS76xUMASize;
     int			CRT1isoff;
+    ULong		UMAsize, LFBsize;	/* For SiSCtrl extension info only */
 #ifdef SIS_CP
     SIS_CP_H
 #endif
@@ -1139,6 +1161,8 @@ typedef struct {
     CARD32		*CurARGBDest;
     int			GammaBriR, GammaBriG, GammaBriB;
     int			GammaPBriR, GammaPBriG, GammaPBriB;
+    unsigned int	CRT1MonGamma, CRT2MonGamma;
+    unsigned int	CRT1VGAMonitorGamma, CRT2LCDMonitorGamma, CRT2VGAMonitorGamma;
     Bool		HideHWCursor;  /* Custom application */
     Bool		HWCursorIsVisible;
     ULong       	HWCursorBackup[16];
@@ -1173,6 +1197,9 @@ typedef struct {
     int			GammaR2i, GammaG2i, GammaB2i;
     int			GammaBriR2, GammaBriG2, GammaBriB2;
     int			GammaPBriR2, GammaPBriG2, GammaPBriB2;
+    ExtensionEntry	*SiSCtrlExtEntry;
+    char		devsectname[32];
+    Bool		SCLogQuiet;
 #ifdef SIS_NEED_MAP_IOP
     CARD32		IOPAddress;		/* I/O port physical address */
     UChar 		*IOPBase;		/* I/O port linear address */
@@ -1297,29 +1324,9 @@ typedef struct _SiSXineramaData {
 #endif
 #endif
 
-#if 0
-/* SiS Direct access for config utility */
+extern const customttable SiS_customttable[];
 
-#define SDC_ID 0x53495321
-
-#define SDC_VERSION 1
-
-#define SDC_NUM_PARM 20
-typedef struct _sisdirectcommand {
-    ULong sdc_id;
-    ULong sdc_chksum;
-    ULong sdc_header;
-    ULong sdc_command;
-    ULong sdc_parm[SDC_NUM_PARM];
-} sisdirectcommand;
-
-#define SDC_RESULT_OK  		0x66670000
-#define SDC_RESULT_UNDEFCMD	0x66670001
-
-#define SDC_CMD_GETVERSION 		0x98980001
-#define SDC_CMD_CHECKMODEFORCRT2 	0x98980002
-/* more to come */
-#endif
+/* prototypes */
 
 extern void  sisSaveUnlockExtRegisterLock(SISPtr pSiS, UChar *reg1, UChar *reg2);
 extern void  sisRestoreExtRegisterLock(SISPtr pSiS, UChar reg1, UChar reg2);
@@ -1364,11 +1371,6 @@ extern void  SiS_SetTVxposoffset(ScrnInfoPtr pScrn, int val);
 extern void  SiS_SetTVyposoffset(ScrnInfoPtr pScrn, int val);
 extern void  SiS_SetTVxscale(ScrnInfoPtr pScrn, int val);
 extern void  SiS_SetTVyscale(ScrnInfoPtr pScrn, int val);
-extern Bool  SISSwitchCRT2Type(ScrnInfoPtr pScrn, ULong newvbflags);
-extern int   SISCheckModeIndexForCRT2Type(ScrnInfoPtr pScrn, UShort cond,
-					  UShort index, Bool quiet);
-extern Bool  SISSwitchCRT1Status(ScrnInfoPtr pScrn, int onoff);
-extern Bool  SISRedetectCRT2Devices(ScrnInfoPtr pScrn);
 extern int   SiS_GetCHTVlumabandwidthcvbs(ScrnInfoPtr pScrn);
 extern int   SiS_GetCHTVlumabandwidthsvideo(ScrnInfoPtr pScrn);
 extern int   SiS_GetCHTVlumaflickerfilter(ScrnInfoPtr pScrn);
