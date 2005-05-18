@@ -271,12 +271,13 @@ SISDRIScreenInit(ScreenPtr pScreen)
   {
      int major, minor, patch;
      DRIQueryVersion(&major, &minor, &patch);
-     if(major != 4 || minor < 0) {
+     if(major != DRIINFO_MAJOR_VERSION || minor < DRIINFO_MINOR_VERSION) {
         xf86DrvMsg(pScreen->myNum, X_ERROR,
                     "[dri] SISDRIScreenInit failed because of a version mismatch.\n"
-                    "\t[dri] libDRI version is %d.%d.%d but version 4.0.x is needed.\n"
+                    "\t[dri] libdri version is %d.%d.%d but version %d.%d.x is needed.\n"
                     "\t[dri] Disabling DRI.\n",
-                    major, minor, patch);
+                    major, minor, patch,
+                    DRIINFO_MAJOR_VERSION, DRIINFO_MINOR_VERSION);
         return FALSE;
      }
   }
