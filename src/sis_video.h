@@ -154,7 +154,7 @@ extern int	SISGetPortUtilAttribute(ScrnInfoPtr pScrn,  Atom attribute,
 
 #define IMAGE_MIN_WIDTH         32  	/* Minimum and maximum source image sizes */
 #define IMAGE_MIN_HEIGHT        24
-#define IMAGE_MAX_WIDTH_300    720
+#define IMAGE_MAX_WIDTH_300    768	/* was 720, wrong */
 #define IMAGE_MAX_HEIGHT_300   576
 #define IMAGE_MAX_WIDTH_315   1920
 #define IMAGE_MAX_WIDTH_340   1920	/* ? */

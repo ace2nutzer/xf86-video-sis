@@ -1373,17 +1373,21 @@ SiSEstimateCRT2Clock(ScrnInfoPtr pScrn, Bool FakeForCRT2)
 	   } else if(pSiS->VBLCDFlags & (VB_LCD_1024x768 | VB_LCD_1024x600 | VB_LCD_1152x768)) {
 	      return 65000;
 	   } else if(pSiS->VBLCDFlags & VB_LCD_1280x720) {
-	      /* Fake clock; VGA mode is 108, but uses only 75 for LCD */
+	      /* Fake clock; VGA (4:3) mode is 108, but uses only 75 for LCD */
 	      if(FakeForCRT2) return 108000;
 	      else            return 75000;
 	   } else if(pSiS->VBLCDFlags & VB_LCD_1280x768) {
-	      /* Fake clock; VGA mode is 108, but uses only 81 for LCD */
+	      /* Fake clock; VGA (4:3) mode is 108, but uses only 81 for LCD */
 	      if(FakeForCRT2) return 108000;
 	      else            return 81000;
 	   } else if(pSiS->VBLCDFlags & VB_LCD_1280x800) {
-	      /* Fake clock; VGA mode is 108, but uses only 83 for LCD */
+	      /* Fake clock; VGA (4:3) mode is 108, but uses only 83 for LCD */
 	      if(FakeForCRT2) return 108000;
 	      else            return 83000;
+	   } else if(pSiS->VBLCDFlags & VB_LCD_1280x854) {
+	      /* Fake clock; VGA (4:3) mode is 108, but uses only 84 for LCD */
+	      if(FakeForCRT2) return 108000;
+	      else            return 84000;
 	   } else if(pSiS->VBLCDFlags & (VB_LCD_1280x1024 | VB_LCD_1280x960)) {
 	      return 108000;
 	   } else if(pSiS->VBLCDFlags & VB_LCD_1400x1050) {

@@ -26,12 +26,12 @@ sis \- SiS video driver
 .SH DESCRIPTION
 .B sis
 is an __myservername__ driver for SiS (Silicon Integrated Systems) video chips. The
-driver is accelerated, and provides support for colordepths of 8, 16 and 24 bpp.
+driver is accelerated and provides support for colordepths of 8, 16 and 24 bpp.
 XVideo, Render and other extensions are supported as well.
 .SH SUPPORTED HARDWARE
 The
 .B sis
-driver supports PCI and AGP video cards based on the following chipsets:
+driver supports PCI, AGP and PCIe video cards based on the following chipsets:
 .PP
 .B SiS5597/5598
 .B SiS530/620
@@ -41,9 +41,9 @@ driver supports PCI and AGP video cards based on the following chipsets:
 .B SiS630/730
 .B SiS315/E/H/PRO
 .B SiS550/551/552
-.B SiS650/651/M650/661FX/M661FX/M661MX/740/741/741GX/M741
+.B SiS650/651/661/741
 .B SiS330 (Xabre)
-.B SiS760/760GX/M760
+.B SiS760/761
 .PP
 In the following text, the following terms are used:
 .PP
@@ -54,7 +54,7 @@ for SiS5597/5598, 530/620 and 6326/AGP/DVD
 for SiS300/305, 540 and 630/730
 .PP
 .B 315/330 series
-for SiS315, 55x and (M)65x/(M)661xX/74x(GX), 330, (M)760(GX)
+for SiS315, 55x and 661/741/760/761 (plus M, FX, MX, GX variants thereof)
 .PP
 .SH CONFIGURATION DETAILS
 Please refer to __myxconfigfile__(__filemansuffix__) for general configuration
@@ -69,7 +69,7 @@ This manpage only covers a subset of the supported options.
 .I "1. For all supported chipsets"
 .PP
 The following driver
-.B Options
+.B options
 are supported on all chipsets:
 .TP
 .BI "Option \*qNoAccel\*q \*q" boolean \*q
@@ -81,25 +81,24 @@ Enable or disable the HW cursor. Default: HWCursor is on.
 .BI "Option \*qSWCursor\*q \*q" boolean \*q
 The opposite of HWCursor. Default: SWCursor is off.
 .TP
-.BI "Option \*qRotate\*q \*qCW\*q"
-Rotate the display clockwise. This mode is unaccelerated, and uses
-the Shadow Frame Buffer layer. Using this option disables
-the Resize and Rotate extension (RandR).
+.BI "Option \*qRotate\*q \*q" string \*q
+Rotate the display clockwise ("CW") or counter-clockwise ("CCW"). This
+mode is unaccelerated. Using this option disables XVideo and the Resize
+and Rotate extension (RandR). Rotation and reflection (see below) are
+mutually exclusive.
 Default: no rotation.
 .TP
-.BI "Option \*qRotate\*q \*qCCW\*q"
-Rotate the display counterclockwise. This mode is unaccelerated, and
-uses the Shadow Frame Buffer layer. Using this option disables
-the Resize and Rotate extension (RandR).
-Default: no rotation.
-.TP
-.BI "Option \*qShadowFB\*q \*q" boolean \*q
-Enable or disable use of the shadow framebuffer layer.
-Default: Shadow framebuffer is off.
+.BI "Option \*qReflect\*q \*q" string \*q
+Reflect (mirror) the display horizontally ("X"), vertically ("Y") or
+both ("XY"). This mode is unaccelerated. Using this option disables
+XVideo and the Resize and Rotate extension (RandR). Rotation (see
+above) and reflection are mutually exclusive.
+Default: no reflection.
 .TP
 .BI "Option \*qCRT1Gamma\*q \*q" boolean \*q
-Enable or disable gamma correction.
-Default: Gamma correction is on.
+Enable or disable gamma correction. (On the 300 and 315/330 series, this
+option only affects CRT1 output).
+Default: Gamma correction is enabled.
 .PP
 .I "2. Old series specific information"
 .PP
@@ -111,16 +110,11 @@ the 3D engine can address RAM above 4MB. However, you can override this
 limitation using the
 .B \*qVideoRAM\*q
 option in the Device section if your board has more than 4MB and you
-need to use it. However, 2D acceleration, Xvideo and the HWCursor will
+need to use it. However, 2D acceleration, XVideo and the HWCursor will
 be disabled in this case.
 .PP
-The driver will also auto-detect the maximum dotclock and DAC speed.
-If you have problems getting high resolutions because of dot clock
-limitations, try using the
-.B \*qDacSpeed\*q
-option, also in the Device section. However, this is not recommended
-for the 6326. For this chip, the driver has two built-in modes for
-high resolutions which you should use instead. These are named
+For the 6326, the driver has two built-in modes for high resolutions
+which you should use instead of the default ones. These are named
 .B \*qSIS1280x1024-75\*q
 and
 .B \*qSIS1600x1200-60\*q
@@ -135,8 +129,8 @@ is available at 8bpp only.
 TV support for the 6326
 .PP
 TV output is supported for the 6326. The driver will auto detect a
-TV connected and in this case add the following modes to the list
-of default modes: "PAL800x600", "PAL800x600U", "PAL720x540",
+connected TV and in this case add the following display modes to the list
+of available display modes: "PAL800x600", "PAL800x600U", "PAL720x540",
 "PAL640x480", "NTSC640x480", "NTSC640x480U" and "NTSC640x400".
 Use these modes like the hi-res modes described above.
 .PP

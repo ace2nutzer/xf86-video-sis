@@ -36,8 +36,8 @@
 #define _SIS_H_
 
 #define SISDRIVERVERSIONYEAR    5
-#define SISDRIVERVERSIONMONTH   4
-#define SISDRIVERVERSIONDAY     21
+#define SISDRIVERVERSIONMONTH   6
+#define SISDRIVERVERSIONDAY     20
 #define SISDRIVERREVISION       1
 
 #define SISDRIVERIVERSION ((SISDRIVERVERSIONYEAR << 16) |  \
@@ -377,6 +377,7 @@
 #define VB_LCD_1280x720		0x00040000
 #define VB_LCD_320x240		0x00080000
 #define VB_LCD_856x480		0x00100000
+#define VB_LCD_1280x854		0x00200000
 #define VB_LCD_UNKNOWN		0x10000000
 #define VB_LCD_BARCO1366	0x20000000
 #define VB_LCD_CUSTOM		0x40000000
@@ -746,7 +747,6 @@ typedef struct {
     Bool		CRT1gamma, CRT1gammaGiven, CRT2gamma, XvGamma, XvGammaGiven, XvDefAdaptorBlit;
     int			XvGammaRed, XvGammaGreen, XvGammaBlue;
     int			GammaBriR, GammaBriG, GammaBriB;	/* strictly for Xinerama */
-    int			GammaPBriR, GammaPBriG, GammaPBriB;	/* strictly for Xinerama */
     unsigned int	CRT1MonGamma, CRT2MonGamma;
     unsigned int	CRT1VGAMonitorGamma, CRT2LCDMonitorGamma, CRT2VGAMonitorGamma;
     int			curxvcrtnum;
@@ -1160,7 +1160,6 @@ typedef struct {
     UChar		*CurMonoSrc;
     CARD32		*CurARGBDest;
     int			GammaBriR, GammaBriG, GammaBriB;
-    int			GammaPBriR, GammaPBriG, GammaPBriB;
     unsigned int	CRT1MonGamma, CRT2MonGamma;
     unsigned int	CRT1VGAMonitorGamma, CRT2LCDMonitorGamma, CRT2VGAMonitorGamma;
     Bool		HideHWCursor;  /* Custom application */
@@ -1196,7 +1195,6 @@ typedef struct {
     float		GammaR2, GammaG2, GammaB2;
     int			GammaR2i, GammaG2i, GammaB2i;
     int			GammaBriR2, GammaBriG2, GammaBriB2;
-    int			GammaPBriR2, GammaPBriG2, GammaPBriB2;
     ExtensionEntry	*SiSCtrlExtEntry;
     char		devsectname[32];
     Bool		SCLogQuiet;

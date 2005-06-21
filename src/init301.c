@@ -90,6 +90,9 @@
 #define SiS_I2CDELAYSHORT  150
 
 static USHORT SiS_GetBIOSLCDResInfo(SiS_Private *SiS_Pr);
+#ifdef LINUX_KERNEL
+static void   SiS_SetCH70xx(SiS_Private *SiS_Pr, USHORT tempbx);
+#endif
 
 /*********************************************/
 /*         HELPER: Lock/Unlock CRT2          */
@@ -104,6 +107,9 @@ SiS_UnLockCRT2(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo)
       SiS_SetRegOR(SiS_Pr->SiS_Part1Port,0x24,0x01);
 }
 
+#ifdef LINUX_KERNEL
+static
+#endif
 void
 SiS_LockCRT2(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo)
 {
@@ -1431,8 +1437,11 @@ SiS_GetBIOSLCDResInfo(SiS_Private *SiS_Pr)
 {
    USHORT temp = SiS_Pr->SiS_LCDResInfo;
    /* Translate my LCDResInfo to BIOS value */
-   if(temp == Panel_1280x768_2)  temp = Panel_1280x768;
-   if(temp == Panel_1280x800_2)  temp = Panel_1280x800;
+   switch(temp) {
+   case Panel_1280x768_2: temp = Panel_1280x768;    break;
+   case Panel_1280x800_2: temp = Panel_1280x800;    break;
+   case Panel_1280x854:   temp = Panel661_1280x854; break;
+   }
    return temp;
 }
 
@@ -1569,11 +1578,15 @@ SiS_GetLCDResInfo(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
 #endif
 
   /* Translate to our internal types */
+#ifdef SIS315H
   if(HwInfo->jChipType == SIS_550) {
      if     (temp == Panel310_1152x768)  temp = Panel_320x240_2; /* Verified working */
      else if(temp == Panel310_320x240_2) temp = Panel_320x240_2;
      else if(temp == Panel310_320x240_3) temp = Panel_320x240_3;
+  } else if(HwInfo->jChipType >= SIS_661) {
+     if(temp == Panel661_1280x854)       temp = Panel_1280x854;
   }
+#endif
 
   if(SiS_Pr->SiS_VBType & VB_SISLVDS) {	/* SiS LVDS */
      if(temp == Panel310_1280x768) {
@@ -1782,6 +1795,13 @@ SiS_GetLCDResInfo(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
 			    SiS_Pr->PanelVCLKIdx315 = VCLK_1280x800_315_2;
 			    SiS_GetLCDInfoBIOS(SiS_Pr, HwInfo);
 			    break;
+     case Panel_1280x854:   SiS_Pr->PanelXRes = 1280; SiS_Pr->PanelYRes =  854;
+     			    SiS_Pr->PanelHT   = 1664; SiS_Pr->PanelVT   =  861;
+			    SiS_Pr->PanelHRS   =  16; SiS_Pr->PanelHRE  =  112;
+			    SiS_Pr->PanelVRS   =   1; SiS_Pr->PanelVRE  =    3;
+			    SiS_Pr->PanelVCLKIdx315 = VCLK_1280x854;
+			    SiS_GetLCDInfoBIOS(SiS_Pr, HwInfo);
+			    break;
      case Panel_1280x960:   SiS_Pr->PanelXRes = 1280; SiS_Pr->PanelYRes =  960;
 			    SiS_Pr->PanelHT   = 1800; SiS_Pr->PanelVT   = 1000;
 			    SiS_Pr->PanelVCLKIdx300 = VCLK108_3_300;
@@ -1982,12 +2002,29 @@ SiS_GetLCDResInfo(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
 	}
 	break;
      }
+     case Panel_1280x854: {  	/* SiS LVDS */
+	static const UCHAR nonscalingmodes[] = {
+	   SIS_RI_720x480, SIS_RI_720x576, SIS_RI_768x576, SIS_RI_800x480, SIS_RI_848x480,
+	   SIS_RI_856x480, SIS_RI_960x540, SIS_RI_960x600, SIS_RI_1024x576,SIS_RI_1024x600,
+	   SIS_RI_1152x768,0xff
+	};
+	SiS_CheckScaling(SiS_Pr, resinfo, nonscalingmodes);
+	switch(resinfo) {
+	case SIS_RI_1280x720:
+	case SIS_RI_1280x768:
+	case SIS_RI_1280x800:  if(SiS_Pr->UsePanelScaler == -1) {
+				  SiS_Pr->SiS_LCDInfo |= DontExpandLCD;
+			       }
+			       break;
+	}
+	break;
+     }
      case Panel_1280x960: {
 	static const UCHAR nonscalingmodes[] = {
 	   SIS_RI_720x480, SIS_RI_720x576, SIS_RI_768x576, SIS_RI_800x480, SIS_RI_848x480,
 	   SIS_RI_856x480, SIS_RI_960x540, SIS_RI_960x600, SIS_RI_1024x576,SIS_RI_1024x600,
 	   SIS_RI_1152x768,SIS_RI_1152x864,SIS_RI_1280x720,SIS_RI_1280x768,SIS_RI_1280x800,
-	   0xff
+	   SIS_RI_1280x854,0xff
 	};
 	SiS_CheckScaling(SiS_Pr, resinfo, nonscalingmodes);
 	break;
@@ -1997,7 +2034,7 @@ SiS_GetLCDResInfo(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
 	   SIS_RI_720x480, SIS_RI_720x576, SIS_RI_768x576, SIS_RI_800x480, SIS_RI_848x480,
 	   SIS_RI_856x480, SIS_RI_960x540, SIS_RI_960x600, SIS_RI_1024x576,SIS_RI_1024x600,
 	   SIS_RI_1152x768,SIS_RI_1152x864,SIS_RI_1280x720,SIS_RI_1280x768,SIS_RI_1280x800,
-	   SIS_RI_1280x960,0xff
+	   SIS_RI_1280x854,SIS_RI_1280x960,0xff
 	};
 	SiS_CheckScaling(SiS_Pr, resinfo, nonscalingmodes);
 	break;
@@ -2006,8 +2043,8 @@ SiS_GetLCDResInfo(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
 	static const UCHAR nonscalingmodes[] = {
 	     SIS_RI_720x480, SIS_RI_720x576, SIS_RI_768x576, SIS_RI_800x480, SIS_RI_848x480,
 	     SIS_RI_856x480, SIS_RI_960x540, SIS_RI_960x600, SIS_RI_1024x576,SIS_RI_1024x600,
-	     SIS_RI_1152x768,SIS_RI_1152x864,SIS_RI_1280x768,SIS_RI_1280x800,SIS_RI_1280x960,
-	     0xff
+	     SIS_RI_1152x768,SIS_RI_1152x864,SIS_RI_1280x768,SIS_RI_1280x800,SIS_RI_1280x854,
+	     SIS_RI_1280x960,0xff
 	};
 	SiS_CheckScaling(SiS_Pr, resinfo, nonscalingmodes);
 	switch(resinfo) {
@@ -2025,7 +2062,7 @@ SiS_GetLCDResInfo(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
 	     SIS_RI_720x480, SIS_RI_720x576, SIS_RI_768x576, SIS_RI_800x480, SIS_RI_848x480,
 	     SIS_RI_856x480, SIS_RI_960x540, SIS_RI_960x600, SIS_RI_1024x576,SIS_RI_1024x600,
 	     SIS_RI_1152x768,SIS_RI_1152x864,SIS_RI_1280x720,SIS_RI_1280x768,SIS_RI_1280x800,
-	     SIS_RI_1280x960,SIS_RI_1360x768,SIS_RI_1360x1024,0xff
+	     SIS_RI_1280x854,SIS_RI_1280x960,SIS_RI_1360x768,SIS_RI_1360x1024,0xff
 	};
 	SiS_CheckScaling(SiS_Pr, resinfo, nonscalingmodes);
 	break;
@@ -2034,8 +2071,8 @@ SiS_GetLCDResInfo(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,
 	static const UCHAR nonscalingmodes[] = {
 	     SIS_RI_720x480, SIS_RI_720x576, SIS_RI_768x576, SIS_RI_800x480, SIS_RI_848x480,
 	     SIS_RI_856x480, SIS_RI_960x540, SIS_RI_960x600, SIS_RI_1024x576,SIS_RI_1024x600,
-	     SIS_RI_1152x768,SIS_RI_1152x864,SIS_RI_1280x960,SIS_RI_1360x768,SIS_RI_1360x1024,
-	     0xff
+	     SIS_RI_1152x768,SIS_RI_1152x864,SIS_RI_1280x854,SIS_RI_1280x960,SIS_RI_1360x768,
+	     SIS_RI_1360x1024,0xff
 	};
 	SiS_CheckScaling(SiS_Pr, resinfo, nonscalingmodes);
 	break;
@@ -2882,11 +2919,13 @@ SiS_GetCRT2Ptr(SiS_Private *SiS_Pr,USHORT ModeNo,USHORT ModeIdIndex,
 	tempbx = SiS_Pr->SiS_LCDResInfo;
 	if(!(SiS_Pr->SiS_SetFlag & LCDVESATiming)) tempbx += 32;
 
+	/* patch index */
 	if(SiS_Pr->SiS_LCDResInfo == Panel_1680x1050) {
 	   if     (resinfo == SIS_RI_1280x800)  tempal =  9;
 	   else if(resinfo == SIS_RI_1400x1050) tempal = 11;
 	} else if((SiS_Pr->SiS_LCDResInfo == Panel_1280x800) ||
-		  (SiS_Pr->SiS_LCDResInfo == Panel_1280x800_2)) {
+		  (SiS_Pr->SiS_LCDResInfo == Panel_1280x800_2) ||
+		  (SiS_Pr->SiS_LCDResInfo == Panel_1280x854)) {
 	   if     (resinfo == SIS_RI_1280x768)  tempal =  9;
 	}
 
@@ -3475,6 +3514,8 @@ SiS_GetCRT2Data301(SiS_Private *SiS_Pr,USHORT ModeNo,USHORT ModeIdIndex,
 	      case Panel_1280x800  + 32: LCDPtr = SiS_Pr->SiS_LCD1280x800Data;      break;
 	      case Panel_1280x800_2    :
 	      case Panel_1280x800_2+ 32: LCDPtr = SiS_Pr->SiS_LCD1280x800_2Data;    break;
+	      case Panel_1280x854      :
+	      case Panel_1280x854  + 32: LCDPtr = SiS_Pr->SiS_LCD1280x854Data;      break;
 	      case Panel_1280x960      :
 	      case Panel_1280x960  + 32: LCDPtr = SiS_Pr->SiS_LCD1280x960Data;      break;
 	      case Panel_1280x1024     : LCDPtr = SiS_Pr->SiS_ExtLCD1280x1024Data;  break;
@@ -3690,6 +3731,7 @@ SiS_GetLVDSDesData(SiS_Private *SiS_Pr, USHORT ModeNo,USHORT ModeIdIndex,
 	   break;
 	case Panel_1280x800:	/* Verified for Averatec 6240 */
 	case Panel_1280x800_2:	/* Verified for Asus A4L */
+	case Panel_1280x854:    /* Not verified yet FIXME */
 	   SiS_Pr->SiS_LCDVDES = SiS_Pr->PanelVT - 1;
 	   break;
 	}
@@ -4250,6 +4292,9 @@ SiS_DisableBridge(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo)
  * from outside the context of a mode switch!
  * MUST call getVBType before calling this
  */
+#ifdef LINUX_KERNEL
+static
+#endif
 void
 SiS_EnableBridge(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo)
 {
@@ -9102,6 +9147,9 @@ SiS_SetTrumpReg(SiS_Private *SiS_Pr, USHORT tempbx)
 
 /* Write to Chrontel 700x */
 /* Parameter is [Data (S15-S8) | Register no (S7-S0)] */
+#ifdef LINUX_KERNEL
+static
+#endif
 void
 SiS_SetCH700x(SiS_Private *SiS_Pr, USHORT tempbx)
 {
@@ -9140,6 +9188,9 @@ SiS_SetCH701x(SiS_Private *SiS_Pr, USHORT tempbx)
   SiS_SetChReg(SiS_Pr, tempbx, 0);
 }
 
+#ifdef LINUX_KERNEL
+static
+#endif
 void
 SiS_SetCH70xx(SiS_Private *SiS_Pr, USHORT tempbx)
 {
@@ -9246,6 +9297,9 @@ SiS_GetCH701x(SiS_Private *SiS_Pr, USHORT tempbx)
 
 /* Read from Chrontel 70xx */
 /* Parameter is [Register no (S7-S0)] */
+#ifdef LINUX_KERNEL
+static
+#endif
 USHORT
 SiS_GetCH70xx(SiS_Private *SiS_Pr, USHORT tempbx)
 {
@@ -11334,6 +11388,7 @@ SetDelayComp661(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo, USHORT ModeNo,
 	    case Panel_1280x768_2:delay = 0x0004; break;
 	    case Panel_1280x800:
 	    case Panel_1280x800_2:delay = 0x0004; break; /* Verified for 1280x800 */
+	    case Panel_1280x854:  delay = 0x0004; break; /* FIXME */
 	    case Panel_1280x1024: delay = 0x1e04; break;
 	    case Panel_1400x1050: delay = 0x0004; break;
 	    case Panel_1600x1200: delay = 0x0400; break;
@@ -11908,7 +11963,7 @@ SetOEMLCDData(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo,
   }
 
   temp = GetOEMLCDPtr(SiS_Pr,HwInfo, 1);
-  if(temp = 0xFFFF) return;
+  if(temp == 0xFFFF) return;
 
   index = SiS_Pr->SiS_VBModeIDTable[ModeIdIndex]._VB_LCDHIndex;
   for(i=0x14, j=0; i<=0x17; i++, j++) {

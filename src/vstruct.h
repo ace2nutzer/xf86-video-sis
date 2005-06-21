@@ -424,6 +424,7 @@ typedef struct _SiS_Private
 	const SiS_LCDDataStruct  *SiS_ExtLCD1280x768_2Data;
 	const SiS_LCDDataStruct  *SiS_LCD1280x800Data;
 	const SiS_LCDDataStruct  *SiS_LCD1280x800_2Data;
+	const SiS_LCDDataStruct  *SiS_LCD1280x854Data;
 	const SiS_LCDDataStruct  *SiS_LCD1280x960Data;
 	const SiS_LCDDataStruct  *SiS_ExtLCD1280x1024Data;
 	const SiS_LCDDataStruct  *SiS_St2LCD1280x1024Data;

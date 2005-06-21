@@ -2335,11 +2335,11 @@ SISGetPortUtilAttribute(ScrnInfoPtr pScrn,  Atom attribute,
   } else if(attribute == pSiS->xv_BRB) {
      *value = pSiS->GammaBriB;
   } else if(attribute == pSiS->xv_PBR) {
-     *value = pSiS->GammaPBriR;
+     *value = 1000;
   } else if(attribute == pSiS->xv_PBG) {
-     *value = pSiS->GammaPBriG;
+     *value = 1000;
   } else if(attribute == pSiS->xv_PBB) {
-     *value = pSiS->GammaPBriB;
+     *value = 1000;
   } else if(attribute == pSiS->xv_BRR2) {
 #ifdef SISDUALHEAD
      if(pPriv->dualHeadMode) *value = pSiSEnt->GammaBriR;
@@ -2359,23 +2359,11 @@ SISGetPortUtilAttribute(ScrnInfoPtr pScrn,  Atom attribute,
 #endif
           *value = pSiS->GammaBriB;
   } else if(attribute == pSiS->xv_PBR2) {
-#ifdef SISDUALHEAD
-     if(pPriv->dualHeadMode) *value = pSiSEnt->GammaPBriR;
-     else
-#endif
-          *value = pSiS->GammaPBriR;
+     *value = 1000;
   } else if(attribute == pSiS->xv_PBG2) {
-#ifdef SISDUALHEAD
-     if(pPriv->dualHeadMode) *value = pSiSEnt->GammaPBriG;
-     else
-#endif
-          *value = pSiS->GammaPBriG;
+     *value = 1000;
   } else if(attribute == pSiS->xv_PBB2) {
-#ifdef SISDUALHEAD
-     if(pPriv->dualHeadMode) *value = pSiSEnt->GammaPBriB;
-     else
-#endif
-          *value = pSiS->GammaPBriB;
+     *value = 1000;
   } else if(attribute == pSiS->xv_GARC2) {
      *value = (int)(pSiS->GammaR2 * 1000);
   } else if(attribute == pSiS->xv_GAGC2) {
@@ -2389,11 +2377,11 @@ SISGetPortUtilAttribute(ScrnInfoPtr pScrn,  Atom attribute,
   } else if(attribute == pSiS->xv_BRBC2) {
      *value = pSiS->GammaBriB2;
   } else if(attribute == pSiS->xv_PBRC2) {
-     *value = pSiS->GammaPBriR2;
+     *value = 1000;
   } else if(attribute == pSiS->xv_PBGC2) {
-     *value = pSiS->GammaPBriG2;
+     *value = 1000;
   } else if(attribute == pSiS->xv_PBBC2) {
-     *value = pSiS->GammaPBriB2;
+     *value = 1000;
   } else if(attribute == pSiS->xv_SHC) {
      *value = pSiS->HideHWCursor ? 1 : 0;
   } else if(attribute == pSiS->xv_PMD) {

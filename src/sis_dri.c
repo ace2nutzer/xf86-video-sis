@@ -65,6 +65,14 @@ extern char *DRICreatePCIBusID(pciVideoPtr PciInfo);
 #include "sis_common.h"
 #endif
 
+#ifndef DRIINFO_MAJOR_VERSION
+#define DRIINFO_MAJOR_VERSION 4
+#endif
+
+#ifndef DRIINFO_MINOR_VERSION
+#define DRIINFO_MINOR_VERSION 0
+#endif
+
 /* Idle function for 300 series */
 #define BR(x)   (0x8200 | (x) << 2)
 #define SiSIdle \
@@ -274,10 +282,9 @@ SISDRIScreenInit(ScreenPtr pScreen)
      if(major != DRIINFO_MAJOR_VERSION || minor < DRIINFO_MINOR_VERSION) {
         xf86DrvMsg(pScreen->myNum, X_ERROR,
                     "[dri] SISDRIScreenInit failed because of a version mismatch.\n"
-                    "\t[dri] libdri version is %d.%d.%d but version %d.%d.x is needed.\n"
+                    "\t[dri] libDRI version is %d.%d.%d but version %d.%d.x is needed.\n"
                     "\t[dri] Disabling DRI.\n",
-                    major, minor, patch,
-                    DRIINFO_MAJOR_VERSION, DRIINFO_MINOR_VERSION);
+                    major, minor, patch, DRIINFO_MAJOR_VERSION, DRIINFO_MINOR_VERSION);
         return FALSE;
      }
   }

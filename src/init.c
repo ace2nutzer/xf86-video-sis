@@ -138,6 +138,7 @@ InitCommonPointer(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo)
    SiS_Pr->SiS_ExtLCD1280x768_2Data = SiS_ExtLCD1280x768_2Data;
    SiS_Pr->SiS_LCD1280x800Data      = SiS_LCD1280x800Data;
    SiS_Pr->SiS_LCD1280x800_2Data    = SiS_LCD1280x800_2Data;
+   SiS_Pr->SiS_LCD1280x854Data      = SiS_LCD1280x854Data;
    SiS_Pr->SiS_LCD1280x960Data      = SiS_LCD1280x960Data;
    SiS_Pr->SiS_StLCD1400x1050Data   = SiS_StLCD1400x1050Data;
    SiS_Pr->SiS_ExtLCD1400x1050Data  = SiS_ExtLCD1400x1050Data;
@@ -505,6 +506,11 @@ SiS_GetModeID(int VGAEngine, ULONG VBFlags, int HDisplay, int VDisplay,
 	        ModeIndex = ModeIndex_1280x800[Depth];
 	     }
 	     break;
+	  case 854:
+	     if(VGAEngine == SIS_315_VGA) {
+	        ModeIndex = ModeIndex_1280x854[Depth];
+	     }
+	     break;
 	  case 960:
 	     ModeIndex = ModeIndex_1280x960[Depth];
 	     break;
@@ -742,6 +748,11 @@ SiS_GetModeID_LCD(int VGAEngine, ULONG VBFlags, int HDisplay, int VDisplay,
 		   ModeIndex = ModeIndex_1280x800[Depth];
 		}
 		break;
+	     case 854:
+		if(VGAEngine == SIS_315_VGA) {
+		   ModeIndex = ModeIndex_1280x854[Depth];
+		}
+		break;
 	     case 960:
 		ModeIndex = ModeIndex_1280x960[Depth];
 		break;
@@ -967,8 +978,11 @@ SiS_GetModeID_VGA2(int VGAEngine, ULONG VBFlags, int HDisplay, int VDisplay, int
 		   }
 		} else if(VDisplay == 1024) ModeIndex = ModeIndex_1280x1024[Depth];
 		else if(VDisplay == 720)    ModeIndex = ModeIndex_1280x720[Depth];
-		else if(VDisplay == 800)    ModeIndex = ModeIndex_1280x800[Depth];
 		else if(VDisplay == 960)    ModeIndex = ModeIndex_1280x960[Depth];
+		else if(VGAEngine == SIS_315_VGA) {
+		   if(VDisplay == 800)      ModeIndex = ModeIndex_1280x800[Depth];
+		   else if(VDisplay == 854) ModeIndex = ModeIndex_1280x854[Depth];
+		}
 		break;
         case 1360:
 	        if(VDisplay == 768) ModeIndex = ModeIndex_1360x768[Depth];
@@ -1260,6 +1274,9 @@ SiSInitPCIetc(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo)
 /*             HELPER: SetLVDSetc            */
 /*********************************************/
 
+#ifdef LINUX_KERNEL
+static
+#endif
 void
 SiSSetLVDSetc(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo)
 {
@@ -1502,6 +1519,9 @@ SiS_ResetSegmentRegisters(SiS_Private *SiS_Pr,PSIS_HW_INFO HwInfo)
 /*             HELPER: GetVBType             */
 /*********************************************/
 
+#ifdef LINUX_KERNEL
+static
+#endif
 void
 SiS_GetVBType(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo)
 {

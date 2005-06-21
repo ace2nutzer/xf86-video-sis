@@ -113,6 +113,7 @@ static const USHORT ModeIndex_300_1280x768[] = {0x55, 0x5a, 0x00, 0x5b};
 static const USHORT ModeIndex_310_1280x768[] = {0x23, 0x24, 0x00, 0x25};
 static const USHORT ModeIndex_1280x720[]     = {0x79, 0x75, 0x00, 0x78};
 static const USHORT ModeIndex_1280x800[]     = {0x14, 0x15, 0x00, 0x16};
+static const USHORT ModeIndex_1280x854[]     = {0x1a, 0x1b, 0x00, 0x1c};
 static const USHORT ModeIndex_1360x768[]     = {0x48, 0x4b, 0x00, 0x4e};
 static const USHORT ModeIndex_300_1360x1024[]= {0x67, 0x6f, 0x00, 0x72};  /* 300 series, BARCO only */
 static const USHORT ModeIndex_1400x1050[]    = {0x26, 0x27, 0x00, 0x28};  /* 315 series only */
@@ -286,7 +287,8 @@ static const SiS_ModeResInfoStruct SiS_ModeResInfo[] =
 	{ 1280, 800, 8,16},   /* 0x1e */
 	{ 1920,1080, 8,16},   /* 0x1f */
 	{  960, 540, 8,16},   /* 0x20 */
-	{  960, 600, 8,16}    /* 0x21 */
+	{  960, 600, 8,16},   /* 0x21 */
+	{ 1280, 854, 8,16}    /* 0x22 */
 };
 
 #if defined(SIS300) || defined(SIS315H)
@@ -1086,6 +1088,24 @@ static const SiS_LCDDataStruct  SiS_LCD1280x800_3Data[] = /* 2.02.05a (LVDS); m2
 };
 #endif
 
+static const SiS_LCDDataStruct  SiS_LCD1280x854Data[] = /* 2.21.00CS (LVDS) */
+{
+	{  56,   15,  936,  410, 1664,  861 },  /* 640x400 */
+	{  64,   25, 1586,  355, 1664,  861 },
+	{  56,   15,  936,  410, 1664,  861 },
+	{  64,   25, 1586,  355, 1664,  861 },
+	{  91,   45, 1464,  485, 1664,  861 },  /* 640x480 */
+	{ 182,   75,  976,  605, 1664,  861 },  /* 800x600 */
+	{  91,   66, 1342,  774, 1664,  861 },  /* 1024x768 */
+	{   0,    0,    0,    0,    0,    0 },  /* 1280x1024 */
+	{  26,   25, 1708,  807, 1664,  861 },  /* 1280x800 */
+	{  13,   12, 1708,  774, 1664,  861 },  /* 1280x768 - patch index */
+	{  52,   45, 1708,  725, 1664,  861 },  /* 1280x720 */
+	{   0,    0,    0,    0,    0,    0 },
+	{   0,    0,    0,    0,    0,    0 },
+	{   1,    1, 1664,  861, 1664,  861 }   /* 1280x854 */
+};
+
 static const SiS_LCDDataStruct  SiS_LCD1280x960Data[] =
 {
 	{    9,   2,  800,  500, 1800, 1000 },
@@ -1096,7 +1116,12 @@ static const SiS_LCDDataStruct  SiS_LCD1280x960Data[] =
 	{   30,  11, 1056,  625, 1800, 1000 },
 	{    5,   3, 1350,  800, 1800, 1000 },
 	{    1,   1, 1576, 1050, 1576, 1050 },
-	{    1,   1, 1800, 1000, 1800, 1000 }
+	{    1,   1, 1800, 1000, 1800, 1000 },
+	{   0,    0,    0,    0,    0,    0 },
+	{   0,    0,    0,    0,    0,    0 },
+	{   0,    0,    0,    0,    0,    0 },
+	{   0,    0,    0,    0,    0,    0 },
+	{   0,    0,    0,    0,    0,    0 }
 };
 
 static const SiS_LCDDataStruct  SiS_StLCD1400x1050Data[] =
@@ -1109,7 +1134,12 @@ static const SiS_LCDDataStruct  SiS_StLCD1400x1050Data[] =
 	{ 211,   72, 1008,  609, 1688, 1066 },
 	{ 211,  128, 1400,  776, 1688, 1066 },
 	{ 211,  205, 1680, 1041, 1688, 1066 },
-	{   1,    1, 1688, 1066, 1688, 1066 }
+	{   1,    1, 1688, 1066, 1688, 1066 },
+	{   0,    0,    0,    0,    0,    0 },
+	{   0,    0,    0,    0,    0,    0 },
+	{   0,    0,    0,    0,    0,    0 },
+	{   0,    0,    0,    0,    0,    0 },
+	{   0,    0,    0,    0,    0,    0 }
 };
 
 static const SiS_LCDDataStruct  SiS_ExtLCD1400x1050Data[] =
@@ -1127,7 +1157,10 @@ static const SiS_LCDDataStruct  SiS_ExtLCD1400x1050Data[] =
 	{ 211,  205, 1680, 1041, 1688, 1066 }, /* 1280x1024 - not used (always unscaled) */
 	{   1,    1, 1688, 1066, 1688, 1066 }, /* 1400x1050 */
 	{   0,    0,    0,    0,    0,    0 }, /* kludge */
-	{ 211,  120, 1400,  730, 1688, 1066 }  /* 1280x720 */
+	{ 211,  120, 1400,  730, 1688, 1066 }, /* 1280x720 */
+	{   0,    0,    0,    0,    0,    0 },
+	{   0,    0,    0,    0,    0,    0 },
+	{   0,    0,    0,    0,    0,    0 }
 };
 
 static const SiS_LCDDataStruct  SiS_LCD1680x1050Data[] =
@@ -1144,7 +1177,8 @@ static const SiS_LCDDataStruct  SiS_LCD1680x1050Data[] =
 	{  95,   69, 1800,  817, 1900, 1066 }, /*  9 1280x800 patch index */
 	{  13,    9, 1900,  739, 1900, 1066 }, /* 10 1280x720 */
 	{  95,   94, 1880, 1066, 1900, 1066 }, /* 11 1400x1050 patch index */
-	{   1,    1, 1900, 1066, 1900, 1066 }  /* 12 1680x1050 */
+	{   1,    1, 1900, 1066, 1900, 1066 }, /* 12 1680x1050 */
+	{   0,    0,    0,    0,    0,    0 }
 };
 
 static const SiS_LCDDataStruct  SiS_StLCD1600x1200Data[] =
@@ -1158,7 +1192,11 @@ static const SiS_LCDDataStruct  SiS_StLCD1600x1200Data[] =
 	{ 5,  2,1350, 800, 2160, 1250 },
 	{135,88,1600,1100, 2160, 1250 },
 	{72, 49,1680,1092, 2160, 1250 },
-	{ 1,  1,2160,1250, 2160, 1250 }
+	{ 1,  1,2160,1250, 2160, 1250 },
+	{ 0,  0,   0,   0,    0,    0 },
+	{ 0,  0,   0,   0,    0,    0 },
+	{ 0,  0,   0,   0,    0,    0 },
+	{ 0,  0,   0,   0,    0,    0 }
 };
 
 static const SiS_LCDDataStruct  SiS_ExtLCD1600x1200Data[] =
@@ -1174,7 +1212,11 @@ static const SiS_LCDDataStruct  SiS_ExtLCD1600x1200Data[] =
 	{ 5, 2,1350, 800, 2160, 1250 },
 	{27,16,1500,1064, 2160, 1250 }, /* 1280x1024 */
 	{72,49,1680,1092, 2160, 1250 }, /* 1400x1050 (6330, was not supported on 6325) */
-	{ 1, 1,2160,1250, 2160, 1250 }
+	{ 1, 1,2160,1250, 2160, 1250 },
+	{ 0, 0,   0,   0,    0,    0 },
+	{ 0, 0,   0,   0,    0,    0 },
+	{ 0, 0,   0,   0,    0,    0 },
+	{ 0, 0,   0,   0,    0,    0 }
 };
 
 static const SiS_LCDDataStruct  SiS_NoScaleData[] =
@@ -1211,7 +1253,8 @@ static const SiS_LCDDataStruct  SiS_NoScaleData[] =
 	{ 1, 1,1120, 618,1120, 618 },  /* 0x1d: 960x600 */
 	{ 1, 1,1408, 816,1408, 816 },  /* 0x1f: 1280x800 (TMDS special) */
 	{ 1, 1,1760,1235,1760,1235 },  /* 0x20: 1600x1200 for LCDA */
-	{ 1, 1,2048,1320,2048,1320 }   /* 0x21: 1600x1200 for non-SiS LVDS */
+	{ 1, 1,2048,1320,2048,1320 },  /* 0x21: 1600x1200 for non-SiS LVDS */
+	{ 1, 1,1664, 861,1664, 861 }   /* 0x22: 1280x854 */
 };
 
 /**************************************************************/
@@ -1958,11 +2001,15 @@ void	SiS_SetRegOR(SISIOADDRESS Port,USHORT Index, USHORT DataOR);
 void	SiS_DisplayOn(SiS_Private *SiS_Pr);
 void	SiS_DisplayOff(SiS_Private *SiS_Pr);
 void	SiSRegInit(SiS_Private *SiS_Pr, SISIOADDRESS BaseAddr);
+#ifndef LINUX_KERNEL
 void	SiSSetLVDSetc(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo);
+#endif
 BOOLEAN SiSDetermineROMLayout661(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo);
 void	SiS_SetEnableDstn(SiS_Private *SiS_Pr, int enable);
 void	SiS_SetEnableFstn(SiS_Private *SiS_Pr, int enable);
+#ifndef LINUX_KERNEL
 void	SiS_GetVBType(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo);
+#endif
 BOOLEAN	SiS_SearchModeID(SiS_Private *SiS_Pr, USHORT *ModeNo, USHORT *ModeIdIndex);
 UCHAR	SiS_GetModePtr(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex);
 USHORT	SiS_GetColorDepth(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex);
@@ -2011,7 +2058,6 @@ extern void     SiS_GetLCDResInfo(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT Mod
 extern void     SiS_SetYPbPr(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo);
 extern void 	SiS_SetTVMode(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex, PSIS_HW_INFO HwInfo);
 extern void     SiS_UnLockCRT2(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo);
-extern void     SiS_LockCRT2(SiS_Private *SiS_Pr, PSIS_HW_INFO HwInfo);
 extern void     SiS_DisableBridge(SiS_Private *, PSIS_HW_INFO);
 extern BOOLEAN  SiS_SetCRT2Group(SiS_Private *, PSIS_HW_INFO, USHORT);
 extern USHORT   SiS_GetRatePtr(SiS_Private *SiS_Pr, USHORT ModeNo, USHORT ModeIdIndex,

@@ -504,11 +504,9 @@ SiSOptions(ScrnInfoPtr pScrn)
     pSiS->XvGammaRed = pSiS->XvGammaGreen = pSiS->XvGammaBlue =
           pSiS->XvGammaRedDef = pSiS->XvGammaGreenDef = pSiS->XvGammaBlueDef = 1000;
     pSiS->GammaBriR = pSiS->GammaBriG = pSiS->GammaBriB = 1000;
-    pSiS->GammaPBriR = pSiS->GammaPBriG = pSiS->GammaPBriB = 1000;
     pSiS->CRT2SepGamma = FALSE;
     pSiS->GammaR2 = pSiS->GammaG2 = pSiS->GammaB2 = 1.0;
     pSiS->GammaBriR2 = pSiS->GammaBriG2 = pSiS->GammaBriB2 = 1000;
-    pSiS->GammaPBriR2 = pSiS->GammaPBriG2 = pSiS->GammaPBriB2 = 1000;
     pSiS->HideHWCursor = FALSE;
     pSiS->HWCursorIsVisible = FALSE;
     pSiS->OverruleRanges = TRUE;

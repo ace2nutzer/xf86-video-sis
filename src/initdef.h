@@ -404,7 +404,7 @@
 #define Panel661_1024x600       0x05
 #define Panel661_1152x864       0x06
 #define Panel661_1280x960       0x07
-#define Panel661_1152x768       0x08
+#define Panel661_1280x854       0x08
 #define Panel661_1400x1050      0x09
 #define Panel661_1280x768       0x0a
 #define Panel661_1600x1200      0x0b
@@ -437,6 +437,7 @@
 #define Panel_1280x768_3        0x16    /* (unused) */
 #define Panel_1280x800_2	0x17    /* 30xLV */
 #define Panel_856x480		0x18
+#define Panel_1280x854		0x19	/* 661etc */
 
 /* Index in ModeResInfo table */
 #define SIS_RI_320x200    0
@@ -473,6 +474,7 @@
 #define SIS_RI_1920x1080 31
 #define SIS_RI_960x540   32
 #define SIS_RI_960x600   33
+#define SIS_RI_1280x854  34
 
 /* CR5F */
 #define IsM650                  0x80
@@ -528,6 +530,7 @@
 #define VCLK_1152x864		0x64
 #define VCLK_1360x768		0x58
 #define VCLK_1280x800_315	0x6c
+#define VCLK_1280x854		0x76
 
 #define TVCLKBASE_300		0x21   /* Indices on TV clocks in VCLKData table (300) */
 #define TVCLKBASE_315	        0x3a   /* Indices on TV clocks in (VB)VCLKData table (315) */

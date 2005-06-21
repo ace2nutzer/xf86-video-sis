@@ -693,7 +693,7 @@ SISCalculateGammaRamp(ScreenPtr pScreen, ScrnInfoPtr pScrn)
    for(i = 0; i < 3; i++) {
       int fullscale = 65535 * gamma_max[i];
       float dramp = 1. / (nramp - 1);
-      float invgamma=0.0, v;
+      float invgamma = 0.0, v;
 
       switch(i) {
       case 0: invgamma = 1. / pScrn->gamma.red; break;
@@ -702,7 +702,7 @@ SISCalculateGammaRamp(ScreenPtr pScreen, ScrnInfoPtr pScrn)
       }
 
       for(j = 0; j < nramp; j++) {
-	 framp = pow(1.0 * j * dramp, invgamma);
+	 framp = pow(j * dramp, invgamma);
 
 	 v = (fullscale < 0) ? (65535 + fullscale * framp) :
 			       fullscale * framp;
@@ -4149,9 +4149,6 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	  pSiSEnt->GammaBriR = pSiS->GammaBriR;
 	  pSiSEnt->GammaBriG = pSiS->GammaBriG;
 	  pSiSEnt->GammaBriB = pSiS->GammaBriB;
-	  pSiSEnt->GammaPBriR = pSiS->GammaPBriR;
-	  pSiSEnt->GammaPBriG = pSiS->GammaPBriG;
-	  pSiSEnt->GammaPBriB = pSiS->GammaPBriB;
 #ifdef SIS_CP
 	  SIS_CP_DRIVER_COPYOPTIONS
 #endif
@@ -8408,11 +8405,11 @@ SISScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
        return FALSE;
     }
 
-    /* Recalculate our gamma ramp for (pre)brightness feature */
+    /* Recalculate our gamma ramp for brightness feature */
 #ifdef SISGAMMARAMP
-    if((pSiS->GammaBriR != 1000) || (pSiS->GammaBriG != 1000) ||
-       (pSiS->GammaBriB != 1000) || (pSiS->GammaPBriR != 1000) ||
-       (pSiS->GammaPBriG != 1000) || (pSiS->GammaPBriB != 1000)) {
+    if((pSiS->GammaBriR != 1000) ||
+       (pSiS->GammaBriB != 1000) ||
+       (pSiS->GammaBriG != 1000)) {
        SISCalculateGammaRamp(pScreen, pScrn);
     }
 #endif
