@@ -126,7 +126,7 @@ static int pix24bpp = 0;
  * an upper-case version of the driver name.
  */
 
-DriverRec SIS = {
+_X_EXPORT DriverRec SIS = {
     SIS_CURRENT_VERSION,
     SIS_DRIVER_NAME,
     SISIdentify,
@@ -306,7 +306,7 @@ static XF86ModuleVersionInfo sisVersRec =
     {0,0,0,0}
 };
 
-XF86ModuleData sisModuleData = { &sisVersRec, sisSetup, NULL };
+_X_EXPORT XF86ModuleData sisModuleData = { &sisVersRec, sisSetup, NULL };
 
 pointer
 sisSetup(pointer module, pointer opts, int *errmaj, int *errmin)
