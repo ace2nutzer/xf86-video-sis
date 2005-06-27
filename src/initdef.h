@@ -53,19 +53,20 @@
 #ifndef _INITDEF_
 #define _INITDEF_
 
-#define IS_SIS330		(HwInfo->jChipType == SIS_330)
-#define IS_SIS550		(HwInfo->jChipType == SIS_550)
-#define IS_SIS650		(HwInfo->jChipType == SIS_650)  /* All versions, incl 651, M65x */
-#define IS_SIS740		(HwInfo->jChipType == SIS_740)
+#define IS_SIS330		(SiS_Pr->ChipType == SIS_330)
+#define IS_SIS550		(SiS_Pr->ChipType == SIS_550)
+#define IS_SIS650		(SiS_Pr->ChipType == SIS_650)  /* All versions, incl 651, M65x */
+#define IS_SIS740		(SiS_Pr->ChipType == SIS_740)
 #define IS_SIS651	        (SiS_Pr->SiS_SysFlags & (SF_Is651 | SF_Is652))
 #define IS_SISM650	        (SiS_Pr->SiS_SysFlags & (SF_IsM650 | SF_IsM652 | SF_IsM653))
 #define IS_SIS65x               (IS_SIS651 || IS_SISM650)       /* Only special versions of 65x */
-#define IS_SIS661		(HwInfo->jChipType == SIS_661)
-#define IS_SIS741		(HwInfo->jChipType == SIS_741)
-#define IS_SIS660		(HwInfo->jChipType == SIS_660)
-#define IS_SIS760		(HwInfo->jChipType == SIS_760)
-#define IS_SIS661741660760	(IS_SIS661 || IS_SIS741 || IS_SIS660 || IS_SIS760)
-#define IS_SIS650740            ((HwInfo->jChipType >= SIS_650) && (HwInfo->jChipType < SIS_330))
+#define IS_SIS661		(SiS_Pr->ChipType == SIS_661)
+#define IS_SIS741		(SiS_Pr->ChipType == SIS_741)
+#define IS_SIS660		(SiS_Pr->ChipType == SIS_660)
+#define IS_SIS760		(SiS_Pr->ChipType == SIS_760)
+#define IS_SIS761		(SiS_Pr->ChipType == SIS_761)
+#define IS_SIS661741660760	(IS_SIS661 || IS_SIS741 || IS_SIS660 || IS_SIS760 || IS_SIS761)
+#define IS_SIS650740            ((SiS_Pr->ChipType >= SIS_650) && (SiS_Pr->ChipType < SIS_330))
 #define IS_SIS550650740         (IS_SIS550 || IS_SIS650740)
 #define IS_SIS650740660         (IS_SIS650 || IS_SIS740 || IS_SIS661741660760)
 #define IS_SIS550650740660      (IS_SIS550 || IS_SIS650740660)

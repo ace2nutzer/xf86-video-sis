@@ -308,7 +308,7 @@ SISInitVideo(ScreenPtr pScreen)
 
 #ifdef INCL_YUV_BLIT_ADAPTOR
     if( ( (pSiS->ChipFlags & SiSCF_Is65x) ||
-          (pSiS->sishw_ext.jChipType >= SIS_330) ) &&
+          (pSiS->ChipType >= SIS_330) ) &&
         (pScrn->bitsPerPixel != 8) ) {
        newBlitAdaptor = SISSetupBlitVideo(pScreen);
     }
@@ -552,7 +552,7 @@ SISResetVideo(ScrnInfoPtr pScrn)
 	if(pPriv->is661741760) {
 	   CARD8 temp;
 	   setvideoregmask(pSiS, Index_VI_Key_Overlay_OP, 0x00, 0xE0);
-	   switch(pSiS->sishw_ext.jChipType) {
+	   switch(pSiS->ChipType) {
 	   case SIS_661: temp = 0x24; break;
 	   case SIS_741: temp = 0x2c; break;
 	   default: 	 temp = 0x3c;
@@ -893,10 +893,10 @@ SISSetupImageVideo(ScreenPtr pScreen)
     pPriv->grabbedByV4L= FALSE;
     pPriv->NoOverlay   = FALSE;
     pPriv->PrevOverlay = FALSE;
-    pPriv->is661741760 = ((pSiS->sishw_ext.jChipType >= SIS_661) &&
-			  (pSiS->sishw_ext.jChipType <= SIS_760)) ? TRUE : FALSE;
-    pPriv->is760       = (pSiS->sishw_ext.jChipType == SIS_760)   ? TRUE : FALSE;
-    pPriv->is761       = (pSiS->sishw_ext.jChipType == SIS_761)   ? TRUE : FALSE;
+    pPriv->is661741760 = ((pSiS->ChipType >= SIS_661) &&
+			  (pSiS->ChipType <= SIS_760)) ? TRUE : FALSE;
+    pPriv->is760       = (pSiS->ChipType == SIS_760)   ? TRUE : FALSE;
+    pPriv->is761       = (pSiS->ChipType == SIS_761)   ? TRUE : FALSE;
     pPriv->is340       = (pSiS->Chipset == PCI_CHIP_SIS340)       ? TRUE : FALSE;
 
     /* Setup chipset type helpers */
@@ -914,7 +914,7 @@ SISSetupImageVideo(ScreenPtr pScreen)
        adapt->pAttributes = SISAttributes_300;
        adapt->nAttributes = SiSCountAttributes(&SISAttributes_300[0]);
     } else {
-       if(pSiS->sishw_ext.jChipType >= SIS_330) {
+       if(pSiS->ChipType >= SIS_330) {
           adapt->nImages = NUM_IMAGES_330;
        } else {
           adapt->nImages = NUM_IMAGES_315;
@@ -1456,8 +1456,8 @@ calc_scale_factor(SISOverlayPtr pOverlay, ScrnInfoPtr pScrn,
   if((modeflags & V_DBLSCAN) && !flag2) {
      dstH = origdstH << 1;
      flag = 0;
-     if((pSiS->sishw_ext.jChipType >= SIS_315H) &&
-	(pSiS->sishw_ext.jChipType <= SIS_550)) {
+     if((pSiS->ChipType >= SIS_315H) &&
+	(pSiS->ChipType <= SIS_550)) {
 	dstW <<= 1;
      }
   } else if(modeflags & V_INTERLACE) {
@@ -1613,8 +1613,8 @@ calc_scale_factor_2(SISOverlayPtr pOverlay, ScrnInfoPtr pScrn,
   if((modeflags & V_DBLSCAN) && !flag2) {
      dstH = origdstH << 1;
      flag = 0;
-     if((pSiS->sishw_ext.jChipType >= SIS_315H) &&
-	(pSiS->sishw_ext.jChipType <= SIS_550)) {
+     if((pSiS->ChipType >= SIS_315H) &&
+	(pSiS->ChipType <= SIS_550)) {
 	dstW <<= 1;
      }
   }
@@ -4063,7 +4063,7 @@ SISSetupBlitVideo(ScreenPtr pScreen)
    /* Scanline trigger not implemented by hardware! */
    pPriv->VBlankTriggerCRT1 = 0; /* SCANLINE_TRIGGER_ENABLE | SCANLINE_TR_CRT1; */
    pPriv->VBlankTriggerCRT2 = 0; /* SCANLINE_TRIGGER_ENABLE | SCANLINE_TR_CRT2; */
-   if(pSiS->sishw_ext.jChipType >= SIS_330) {
+   if(pSiS->ChipType >= SIS_330) {
       pPriv->AccelCmd = YUVRGB_BLIT_330;
    } else {
       pPriv->AccelCmd = YUVRGB_BLIT_325;

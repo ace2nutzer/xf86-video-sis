@@ -53,27 +53,27 @@ extern float	SiSCalcVRate(DisplayModePtr mode);
 extern void	SISCalculateGammaRampCRT2(ScrnInfoPtr pScrn);
 
 /* Functions from init.c and init301.c (use their datatypes!) */
-extern void	SiS_UnLockCRT2(SiS_Private *SiS_Pr, PSIS_HW_INFO);
-extern void	SiS_LockCRT2(SiS_Private *SiS_Pr, PSIS_HW_INFO);
-extern void	SiS_DisableBridge(SiS_Private *SiS_Pr, PSIS_HW_INFO);
-extern void	SiS_EnableBridge(SiS_Private *SiS_Pr, PSIS_HW_INFO);
-extern USHORT	SiS_GetCH700x(SiS_Private *SiS_Pr, USHORT tempbx);
-extern void	SiS_SetCH700x(SiS_Private *SiS_Pr, USHORT tempbx);
-extern USHORT	SiS_GetCH701x(SiS_Private *SiS_Pr, USHORT tempbx);
-extern void	SiS_SetCH701x(SiS_Private *SiS_Pr, USHORT tempbx);
-extern USHORT	SiS_GetCH70xx(SiS_Private *SiS_Pr, USHORT tempbx);
-extern void	SiS_SetCH70xx(SiS_Private *SiS_Pr, USHORT tempbx);
-extern void	SiS_SetCH70xxANDOR(SiS_Private *SiS_Pr, USHORT tempax, USHORT tempbh);
-extern void	SiS_DDC2Delay(SiS_Private *SiS_Pr, USHORT delaytime);
-extern USHORT	SiS_ReadDDC1Bit(SiS_Private *SiS_Pr);
-extern USHORT	SiS_HandleDDC(SiS_Private *SiS_Pr, ULONG VBFlags, int VGAEngine,
-                              USHORT adaptnum, USHORT DDCdatatype, UCHAR *buffer);
-extern void	SiS_SetChrontelGPIO(SiS_Private *SiS_Pr, USHORT myvbinfo);
-extern void	SiS_DisplayOn(SiS_Private *SiS_Pr);
-extern UCHAR	SiS_GetSetModeID(ScrnInfoPtr pScrn, UCHAR id);
-extern void	SiS_SetEnableDstn(SiS_Private *SiS_Pr, int enable);
-extern void	SiS_SetEnableFstn(SiS_Private *SiS_Pr, int enable);
-extern void	SiSRegInit(SiS_Private *SiS_Pr, USHORT BaseAddr);
-extern void	SiSSetLVDSetc(SiS_Private *SiS_Pr, PSIS_HW_INFO HwDeviceExtension, USHORT ModeNo);
-extern void	SiS_GetVBType(SiS_Private *SiS_Pr, PSIS_HW_INFO);
+extern void		SiS_UnLockCRT2(struct SiS_Private *SiS_Pr);
+extern void		SiS_LockCRT2(struct SiS_Private *SiS_Pr);
+extern void		SiS_DisableBridge(struct SiS_Private *SiS_Pr);
+extern void		SiS_EnableBridge(struct SiS_Private *SiS_Pr);
+extern unsigned short	SiS_GetCH700x(struct SiS_Private *SiS_Pr, unsigned short reg);
+extern void		SiS_SetCH700x(struct SiS_Private *SiS_Pr, unsigned short reg, unsigned char val);
+extern unsigned short	SiS_GetCH701x(struct SiS_Private *SiS_Pr, unsigned short reg);
+extern void		SiS_SetCH701x(struct SiS_Private *SiS_Pr, unsigned short reg, unsigned char val);
+extern unsigned short	SiS_GetCH70xx(struct SiS_Private *SiS_Pr, unsigned short reg);
+extern void		SiS_SetCH70xx(struct SiS_Private *SiS_Pr, unsigned short reg, unsigned char val);
+extern void		SiS_SetCH70xxANDOR(struct SiS_Private *SiS_Pr, unsigned short reg, unsigned char orval, unsigned char andval);
+extern void		SiS_DDC2Delay(struct SiS_Private *SiS_Pr, unsigned short delaytime);
+extern unsigned short	SiS_ReadDDC1Bit(struct SiS_Private *SiS_Pr);
+extern unsigned short	SiS_HandleDDC(struct SiS_Private *SiS_Pr, unsigned int VBFlags, int VGAEngine,
+                              unsigned short adaptnum, unsigned short DDCdatatype, unsigned char *buffer);
+extern void		SiS_SetChrontelGPIO(struct SiS_Private *SiS_Pr, unsigned short myvbinfo);
+extern void		SiS_DisplayOn(struct SiS_Private *SiS_Pr);
+extern unsigned char	SiS_GetSetModeID(ScrnInfoPtr pScrn, unsigned char id);
+extern void		SiS_SetEnableDstn(struct SiS_Private *SiS_Pr, int enable);
+extern void		SiS_SetEnableFstn(struct SiS_Private *SiS_Pr, int enable);
+extern void		SiSRegInit(struct SiS_Private *SiS_Pr, unsigned short BaseAddr);
+extern void		SiSSetLVDSetc(struct SiS_Private *SiS_Pr, unsigned short ModeNo);
+extern void		SiS_GetVBType(struct SiS_Private *SiS_Pr);
 /* End of init.c/init301.c imports */

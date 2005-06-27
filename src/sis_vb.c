@@ -56,9 +56,9 @@ extern void   SISWaitRetraceCRT1(ScrnInfoPtr pScrn);
 extern UChar  SiS_GetSetBIOSScratch(ScrnInfoPtr pScrn, UShort offset, UChar value);
 
 /* From init.c, init301.c ---- (use their data types) */
-extern BOOLEAN SiS_GetPanelID(SiS_Private *SiS_Pr, PSIS_HW_INFO HwDeviceExtension);
-extern USHORT  SiS_SenseLCDDDC(SiS_Private *SiS_Pr, SISPtr pSiS);
-extern USHORT  SiS_SenseVGA2DDC(SiS_Private *SiS_Pr, SISPtr pSiS);
+extern BOOLEAN		SiS_GetPanelID(struct SiS_Private *SiS_Pr);
+extern unsigned short	SiS_SenseLCDDDC(struct SiS_Private *SiS_Pr, SISPtr pSiS);
+extern unsigned short	SiS_SenseVGA2DDC(struct SiS_Private *SiS_Pr, SISPtr pSiS);
 
 typedef struct _SiS_LCD_StStruct
 {
@@ -173,9 +173,9 @@ SiS_SISDetectCRT1(ScrnInfoPtr pScrn)
        for(i=0; i < 10; i++) SISWaitRetraceCRT1(pScrn);
     }
 
-    if(pSiS->sishw_ext.jChipType >= SIS_330) {
+    if(pSiS->ChipType >= SIS_330) {
        int watchdog;
-       if(pSiS->sishw_ext.jChipType >= SIS_340) {
+       if(pSiS->ChipType >= SIS_340) {
           outSISIDXREG(SISCR, 0x57, 0x4a);
        } else {
           outSISIDXREG(SISCR, 0x57, 0x5f);
@@ -207,7 +207,7 @@ SiS_SISDetectCRT1(ScrnInfoPtr pScrn)
     if((temp) && (temp != 0xffff)) {
        orSISIDXREG(SISCR,0x32,0x20);
        ret = 1;
-    } else if(pSiS->sishw_ext.jChipType >= SIS_330) {
+    } else if(pSiS->ChipType >= SIS_330) {
        andSISIDXREG(SISCR,0x32,~0x20);
        ret = 0;
     }
@@ -256,7 +256,7 @@ void SISCRT1PreInit(ScrnInfoPtr pScrn)
 
     inSISIDXREG(SISCR, 0x32, CR32);
 
-    if(pSiS->sishw_ext.jChipType >= SIS_330) {
+    if(pSiS->ChipType >= SIS_330) {
        /* Works reliably on 330 and later */
        pSiS->CRT1Detected = SiS_SISDetectCRT1(pScrn);
     } else {
@@ -380,9 +380,9 @@ void SISLCDPreInit(ScrnInfoPtr pScrn, Bool quiet)
        }
        if(pSiS->PRGB != -1) {
 	  tmp = 0x37;
-	  if((pSiS->VGAEngine == SIS_315_VGA)      &&
-	     (pSiS->sishw_ext.jChipType < SIS_661) &&
-	     (pSiS->ROM661New)                     &&
+	  if((pSiS->VGAEngine == SIS_315_VGA) &&
+	     (pSiS->ChipType < SIS_661)       &&
+	     (pSiS->ROM661New)                &&
 	     (!(pSiS->SiS_Pr->PanelSelfDetected))) {
 	     tmp = 0x35;
 	  }
@@ -390,7 +390,7 @@ void SISLCDPreInit(ScrnInfoPtr pScrn, Bool quiet)
 	  else if(pSiS->PRGB == 24) andSISIDXREG(SISCR, tmp, 0xfe);
        }
        inSISIDXREG(SISCR, 0x37, CR37);
-       if(pSiS->sishw_ext.jChipType < SIS_661) {
+       if(pSiS->ChipType < SIS_661) {
 	  inSISIDXREG(SISCR, 0x3C, CR7D);
        } else {
 	  inSISIDXREG(SISCR, 0x7D, CR7D);
@@ -431,12 +431,12 @@ void SISLCDPreInit(ScrnInfoPtr pScrn, Bool quiet)
 	  if(CR36 == 0) {
 	     /* Old 650/301LV and ECS A907 BIOS versions "forget" to set CR36, CR37 */
 	     if(pSiS->VGAEngine == SIS_315_VGA) {
-		if(pSiS->sishw_ext.jChipType < SIS_661) {
+		if(pSiS->ChipType < SIS_661) {
 		   xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
 		      "BIOS provided invalid panel size, probing...\n");
 		   if(pSiS->VBFlags & VB_LVDS) pSiS->SiS_Pr->SiS_IF_DEF_LVDS = 1;
 		   else pSiS->SiS_Pr->SiS_IF_DEF_LVDS = 0;
-		   SiS_GetPanelID(pSiS->SiS_Pr, &pSiS->sishw_ext);
+		   SiS_GetPanelID(pSiS->SiS_Pr);
 		   inSISIDXREG(SISCR, 0x36, CR36);
 		   inSISIDXREG(SISCR, 0x37, CR37);
 		} else {
@@ -470,12 +470,12 @@ void SISLCDPreInit(ScrnInfoPtr pScrn, Bool quiet)
 		pSiS->LCDheight = SiS300_LCD_Type[(CR36 & 0x0f)].LCDheight;
 		pSiS->LCDwidth = SiS300_LCD_Type[(CR36 & 0x0f)].LCDwidth;
 		if(CR37 & 0x10) pSiS->VBLCDFlags |= VB_LCD_EXPANDING;
-	     } else if((pSiS->sishw_ext.jChipType >= SIS_661) || (pSiS->ROM661New)) {
+	     } else if((pSiS->ChipType >= SIS_661) || (pSiS->ROM661New)) {
 		pSiS->VBLCDFlags |= SiS661_LCD_Type[(CR36 & 0x0f)].VBLCD_lcdflag;
 		pSiS->LCDheight = SiS661_LCD_Type[(CR36 & 0x0f)].LCDheight;
 		pSiS->LCDwidth = SiS661_LCD_Type[(CR36 & 0x0f)].LCDwidth;
 		if(CR37 & 0x10) pSiS->VBLCDFlags |= VB_LCD_EXPANDING;
-		if(pSiS->sishw_ext.jChipType < SIS_661) {
+		if(pSiS->ChipType < SIS_661) {
 		   if(!(pSiS->SiS_Pr->PanelSelfDetected)) {
 		      inSISIDXREG(SISCR,0x35,tmp);
 		      CR37 &= 0xfc;
@@ -826,7 +826,7 @@ SISSense30x(ScrnInfoPtr pScrn, Bool quiet)
        if(!(myflag & 0x01)) vga2 = vga2_c = 0;
     }
 
-    if(pSiS->sishw_ext.UseROM) {
+    if(pSiS->SiS_Pr->UseROM) {
        if(pSiS->VGAEngine == SIS_300_VGA) {
           if(pSiS->VBFlags & VB_301) {
 	     inSISIDXREG(SISPART4,0x01,myflag);
@@ -1019,14 +1019,14 @@ SISSenseChrontel(ScrnInfoPtr pScrn, Bool quiet)
        temp1 = SiS_GetCH700x(pSiS->SiS_Pr, 0x0e);  /* Power status */
        if((temp1 & 0x03) != 0x03) {
 	  /* Power all outputs */
-	  SiS_SetCH700x(pSiS->SiS_Pr, 0x0B0E);
+	  SiS_SetCH700x(pSiS->SiS_Pr, 0x0e,0x0b);
 	  SiS_DDC2Delay(pSiS->SiS_Pr, 0x96);
        }
        /* Sense connected TV devices */
        for(i = 0; i < 3; i++) {
-	  SiS_SetCH700x(pSiS->SiS_Pr, 0x0110);
+	  SiS_SetCH700x(pSiS->SiS_Pr, 0x10, 0x01);
 	  SiS_DDC2Delay(pSiS->SiS_Pr, 0x96);
-	  SiS_SetCH700x(pSiS->SiS_Pr, 0x0010);
+	  SiS_SetCH700x(pSiS->SiS_Pr, 0x10, 0x00);
 	  SiS_DDC2Delay(pSiS->SiS_Pr, 0x96);
 	  temp1 = SiS_GetCH700x(pSiS->SiS_Pr, 0x10);
 	  if(!(temp1 & 0x08))       test[i] = 0x02;
@@ -1052,26 +1052,26 @@ SISSenseChrontel(ScrnInfoPtr pScrn, Bool quiet)
        temp1 = SiS_GetCH701x(pSiS->SiS_Pr, 0x49);
 
        /* Enable TV path */
-       SiS_SetCH701x(pSiS->SiS_Pr, 0x2049);
+       SiS_SetCH701x(pSiS->SiS_Pr, 0x49, 0x20);
 
        SiS_DDC2Delay(pSiS->SiS_Pr, 0x96);
 
        /* Sense connected TV devices */
        temp2 = SiS_GetCH701x(pSiS->SiS_Pr, 0x20);
        temp2 |= 0x01;
-       SiS_SetCH701x(pSiS->SiS_Pr, (temp2 << 8) | 0x20);
+       SiS_SetCH701x(pSiS->SiS_Pr, 0x20, temp2);
 
        SiS_DDC2Delay(pSiS->SiS_Pr, 0x96);
 
        temp2 ^= 0x01;
-       SiS_SetCH701x(pSiS->SiS_Pr, (temp2 << 8) | 0x20);
+       SiS_SetCH701x(pSiS->SiS_Pr, 0x20, temp2);
 
        SiS_DDC2Delay(pSiS->SiS_Pr, 0x96);
 
        temp2 = SiS_GetCH701x(pSiS->SiS_Pr, 0x20);
 
        /* Restore Power register */
-       SiS_SetCH701x(pSiS->SiS_Pr, (temp1 << 8) | 0x49);
+       SiS_SetCH701x(pSiS->SiS_Pr, 0x49, temp1);
 
        temp1 = 0;
        if(temp2 & 0x02) temp1 |= 0x01;

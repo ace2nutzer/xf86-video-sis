@@ -1194,7 +1194,7 @@ void SISVGAPreInit(ScrnInfoPtr pScrn)
 	      /* See Chrontel TB31 for explanation */
 	      temp2 = SiS_GetCH700x(pSiS->SiS_Pr, 0x0e);
 	      if(((temp2 & 0x07) == 0x01) || (temp2 & 0x04)) {
-		 SiS_SetCH700x(pSiS->SiS_Pr, 0x0b0e);
+		 SiS_SetCH700x(pSiS->SiS_Pr, 0x0e, 0x0b);
 		 SiS_DDC2Delay(pSiS->SiS_Pr, 300);
 	      }
 	      temp2 = SiS_GetCH70xx(pSiS->SiS_Pr, chrontelidreg);

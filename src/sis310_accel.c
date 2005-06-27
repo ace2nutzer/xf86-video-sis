@@ -541,7 +541,7 @@ SiS315AccelInit(ScreenPtr pScreen)
 	if(Avail.y2 < pScrn->currentMode->VDisplay) {
 	   xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
 		"Not enough video RAM for accelerator. At least "
-		"%dKB needed, %ldKB available\n",
+		"%dKB needed, %dKB available\n",
 		((((pScrn->displayWidth * pScrn->bitsPerPixel/8)   /* +8 for make it sure */
 		     * pScrn->currentMode->VDisplay) + reservedFbSize) / 1024) + 8,
 		pSiS->maxxfbmem/1024);

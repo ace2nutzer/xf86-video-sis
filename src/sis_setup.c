@@ -559,7 +559,7 @@ sis550Setup(ScrnInfoPtr pScrn)
 
     if(pSiS->Chipset == PCI_CHIP_SIS660) {
 
-       if(pSiS->sishw_ext.jChipType >= SIS_660) {
+       if(pSiS->ChipType >= SIS_660) {
 
 	  /* UMA - shared fb */
 	  pScrn->videoRam = 0;
@@ -615,7 +615,7 @@ sis550Setup(ScrnInfoPtr pScrn)
 
 	  int dimmnum;
 
-	  if(pSiS->sishw_ext.jChipType == SIS_741) {
+	  if(pSiS->ChipType == SIS_741) {
 	     dimmnum = 4;
 	  } else {
 	     dimmnum = 3;
@@ -702,7 +702,7 @@ sis550Setup(ScrnInfoPtr pScrn)
 	  inSISIDXREG(SISCR, 0x79, config);
 	  pSiS->BusWidth = (config & 0x04) ? 128 : 64;
 	  ramtype = (config & 0x01) ? 8 : 4;
-	  if(pSiS->sishw_ext.jChipType >= SIS_660) {
+	  if(pSiS->ChipType >= SIS_660) {
 	     pScrn->videoRam = 0;
 	     if(config & 0xf0) {
 		pScrn->videoRam = (1 << ((config & 0xf0) >> 4)) * 1024;
@@ -753,7 +753,7 @@ sis550Setup(ScrnInfoPtr pScrn)
      * - no DDR * 2 for bandwidth calculation,
      * - overlay magic (bandwidth dependent one/two overlay stuff)
      */
-    if((pSiS->sishw_ext.jChipType >= SIS_760) && (pSiS->sishw_ext.jChipType <= SIS_770)) {
+    if((pSiS->ChipType >= SIS_760) && (pSiS->ChipType <= SIS_770)) {
        if(!(pSiS->ChipFlags & SiSCF_760LFB)) {
 	  ddrtimes2 = FALSE;
 	  pSiS->SiS_SD2_Flags |= SiS_SD2_SUPPORT760OO;

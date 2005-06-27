@@ -46,7 +46,7 @@
 
 #define sis300GetCursorStatus \
   SIS_MMIO_IN32(pSiS->IOBase, CS(0)) & 0x40000000;
-  
+
 #define sis300SetCursorStatus(status) \
   { \
   ULong temp; \
@@ -64,7 +64,7 @@
   temp |= 0x40000000; \
   SIS_MMIO_OUT32(pSiS->IOBase, CS(0), temp); \
   }
-  
+
 #define sis300EnableHWARGBCursor() \
   { \
   ULong temp; \
@@ -89,7 +89,7 @@
   temp &= 0x4fffffff; \
   SIS_MMIO_OUT32(pSiS->IOBase, CS(0), temp); \
   }
-  
+
 #define sis300SwitchToRGBCursor() \
   { \
   ULong temp; \
@@ -97,7 +97,7 @@
   temp |= 0xB0000000; \
   SIS_MMIO_OUT32(pSiS->IOBase, CS(0), temp); \
   }
-  
+
 #define sis300DisableHWCursor()\
   { \
   ULong temp; \
@@ -135,7 +135,7 @@
 
 #define sis301GetCursorStatus \
   SIS_MMIO_IN32(pSiS->IOBase, CS(8)) & 0x40000000;
-  
+
 #define sis301SetCursorStatus(status) \
   { \
   ULong temp; \
@@ -144,7 +144,7 @@
   temp |= status; \
   SIS_MMIO_OUT32(pSiS->IOBase, CS(8), temp); \
   }
-  
+
 #define sis301EnableHWCursor()\
   { \
   ULong temp; \
@@ -153,7 +153,7 @@
   temp |= 0x40000000; \
   SIS_MMIO_OUT32(pSiS->IOBase, CS(8), temp); \
   }
-  
+
 #define sis301EnableHWARGBCursor()\
   { \
   ULong temp; \
@@ -161,7 +161,7 @@
   temp |= 0xF0000000; \
   SIS_MMIO_OUT32(pSiS->IOBase, CS(8), temp); \
   }
-  
+
 #define sis301EnableHWARGB16Cursor()\
   { \
   ULong temp; \
@@ -170,7 +170,7 @@
   temp |= 0xD0000000; \
   SIS_MMIO_OUT32(pSiS->IOBase, CS(8), temp); \
   }
-  
+
 #define sis301SwitchToRGBCursor() \
   { \
   ULong temp; \
@@ -178,7 +178,7 @@
   temp |= 0xB0000000; \
   SIS_MMIO_OUT32(pSiS->IOBase, CS(8), temp); \
   }
-  
+
 #define sis301SwitchToMONOCursor() \
   { \
   ULong temp; \
@@ -186,7 +186,7 @@
   temp &= 0x4fffffff; \
   SIS_MMIO_OUT32(pSiS->IOBase, CS(8), temp); \
   }
- 
+
 #define sis301DisableHWCursor()\
   { \
   ULong temp; \
@@ -194,7 +194,7 @@
   temp &= 0xbFFFFFFF; \
   SIS_MMIO_OUT32(pSiS->IOBase, CS(8), temp); \
   }
-  
+
 #define sis301SetCursorBGColor(color)\
   SIS_MMIO_OUT32(pSiS->IOBase, CS(9), (color));
 #define sis301SetCursorFGColor(color)\
@@ -221,10 +221,10 @@
  * 20000000 = 32(1) / 16(1) bit RGB
  * 10000000 = "ghost"(1) - Alpha Blend(0)
  */
- 
+
 #define sis310GetCursorStatus \
   SIS_MMIO_IN32(pSiS->IOBase, CS(0)) & 0x40000000;
-  
+
 #define sis310SetCursorStatus(status) \
   pSiS->HWCursorBackup[0] &= 0xbfffffff; \
   pSiS->HWCursorBackup[0] |= status; \
@@ -238,7 +238,7 @@
   SIS_MMIO_OUT32(pSiS->IOBase, CS(0), pSiS->HWCursorBackup[0]); \
   SIS_MMIO_OUT32(pSiS->IOBase, CS(3), pSiS->HWCursorBackup[3]); \
   SIS_MMIO_OUT32(pSiS->IOBase, CS(4), pSiS->HWCursorBackup[4]);
-  
+
 #define sis310EnableHWARGBCursor()\
   pSiS->HWCursorBackup[0] &= 0x0FFFFFFF; \
   pSiS->HWCursorBackup[0] |= 0xE0000000; \
@@ -264,7 +264,7 @@
   SIS_MMIO_OUT32(pSiS->IOBase, CS(0), pSiS->HWCursorBackup[0]); \
   SIS_MMIO_OUT32(pSiS->IOBase, CS(3), pSiS->HWCursorBackup[3]); \
   SIS_MMIO_OUT32(pSiS->IOBase, CS(4), pSiS->HWCursorBackup[4]);
-  
+
 #define sis310SetCursorBGColor(color) \
   SIS_MMIO_OUT32(pSiS->IOBase, CS(1), (color)); \
   pSiS->HWCursorBackup[1] = color;
@@ -358,7 +358,7 @@
   SIS_MMIO_OUT32(pSiS->IOBase, CS(12), pSiS->HWCursorBackup[12]);
 
 #define sis301SetCursorAddress310(address) \
-  if(pSiS->sishw_ext.jChipType == SIS_315H) { \
+  if(pSiS->ChipType == SIS_315H) { \
      if(address & 0x10000) { \
         address &= ~0x10000; \
 	orSISIDXREG(SISSR, 0x37, 0x80); \

@@ -257,9 +257,9 @@ int		SISGetPortUtilAttribute(ScrnInfoPtr pScrn,  Atom attribute,
 
 extern Bool 	SISRedetectCRT2Type(ScrnInfoPtr pScrn);
 extern UShort	SiS_CheckModeCRT1(ScrnInfoPtr pScrn, DisplayModePtr mode,
-				 ULong VBFlags, Bool hcm);
+				 unsigned int VBFlags, Bool hcm);
 extern UShort	SiS_CheckModeCRT2(ScrnInfoPtr pScrn, DisplayModePtr mode,
-				 ULong VBFlags, Bool hcm);
+				 unsigned int VBFlags, Bool hcm);
 extern void	SISAdjustFrame(int scrnIndex, int x, int y, int flags);
 extern float	SiSCalcVRate(DisplayModePtr mode);
 extern void	SiS_UpdateGammaCRT2(ScrnInfoPtr pScrn);
@@ -899,7 +899,7 @@ SiSHandleSiSDirectCommand(xSiSCtrlCommandReply *sdcbuf)
 	 sdcbuf->sdc_result[3]  = pSiS->PciInfo->func;
 	 sdcbuf->sdc_result[4]  = pSiS->ROM661New ? 1 : 0,
 	 sdcbuf->sdc_result[5]  = pSiS->ChipFlags;
-	 sdcbuf->sdc_result[6]  = pSiS->sishw_ext.jChipType;
+	 sdcbuf->sdc_result[6]  = pSiS->ChipType;
 	 sdcbuf->sdc_result[7]  = pSiS->ChipRev;
 	 sdcbuf->sdc_result[8]  = SISDRIVERVERSIONYEAR;
 	 sdcbuf->sdc_result[9]  = SISDRIVERVERSIONMONTH;
@@ -2260,7 +2260,7 @@ SISGetPortUtilAttribute(ScrnInfoPtr pScrn,  Atom attribute,
   } else if(attribute == pSiS->xv_GDV) {
      *value = SISDRIVERIVERSION;
   } else if(attribute == pSiS->xv_GHI) {
-     *value = (pSiS->ChipFlags & 0xffff) | (pSiS->sishw_ext.jChipType << 16) | (pSiS->ChipRev << 24);
+     *value = (pSiS->ChipFlags & 0xffff) | (pSiS->ChipType << 16) | (pSiS->ChipRev << 24);
   } else if(attribute == pSiS->xv_GBI) {
      *value = (pSiS->PciInfo->bus << 16) | (pSiS->PciInfo->device << 8) | pSiS->PciInfo->func;
   } else if(attribute == pSiS->xv_QVV) {

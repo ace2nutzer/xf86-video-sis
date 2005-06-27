@@ -37,7 +37,7 @@
 
 #define SISDRIVERVERSIONYEAR    5
 #define SISDRIVERVERSIONMONTH   6
-#define SISDRIVERVERSIONDAY     20
+#define SISDRIVERVERSIONDAY     27
 #define SISDRIVERREVISION       1
 
 #define SISDRIVERIVERSION ((SISDRIVERVERSIONYEAR << 16) |  \
@@ -94,7 +94,7 @@
 #ifndef XF86_VERSION_NUMERIC
 #define XF86_VERSION_NUMERIC(major,minor,patch,snap,dummy) \
 	(((major) * 10000000) + ((minor) * 100000) + ((patch) * 1000) + snap)
-#define XF86_VERSION_CURRENT XF86_VERSION_NUMERIC(4,3,99,902)
+#define XF86_VERSION_CURRENT XF86_VERSION_NUMERIC(4,3,99,902,0)
 #endif
 #if 0
 #ifdef HaveDriverFuncs
@@ -163,6 +163,7 @@
 #if XF86_VERSION_CURRENT >= XF86_VERSION_NUMERIC(4,3,99,14,0)
 #define SISNEWDRI
 #endif
+#undef SIS315DRI		/* define this if dri is adapted for 315/330 series */
 #include "xf86drm.h"
 #include "sarea.h"
 #define _XF86DRI_SERVER_
@@ -227,8 +228,6 @@
 #define SISGAMMARAMP		/* Driver can set gamma ramp; requires additional symbols in xf86sym.h */
 #endif
 #endif
-
-#undef SIS315DRI		/* define this if dri is adapted for 315/330 series */
 
 #ifdef TWDEBUG
 #define SISVERBLEVEL 3
@@ -407,8 +406,6 @@
 #define SIS6326_TVDETECTED	0x00000010
 #define SIS6326_TVON		0x80000000
 
-#define HW_DEVICE_EXTENSION	SIS_HW_INFO
-
 #ifdef  DEBUG
 #define PDEBUG(p)       p
 #else
@@ -480,8 +477,8 @@ typedef unsigned char  UChar;
 #define SiSCF_Ultra256Core  0x00080000  /* 3D: aka "Mirage 2"; similar to Xabre, no T&L?, no P:Shader? (760) */
 #define SiSCF_MMIOPalette   0x00100000  /* HW supports MMIO palette writing/reading */
 #define SiSCF_UseLCDA       0x01000000
-#define SiSCF_760LFB        0x08000000  /* 760/761: LFB active (if not set, UMA only) */
-#define SiSCF_760UMA        0x10000000  /* 760/761: UMA active (if not set, LFB only) */
+#define SiSCF_760LFB        0x08000000  /* 76x: LFB active (if not set, UMA only) */
+#define SiSCF_760UMA        0x10000000  /* 76x: UMA active (if not set, LFB only) */
 #define SiSCF_CRT2HWCKaputt 0x20000000  /* CRT2 Mono HWCursor engine buggy (SiS 330) */
 #define SiSCF_Glamour3      0x40000000
 #define SiSCF_Integrated    0x80000000
@@ -612,9 +609,9 @@ typedef struct {
     UChar  VBPart3[0x50];
     UChar  VBPart4[0x50];
     UShort ch70xx[64];
-    ULong  sisMMIO85C0;
+    unsigned int sisMMIO85C0;
     UChar  sis6326tv[0x46];
-    ULong  sisRegsPCI50, sisRegsPCIA0;
+    unsigned int sisRegsPCI50, sisRegsPCIA0;
     UChar  BIOSModeSave;
 } SISRegRec, *SISRegPtr;
 
@@ -652,7 +649,7 @@ typedef struct {
     ScrnInfoPtr		pScrn_1;
     ScrnInfoPtr		pScrn_2;
     UChar		*BIOS;
-    SiS_Private		*SiS_Pr;
+    struct SiS_Private	*SiS_Pr;
     ULong		agpHandle;
     ULong		agpAddr;
     UChar		*agpBase;
@@ -732,13 +729,13 @@ typedef struct {
     int			tvxpos, tvypos;
     int			tvxscale, tvyscale;
     int			ForceTVType, SenseYPbPr;
-    ULong		ForceYPbPrType, ForceYPbPrAR;
+    unsigned int	ForceYPbPrType, ForceYPbPrAR;
     int			chtvtype;
     int			NonDefaultPAL, NonDefaultNTSC;
     UShort		tvx, tvy;
     UChar		p2_01, p2_02, p2_1f, p2_20, p2_43, p2_42, p2_2b;
     UChar		p2_44, p2_45, p2_46;
-    ULong		sistvccbase;
+    unsigned int	sistvccbase;
     UChar		p2_35, p2_36, p2_37, p2_38, p2_48, p2_49, p2_4a;
     UChar		p2_0a, p2_2f, p2_30, p2_47;
     UChar		scalingp1[9], scalingp4[9], scalingp2[64];
@@ -753,7 +750,7 @@ typedef struct {
     int			UsePanelScaler, CenterLCD;
     int			AllowHotkey;
     Bool		enablesisctrl;
-    ULong		cmdQ_SharedWritePort_2D;
+    unsigned int	cmdQ_SharedWritePort_2D;
     UChar		*RenderAccelArray;
     UChar		*FbBase1;
     ULong		OnScreenSize1;
@@ -798,16 +795,16 @@ typedef struct _region {
 } region;
 
 typedef struct {
-    ScrnInfoPtr		pScrn;		/* -------------- DON'T INSERT ANYTHING HERE --------------- */
-    pciVideoPtr		PciInfo;	/* -------- OTHERWISE sis_dri.so MUST BE RECOMPILED -------- */
+    ScrnInfoPtr		pScrn;
+    pciVideoPtr		PciInfo;
     PCITAG		PciTag;
     EntityInfoPtr	pEnt;
     int			Chipset;
+    unsigned char	ChipType;
     int			ChipRev;
     int			VGAEngine;	/* see above */
     int			hasTwoOverlays;	/* Chipset supports two video overlays? */
-    HW_DEVICE_EXTENSION	sishw_ext;	/* For new mode switching code */
-    SiS_Private		*SiS_Pr;	/* For new mode switching code */
+    struct SiS_Private	*SiS_Pr;	/* For mode switching code */
     int			DSTN;		/* For 550 FSTN/DSTN; set by option, no detection */
     ULong		FbAddress;	/* VRAM physical address (in DHM: for each Fb!) */
     ULong		realFbAddress;	/* For DHM/PCI mem mapping: store global FBAddress */
@@ -828,10 +825,10 @@ typedef struct {
     int			Flags;		/* HW config flags */
     long		FbMapSize;	/* Used for Mem Mapping - DON'T CHANGE THIS */
     long		availMem;	/* Really available Fb mem (minus TQ, HWCursor) */
-    ULong		maxxfbmem;	/* limit fb memory X is to use to this (KB) */
-    ULong		sisfbHeapStart;	/* heapstart of sisfb (if running) */
-    ULong		dhmOffset;	/* Offset to memory for each head (0 or ..); also used on SiS76x/UMA+LFB */
-    ULong		FbBaseOffset;
+    unsigned int	maxxfbmem;	/* limit fb memory X is to use to this (KB) */
+    unsigned int	sisfbHeapStart;	/* heapstart of sisfb (if running) */
+    unsigned int	dhmOffset;	/* Offset to memory for each head (0 or ..); also used on SiS76x/UMA+LFB */
+    unsigned int	FbBaseOffset;
     DGAModePtr		DGAModes;
     int			numDGAModes;
     Bool		DGAactive;
@@ -859,10 +856,10 @@ typedef struct {
     UChar		oldCR32, oldCR36, oldCR37;
     UChar		myCR32, myCR36, myCR37, myCR63;
     UChar		newCR32;
-    ULong		VBFlags;		/* Video bridge configuration */
-    ULong		VBFlags2;		/* Video bridge configuration 2 (static flags only) */
-    ULong		VBFlags_backup;		/* Backup for SlaveMode-modes */
-    ULong		VBLCDFlags;		/* Moved LCD panel size bits here */
+    unsigned int	VBFlags;		/* Video bridge configuration */
+    unsigned int	VBFlags2;		/* Video bridge configuration 2 (static flags only) */
+    unsigned int	VBFlags_backup;		/* Backup for SlaveMode-modes */
+    unsigned int	VBLCDFlags;		/* Moved LCD panel size bits here */
     int			ChrontelType;		/* CHRONTEL_700x or CHRONTEL_701x */
     unsigned int	PDC, PDCA;		/* PanelDelayCompensation */
     short		scrnOffset;		/* Screen pitch (data) */
@@ -870,7 +867,7 @@ typedef struct {
     short		DstColor;
     int			xcurrent;		/* for temp use in accel */
     int			ycurrent;		/* for temp use in accel */
-    long		SiS310_AccelDepth;	/* used in accel for 315 series */
+    unsigned int	SiS310_AccelDepth;	/* used in accel for 315 series */
     int			Xdirection;		/* for temp use in accel */
     int			Ydirection;		/* for temp use in accel */
     int			sisPatternReg[4];
@@ -898,17 +895,15 @@ typedef struct {
     void		(*SiSSave)(ScrnInfoPtr pScrn, SISRegPtr sisreg);
     void		(*SiSRestore)(ScrnInfoPtr pScrn, SISRegPtr sisreg);
     int			cmdQueueLen;		/* Current cmdQueueLength (for 2D and 3D) */
-    ULong		cmdQueueLenMax;
-    ULong		cmdQueueLenMin;
-    ULong		*cmdQueueBase;
+    unsigned int	*cmdQueueBase;
     int			*cmdQueueLenPtr;	/* Ptr to variable holding the current queue length */
     int			*cmdQueueLenPtrBackup;	/* Backup for DRI init/restore */
     unsigned int	cmdQueueOffset;
     unsigned int	cmdQueueSize;
-    ULong       	cmdQueueSizeMask;
-    ULong		cmdQ_SharedWritePort_2D;
-    ULong		*cmdQ_SharedWritePort;
-    ULong		*cmdQ_SharedWritePortBackup;
+    unsigned int	cmdQueueSizeMask;
+    unsigned int	cmdQ_SharedWritePort_2D;
+    unsigned int	*cmdQ_SharedWritePort;
+    unsigned int	*cmdQ_SharedWritePortBackup;
     unsigned int	cmdQueueSize_div2;
     unsigned int	cmdQueueSize_div4;
     unsigned int	cmdQueueSize_4_3;
@@ -933,7 +928,7 @@ typedef struct {
     Bool		irqEnabled;
     int			irq;
     Bool		IsAGPCard, IsPCIExpress;
-    ULong		DRIheapstart, DRIheapend;
+    unsigned int	DRIheapstart, DRIheapend;
     Bool		NeedFlush;	/* Need to flush cmd buf mem (760) */
 
     void		(*RenderCallback)(ScrnInfoPtr);
@@ -1055,14 +1050,14 @@ typedef struct {
     UChar		sisfbpdc, sisfbpdca;
     UChar       	sisfblcda;
     int			sisfbscalelcd;
-    ULong		sisfbspecialtiming;
+    unsigned int	sisfbspecialtiming;
     Bool		sisfb_haveemi, sisfb_haveemilcd, sisfb_tvposvalid, sisfb_havelock;
     UChar		sisfb_emi30,sisfb_emi31,sisfb_emi32,sisfb_emi33;
     int			sisfb_tvxpos, sisfb_tvypos;
     Bool		sisfbHaveNewHeapDef;
-    ULong		sisfbHeapSize, sisfbVideoOffset;
+    unsigned int	sisfbHeapSize, sisfbVideoOffset;
     Bool		sisfbxSTN;
-    ULong		sisfbDSTN, sisfbFSTN;
+    unsigned int	sisfbDSTN, sisfbFSTN;
     char		sisfbdevname[16];
     int			EMI;
     int			PRGB;
@@ -1071,13 +1066,13 @@ typedef struct {
     int			newFastVram;		/* Replaces FastVram */
     int			ForceTVType, SenseYPbPr;
     int			NonDefaultPAL, NonDefaultNTSC;
-    ULong		ForceYPbPrType, ForceYPbPrAR;
+    unsigned int	ForceYPbPrType, ForceYPbPrAR;
     ULong		lockcalls;		/* Count unlock calls for debug */
     UShort		tvx, tvy;		/* Backup TV position registers */
     UChar		p2_01, p2_02, p2_1f, p2_20, p2_43, p2_42, p2_2b; /* Backup TV position registers */
     UShort      	tvx1, tvx2, tvx3, tvy1;	/* Backup TV position registers */
     UChar		p2_44, p2_45, p2_46;
-    ULong		sistvccbase;
+    unsigned int	sistvccbase;
     UChar		p2_35, p2_36, p2_37, p2_38, p2_48, p2_49, p2_4a;
     UChar		p2_0a, p2_2f, p2_30, p2_47;
     UChar		scalingp1[9], scalingp4[9], scalingp2[64];
@@ -1106,9 +1101,9 @@ typedef struct {
 #ifdef TWDEBUG
     Atom		xv_STR;
 #endif
+    unsigned int	xv_sd_result;
 #endif /* XV_SD_DEPRECATED */
     int			xv_sisdirectunlocked;
-    ULong		xv_sd_result;
     Bool		SiS760VLFB;		/* video area for UMA+LFB reserved in LFB */
     ULong		SiS760VLFBBase; 	/* Base of reserved video ram in LFB (address) */
     unsigned int	SiS760VLFBOffset;	/* Base of reserved video ram in LFB (offset) */
@@ -1164,13 +1159,13 @@ typedef struct {
     unsigned int	CRT1VGAMonitorGamma, CRT2LCDMonitorGamma, CRT2VGAMonitorGamma;
     Bool		HideHWCursor;  /* Custom application */
     Bool		HWCursorIsVisible;
-    ULong       	HWCursorBackup[16];
+    unsigned int	HWCursorBackup[16];
     int			HWCursorMBufNum, HWCursorCBufNum;
     ULong		mmioSize;
     Bool		ROM661New;
     Bool		NewCRLayout;
     Bool		skipswitchcheck;
-    ULong		VBFlagsInit;
+    unsigned int	VBFlagsInit;
     DisplayModePtr	currentModeLast;
     IOADDRESS		MyPIOOffset;
     Bool		OverruleRanges;

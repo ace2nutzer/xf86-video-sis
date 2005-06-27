@@ -599,10 +599,10 @@ SiS300Restore(ScrnInfoPtr pScrn, SISRegPtr sisReg)
     if(!(pSiS->UseVESA)) {
        if(pSiS->VBFlags & VB_LVDS) {
 	  SiSRegInit(pSiS->SiS_Pr, pSiS->RelIO + 0x30);
-	  SiSSetLVDSetc(pSiS->SiS_Pr, &pSiS->sishw_ext, 0);
-	  SiS_GetVBType(pSiS->SiS_Pr, &pSiS->sishw_ext);
-	  SiS_UnLockCRT2(pSiS->SiS_Pr, &pSiS->sishw_ext);
-	  SiS_DisableBridge(pSiS->SiS_Pr, &pSiS->sishw_ext);
+	  SiSSetLVDSetc(pSiS->SiS_Pr, 0);
+	  SiS_GetVBType(pSiS->SiS_Pr);
+	  SiS_UnLockCRT2(pSiS->SiS_Pr);
+	  SiS_DisableBridge(pSiS->SiS_Pr);
        }
     }
 
@@ -831,7 +831,7 @@ SiS315Restore(ScrnInfoPtr pScrn, SISRegPtr sisReg)
     for(i = 0x19; i < 0x5C; i++) {
        outSISIDXREG(SISCR, i, sisReg->sisRegs3D4[i]);
     }
-    if(pSiS->sishw_ext.jChipType < SIS_661) {
+    if(pSiS->ChipType < SIS_661) {
        outSISIDXREG(SISCR, 0x79, sisReg->sisRegs3D4[0x79]);
     }
     outSISIDXREG(SISCR, pSiS->myCR63, sisReg->sisRegs3D4[pSiS->myCR63]);
@@ -986,10 +986,10 @@ SiS301Restore(ScrnInfoPtr pScrn, SISRegPtr sisReg)
     Part4max = 0x1b;
 
     SiSRegInit(pSiS->SiS_Pr, pSiS->RelIO + 0x30);
-    SiSSetLVDSetc(pSiS->SiS_Pr, &pSiS->sishw_ext, 0);
-    SiS_GetVBType(pSiS->SiS_Pr, &pSiS->sishw_ext);
-    SiS_DisableBridge(pSiS->SiS_Pr, &pSiS->sishw_ext);
-    SiS_UnLockCRT2(pSiS->SiS_Pr, &pSiS->sishw_ext);
+    SiSSetLVDSetc(pSiS->SiS_Pr, 0);
+    SiS_GetVBType(pSiS->SiS_Pr);
+    SiS_DisableBridge(pSiS->SiS_Pr);
+    SiS_UnLockCRT2(pSiS->SiS_Pr);
 
     /* Pre-restore Part1 */
     outSISIDXREG(SISPART1, 0x04, 0x00);
@@ -1004,7 +1004,7 @@ SiS301Restore(ScrnInfoPtr pScrn, SISRegPtr sisReg)
 
     if((!(sisReg->sisRegs3D4[0x30] & 0x03)) &&
        (sisReg->sisRegs3D4[0x31] & 0x20))  {      /* disable CRT2 */
-       SiS_LockCRT2(pSiS->SiS_Pr, &pSiS->sishw_ext);
+       SiS_LockCRT2(pSiS->SiS_Pr);
        return;
     }
 
@@ -1032,9 +1032,9 @@ SiS301Restore(ScrnInfoPtr pScrn, SISRegPtr sisReg)
     outSISIDXREG(SISPART4, 0x12, 0x00);
     outSISIDXREG(SISPART4, 0x12, sisReg->VBPart4[0x12]);
 
-    SiS_EnableBridge(pSiS->SiS_Pr, &pSiS->sishw_ext);
+    SiS_EnableBridge(pSiS->SiS_Pr);
     SiS_DisplayOn(pSiS->SiS_Pr);
-    SiS_LockCRT2(pSiS->SiS_Pr, &pSiS->sishw_ext);
+    SiS_LockCRT2(pSiS->SiS_Pr);
 }
 
 /* Save SiS30xB/30xLV bridge register contents */
@@ -1082,10 +1082,10 @@ SiS301BRestore(ScrnInfoPtr pScrn, SISRegPtr sisReg)
     }
 
     SiSRegInit(pSiS->SiS_Pr, pSiS->RelIO + 0x30);
-    SiSSetLVDSetc(pSiS->SiS_Pr, &pSiS->sishw_ext, 0);
-    SiS_GetVBType(pSiS->SiS_Pr, &pSiS->sishw_ext);
-    SiS_DisableBridge(pSiS->SiS_Pr, &pSiS->sishw_ext);
-    SiS_UnLockCRT2(pSiS->SiS_Pr, &pSiS->sishw_ext);
+    SiSSetLVDSetc(pSiS->SiS_Pr, 0);
+    SiS_GetVBType(pSiS->SiS_Pr);
+    SiS_DisableBridge(pSiS->SiS_Pr);
+    SiS_UnLockCRT2(pSiS->SiS_Pr);
 
     /* Pre-restore Part1 */
     outSISIDXREG(SISPART1, 0x04, 0x00);
@@ -1104,7 +1104,7 @@ SiS301BRestore(ScrnInfoPtr pScrn, SISRegPtr sisReg)
 
     if((!(sisReg->sisRegs3D4[0x30] & 0x03)) &&
        (sisReg->sisRegs3D4[0x31] & 0x20)) {      /* disable CRT2 */
-       SiS_LockCRT2(pSiS->SiS_Pr, &pSiS->sishw_ext);
+       SiS_LockCRT2(pSiS->SiS_Pr);
        return;
     }
 
@@ -1113,7 +1113,7 @@ SiS301BRestore(ScrnInfoPtr pScrn, SISRegPtr sisReg)
     if(pSiS->VGAEngine == SIS_315_VGA) {
        SetBlock(SISPART1, 0x2C, 0x2D, &(sisReg->VBPart1[0x2C]));
        SetBlock(SISPART1, 0x35, 0x37, &(sisReg->VBPart1[0x35]));
-       if((pSiS->ChipFlags & SiSCF_Is65x) || (pSiS->sishw_ext.jChipType >= SIS_661)) {
+       if((pSiS->ChipFlags & SiSCF_Is65x) || (pSiS->ChipType >= SIS_661)) {
           outSISIDXREG(SISPART1, 0x4c, sisReg->VBPart1[0x4c]);
        }
        outSISIDXREG(SISPART1, 0x2e, sisReg->VBPart1[0x2e] & 0x7f);
@@ -1135,9 +1135,9 @@ SiS301BRestore(ScrnInfoPtr pScrn, SISRegPtr sisReg)
     outSISIDXREG(SISPART4, 0x12, 0x00);
     outSISIDXREG(SISPART4, 0x12, sisReg->VBPart4[0x12]);
 
-    SiS_EnableBridge(pSiS->SiS_Pr, &pSiS->sishw_ext);
+    SiS_EnableBridge(pSiS->SiS_Pr);
     SiS_DisplayOn(pSiS->SiS_Pr);
-    SiS_LockCRT2(pSiS->SiS_Pr, &pSiS->sishw_ext);
+    SiS_LockCRT2(pSiS->SiS_Pr);
 }
 
 /* Save LVDS bridge (+ Chrontel) register contents */
@@ -1187,30 +1187,27 @@ SiSLVDSChrontelSave(ScrnInfoPtr pScrn, SISRegPtr sisReg)
 static void
 SiSLVDSChrontelRestore(ScrnInfoPtr pScrn, SISRegPtr sisReg)
 {
-    SISPtr  pSiS = SISPTR(pScrn);
+    SISPtr pSiS = SISPTR(pScrn);
     int i;
-    USHORT wtemp;
 
     SiSRegInit(pSiS->SiS_Pr, pSiS->RelIO + 0x30);
-    SiSSetLVDSetc(pSiS->SiS_Pr, &pSiS->sishw_ext, 0);
-    SiS_GetVBType(pSiS->SiS_Pr, &pSiS->sishw_ext);
-    SiS_DisableBridge(pSiS->SiS_Pr, &pSiS->sishw_ext);
-    if(pSiS->sishw_ext.jChipType == SIS_730) {
+    SiSSetLVDSetc(pSiS->SiS_Pr, 0);
+    SiS_GetVBType(pSiS->SiS_Pr);
+    SiS_DisableBridge(pSiS->SiS_Pr);
+    if(pSiS->ChipType == SIS_730) {
        outSISIDXREG(SISPART1, 0x00, 0x80);
     }
-    SiS_UnLockCRT2(pSiS->SiS_Pr, &pSiS->sishw_ext);
+    SiS_UnLockCRT2(pSiS->SiS_Pr);
 
     if(pSiS->VBFlags & VB_CHRONTEL) {
        /* Restore Chrontel registers */
        if(pSiS->ChrontelType == CHRONTEL_700x) {
           for(i=0; i<0x11; i++) {
-             wtemp = ((sisReg->ch70xx[i]) << 8) | (ch700xidx[i] & 0x00FF);
-             SiS_SetCH700x(pSiS->SiS_Pr, wtemp);
+             SiS_SetCH700x(pSiS->SiS_Pr, ch700xidx[i] & 0xFF, sisReg->ch70xx[i]);
           }
        } else {
           for(i=0; i<34; i++) {
-             wtemp = ((sisReg->ch70xx[i]) << 8) | (ch701xidx[i] & 0x00FF);
-             SiS_SetCH701x(pSiS->SiS_Pr, wtemp);
+             SiS_SetCH701x(pSiS->SiS_Pr, ch701xidx[i] & 0xFF, sisReg->ch70xx[i]);
           }
        }
     }
@@ -1228,7 +1225,7 @@ SiSLVDSChrontelRestore(ScrnInfoPtr pScrn, SISRegPtr sisReg)
 
     if((!(sisReg->sisRegs3D4[0x30] & 0x03)) &&
        (sisReg->sisRegs3D4[0x31] & 0x20)) {      /* disable CRT2 */
-       SiS_LockCRT2(pSiS->SiS_Pr, &pSiS->sishw_ext);
+       SiS_LockCRT2(pSiS->SiS_Pr);
        return;
     }
 
@@ -1250,9 +1247,9 @@ SiSLVDSChrontelRestore(ScrnInfoPtr pScrn, SISRegPtr sisReg)
        SetBlock(SISPART1, 0x30, 0x45, &(sisReg->VBPart1[0x30]));
     }
 
-    SiS_EnableBridge(pSiS->SiS_Pr, &pSiS->sishw_ext);
+    SiS_EnableBridge(pSiS->SiS_Pr);
     SiS_DisplayOn(pSiS->SiS_Pr);
-    SiS_LockCRT2(pSiS->SiS_Pr, &pSiS->sishw_ext);
+    SiS_LockCRT2(pSiS->SiS_Pr);
 }
 
 /* Restore output selection registers */
@@ -1273,7 +1270,7 @@ SiSRestoreBridge(ScrnInfoPtr pScrn, SISRegPtr sisReg)
 
    if(pSiS->VGAEngine == SIS_315_VGA) {
       outSISIDXREG(SISCR, pSiS->myCR63, sisReg->sisRegs3D4[pSiS->myCR63]);
-      if(pSiS->sishw_ext.jChipType < SIS_661) {
+      if(pSiS->ChipType < SIS_661) {
          outSISIDXREG(SISCR, 0x79, sisReg->sisRegs3D4[0x79]);
       }
    }
@@ -1516,7 +1513,7 @@ int SiSMemBandWidth(ScrnInfoPtr pScrn, Bool IsForCRT2)
 		    max = 680000;
 		    break;
 		case PCI_CHIP_SIS660:
-		    if((pSiS->sishw_ext.jChipType >= SIS_660) &&
+		    if((pSiS->ChipType >= SIS_660) &&
 		       (pSiS->ChipFlags & SiSCF_760LFB)) {
 		       magic = magicDED[bus/64];
 		    } else {

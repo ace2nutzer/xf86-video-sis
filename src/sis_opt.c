@@ -545,8 +545,8 @@ SiSOptions(ScrnInfoPtr pScrn)
        pSiS->newFastVram = 1;
     }
 
-    if(pSiS->sishw_ext.jChipType == SIS_315H ||
-       pSiS->sishw_ext.jChipType == SIS_315) {
+    if(pSiS->ChipType == SIS_315H ||
+       pSiS->ChipType == SIS_315) {
        /* Cursor engine seriously broken */
        pSiS->HWCursor = FALSE;
     }
@@ -618,10 +618,10 @@ SiSOptions(ScrnInfoPtr pScrn)
      * of memory X uses, a clash between the framebuffer's memory heap
      * and X is avoided. The amount is to be specified in KB.
      */
-    if(xf86GetOptValULong(pSiS->Options, OPTION_MAXXFBMEM, &pSiS->maxxfbmem)) {
+    if(xf86GetOptValInteger(pSiS->Options, OPTION_MAXXFBMEM, (int *)&pSiS->maxxfbmem)) {
        if(pSiS->maxxfbmem >= 2048) {
 	  xf86DrvMsg(pScrn->scrnIndex, X_CONFIG,
-		   "MaxXFBMem: Framebuffer memory shall be limited to %ld KB\n",
+		   "MaxXFBMem: Framebuffer memory shall be limited to %d KB\n",
 		    pSiS->maxxfbmem);
 	  pSiS->maxxfbmem *= 1024;
        } else {

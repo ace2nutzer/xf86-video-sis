@@ -158,18 +158,18 @@ SiS300AccelInit(ScreenPtr pScreen)
 	pSiS->PerColorExpandBufferSize = 0;
 	pSiS->RenderAccelArray = NULL;
 	pSiS->AccelInfoPtr = NULL;
-	
-	if((pScrn->bitsPerPixel != 8)  && 
+
+	if((pScrn->bitsPerPixel != 8)  &&
 	   (pScrn->bitsPerPixel != 16) &&
 	   (pScrn->bitsPerPixel != 32)) {
 	   pSiS->NoAccel = TRUE;
 	}
-	
+
 	if(!pSiS->NoAccel) {
 	   pSiS->AccelInfoPtr = infoPtr = XAACreateInfoRec();
 	   if(!infoPtr) pSiS->NoAccel = TRUE;
 	}
-	
+
 	if(!pSiS->NoAccel) {
 
 	   SiSInitializeAccelerator(pScrn);
@@ -263,7 +263,7 @@ SiS300AccelInit(ScreenPtr pScreen)
 	         pSiS->ColorExpandBufferNumber = 16;
 	         pSiS->ColorExpandBufferCountMask = 0x0F;
 	      }
-	      
+
 	      pSiS->PerColorExpandBufferSize = ((pScrn->virtualX + 31)/32) * 4;
 	      infoPtr->NumScanlineColorExpandBuffers = pSiS->ColorExpandBufferNumber;
 	      infoPtr->ScanlineColorExpandBuffers = (UChar **)&pSiS->ColorExpandBufferAddr[0];
@@ -280,13 +280,13 @@ SiS300AccelInit(ScreenPtr pScreen)
 	    						      BIT_ORDER_IN_BYTE_MSBFIRST |
 	    						      LEFT_EDGE_CLIPPING;
            } else {
-	   
+
 	      xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
   	   	   "Virtual screen width too large for accelerator engine\n");
               xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
  	   	   "\t2D acceleration and Xv disabled\n");
               pSiS->NoXvideo = TRUE;
-	      
+
 	   }
 
 #ifdef SISDUALHEAD
@@ -296,9 +296,9 @@ SiS300AccelInit(ScreenPtr pScreen)
 #endif
 
    	}  /* NoAccel */
-	
+
 	/* Init framebuffer memory manager */
-	
+
 	topFB = pSiS->maxxfbmem;
 
 	reservedFbSize = pSiS->ColorExpandBufferNumber * pSiS->PerColorExpandBufferSize;
@@ -320,7 +320,7 @@ SiS300AccelInit(ScreenPtr pScreen)
 	   pSiS->ColorExpandBufferScreenOffset[i] = usableFbSize +
 		    i * pSiS->PerColorExpandBufferSize;
 	}
-	
+
 	Avail.x1 = 0;
 	Avail.y1 = 0;
 	Avail.x2 = pScrn->displayWidth;
@@ -331,7 +331,7 @@ SiS300AccelInit(ScreenPtr pScreen)
 	if(Avail.y2 < pScrn->currentMode->VDisplay) {
 	   xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
 		"Not enough video RAM for accelerator. At least "
-		"%dKB needed, %ldKB available\n",
+		"%dKB needed, %dKB available\n",
 		((((pScrn->displayWidth * pScrn->bitsPerPixel/8)   /* TW: +8 for make it sure */
 		     * pScrn->currentMode->VDisplay) + reservedFbSize) / 1024) + 8,
 		pSiS->maxxfbmem/1024);
@@ -345,17 +345,17 @@ SiS300AccelInit(ScreenPtr pScreen)
 	xf86DrvMsg(pScrn->scrnIndex, X_INFO,
 		   "Framebuffer from (%d,%d) to (%d,%d)\n",
 		   Avail.x1, Avail.y1, Avail.x2 - 1, Avail.y2 - 1);
- 
+
 	xf86InitFBManager(pScreen, &Avail);
 
 	if(pSiS->NoAccel) {
 	   return TRUE;
 	} else {
 	   return(XAAInit(pScreen, infoPtr));
-	}		
+	}
 }
 
-static void 
+static void
 SiSSync(ScrnInfoPtr pScrn)
 {
 	SISPtr pSiS = SISPTR(pScrn);
