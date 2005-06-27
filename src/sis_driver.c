@@ -4302,7 +4302,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	break;
 
       case SIS_315_VGA:
-#ifdef SISVRAMQ
+#ifdef SISVRAMQ		/* VRAM queue */
 	pSiS->cmdQueueSizeMask = pSiS->cmdQueueSize - 1;	/* VRAM Command Queue is variable (in therory) */
 	pSiS->cmdQueueOffset = (pScrn->videoRam * 1024) - pSiS->cmdQueueSize;
 	pSiS->cmdQueueLen = 0;
@@ -4311,7 +4311,17 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	pSiS->cmdQueueSize_4_3 = (pSiS->cmdQueueSize / 4) * 3;
 	pSiS->availMem -= pSiS->cmdQueueSize;
 	pSiS->cursorOffset = (pSiS->cmdQueueSize / 1024);
-#else
+
+	/* Set up shared pointer to current offset */
+#ifdef SISDUALHEAD
+	if(pSiS->DualHeadMode)
+	   pSiS->cmdQ_SharedWritePort = &(pSiSEnt->cmdQ_SharedWritePort_2D);
+	else
+#endif
+	   pSiS->cmdQ_SharedWritePort = &(pSiS->cmdQ_SharedWritePort_2D);
+
+
+#else			/* MMIO */
 	if(pSiS->TurboQueue) {
 	   pSiS->availMem -= (512*1024);			/* MMIO Command Queue is 512k (variable in theory) */
 	   pSiS->cursorOffset = 512;
@@ -9670,19 +9680,11 @@ SiSEnableTurboQueue(ScrnInfoPtr pScrn)
 	      /* We use VRAM Cmd Queue, not MMIO or AGP */
 	      UChar tempCR55 = 0;
 
-#ifdef SISDUALHEAD
-	      if(pSiS->DualHeadMode) {
-	         SISEntPtr pSiSEnt = pSiS->entityPrivate;
-	         pSiS->cmdQ_SharedWritePort = &(pSiSEnt->cmdQ_SharedWritePort_2D);
-	      } else
-#endif
-	         pSiS->cmdQ_SharedWritePort = &(pSiS->cmdQ_SharedWritePort_2D);
-
 	      /* Set Command Queue Threshold to max value 11111b (?) */
 	      outSISIDXREG(SISSR, 0x27, 0x1F);
 	      /* Disable queue flipping */
-	      inSISIDXREG(SISCR, 0x55, tempCR55) ;
-	      andSISIDXREG(SISCR, 0x55, 0x33) ;
+	      inSISIDXREG(SISCR, 0x55, tempCR55);
+	      andSISIDXREG(SISCR, 0x55, 0x33);
 	      /* Syncronous reset for Command Queue */
 	      outSISIDXREG(SISSR, 0x26, 0x01);
 	      SIS_MMIO_OUT32(pSiS->IOBase, 0x85c4, 0);
@@ -9698,9 +9700,8 @@ SiSEnableTurboQueue(ScrnInfoPtr pScrn)
 	      outSISIDXREG(SISSR, 0x26, SR26);
 	      SR26 &= 0xfe;
 	      outSISIDXREG(SISSR, 0x26, SR26);
-	      pSiS->cmdQ_SharedWritePort_2D = (unsigned int)(SIS_MMIO_IN32(pSiS->IOBase, 0x85c8));
-	      *(pSiS->cmdQ_SharedWritePort) = pSiS->cmdQ_SharedWritePort_2D;
-	      SIS_MMIO_OUT32(pSiS->IOBase, 0x85c4, pSiS->cmdQ_SharedWritePort_2D);
+	      *(pSiS->cmdQ_SharedWritePort) = (unsigned int)(SIS_MMIO_IN32(pSiS->IOBase, 0x85c8));
+	      SIS_MMIO_OUT32(pSiS->IOBase, 0x85c4, (CARD32)(*(pSiS->cmdQ_SharedWritePort)));
 	      SIS_MMIO_OUT32(pSiS->IOBase, 0x85C0, pSiS->cmdQueueOffset);
 	      temp = (ULong)pSiS->RealFbBase;
 #ifdef SISDUALHEAD
@@ -9714,7 +9715,7 @@ SiSEnableTurboQueue(ScrnInfoPtr pScrn)
 	      outSISIDXREG(SISCR, 0x55, tempCR55);
 #ifdef TWDEBUG
 	      xf86DrvMsg(0, 0, "CmdQueueOffs 0x%x, CmdQueueAdd %p, shwrp 0x%x, status %x, base %p\n",
-		pSiS->cmdQueueOffset, pSiS->cmdQueueBase, pSiS->cmdQ_SharedWritePort_2D,
+		pSiS->cmdQueueOffset, pSiS->cmdQueueBase, *(pSiS->cmdQ_SharedWritePort),
 		SIS_MMIO_IN32(pSiS->IOBase, 0x85cc), (ULong *)temp);
 #endif
 #else

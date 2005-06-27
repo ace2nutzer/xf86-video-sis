@@ -695,10 +695,11 @@ SISDRIFinishScreenInit(ScreenPtr pScreen)
     case SIS_315_VGA:
        saPriv->AGPVtxBufNext = 0;
 
-       saPriv->QueueLength = pSiS->cmdQueueSize;  /* In bytes! */
+       saPriv->QueueLength = pSiS->cmdQueueSize;  /* Total (not: current) size, in bytes! */
 
+       /* Copy current queue position to sarea */
+       saPriv->sharedWPoffset = *(pSiS->cmdQ_SharedWritePort);
        /* Delegate our shared offset to current queue position */
-       saPriv->sharedWPoffset = pSiS->cmdQ_SharedWritePort_2D;
        pSiS->cmdQ_SharedWritePortBackup = pSiS->cmdQ_SharedWritePort;
        pSiS->cmdQ_SharedWritePort = &(saPriv->sharedWPoffset);
 

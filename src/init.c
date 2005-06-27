@@ -844,7 +844,7 @@ SiS_GetModeID_VGA2(int VGAEngine, unsigned int VBFlags, int HDisplay, int VDispl
 		}
 		break;
 	case 1680:
-		if(VDisplay == 1080) {
+		if(VDisplay == 1050) {
 			if(VGAEngine != SIS_315_VGA) return 0;
 			if(!(VBFlags & (VB_301B|VB_301C|VB_302B))) return 0;
 		}
@@ -2691,7 +2691,7 @@ SiS_SetCRT1ModeRegs(struct SiS_Private *SiS_Pr, unsigned short ModeNo,
 	 data3 = SiS_GetColorDepth(SiS_Pr, ModeNo, ModeIdIndex) >> 1;
 	 if(data3) data2 *= data3;
 
-	 data2 = (SiS_GetMCLK(SiS_Pr) * 1024) / data2;
+	 data2 = ((unsigned int)(SiS_GetMCLK(SiS_Pr) * 1024)) / data2;
 
 	 if(SiS_Pr->ChipType == SIS_330) {
 	    if(SiS_Pr->SiS_ModeType != Mode16Bpp) {
