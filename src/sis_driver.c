@@ -1872,13 +1872,13 @@ SiSUpdateXineramaScreenInfo(ScrnInfoPtr pScrn1)
        switch(pSiS->CRT2Position) {
        case sisLeftOf:
        case sisRightOf:
-	  if((pSiS->maxCRT1_Y1 != realvirtY) && (pSiS->maxCRT2_Y1 != realvirtY)) {
+	  if((pSiS->maxCRT1_Y1 != realvirtY) && (pSiS->maxCRT2_Y2 != realvirtY)) {
 	     usenonrect = FALSE;
 	  }
 	  break;
        case sisAbove:
        case sisBelow:
-	  if((pSiS->maxCRT1_X1 != realvirtX) && (pSiS->maxCRT2_X1 != realvirtX)) {
+	  if((pSiS->maxCRT1_X1 != realvirtX) && (pSiS->maxCRT2_X2 != realvirtX)) {
 	     usenonrect = FALSE;
 	  }
 	  break;
