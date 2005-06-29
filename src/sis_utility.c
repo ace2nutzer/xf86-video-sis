@@ -263,6 +263,9 @@ extern UShort	SiS_CheckModeCRT2(ScrnInfoPtr pScrn, DisplayModePtr mode,
 extern void	SISAdjustFrame(int scrnIndex, int x, int y, int flags);
 extern float	SiSCalcVRate(DisplayModePtr mode);
 extern void	SiS_UpdateGammaCRT2(ScrnInfoPtr pScrn);
+#ifdef SISGAMMARAMP
+extern void	SISCalculateGammaRamp(ScreenPtr pScreen, ScrnInfoPtr pScrn);
+#endif
 
 extern void	SISSetPortDefaults(ScrnInfoPtr pScrn, SISPortPrivPtr pPriv);
 extern void	SISUpdateVideoParms(SISPtr pSiS, SISPortPrivPtr pPriv);

@@ -673,7 +673,7 @@ SISProbe(DriverPtr drv, int flags)
 /* Various helpers */
 
 #ifdef SISGAMMARAMP
-static void
+void
 SISCalculateGammaRamp(ScreenPtr pScreen, ScrnInfoPtr pScrn)
 {
    SISPtr pSiS = SISPTR(pScrn);
