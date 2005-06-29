@@ -217,14 +217,14 @@
 
 #undef SISCHECKOSSSE
 #ifdef XORG_VERSION_CURRENT
-#if XORG_VERSION_CURRENT >= XORG_VERSION_NUMERIC(6,9,0,0,0)
+#if XORG_VERSION_CURRENT >= XORG_VERSION_NUMERIC(6,8,99,13,0)
 #define SISCHECKOSSSE		/* Automatic check OS for SSE; requires SigIll facility */
 #endif
 #endif
 
 #undef SISGAMMARAMP
 #ifdef XORG_VERSION_CURRENT
-#if XORG_VERSION_CURRENT >= XORG_VERSION_NUMERIC(6,9,0,0,0)
+#if XORG_VERSION_CURRENT >= XORG_VERSION_NUMERIC(6,8,99,13,0)
 #define SISGAMMARAMP		/* Driver can set gamma ramp; requires additional symbols in xf86sym.h */
 #endif
 #endif
