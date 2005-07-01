@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg$ */
+/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/init.h,v 1.20 2005/06/27 15:56:52 twini Exp $ */
 /*
  * Data and prototypes for init.c
  *

@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg$ */
+/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/sis.h,v 1.40 2005/06/29 22:11:28 twini Exp $ */
 /*
  * Main global data and definitions
  *

@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg$ */
+/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/sis_dac.c,v 1.16 2005/06/27 15:56:53 twini Exp $ */
 /*
  * DAC helper functions (Save/Restore, MemClk, etc)
  *

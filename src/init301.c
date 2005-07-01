@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg$ */
+/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/init301.c,v 1.23 2005/06/27 15:56:52 twini Exp $ */
 /*
  * Mode initializing code (CRT2 section)
  for SiS 300/305/540/630/730 and

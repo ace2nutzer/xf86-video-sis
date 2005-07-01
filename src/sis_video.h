@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg$ */
+/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/sis_video.h,v 1.2 2005/06/21 11:18:51 twini Exp $ */
 /*
  * Xv driver for SiS 300, 315 and 330 series.
  *

@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg$ */
+/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/sis_driver.c,v 1.43 2005/06/29 23:06:12 twini Exp $ */
 /*
  * SiS driver main code
  *

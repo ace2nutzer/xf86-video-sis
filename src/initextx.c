@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg$ */
+/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/initextx.c,v 1.1 2005/06/27 15:56:52 twini Exp $ */
 /*
  * X.org/XFree86 specific extensions to init.c/init301.c
  *

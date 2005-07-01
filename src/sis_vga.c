@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg$ */
+/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/sis_vga.c,v 1.14 2005/06/27 15:56:53 twini Exp $ */
 /*
  * Mode setup and basic video bridge detection
  *

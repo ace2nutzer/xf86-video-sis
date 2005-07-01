@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg$ */
+/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/sis_vb.c,v 1.22 2005/06/27 15:56:53 twini Exp $ */
 /*
  * Video bridge detection and configuration for 300, 315 and 330 series
  *

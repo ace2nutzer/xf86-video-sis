@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg$ */
+/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/sis310_accel.h,v 1.7 2005/03/11 14:39:48 twini Exp $ */
 /*
  * 2D Acceleration for SiS 315 and Xabre series
  * Definitions for the SIS engine communication.

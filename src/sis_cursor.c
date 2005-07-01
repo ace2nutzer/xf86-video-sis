@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg$ */
+/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/sis_cursor.c,v 1.8 2005/03/11 14:39:48 twini Exp $ */
 /*
  * SiS hardware cursor handling
  *

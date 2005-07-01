@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg$ */
+/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/sis_dri.c,v 1.18 2005/06/27 17:18:06 twini Exp $ */
 /*
  * DRI wrapper for 300 and 315 series
  *

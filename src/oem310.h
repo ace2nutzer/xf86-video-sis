@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg$ */
+/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/oem310.h,v 1.8 2005/06/27 15:56:52 twini Exp $ */
 /*
  * OEM Data for 315/330 series
  *
