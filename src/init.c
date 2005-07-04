@@ -1288,7 +1288,11 @@ SiSDetermineROMUsage(struct SiS_Private *SiS_Pr)
 	  * the others do as well
 	  */
 	 SiS_Pr->SiS_UseROM = TRUE;
-      } else if(SiS_Pr->ChipType > XGI_20) {
+      } else if(SiS_Pr->ChipType >= XGI_20) {
+         /* We don't use the ROM on these, as we 1) don't really
+	  * need it, and 2) the image does not conform to any
+	  * so far known data structure.
+	  */
          SiS_Pr->SiS_UseROM = FALSE;
       } else {
 	 /* 315/330 series stick to the standard(s) */
@@ -2817,6 +2821,8 @@ SiS_SetCRT1ModeRegs(struct SiS_Private *SiS_Pr, unsigned short ModeNo,
 static void
 SiS_SetupDualChip(struct SiS_Private *SiS_Pr)
 {
+#if 0
+   /* TODO: Find out about IOAddress2 */
    SISIOADDRESS P2_3c2 = SiS_Pr->IOAddress2 + 0x12;
    SISIOADDRESS P2_3c4 = SiS_Pr->IOAddress2 + 0x14;
    SISIOADDRESS P2_3ce = SiS_Pr->IOAddress2 + 0x1e;
@@ -2837,6 +2843,7 @@ SiS_SetupDualChip(struct SiS_Private *SiS_Pr)
    SiS_SetReg(P2_3c4,0x21,SiS_GetReg(SiS_Pr->SiS_P3c4,0x21));	/* SR21 */
    SiS_SetRegByte(P2_3c2,SiS_GetRegByte(SiS_Pr->SiS_P3cc));	/* MISC */
    SiS_SetReg(P2_3c4,0x05,0x00);
+#endif
 }
 #endif
 
@@ -3080,7 +3087,8 @@ SiS_ResetVB(struct SiS_Private *SiS_Pr)
 	 if(SiS_Pr->SiS_ROMNew) temp = ROMAddr[0x80] | 0x40;
 	 SiS_SetReg(SiS_Pr->SiS_Part1Port,0x02,temp);
       }
-   } else {
+   } else if(SiS_Pr->ChipType >= XGI_40) {
+      /* Can we do this on any chipset? */
       SiS_SetRegOR(SiS_Pr->SiS_Part1Port,0x02,0x40);
    }
 #endif

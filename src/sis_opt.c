@@ -224,7 +224,7 @@ static const OptionInfoRec SISOptions[] = {
     { OPTION_YPBPRAR,			"YPbPrAspectRatio",		OPTV_STRING,	{0}, FALSE },
     { OPTION_TVBLUE,			"TVBlueWorkAround",		OPTV_BOOLEAN,	{0}, FALSE },
     { OPTION_USERGBCURSORBLEND,		"ColorHWCursorBlending",	OPTV_BOOLEAN,	{0}, FALSE },
-    { OPTION_USERGBCURSORBLENDTH,	"ColorHWCursorBlendThreshold",	OPTV_INTEGER,	{0},FALSE},
+    { OPTION_USERGBCURSORBLENDTH,	"ColorHWCursorBlendThreshold",	OPTV_INTEGER,	{0}, FALSE },
     { OPTION_DDCFORCRT2,		"CRT2Detection", 		OPTV_BOOLEAN,	{0}, FALSE },
     { OPTION_FORCECRT2REDETECTION,	"ForceCRT2ReDetection",		OPTV_BOOLEAN,	{0}, FALSE },
     { OPTION_SENSEYPBPR,		"SenseYPbPr",			OPTV_BOOLEAN,	{0}, FALSE },

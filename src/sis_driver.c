@@ -203,6 +203,7 @@ static const char *xaaSymbols[] = {
 
 #ifdef SIS_USE_EXA
 static const char *exaSymbols[] = {
+    "exaGetVersion",
     "exaDriverInit",
     "exaDriverFini",
     "exaOffscreenAlloc",
@@ -686,8 +687,7 @@ SISProbe(DriverPtr drv, int flags)
 	   pEnt->chipset == PCI_CHIP_SIS315 || pEnt->chipset == PCI_CHIP_SIS315H ||
 	   pEnt->chipset == PCI_CHIP_SIS315PRO || pEnt->chipset == PCI_CHIP_SIS330 ||
 	   pEnt->chipset == PCI_CHIP_SIS300 || pEnt->chipset == PCI_CHIP_SIS660 ||
-	   pEnt->chipset == PCI_CHIP_SIS340 || pEnt->chipset == PCI_CHIP_XGIXG20 ||
-	   pEnt->chipset == PCI_CHIP_XGIXG40) {
+	   pEnt->chipset == PCI_CHIP_SIS340 || pEnt->chipset == PCI_CHIP_XGIXG40) {
 
 	    SISEntPtr pSiSEnt = NULL;
 	    DevUnion  *pPriv;
@@ -2805,8 +2805,8 @@ Bool SISDetermineLCDACap(ScrnInfoPtr pScrn)
 
     if( ((pSiS->ChipType == SIS_650)    ||
          (pSiS->ChipType == SIS_315PRO) ||
-         (pSiS->ChipType >= SIS_661)	||
-	 (pSiS->ChipType != XGI_20))    	&&
+         (pSiS->ChipType >= SIS_661))		&&
+	(pSiS->ChipType != XGI_20)		&&
         (pSiS->VBFlags & VB_SISLCDABRIDGE)	&&
 	(pSiS->VESA != 1) ) {
        return TRUE;
@@ -2823,7 +2823,7 @@ void SISSaveDetectedDevices(ScrnInfoPtr pScrn)
 }
 
 static Bool
-SISCheckBIOS(SISPtr pSiS, UShort mypciid)
+SISCheckBIOS(SISPtr pSiS, UShort mypciid, UShort mypcivendor)
 {
     UShort romptr, pciid;
 
@@ -2837,7 +2837,7 @@ SISCheckBIOS(SISPtr pSiS, UShort mypciid)
        (pSiS->BIOS[romptr+2] != 'I') || (pSiS->BIOS[romptr+3] != 'R')) return FALSE;
 
     pciid = pSiS->BIOS[romptr+4] | (pSiS->BIOS[romptr+5] << 8);
-    if(pciid != PCI_VENDOR_SIS && pciid != PCI_VENDOR_XGI) return FALSE;
+    if(pciid != mypcivendor) return FALSE;
 
     pciid = pSiS->BIOS[romptr+6] | (pSiS->BIOS[romptr+7] << 8);
     if(pciid != mypciid) return FALSE;
@@ -4010,6 +4010,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	  } else {
 	     ULong  segstart;
 	     UShort mypciid = pSiS->Chipset;
+	     UShort mypcivendor = (pSiS->ChipFlags & SiSCF_IsXGI) ? PCI_VENDOR_XGI : PCI_VENDOR_SIS;
 	     Bool   found = FALSE, readpci = FALSE;
 
 	     switch(pSiS->ChipType) {
@@ -4031,7 +4032,9 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 
 	     if(readpci) {
 		xf86ReadPciBIOS(0, pSiS->PciTag, 0, pSiS->BIOS, BIOS_SIZE);
-		if(SISCheckBIOS(pSiS, mypciid)) found = TRUE;
+		if(SISCheckBIOS(pSiS, mypciid, mypcivendor)) {
+		   found = TRUE;
+		}
 	     }
 
 	     if(!found) {
@@ -4043,7 +4046,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 		   if(xf86ReadDomainMemory(pSiS->PciTag, segstart, BIOS_SIZE, pSiS->BIOS) != BIOS_SIZE) continue;
 #endif
 
-		   if(!SISCheckBIOS(pSiS, mypciid)) continue;
+		   if(!SISCheckBIOS(pSiS, mypciid, mypcivendor)) continue;
 
 		   found = TRUE;
 		   break;

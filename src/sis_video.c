@@ -4446,8 +4446,8 @@ SISPutImageBlit(
 
       if(!MyPacket.P12_RectWidth) continue;
 
-      MyPacket.P12_YSrcAddr = pPriv->bufAddr[index][pPriv->currentBuf[index]] + offsety;
-      MyPacket.P12_UVSrcAddr = pPriv->bufAddr[index][pPriv->currentBuf[index]] + bytesize + offsetuv;
+      MyPacket.P12_YSrcAddr  = pPriv->bufAddr[index][pPriv->currentBuf[index]] + offsety + FBOFFSET;
+      MyPacket.P12_UVSrcAddr = pPriv->bufAddr[index][pPriv->currentBuf[index]] + bytesize + offsetuv + FBOFFSET;
       SISWriteBlitPacket(pSiS, (CARD32*)&MyPacket);
 #if 0
       MyPacket.P12_Command &= ~(pPriv->VBlankTriggerCRT1 | pPriv->VBlankTriggerCRT2);
