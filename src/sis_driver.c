@@ -7621,8 +7621,10 @@ SISRestore(ScrnInfoPtr pScrn)
 	      ULong backupspecialtiming = pSiS->SiS_Pr->SiS_CustomT;
 	      int mymode = pSiS->OldMode;
 
-	      if((pSiS->VGAEngine == SIS_315_VGA) && (pSiS->ROM661New) && (!pSiS->sisfbfound)) {
-	         /* New BIOS has set mode, therefore eventually translate number */
+	      if((pSiS->VGAEngine == SIS_315_VGA)			&&
+	         ((pSiS->ROM661New) || (pSiS->ChipFlags & SiSCF_IsXGI)) &&
+		 (!pSiS->sisfbfound)) {
+	         /* New SiS BIOS or XGI BIOS has set mode, therefore eventually translate number */
 	         mymode = SiSTranslateToOldMode(mymode);
 	      }
 

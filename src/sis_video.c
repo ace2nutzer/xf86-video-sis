@@ -1105,7 +1105,7 @@ SISSetupImageVideo(ScreenPtr pScreen)
        } else if(pPriv->is761) {
           pPriv->linebufMergeLimit = 1536;		/* should be 1536 */
        } else if(pPriv->isXGI) {
-          pPriv->linebufMergeLimit = 720;		/* Should be 1280, FIXME */
+          pPriv->linebufMergeLimit = 1280;		/* FIXME */
        } else if(!(pPriv->hasTwoOverlays)) {
           pPriv->linebufMergeLimit = 720;		/* should be 960 */
        }

@@ -552,7 +552,7 @@ SiSTranslateToVESA(ScrnInfoPtr pScrn, int modenumber)
    if(modenumber <= 0x13) return modenumber;
 
 #ifdef SIS315H
-   if(pSiS->ROM661New) {
+   if(pSiS->ROM661New) { /* Not XGI! */
       while(SiS_EModeIDTable661[i].Ext_ModeID != 0xff) {
 	 if(SiS_EModeIDTable661[i].Ext_ModeID == modenumber) {
 	    return (int)SiS_EModeIDTable661[i].Ext_VESAID;
@@ -573,7 +573,7 @@ SiSTranslateToVESA(ScrnInfoPtr pScrn, int modenumber)
    return -1;
 }
 
-/* Translate a new BIOS mode number into the driver's pendant */
+/* Translate a new (SiS or XGI) BIOS mode number into the driver's pendant */
 int
 SiSTranslateToOldMode(int modenumber)
 {
