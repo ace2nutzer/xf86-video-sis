@@ -430,18 +430,29 @@ sis315Setup(ScrnInfoPtr pScrn)
 
        pSiS->IsAGPCard = TRUE;
 
-       if(pSiS->ChipRev == 2) {
-	  if(config1 & 0x01) config1 = 0x02;
-	  else               config1 = 0x00;
-       }
-       if(config1 == 0x02)      pScrn->videoRam <<= 1; /* dual rank */
-       else if(config1 == 0x03) pScrn->videoRam <<= 2; /* quad rank */
+       if(pSiS->ChipType != XGI_20) {	/* SIS340, XGI_40 */
 
-       inSISIDXREG(SISSR, 0x39, config2);
-       config2 &= 0x02;
-       if(!config2) {
-	  inSISIDXREG(SISSR, 0x3a, config2);
-	  config2 = (config2 & 0x02) >> 1;
+          if(pSiS->ChipRev == 2) {
+	     if(config1 & 0x01) config1 = 0x02;
+	     else               config1 = 0x00;
+          }
+          if(config1 == 0x02)      pScrn->videoRam <<= 1; /* dual rank */
+          else if(config1 == 0x03) pScrn->videoRam <<= 2; /* quad rank */
+
+	  inSISIDXREG(SISSR, 0x39, config2);
+	  config2 &= 0x02;
+	  if(!config2) {
+	     inSISIDXREG(SISSR, 0x3a, config2);
+	     config2 = (config2 & 0x02) >> 1;
+          }
+
+       } else {				/* XGI_20 (Z7) */
+
+          config1 = 0x00;
+	  inSISIDXREG(SISCR, 0x97, config2);
+	  config2 &= 0x01;
+	  if(config2) config2++;
+
        }
 
        xf86DrvMsg(pScrn->scrnIndex, X_PROBED,

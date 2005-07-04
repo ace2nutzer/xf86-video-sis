@@ -4,6 +4,7 @@
  * Mode initializing code (CRT1 section) for
  * for SiS 300/305/540/630/730 and
  *     SiS 315/550/[M]650/651/[M]661[FGM]X/[M]74x[GX]/330/[M]76x[GX]
+ *     XGI Volari V3[XT]/V5/V8, Z7
  * (Universal module for Linux kernel framebuffer and X.org/XFree86 4.x)
  *
  * Copyright (C) 2001-2005 by Thomas Winischhofer, Vienna, Austria
@@ -1098,7 +1099,6 @@ SiSInitPCIetc(struct SiS_Private *SiS_Pr)
    case SIS_760:
    case SIS_761:
    case SIS_340:
-   case XGI_20:
    case XGI_40:
       SiS_SetReg(SiS_Pr->SiS_P3c4,0x20,0xa1);
       /*  - Enable 3D G/L transformation engine (0x80)
@@ -1109,6 +1109,7 @@ SiSInitPCIetc(struct SiS_Private *SiS_Pr)
        */
       SiS_SetRegOR(SiS_Pr->SiS_P3c4,0x1E,0xDA);
       break;
+   case XGI_20:
    case SIS_550:
       SiS_SetReg(SiS_Pr->SiS_P3c4,0x20,0xa1);
       /* No 3D engine ! */

@@ -44,7 +44,7 @@ driver supports PCI, AGP and PCIe video cards based on the following chipsets:
 .B SiS650/651/661/741
 .B SiS330 (Xabre)
 .B SiS760/761
-.B XGI Volari V3XT/V5/V8
+.B XGI Volari V3/V5/V8
 .B XGI Volari Z7
 .PP
 In the following text, the following terms are used:
