@@ -3014,7 +3014,7 @@ SiS_SetCRT1Group(struct SiS_Private *SiS_Pr, unsigned short ModeNo, unsigned sho
    default:
 #ifdef SIS315H
       if(SiS_Pr->ChipType == XGI_20) {
-         unsigned char sr2b = 0, sr2c;
+         unsigned char sr2b = 0, sr2c = 0;
          switch(ModeNo) {
 	 case 0x00:
 	 case 0x01: sr2b = 0x4e; sr2c = 0xe9; break;

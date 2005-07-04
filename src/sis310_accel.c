@@ -1868,17 +1868,14 @@ SiSDoneComposite(PixmapPtr pDst)
 Bool
 SiSUploadToScreen(PixmapPtr pDst, char *src, int src_pitch)
 {
-	SISPtr pSiS;
-	unsigned char *dst;
+	ScrnInfoPtr pScrn = xf86Screens[pDst->drawable.pScreen->myNum];
+	SISPtr pSiS = SISPTR(pScrn);
+	unsigned char *dst = pDst->devPrivate.ptr;
 	int dst_pitch = pDst->devKind;
 	int size = src_pitch < dst_pitch ? src_pitch : dst_pitch;
-	int h;
+	int h = pDst->drawable.height;
 
-	pSiS = SISPTR(xf86Screens[pDst->drawable.pScreen->myNum]);
-
-	dst = pDst->devPrivate.ptr;
-
-	h = pDst->drawable.height;
+	(pSiS->SyncAccel)(pScrn);
 
 	while(h--) {
 	   SiSMemCopyToVideoRam(pSiS, dst, (unsigned char *)src, size);
@@ -1892,7 +1889,8 @@ SiSUploadToScreen(PixmapPtr pDst, char *src, int src_pitch)
 Bool
 SiSUploadToScratch(PixmapPtr pSrc, PixmapPtr pDst)
 {
-	SISPtr pSiS = SISPTR(xf86Screens[pSrc->drawable.pScreen->myNum]);
+	ScrnInfoPtr pScrn = xf86Screens[pSrc->drawable.pScreen->myNum];
+	SISPtr pSiS = SISPTR(pScrn);
 	unsigned char *src, *dst;
 	int src_pitch = pSrc->devKind;
 	int dst_pitch, size, w, h, bytes;
@@ -1932,6 +1930,8 @@ SiSUploadToScratch(PixmapPtr pSrc, PixmapPtr pDst)
 
 	h = pSrc->drawable.height;
 
+	(pSiS->SyncAccel)(pScrn);
+
 	while(h--) {
 	   SiSMemCopyToVideoRam(pSiS, dst, src, size);
 	   src += src_pitch;
@@ -1944,14 +1944,13 @@ SiSUploadToScratch(PixmapPtr pSrc, PixmapPtr pDst)
 Bool
 SiSDownloadFromScreen(PixmapPtr pSrc, int x, int y, int w, int h, char *dst, int dst_pitch)
 {
-	SISPtr pSiS;
-	unsigned char *src;
+	ScrnInfoPtr pScrn = xf86Screens[pSrc->drawable.pScreen->myNum];
+	SISPtr pSiS = SISPTR(pScrn);
+	unsigned char *src = pSrc->devPrivate.ptr;
 	int src_pitch = pSrc->devKind;
 	int size = src_pitch < dst_pitch ? src_pitch : dst_pitch;
 
-	pSiS = SISPTR(xf86Screens[pSrc->drawable.pScreen->myNum]);
-
-	src = pSrc->devPrivate.ptr;
+	(pSiS->SyncAccel)(pScrn);
 
 	while(h--) {
 	   SiSMemCopyFromVideoRam(pSiS, (unsigned char *)dst, src, size);
