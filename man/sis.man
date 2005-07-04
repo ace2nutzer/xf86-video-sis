@@ -14,7 +14,7 @@
 #endif
 .TH SIS __drivermansuffix__ __vendorversion__
 .SH NAME
-sis \- SiS video driver
+sis \- SiS and XGI video driver
 .SH SYNOPSIS
 .nf
 .B "Section \*qDevice\*q"
@@ -25,9 +25,9 @@ sis \- SiS video driver
 .fi
 .SH DESCRIPTION
 .B sis
-is an __myservername__ driver for SiS (Silicon Integrated Systems) video chips. The
-driver is accelerated and provides support for colordepths of 8, 16 and 24 bpp.
-XVideo, Render and other extensions are supported as well.
+is an __myservername__ driver for SiS (Silicon Integrated Systems) and XGI video
+chips. The driver is accelerated and provides support for colordepths of 8, 16
+and 24 bpp. XVideo, Render and other extensions are supported as well.
 .SH SUPPORTED HARDWARE
 The
 .B sis
@@ -44,6 +44,8 @@ driver supports PCI, AGP and PCIe video cards based on the following chipsets:
 .B SiS650/651/661/741
 .B SiS330 (Xabre)
 .B SiS760/761
+.B XGI Volari V3XT/V5/V8
+.B XGI Volari Z7
 .PP
 In the following text, the following terms are used:
 .PP
@@ -53,8 +55,9 @@ for SiS5597/5598, 530/620 and 6326/AGP/DVD
 .B 300 series
 for SiS300/305, 540 and 630/730
 .PP
-.B 315/330 series
-for SiS315, 55x and 661/741/760/761 (plus M, FX, MX, GX variants thereof)
+.B 315/330/340 series
+for SiS315, 55x and 661/741/760/761 (plus M, FX, MX, GX variants thereof) and all
+XGI chips.
 .PP
 .SH CONFIGURATION DETAILS
 Please refer to __myxconfigfile__(__filemansuffix__) for general configuration
@@ -190,10 +193,10 @@ By experience,
 .B ADAPTIVE
 yields the best results, hence it is the default.
 .PP
-.I "2. 300 and 315/330 series specific information"
+.I "2. 300 and 315/330/340 series specific information"
 .PP
-The 300 and 315/330 series feature two CRT controllers and very often come
-with a video bridge for controlling LCD and TV output. Hereinafter, the
+The 300 and 315/330/340 series feature two CRT controllers and very often
+come with a video bridge for controlling LCD and TV output. Hereinafter, the
 term
 .B CRT1
 refers to the VGA output of the chip, and
@@ -236,9 +239,9 @@ XVideo is supported on all chipsets of both families. However, there
 are some differences in hardware features which cause limitations.
 The 300 series as well as the SiS55x, M650, 651, 661FX, M661FX, M661MX,
 741, 741GX, M741, 760, M760 support two video overlays. The SiS315/H/PRO,
-650/740 and 330 support only one such overlay. On chips with two overlays,
-one overlay is used for CRT1, the other for CRT2. On the other chipsets,
-the option
+650/740, 330 and the XGI chips support only one such overlay. On chips with
+two overlays, one overlay is used for CRT1, the other for CRT2. On the other
+chipsets, the option
 .B \*qXvOnCRT2\*q
 can be used to select the desired output channel.
 .PP
@@ -256,7 +259,7 @@ colordepth 8 is not supported in dual head mode.
 .PP
 The following driver
 .B Options
-are supported on the 300 and 315/330 series:
+are supported on the 300 and 315/330/340 series:
 .TP
 .BI "Option \*qNoXVideo\*q \*q" boolean \*q
 Disable XV (XVideo) extension support.
@@ -319,7 +322,7 @@ Force the TV standard to either
 .B PAL
 or
 .B NTSC.
-On some machines with 630, 730 and the 315/330 series,
+On some machines with 630, 730 and the 315/330/340 series,
 .B PALM
 ,
 .B PALN
@@ -343,7 +346,7 @@ is from -16 to 16. Only supported on SiS video bridges. Default: 0
 .TP
 .BI "Option \*qSISTVYScale\*q \*q" integer \*q
 This option selects the vertical zooming level for TV output in the
-following modes: 640x480, 800x600. On the 315/330 series, also 720x480,
+following modes: 640x480, 800x600. On the 315/330/340 series, also 720x480,
 720x576 and 768x576. The range is from -4 to 3. Only supported on
 SiS video bridges. Default: 0
 .TP
@@ -371,13 +374,14 @@ more information.
 DRI is supported on the 300 series only. On Linux, prior to kernel 2.6.3,
 DRI requires the kernel's SiS framebuffer driver (
 .B sisfb
-) and some other modules which come with either the kernel or the X server.
+). The SiS DRM kernel driver as well as the SiS DRI client driver are
+required in any case.
 .PP
-Sisfb takes care of memory management for texture data. In order to
-prevent the X Server and sisfb from overwriting each other's data,
-sisfb reserves an amount of video memory for the X driver. This amount
-can either be selected using sisfb's mem parameter, or auto-selected
-depending on the amount of total video RAM available.
+Sisfb, if installed and running, takes care of memory management for
+texture data. In order to prevent the X Server and sisfb from overwriting
+each other's data, sisfb reserves an amount of video memory for the X driver.
+This amount can either be selected using sisfb's mem parameter, or
+auto-selected depending on the amount of total video RAM available.
 .PP
 Sisfb can be used for memory management only, or as a complete framebuffer
 driver. If you start sisfb with a valid mode (ie you gain a graphical console),
@@ -404,9 +408,9 @@ If you started sisfb without the mem argument, sisfb will reserve
 .TP
 4096KB in all other cases.
 .PP
-If you intend to use DRI, I recommend setting the total video memory in
-the BIOS to 64MB in order to at least overcome the lack of memory swap
-functions.
+If you intend to use DRI on an integrated chipset, I recommend setting the
+total video memory in the BIOS setup utility to 64MB in order to at least
+overcome the lack of memory swap functions.
 .PP
 As of Linux 2.6.3 and under *BSD, sisfb is not required for memory management.
 Hence, this option is mandatory on such systems not running sisfb to decide
