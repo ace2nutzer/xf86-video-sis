@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/sis_video.h,v 1.2 2005/06/21 11:18:51 twini Exp $ */
+/* $XdotOrg$ */
 /*
  * Xv driver for SiS 300, 315 and 330 series.
  *
@@ -47,11 +47,12 @@
  *  SiSM650/651: Full register range, two overlays (one used for CRT1, one for CRT2)
  *  SiS330: Full register range, one overlay (used for both CRT1 and CRT2 alt.)
  *  SiS661/741/760: Full register range, two overlays (one used for CRT1, one for CRT2)
- *  SiS340: - not finished yet; dda stuff missing - 2 overlays. Extended registers for DDA.
- *  SiS761: - not finished yet; dda stuff missing - 1 overlay. Extended registers for DDA.
+ *  SiS340: - ? overlay(s)? Extended registers for DDA?
+ *  SiS761: - ? overlay(s)? Extended registers for DDA.
+ *  XGI V5/V8/Z7 - 1 overlay, extended registers for DDA.
  *
  * Help for reading the code:
- * 315/550/650/740/M650/651/330/661/741/760/340/761 = SIS_315_VGA
+ * 315/550/650/740/M650/651/330/661/741/76x/340/XGI = SIS_315_VGA
  * 300/630/730                                      = SIS_300_VGA
  * For chipsets with 2 overlays, hasTwoOverlays will be true
  *
@@ -111,8 +112,9 @@ static int 	SISQueryImageAttributes(ScrnInfoPtr,
 			int, UShort *, UShort *, int *, int *);
 static void 	SISVideoTimerCallback(ScrnInfoPtr pScrn, Time now);
 static void     SISInitOffscreenImages(ScreenPtr pScrn);
-static void     set_dda_regs(SISPtr pSiS, float scale);
-FBLinearPtr     SISAllocateOverlayMemory(ScrnInfoPtr pScrn, FBLinearPtr linear, int size);
+static void	set_dda_regs(SISPtr pSiS, float scale);
+unsigned int	SISAllocateFBMemory(ScrnInfoPtr pScrn, void **handle, int bytesize);
+void		SISFreeFBMemory(ScrnInfoPtr pScrn, void **handle);
 void 		SISSetPortDefaults(ScrnInfoPtr pScrn, SISPortPrivPtr pPriv);
 void		SISUpdateVideoParms(SISPtr pSiS, SISPortPrivPtr pPriv);
 void		SiSUpdateXvGamma(SISPtr pSiS, SISPortPrivPtr pPriv);
@@ -732,7 +734,7 @@ static XF86ImageRec SISImagesBlit[NUM_IMAGES_BLIT] =
 };
 
 typedef struct {
-    FBLinearPtr  linear[NUM_BLIT_PORTS];
+    void *	 handle[NUM_BLIT_PORTS];
     CARD32       bufAddr[NUM_BLIT_PORTS][2];
 
     UChar        currentBuf[NUM_BLIT_PORTS];

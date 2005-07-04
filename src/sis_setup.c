@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/sis_setup.c,v 1.10 2005/06/27 15:56:53 twini Exp $ */
+/* $XdotOrg$ */
 /*
  * Basic hardware and memory detection
  *
@@ -425,6 +425,8 @@ sis315Setup(ScrnInfoPtr pScrn)
     switch(pSiS->Chipset) {
 
     case PCI_CHIP_SIS340:
+    case PCI_CHIP_XGIXG20:
+    case PCI_CHIP_XGIXG40:
 
        pSiS->IsAGPCard = TRUE;
 
@@ -799,6 +801,8 @@ SiSSetup(ScrnInfoPtr pScrn)
     case PCI_CHIP_SIS315PRO:
     case PCI_CHIP_SIS330:
     case PCI_CHIP_SIS340:
+    case PCI_CHIP_XGIXG20:
+    case PCI_CHIP_XGIXG40:
     	sis315Setup(pScrn);
 	break;
     case PCI_CHIP_SIS550:

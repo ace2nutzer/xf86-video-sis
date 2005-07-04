@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/sis_regs.h,v 1.9 2005/03/11 14:39:48 twini Exp $ */
+/* $XdotOrg$ */
 /*
  * Register access macros and register definitions
  *

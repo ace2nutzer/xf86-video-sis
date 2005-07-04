@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/sis_driver.c,v 1.43 2005/06/29 23:06:12 twini Exp $ */
+/* $XdotOrg$ */
 /*
  * SiS driver main code
  *
@@ -179,6 +179,19 @@ static PciChipsets SISPciChipsets[] = {
     { -1,                   -1,                 RES_UNDEFINED }
 };
 
+static SymTabRec XGIChipsets[] = {
+    { PCI_CHIP_XGIXG20,     "Volari Z7 (XG20)" },
+    { PCI_CHIP_XGIXG40,     "Volari V3/V5/V8/Duo (XG40)" },
+    { -1,                   NULL }
+};
+
+static PciChipsets XGIPciChipsets[] = {
+    { PCI_CHIP_XGIXG20,     PCI_CHIP_XGIXG20,   RES_SHARED_VGA },
+    { PCI_CHIP_XGIXG40,     PCI_CHIP_XGIXG40,   RES_SHARED_VGA },
+    { -1,                   -1,                 RES_UNDEFINED }
+};
+
+#ifdef SIS_USE_XAA
 static const char *xaaSymbols[] = {
     "XAACreateInfoRec",
     "XAADestroyInfoRec",
@@ -186,6 +199,17 @@ static const char *xaaSymbols[] = {
     "XAAInit",
     NULL
 };
+#endif
+
+#ifdef SIS_USE_EXA
+static const char *exaSymbols[] = {
+    "exaDriverInit",
+    "exaDriverFini",
+    "exaOffscreenAlloc",
+    "exaOffscreenFree",
+    NULL
+};
+#endif
 
 static const char *fbSymbols[] = {
     "fbPictureInit",
@@ -322,7 +346,13 @@ sisSetup(pointer module, pointer opts, int *errmaj, int *errmin)
     if(!setupDone) {
        setupDone = TRUE;
        xf86AddDriver(&SIS, module, SIS_HaveDriverFuncs);
-       LoaderRefSymLists(fbSymbols, xaaSymbols,
+       LoaderRefSymLists(fbSymbols,
+#ifdef SIS_USE_XAA
+			 xaaSymbols,
+#endif
+#ifdef SIS_USE_EXA
+			 exaSymbols,
+#endif
 			 shadowSymbols, ramdacSymbols,
 			 vbeSymbols, int10Symbols,
 #ifdef XF86DRI
@@ -343,6 +373,7 @@ static void
 SISIdentify(int flags)
 {
     xf86PrintChipsets(SIS_NAME, "driver for SiS chipsets", SISChipsets);
+    xf86PrintChipsets(SIS_NAME, "driver for XGI chipsets", XGIChipsets);
 }
 
 #ifdef SIS_HAVE_DRIVER_FUNC
@@ -539,6 +570,7 @@ SISProbe(DriverPtr drv, int flags)
     int     numDevSections;
     int     numUsed;
     Bool    foundScreen = FALSE;
+    PciChipsets *myPciChipsets;
 
     /*
      * The aim here is to find all cards that this driver can handle,
@@ -586,13 +618,27 @@ SISProbe(DriverPtr drv, int flags)
        return FALSE;
     }
 
+    myPciChipsets = SISPciChipsets;
+
     numUsed = xf86MatchPciInstances(SIS_NAME, PCI_VENDOR_SIS,
 			SISChipsets, SISPciChipsets, devSections,
 			numDevSections, drv, &usedChips);
 
+    if(numUsed <= 0) {
+
+       myPciChipsets = XGIPciChipsets;
+
+       numUsed = xf86MatchPciInstances(SIS_NAME, PCI_VENDOR_XGI,
+			XGIChipsets, XGIPciChipsets, devSections,
+			numDevSections, drv, &usedChips);
+
+    }
+
     /* Free it since we don't need that list after this */
     xfree(devSections);
-    if(numUsed <= 0) return FALSE;
+
+    if(numUsed <= 0)
+       return FALSE;
 
     if(flags & PROBE_DETECT) {
 
@@ -609,7 +655,7 @@ SISProbe(DriverPtr drv, int flags)
 	pScrn = NULL;
 
 	if((pScrn = xf86ConfigPciEntity(pScrn, 0, usedChips[i],
-					SISPciChipsets, NULL, NULL,
+					myPciChipsets, NULL, NULL,
 					NULL, NULL, NULL))) {
 	    /* Fill in what we can of the ScrnInfoRec */
 	    pScrn->driverVersion    = SIS_CURRENT_VERSION;
@@ -640,7 +686,8 @@ SISProbe(DriverPtr drv, int flags)
 	   pEnt->chipset == PCI_CHIP_SIS315 || pEnt->chipset == PCI_CHIP_SIS315H ||
 	   pEnt->chipset == PCI_CHIP_SIS315PRO || pEnt->chipset == PCI_CHIP_SIS330 ||
 	   pEnt->chipset == PCI_CHIP_SIS300 || pEnt->chipset == PCI_CHIP_SIS660 ||
-	   pEnt->chipset == PCI_CHIP_SIS340) {
+	   pEnt->chipset == PCI_CHIP_SIS340 || pEnt->chipset == PCI_CHIP_XGIXG20 ||
+	   pEnt->chipset == PCI_CHIP_XGIXG40) {
 
 	    SISEntPtr pSiSEnt = NULL;
 	    DevUnion  *pPriv;
@@ -2517,7 +2564,8 @@ SiSInternalDDC(ScrnInfoPtr pScrn, int crtno)
    if(crtno) {
       if(pSiS->VBFlags & CRT2_LCD)      realcrtno = 1;
       else if(pSiS->VBFlags & CRT2_VGA) realcrtno = 2;
-      else return NULL;
+      else				return NULL;
+      if(pSiS->SiS_Pr->DDCPortMixup) realcrtno = 0;
    } else {
       /* If CRT1 is LCDA, skip DDC (except 301C: DDC allowed, but uses CRT2 port!) */
       if(pSiS->VBFlags & CRT1_LCDA) {
@@ -2554,7 +2602,7 @@ SiSInternalDDC(ScrnInfoPtr pScrn, int crtno)
 	       }
 	       if(crtno == 0) {
 		  if(tempvgagamma) pSiS->CRT1VGAMonitorGamma = tempvgagamma;
-		  /* LCD never via CRT1 DDC port */
+		  /* LCD never via (demanded) CRT1 DDC port */
 	       } else {
 	          if(tempvgagamma) pSiS->CRT2VGAMonitorGamma = tempvgagamma;
 	          if(templcdgamma) pSiS->CRT2LCDMonitorGamma = templcdgamma;
@@ -2600,7 +2648,7 @@ SiSDoPrivateDDC(ScrnInfoPtr pScrn, int *crtnum)
        }
     } else
 #endif
-    if(pSiS->CRT1off) {
+    if((pSiS->CRT1off) || (!pSiS->CRT1Detected)) {
        *crtnum = 2;
        return(SiSInternalDDC(pScrn, 1));
     } else {
@@ -2757,8 +2805,9 @@ Bool SISDetermineLCDACap(ScrnInfoPtr pScrn)
 
     if( ((pSiS->ChipType == SIS_650)    ||
          (pSiS->ChipType == SIS_315PRO) ||
-         (pSiS->ChipType >= SIS_661))    &&
-        (pSiS->VBFlags & VB_SISLCDABRIDGE)          &&
+         (pSiS->ChipType >= SIS_661)	||
+	 (pSiS->ChipType != XGI_20))    	&&
+        (pSiS->VBFlags & VB_SISLCDABRIDGE)	&&
 	(pSiS->VESA != 1) ) {
        return TRUE;
     }
@@ -2788,7 +2837,7 @@ SISCheckBIOS(SISPtr pSiS, UShort mypciid)
        (pSiS->BIOS[romptr+2] != 'I') || (pSiS->BIOS[romptr+3] != 'R')) return FALSE;
 
     pciid = pSiS->BIOS[romptr+4] | (pSiS->BIOS[romptr+5] << 8);
-    if(pciid != 0x1039) return FALSE;
+    if(pciid != PCI_VENDOR_SIS && pciid != PCI_VENDOR_XGI) return FALSE;
 
     pciid = pSiS->BIOS[romptr+6] | (pSiS->BIOS[romptr+7] << 8);
     if(pciid != mypciid) return FALSE;
@@ -2839,6 +2888,11 @@ SiS_MapVGAMem(ScrnInfoPtr pScrn)
     }
 }
 #endif
+
+static void
+SiSPseudo(ScrnInfoPtr pScrn)
+{
+}
 
 /* PreInit()
  *
@@ -3111,27 +3165,35 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
     /* Set pScrn->monitor */
     pScrn->monitor = pScrn->confScreen->monitor;
 
-    /*
-     * Set the Chipset and ChipRev, allowing config file entries to
-     * override. DANGEROUS!
-     */
+    {
+       /*
+        * Set the Chipset and ChipRev, allowing config file entries to
+        * override. DANGEROUS!
+        */
 
-    if(pSiS->pEnt->device->chipset && *pSiS->pEnt->device->chipset) {
-       pScrn->chipset = pSiS->pEnt->device->chipset;
-       pSiS->Chipset = xf86StringToToken(SISChipsets, pScrn->chipset);
-       from = X_CONFIG;
-    } else if(pSiS->pEnt->device->chipID >= 0) {
-       pSiS->Chipset = pSiS->pEnt->device->chipID;
-       pScrn->chipset = (char *)xf86TokenToString(SISChipsets, pSiS->Chipset);
+       SymTabRec *myChipsets = SISChipsets;
 
-       from = X_CONFIG;
-       xf86DrvMsg(pScrn->scrnIndex, X_CONFIG, "ChipID override: 0x%04X\n",
+       if(pSiS->PciInfo->vendor == PCI_VENDOR_XGI)
+          myChipsets = XGIChipsets;
+
+       if(pSiS->pEnt->device->chipset && *pSiS->pEnt->device->chipset) {
+          pScrn->chipset = pSiS->pEnt->device->chipset;
+          pSiS->Chipset = xf86StringToToken(myChipsets, pScrn->chipset);
+          from = X_CONFIG;
+       } else if(pSiS->pEnt->device->chipID >= 0) {
+          pSiS->Chipset = pSiS->pEnt->device->chipID;
+          pScrn->chipset = (char *)xf86TokenToString(myChipsets, pSiS->Chipset);
+
+          from = X_CONFIG;
+          xf86DrvMsg(pScrn->scrnIndex, X_CONFIG, "ChipID override: 0x%04X\n",
                                 pSiS->Chipset);
-    } else {
-       from = X_PROBED;
-       pSiS->Chipset = pSiS->PciInfo->chipType;
-       pScrn->chipset = (char *)xf86TokenToString(SISChipsets, pSiS->Chipset);
+       } else {
+          from = X_PROBED;
+          pSiS->Chipset = pSiS->PciInfo->chipType;
+          pScrn->chipset = (char *)xf86TokenToString(myChipsets, pSiS->Chipset);
+       }
     }
+
     if(pSiS->pEnt->device->chipRev >= 0) {
        pSiS->ChipRev = pSiS->pEnt->device->chipRev;
        xf86DrvMsg(pScrn->scrnIndex, X_CONFIG, "ChipRev override: %d\n",
@@ -3189,7 +3251,18 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
     /* Reset some entries */
     pSiS->SiSFastVidCopy = SiSVidCopyGetDefault();
     pSiS->SiSFastMemCopy = SiSVidCopyGetDefault();
+    pSiS->SiSFastVidCopyFrom = SiSVidCopyGetDefault();
+    pSiS->SiSFastMemCopyFrom = SiSVidCopyGetDefault();
     pSiS->SiSFastVidCopyDone = FALSE;
+#ifdef SIS_USE_XAA
+    pSiS->RenderCallback = NULL;
+#endif
+#ifdef SIS_USE_EXA
+    pSiS->ExaRenderCallback = NULL;
+#endif
+    pSiS->SyncAccel = SiSPseudo;
+    pSiS->FillRect  = NULL;
+    pSiS->BlitRect  = NULL;
 
     /* Always do a ValidMode() inside Switchmode() */
     pSiS->skipswitchcheck = FALSE;
@@ -3200,27 +3273,22 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
     pSiS->HWCursorMBufNum = pSiS->HWCursorCBufNum = 0;
     pSiS->NeedFlush = FALSE;
     pSiS->NewCRLayout = FALSE;
-    pSiS->SiS760VLFB = FALSE;
-    pSiS->SiS760VLFBBase = 0;
-    pSiS->SiS760VLFBSize = 0;
+    pSiS->mmioSize = 64;
 
     switch(pSiS->Chipset) {
        case PCI_CHIP_SIS530:
 	  pSiS->ChipType = SIS_530;
 	  pSiS->VGAEngine = SIS_530_VGA;
-	  pSiS->mmioSize = 64;
 	  break;
        case PCI_CHIP_SIS300:
 	  pSiS->ChipType = SIS_300;
 	  pSiS->VGAEngine = SIS_300_VGA;
 	  pSiS->SiS_SD_Flags |= SiS_SD_IS300SERIES;
-	  pSiS->mmioSize = 128;
 	  break;
        case PCI_CHIP_SIS540:
 	  pSiS->ChipType = SIS_540;
 	  pSiS->VGAEngine = SIS_300_VGA;
 	  pSiS->SiS_SD_Flags |= SiS_SD_IS300SERIES;
-	  pSiS->mmioSize = 128;
 	  break;
        case PCI_CHIP_SIS630: /* 630 + 730 */
 	  pSiS->ChipType = SIS_630;
@@ -3229,7 +3297,6 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	  }
 	  pSiS->VGAEngine = SIS_300_VGA;
 	  pSiS->SiS_SD_Flags |= SiS_SD_IS300SERIES;
-	  pSiS->mmioSize = 128;
 	  break;
        case PCI_CHIP_SIS315H:
 	  pSiS->ChipType = SIS_315H;
@@ -3238,7 +3305,6 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	  pSiS->SiS_SD_Flags |= SiS_SD_IS315SERIES;
 	  pSiS->SiS_SD2_Flags |= SiS_SD2_SUPPORTXVHUESAT;
 	  pSiS->myCR63 = 0x63;
-	  pSiS->mmioSize = 128;
 	  break;
        case PCI_CHIP_SIS315:
 	  /* Override for simplicity */
@@ -3249,7 +3315,6 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	  pSiS->SiS_SD_Flags |= SiS_SD_IS315SERIES;
 	  pSiS->SiS_SD2_Flags |= SiS_SD2_SUPPORTXVHUESAT;
 	  pSiS->myCR63 = 0x63;
-	  pSiS->mmioSize = 128;
 	  break;
        case PCI_CHIP_SIS315PRO:
 	  /* Override for simplicity */
@@ -3260,7 +3325,6 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	  pSiS->SiS_SD_Flags |= SiS_SD_IS315SERIES;
 	  pSiS->SiS_SD2_Flags |= SiS_SD2_SUPPORTXVHUESAT;
 	  pSiS->myCR63 = 0x63;
-	  pSiS->mmioSize = 128;
 	  break;
        case PCI_CHIP_SIS550:
 	  pSiS->ChipType = SIS_550;
@@ -3269,7 +3333,6 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	  pSiS->SiS_SD_Flags |= SiS_SD_IS315SERIES;
 	  pSiS->SiS_SD2_Flags |= SiS_SD2_SUPPORTXVHUESAT;
 	  pSiS->myCR63 = 0x63;
-	  pSiS->mmioSize = 128;
 	  break;
        case PCI_CHIP_SIS650: /* 650 + 740 */
 	  pSiS->ChipType = SIS_650;
@@ -3281,7 +3344,6 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	  pSiS->SiS_SD_Flags |= SiS_SD_IS315SERIES;
 	  pSiS->SiS_SD2_Flags |= SiS_SD2_SUPPORTXVHUESAT;
 	  pSiS->myCR63 = 0x63;
-	  pSiS->mmioSize = 128;
 	  break;
        case PCI_CHIP_SIS330:
 	  pSiS->ChipType = SIS_330;
@@ -3290,7 +3352,6 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	  pSiS->SiS_SD_Flags |= SiS_SD_IS330SERIES;
 	  pSiS->SiS_SD2_Flags |= SiS_SD2_SUPPORTXVHUESAT;
 	  pSiS->myCR63 = 0x53; /* sic! */
-	  pSiS->mmioSize = 256;
 	  break;
        case PCI_CHIP_SIS660: /* 660, 661, 741, 760, 761, 670(?) */
 	  {
@@ -3299,42 +3360,35 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	     case 0x06601039:
 		pSiS->ChipType = SIS_660;
 		pSiS->ChipFlags |= SiSCF_Ultra256Core;
-		pSiS->mmioSize = 256;
 		pSiS->NeedFlush = TRUE;
 		break;
 	     case 0x07601039:
 		pSiS->ChipType = SIS_760;
 		pSiS->ChipFlags |= SiSCF_Ultra256Core;
-		pSiS->mmioSize = 256;
 		pSiS->NeedFlush = TRUE;
 		break;
 	     case 0x07611039:
 		pSiS->ChipType = SIS_761;
 		pSiS->ChipFlags |= SiSCF_Ultra256Core;
-		pSiS->mmioSize = 256;
 		pSiS->NeedFlush = TRUE;
 		break;
 	     case 0x07701039:
 		pSiS->ChipType = SIS_770;
 		pSiS->ChipFlags |= SiSCF_Ultra256Core;
-		pSiS->mmioSize = 256;
 		pSiS->NeedFlush = TRUE;
 		break;
 	     case 0x07411039:
 		pSiS->ChipType = SIS_741;
 		pSiS->ChipFlags |= SiSCF_Real256ECore;
-		pSiS->mmioSize = 128;
 		break;
 	     case 0x06611039:
 	     default:
 		pSiS->ChipType = SIS_661;
 		pSiS->ChipFlags |= SiSCF_Real256ECore;
-		pSiS->mmioSize = 128;
 		break;
 	     case 0x06701039:
 		pSiS->ChipType = SIS_670;
 		pSiS->ChipFlags |= SiSCF_Real256ECore;
-		pSiS->mmioSize = 128;
 	     }
 	     /* Detection could also be done by CR5C & 0xf8:
 	      * 0x10 = 661 (CR5F & 0xc0: 0x00 both A0 and A1)
@@ -3358,13 +3412,28 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	  pSiS->SiS_SD_Flags |= SiS_SD_IS340SERIES;
 	  pSiS->SiS_SD2_Flags |= SiS_SD2_SUPPORTXVHUESAT;
 	  pSiS->myCR63 = 0x53;
-	  pSiS->mmioSize = 256;
 	  pSiS->NewCRLayout = TRUE;
+	  break;
+       case PCI_CHIP_XGIXG20:
+	  pSiS->ChipType = XGI_20;
+	  pSiS->VGAEngine = SIS_315_VGA;
+	  pSiS->ChipFlags |= (SiSCF_XabreCore | SiSCF_MMIOPalette | SiSCF_IsXGI);
+	  pSiS->SiS_SD2_Flags |= (SiS_SD2_SUPPORTXVHUESAT | SiS_SD2_ISXGI);
+	  pSiS->myCR63 = 0x53;
+	  pSiS->NewCRLayout = TRUE;
+	  break;
+       case PCI_CHIP_XGIXG40:
+	  pSiS->ChipType = XGI_40;
+	  pSiS->VGAEngine = SIS_315_VGA;
+	  pSiS->ChipFlags |= (SiSCF_XabreCore | SiSCF_MMIOPalette | SiSCF_IsXGI);
+	  pSiS->SiS_SD2_Flags |= (SiS_SD2_SUPPORTXVHUESAT | SiS_SD2_ISXGI);
+	  pSiS->myCR63 = 0x53;
+	  pSiS->NewCRLayout = TRUE;
+	  if(pSiS->ChipRev == 2) pSiS->ChipFlags |= SiSCF_IsXGIV3;
 	  break;
        default:
 	  pSiS->ChipType = SIS_OLD;
 	  pSiS->VGAEngine = SIS_OLD_VGA;
-	  pSiS->mmioSize = 64;
 	  break;
     }
 
@@ -3595,13 +3664,13 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	  break;
        case SIS_530_VGA:
 	  pSiS->CursorSize = 2048;
-	  pix24flags = Support32bppFb 	  |
-		       Support24bppFb 	  |
+	  pix24flags = Support32bppFb	  |
+		       Support24bppFb	  |
 		       SupportConvert32to24;
           break;
        default:
 	  pSiS->CursorSize = 2048;
-	  pix24flags = Support24bppFb 	  |
+	  pix24flags = Support24bppFb	    |
 		       SupportConvert32to24 |
 		       PreferConvert32to24;
 	  break;
@@ -3629,6 +3698,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	     pSiSEnt->SiS_Pr = NULL;
 	     pSiSEnt->RenderAccelArray = NULL;
 	     pSiSEnt->SiSFastVidCopy = pSiSEnt->SiSFastMemCopy = NULL;
+	     pSiSEnt->SiSFastVidCopyFrom = pSiSEnt->SiSFastMemCopyFrom = NULL;
 	  } else {
 	     /* Second Head (always CRT1) */
 	     pSiS->SecondHead = TRUE;
@@ -3707,6 +3777,10 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
           pSiS->SiS_Pr->SiS_SensibleSR11 = TRUE;
        }
        pSiS->SiS_Pr->SiS_MyCR63 = pSiS->myCR63;
+       pSiS->SiS_Pr->DDCPortMixup = FALSE;
+       if((pSiS->ChipType == XGI_40) && (pSiS->ChipFlags & SiSCF_IsXGIV3)) {
+          pSiS->SiS_Pr->DDCPortMixup = TRUE;
+       }
     }
 
     /* Get our relocated IO registers */
@@ -3916,7 +3990,10 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
     pSiS->SiS_Pr->UseROM = FALSE;
     pSiS->ROM661New = FALSE;
 
-    if((pSiS->VGAEngine == SIS_300_VGA) || (pSiS->VGAEngine == SIS_315_VGA)) {
+    /* Don't use BIOS image for XGI - different layout. */
+
+    if(((pSiS->VGAEngine == SIS_300_VGA) || (pSiS->VGAEngine == SIS_315_VGA)) &&
+       (!(pSiS->SiS_SD2_Flags & SiS_SD2_ISXGI))) {
 #ifdef SISDUALHEAD
        if(pSiSEnt) {
 	  if(pSiSEnt->BIOS) {
@@ -3936,12 +4013,20 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	     Bool   found = FALSE, readpci = FALSE;
 
 	     switch(pSiS->ChipType) {
-	     case SIS_300:                                  readpci = TRUE; break;
-	     case SIS_315:    mypciid = PCI_CHIP_SIS315;    readpci = TRUE; break;
-	     case SIS_315PRO: mypciid = PCI_CHIP_SIS315PRO; readpci = TRUE; break;
-	     case SIS_315H:                                 readpci = TRUE; break;
-	     case SIS_330:                                  readpci = TRUE; break;
-	     case SIS_340:                                  readpci = TRUE; break;
+	     case SIS_315:    mypciid = PCI_CHIP_SIS315;
+			      readpci = TRUE;
+			      break;
+	     case SIS_315PRO: mypciid = PCI_CHIP_SIS315PRO;
+			      readpci = TRUE;
+			      break;
+	     case SIS_300:
+	     case SIS_315H:
+	     case SIS_330:
+	     case SIS_340:
+	     case XGI_20:
+	     case XGI_40:
+			      readpci = TRUE;
+			      break;
 	     }
 
 	     if(readpci) {
@@ -4029,6 +4114,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	  /* Copy some option settings to entity private */
 	  pSiSEnt->HWCursor = pSiS->HWCursor;
 	  pSiSEnt->NoAccel = pSiS->NoAccel;
+	  pSiSEnt->useEXA = pSiS->useEXA;
 	  pSiSEnt->restorebyset = pSiS->restorebyset;
 	  pSiSEnt->OptROMUsage = pSiS->OptROMUsage;
 	  pSiSEnt->OptUseOEM = pSiS->OptUseOEM;
@@ -4091,6 +4177,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	  pSiS->HWCursor = pSiSEnt->HWCursor;
 	  /* We need identical NoAccel setting */
 	  pSiS->NoAccel = pSiSEnt->NoAccel;
+	  pSiS->useEXA = pSiSEnt->useEXA;
 	  pSiS->TurboQueue = pSiSEnt->TurboQueue;
 	  pSiS->restorebyset = pSiSEnt->restorebyset;
 	  pSiS->AllowHotkey = pSiS->AllowHotkey;
@@ -4517,9 +4604,8 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	   pSiS->ChipFlags |= (SiSCF_CRT2HWCKaputt | SiSCF_LARGEOVERLAY);
 	   break;
 	 case PCI_CHIP_SIS340:
+	 case PCI_CHIP_XGIXG40: /* Verified: only 1 overlay */
 	   pSiS->ChipFlags |= SiSCF_LARGEOVERLAY;
-	   pSiS->hasTwoOverlays = TRUE;
-	   pSiS->SiS_SD_Flags |= SiS_SD_SUPPORT2OVL;
 	   break;
 	 case PCI_CHIP_SIS650:
 	   {
@@ -6569,20 +6655,36 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
     }
     xf86LoaderReqSymLists(fbSymbols, NULL);
 
-    /* Load XAA (if needed) */
+    /* Load XAA/EXA (if needed) */
     if(!pSiS->NoAccel) {
-       xf86DrvMsg(pScrn->scrnIndex, X_INFO, "2D acceleration enabled\n");
-       if(!xf86LoadSubModule(pScrn, "xaa")) {
-	  SISErrorLog(pScrn, "Could not load xaa module\n");
+       char *modName = NULL;
+       const char **symNames = NULL;
+#ifdef SIS_USE_XAA
+       if(!pSiS->useEXA) {
+	  modName = "xaa";
+	  symNames = xaaSymbols;
+       }
+#endif
+#ifdef SIS_USE_EXA
+       if(pSiS->useEXA) {
+	  modName = "exa";
+	  symNames = exaSymbols;
+       }
+#endif
+       if(modName && (!xf86LoadSubModule(pScrn, modName))) {
+	  SISErrorLog(pScrn, "Could not load %s module\n", modName);
 #ifdef SISDUALHEAD
 	  if(pSiSEnt) pSiSEnt->ErrorAfterFirst = TRUE;
 #endif
 	  if(pSiS->pInt) xf86FreeInt10(pSiS->pInt);
-	  sisRestoreExtRegisterLock(pSiS,srlockReg,crlockReg);
+	  sisRestoreExtRegisterLock(pSiS, srlockReg, crlockReg);
 	  SISFreeRec(pScrn);
 	  return FALSE;
        }
-       xf86LoaderReqSymLists(xaaSymbols, NULL);
+       if(symNames) {
+	  xf86LoaderReqSymLists(symNames, NULL);
+	  xf86DrvMsg(pScrn->scrnIndex, X_INFO, "2D acceleration enabled\n");
+       }
     }
 
     /* Load shadowfb (if needed) */
@@ -7429,9 +7531,7 @@ SISRestore(ScrnInfoPtr pScrn)
      */
 
     /* Wait for the accelerators */
-    if(pSiS->AccelInfoPtr) {
-       (*pSiS->AccelInfoPtr->Sync)(pScrn);
-    }
+    (*pSiS->SyncAccel)(pScrn);
 
     /* Set up restore flags */
     flags = SISVGA_SR_MODE | SISVGA_SR_CMAP;
@@ -7760,6 +7860,8 @@ SISBlockHandler(int i, pointer blockData, pointer pTimeout, pointer pReadmask)
 	  pSiS->NeedCopyFastVidCpy = FALSE;
 	  pSiS->SiSFastVidCopy = pSiSEnt->SiSFastVidCopy;
 	  pSiS->SiSFastMemCopy = pSiSEnt->SiSFastMemCopy;
+	  pSiS->SiSFastVidCopyFrom = pSiSEnt->SiSFastVidCopyFrom;
+	  pSiS->SiSFastMemCopyFrom = pSiSEnt->SiSFastMemCopyFrom;
        }
     }
 #endif
@@ -7768,9 +7870,16 @@ SISBlockHandler(int i, pointer blockData, pointer pTimeout, pointer pReadmask)
        (*pSiS->VideoTimerCallback)(pScrn, currentTime.milliseconds);
     }
 
+#ifdef SIS_USE_XAA
     if(pSiS->RenderCallback) {
        (*pSiS->RenderCallback)(pScrn);
     }
+#endif
+#ifdef SIS_USE_EXA
+    if(pSiS->ExaRenderCallback) {
+       (*pSiS->ExaRenderCallback)(pScrn);
+    }
+#endif
 }
 
 
@@ -8347,16 +8456,32 @@ SISScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
 #ifdef SISDUALHEAD
        if(pSiS->DualHeadMode) {
 	  if(pSiS->SecondHead) {
-	     pSiSEnt->SiSFastVidCopy = SiSVidCopyInit(pScreen, &pSiSEnt->SiSFastMemCopy);
+	     pSiSEnt->SiSFastVidCopy = SiSVidCopyInit(pScreen, &pSiSEnt->SiSFastMemCopy, FALSE);
+	     pSiSEnt->SiSFastVidCopyFrom = SiSVidCopyGetDefault();
+	     pSiSEnt->SiSFastMemCopyFrom = SiSVidCopyGetDefault();
+#ifdef SIS_USE_EXA
+	     if(pSiS->useEXA) {
+	        pSiSEnt->SiSFastVidCopyFrom = SiSVidCopyInit(pScreen, &pSiSEnt->SiSFastMemCopyFrom, TRUE);
+	     }
+#endif /* EXA */
 	     pSiSEnt->HaveFastVidCpy = TRUE;
 	     pSiS->SiSFastVidCopy = pSiSEnt->SiSFastVidCopy;
 	     pSiS->SiSFastMemCopy = pSiSEnt->SiSFastMemCopy;
+	     pSiS->SiSFastVidCopyFrom = pSiSEnt->SiSFastVidCopyFrom;
+	     pSiS->SiSFastMemCopyFrom = pSiSEnt->SiSFastMemCopyFrom;
 	  } else {
 	     pSiS->NeedCopyFastVidCpy = TRUE;
 	  }
        } else {
 #endif
-          pSiS->SiSFastVidCopy = SiSVidCopyInit(pScreen, &pSiS->SiSFastMemCopy);
+	  pSiS->SiSFastVidCopy = SiSVidCopyInit(pScreen, &pSiS->SiSFastMemCopy, FALSE);
+	  pSiS->SiSFastVidCopyFrom = SiSVidCopyGetDefault();
+	  pSiS->SiSFastMemCopyFrom = SiSVidCopyGetDefault();
+#ifdef SIS_USE_EXA
+	  if(pSiS->useEXA) {
+	     pSiS->SiSFastVidCopyFrom = SiSVidCopyInit(pScreen, &pSiS->SiSFastMemCopyFrom, TRUE);
+	  }
+#endif /* EXA */
 #ifdef SISDUALHEAD
        }
 #endif
@@ -8686,11 +8811,7 @@ SISSwitchMode(int scrnIndex, DisplayModePtr mode, int flags)
        }
     }
 
-    if(!pSiS->NoAccel) {
-       if(pSiS->AccelInfoPtr) {
-          (*pSiS->AccelInfoPtr->Sync)(pScrn);
-       }
-    }
+    (*pSiS->SyncAccel)(pScrn);
 
     if(!(SISModeInit(xf86Screens[scrnIndex], mode))) return FALSE;
 
@@ -9454,15 +9575,29 @@ SISCloseScreen(int scrnIndex, ScreenPtr pScreen)
        pSiS->pInt = NULL;
     }
 
-    if(pSiS->AccelLinearScratch) {
-       xf86FreeOffscreenLinear(pSiS->AccelLinearScratch);
-       pSiS->AccelLinearScratch = NULL;
+#ifdef SIS_USE_XAA
+    if(!pSiS->useEXA) {
+       if(pSiS->AccelLinearScratch) {
+          xf86FreeOffscreenLinear(pSiS->AccelLinearScratch);
+          pSiS->AccelLinearScratch = NULL;
+       }
+       if(pSiS->AccelInfoPtr) {
+          XAADestroyInfoRec(pSiS->AccelInfoPtr);
+          pSiS->AccelInfoPtr = NULL;
+       }
     }
+#endif
 
-    if(pSiS->AccelInfoPtr) {
-       XAADestroyInfoRec(pSiS->AccelInfoPtr);
-       pSiS->AccelInfoPtr = NULL;
+#ifdef SIS_USE_EXA
+    if(pSiS->useEXA) {
+       if(pSiS->EXADriverPtr) {
+          exaDriverFini(pScreen);
+          xfree(pSiS->EXADriverPtr);
+          pSiS->EXADriverPtr = NULL;
+          pSiS->exa_scratch = NULL;
+       }
     }
+#endif
 
     if(pSiS->CursorInfoPtr) {
        xf86DestroyCursorInfoRec(pSiS->CursorInfoPtr);
@@ -9682,20 +9817,26 @@ SiSEnableTurboQueue(ScrnInfoPtr pScrn)
 
 	      /* Set Command Queue Threshold to max value 11111b (?) */
 	      outSISIDXREG(SISSR, 0x27, 0x1F);
+
 	      /* Disable queue flipping */
 	      inSISIDXREG(SISCR, 0x55, tempCR55);
 	      andSISIDXREG(SISCR, 0x55, 0x33);
-	      /* Syncronous reset for Command Queue */
+	      /* Synchronous reset for Command Queue */
 	      outSISIDXREG(SISSR, 0x26, 0x01);
 	      SIS_MMIO_OUT32(pSiS->IOBase, 0x85c4, 0);
 	      /* Enable VRAM Command Queue mode */
-	      switch(pSiS->cmdQueueSize) {
-		case 1*1024*1024: SR26 = (0x40 | 0x04 | 0x01); break;
-		case 2*1024*1024: SR26 = (0x40 | 0x08 | 0x01); break;
-		case 4*1024*1024: SR26 = (0x40 | 0x0C | 0x01); break;
-		default:
-		                  pSiS->cmdQueueSize = 512 * 1024;
-		case    512*1024: SR26 = (0x40 | 0x00 | 0x01);
+	      if(pSiS->ChipType == XGI_20) {
+		 /* On XGI_20, always 128K */
+		 SR26 = 0x40 | 0x04 | 0x01;
+	      } else {
+	         switch(pSiS->cmdQueueSize) {
+		    case 1*1024*1024: SR26 = (0x40 | 0x04 | 0x01); break;
+		    case 2*1024*1024: SR26 = (0x40 | 0x08 | 0x01); break;
+		    case 4*1024*1024: SR26 = (0x40 | 0x0C | 0x01); break;
+		    default:
+		                      pSiS->cmdQueueSize = 512 * 1024;
+		    case    512*1024: SR26 = (0x40 | 0x00 | 0x01);
+	         }
 	      }
 	      outSISIDXREG(SISSR, 0x26, SR26);
 	      SR26 &= 0xfe;
@@ -12204,6 +12345,8 @@ SiSPostSetMode(ScrnInfoPtr pScrn, SISRegPtr sisReg)
 	    break;
 
 	 case SIS_340: /* ? */
+	 case XGI_20:
+	 case XGI_40:
 	    clklimit1 = clklimit2 = 240;  /* ? */
 	    clklimitg = 200;		  /* ? */
 	    break;
@@ -13201,6 +13344,13 @@ SiSMemCopyToVideoRam(SISPtr pSiS, UChar *to, UChar *from, int size)
 {
    if((ULong)to & 15) (*pSiS->SiSFastMemCopy)(to, from, size);
    else       	      (*pSiS->SiSFastVidCopy)(to, from, size);
+}
+
+void
+SiSMemCopyFromVideoRam(SISPtr pSiS, UChar *to, UChar *from, int size)
+{
+   if((ULong)to & 15) (*pSiS->SiSFastMemCopyFrom)(to, from, size);
+   else       	      (*pSiS->SiSFastVidCopyFrom)(to, from, size);
 }
 
 void

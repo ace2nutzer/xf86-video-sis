@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/sis_opt.c,v 1.19 2005/06/27 15:56:53 twini Exp $ */
+/* $XdotOrg$ */
 /*
  * SiS driver option evaluation
  *
@@ -40,6 +40,7 @@ typedef enum {
     OPTION_SW_CURSOR,
     OPTION_HW_CURSOR,
     OPTION_ACCEL,
+    OPTION_ACCELMETHOD,
     OPTION_TURBOQUEUE,
     OPTION_FAST_VRAM,
     OPTION_HOSTBUS,
@@ -152,6 +153,9 @@ typedef enum {
 
 static const OptionInfoRec SISOptions[] = {
     { OPTION_ACCEL,			"Accel",			OPTV_BOOLEAN,	{0}, FALSE },
+#if defined(SIS_USE_XAA) && defined(SIS_USE_EXA)
+    { OPTION_ACCELMETHOD,		"AccelMethod",			OPTV_STRING,	{0}, FALSE },
+#endif
     { OPTION_TURBOQUEUE,		"TurboQueue",			OPTV_BOOLEAN,	{0}, FALSE },
     { OPTION_FAST_VRAM,			"FastVram",			OPTV_BOOLEAN,	{0}, FALSE },
     { OPTION_HOSTBUS,			"HostBus",			OPTV_BOOLEAN,	{0}, FALSE },
@@ -413,12 +417,21 @@ SiSOptions(ScrnInfoPtr pScrn)
     /* TODO: Option (315 series VRAM command queue) */
     /* But beware: sisfb does not know about this!!! */
     pSiS->cmdQueueSize = 512*1024;
+    if(pSiS->ChipType == XGI_20) {
+       /* Hardware maximum on Z7: 128k */
+       pSiS->cmdQueueSize = 128*1024;
+    }
 #endif
     pSiS->doRender = TRUE;
     pSiS->HWCursor = TRUE;
     pSiS->Rotate = 0;
     pSiS->Reflect = 0;
     pSiS->NoAccel = FALSE;
+#if (defined(SIS_USE_EXA) && defined(SIS_USE_XAA)) || !defined(SIS_USE_EXA)
+    pSiS->useEXA = FALSE;
+#else
+    pSiS->useEXA = TRUE;
+#endif
     pSiS->ShadowFB = FALSE;
     pSiS->loadDRI = FALSE;
     pSiS->agpWantedPages = AGP_PAGES;
@@ -644,9 +657,27 @@ SiSOptions(ScrnInfoPtr pScrn)
 #endif
     }
 
+#if defined(SIS_USE_XAA) && defined(SIS_USE_EXA)
+    if(!pSiS->NoAccel) {
+       from = X_DEFAULT;
+       if((strptr = (char *)xf86GetOptValString(pSiS->Options, OPTION_ACCELMETHOD))) {
+	  if(!xf86NameCmp(strptr,"XAA")) {
+	     from = X_CONFIG;
+	     pSiS->useEXA = FALSE;
+	  } else if(!xf86NameCmp(strptr,"EXA")) {
+	     from = X_CONFIG;
+	     pSiS->useEXA = TRUE;
+	  }
+       }
+       xf86DrvMsg(pScrn->scrnIndex, from, "Using %s acceleration architecture\n",
+		pSiS->useEXA ? "EXA" : "XAA");
+    }
+#endif
+
     /* RenderAcceleration
      * En/Disables RENDER acceleration (315/330 series only, not 550)
      */
+#ifdef SIS_USE_XAA
     if((pSiS->VGAEngine == SIS_315_VGA) && (pSiS->Chipset != PCI_CHIP_SIS550) && (!pSiS->NoAccel)) {
        if(xf86GetOptValBool(pSiS->Options, OPTION_RENDER, &pSiS->doRender)) {
 	  if(!pSiS->doRender) {
@@ -654,6 +685,9 @@ SiSOptions(ScrnInfoPtr pScrn)
 	  }
        }
     }
+#else
+    pSiS->doRender = FALSE;
+#endif
 
     /* SWCursor, HWCursor
      * Chooses whether to use the hardware or software cursor
@@ -912,6 +946,9 @@ SiSOptions(ScrnInfoPtr pScrn)
 		OPTION_SISTVCOLCALIBFINE, OPTION_TVXPOSOFFSET, OPTION_TVYPOSOFFSET,
 		OPTION_TVXSCALE, OPTION_TVYSCALE, OPTION_TVBLUE, OPTION_CRT2GAMMA, OPTION_XVONCRT2,
 		OPTION_XVDEFAULTADAPTOR, OPTION_XVMEMCPY, OPTION_XVBENCHCPY, OPTION_FORCE2ASPECT,
+#if defined(SIS_USE_XAA) && defined(SIS_USE_EXA)
+		OPTION_ACCELMETHOD,
+#endif
 #ifndef SISCHECKOSSSE
 		OPTION_XVSSECOPY,
 #endif
@@ -1724,7 +1761,7 @@ SiSOptions(ScrnInfoPtr pScrn)
 		val ? "" : "not ");
        }
 
-#if defined(__i386__) || defined(__AMD64__) || defined(__amd64__)
+#if defined(__i386__) || defined(__AMD64__) || defined(__amd64__) || defined(__x86_64__)
        if(xf86GetOptValBool(pSiS->Options, OPTION_XVBENCHCPY, &val)) {
 	  pSiS->BenchMemCpy = val ? TRUE : FALSE;
 	  xf86DrvMsg(pScrn->scrnIndex, X_CONFIG,

@@ -33,7 +33,8 @@
 #define SISDGBMC
 #endif
 
-extern FBLinearPtr SISAllocateOverlayMemory(ScrnInfoPtr pScrn, FBLinearPtr linear, int size);
+extern unsigned int SISAllocateFBMemory(ScrnInfoPtr pScrn, void **handle, int bytesize);
+extern void	    SISFreeFBMemory(ScrnInfoPtr pScrn, void **handle);
 
 #define CPUBUFSIZE 2048      /* Size of /proc/cpuinfo buffer */
 #define BUFSIZ (576 * 1152)  /* Matches 720x576 YUV420 */
@@ -339,6 +340,7 @@ typedef struct {
     char         *mName;
     unsigned int mycpuflag;
     int          grade;
+    int 	 gradefrom;
     Bool         reqAlignment;
 } SISMCFuncData;
 
@@ -363,7 +365,7 @@ unsigned int SiSGetCPUFlags(ScrnInfoPtr pScrn)
     return 0;
 }
 
-vidCopyFunc SiSVidCopyInit(ScreenPtr pScreen, vidCopyFunc *UMemCpy)
+vidCopyFunc SiSVidCopyInit(ScreenPtr pScreen, vidCopyFunc *UMemCpy, Bool from)
 {
     *UMemCpy = SiS_libc_memcpy;
     return SiS_libc_memcpy;
@@ -479,7 +481,7 @@ static unsigned int taketime(void)	/* get current time (for benchmarking) */
     return(eax);
 }
 
-#elif defined(__AMD64__) || defined(__amd64__) /***************** AMD64 */
+#elif defined(__AMD64__) || defined(__amd64__) || defined(__x86_64__) /***************** AMD64 */
 
 #define SiS_checkosforsse	/* Does this cpu support sse and do we need to check os? */
 #define SiS_canBenchmark	/* Can we perform a benchmark? */
@@ -618,47 +620,38 @@ static unsigned int time_function(vidCopyFunc mf, UChar *buf1, UChar *buf2, int 
 /* Allocate an area of offscreen FB memory (buf1), a simulated video
  * player buffer (buf2) and a pool of uninitialized "video" data (buf3).
  */
-static FBLinearPtr SiS_AllocBuffers(ScrnInfoPtr pScrn, UChar **buf1,
-                                         UChar **buf2, UChar **buf3)
+static void *
+SiS_AllocBuffers(ScrnInfoPtr pScrn, UChar **buf1, UChar **buf2, UChar **buf3)
 {
     SISPtr pSiS = SISPTR(pScrn);
-    int depth = pSiS->CurrentLayout.bitsPerPixel >> 3;
-    unsigned alignSize;
-    FBLinearPtr tmpFbBuffer = NULL;
+    unsigned int offset;
+    void *handle = NULL;
 
-    if(depth == 0) {
-       xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
-		"Internal error: depth is 0!\n");
+    if(!(offset = SISAllocateFBMemory(pScrn, &handle, BUFSIZ + 31))) {
        return NULL;
     }
-
-    alignSize = (BUFSIZ + depth - 1) / depth;
-
-    if(!(tmpFbBuffer = SISAllocateOverlayMemory(pScrn, tmpFbBuffer, alignSize + 31))) {
-       return NULL;
-    }
-    (*buf1) = (UChar *)pSiS->FbBase + (tmpFbBuffer->offset * depth);
+    (*buf1) = (UChar *)pSiS->FbBase + offset;
     (*buf1) = (UChar *)(((ULong)(*buf1) + 31) & ~31);
 
-    if(!((*buf2) = (UChar *)xalloc(BUFSIZ))) {
-       xf86FreeOffscreenLinear(tmpFbBuffer);
+    if(!((*buf2) = (UChar *)xalloc(BUFSIZ + 15))) {
+       SISFreeFBMemory(pScrn, &handle);
        return NULL;
     }
 
-    if(!((*buf3) = (UChar *)xalloc(BUFSIZ))) {
+    if(!((*buf3) = (UChar *)xalloc(BUFSIZ + 15))) {
        xfree((*buf2));
-       xf86FreeOffscreenLinear(tmpFbBuffer);
+       SISFreeFBMemory(pScrn, &handle);
        return NULL;
     }
 
-    return tmpFbBuffer;
+    return handle;
 }
 
 /* Perform Benchmark */
 static int SiS_BenchmarkMemcpy(ScrnInfoPtr pScrn, SISMCFuncData *MCFunctions,
                                unsigned int myCPUflags, UChar *buf1, UChar *buf2,
 			       UChar *buf3, char *frqBuf, double cpuFreq,
-			       vidCopyFunc *UMemCpy, int *best2)
+			       vidCopyFunc *UMemCpy, int *best2, Bool from)
 {
     SISMCFuncData *curData;
     int j = 0, bestSoFar = 0;
@@ -670,7 +663,9 @@ static int SiS_BenchmarkMemcpy(ScrnInfoPtr pScrn, SISMCFuncData *MCFunctions,
     SiS_libc_memcpy(buf1, buf2, BUFSIZ);
 
     xf86DrvMsg(pScrn->scrnIndex, X_INFO,
-	       "Benchmarking system RAM to video RAM memory transfer methods:\n");
+	       "Benchmarking %s RAM to %s RAM memory transfer methods:\n",
+	       from ? "video" : "system",
+	       from ? "system" : "video");
 
 #ifdef TWDEBUG
     xf86DrvMsg(pScrn->scrnIndex, X_INFO, "Benchmark: CPUFlags %x\n", myCPUflags);
@@ -685,17 +680,31 @@ static int SiS_BenchmarkMemcpy(ScrnInfoPtr pScrn, SISMCFuncData *MCFunctions,
 
 	   /* Simulate setup of the video buffer and copy result to framebuffer */
 	   /* Do this 4 times to verify results */
-	   SiS_builtin_memcpy(buf2, buf3, BUFSIZ);
-	   tmp1 = time_function(curData->mFunc, buf1, buf2, BUFSIZ);
-	   SiS_builtin_memcpy(buf2, buf3, BUFSIZ);
-	   tmp2 = time_function(curData->mFunc, buf1, buf2, BUFSIZ);
-	   tmp1 = (tmp2 < tmp1) ? tmp2 : tmp1;
-	   SiS_builtin_memcpy(buf2, buf3, BUFSIZ);
-	   tmp2 = time_function(curData->mFunc, buf1, buf2, BUFSIZ);
-	   tmp1 = (tmp2 < tmp1) ? tmp2 : tmp1;
-	   SiS_builtin_memcpy(buf2, buf3, BUFSIZ);
-	   tmp2 = time_function(curData->mFunc, buf1, buf2, BUFSIZ);
-	   tmp1 = (tmp2 < tmp1) ? tmp2 : tmp1;
+	   if(!from) {
+	      SiS_builtin_memcpy(buf2, buf3, BUFSIZ);
+	      tmp1 = time_function(curData->mFunc, buf1, buf2, BUFSIZ);
+	      SiS_builtin_memcpy(buf2, buf3, BUFSIZ);
+	      tmp2 = time_function(curData->mFunc, buf1, buf2, BUFSIZ);
+	      tmp1 = (tmp2 < tmp1) ? tmp2 : tmp1;
+	      SiS_builtin_memcpy(buf2, buf3, BUFSIZ);
+	      tmp2 = time_function(curData->mFunc, buf1, buf2, BUFSIZ);
+	      tmp1 = (tmp2 < tmp1) ? tmp2 : tmp1;
+	      SiS_builtin_memcpy(buf2, buf3, BUFSIZ);
+	      tmp2 = time_function(curData->mFunc, buf1, buf2, BUFSIZ);
+	      tmp1 = (tmp2 < tmp1) ? tmp2 : tmp1;
+	   } else {
+	      SiS_builtin_memcpy(buf3, buf2, BUFSIZ);
+	      tmp1 = time_function(curData->mFunc, buf2, buf1, BUFSIZ);
+	      SiS_builtin_memcpy(buf3, buf2, BUFSIZ);
+	      tmp2 = time_function(curData->mFunc, buf2, buf1, BUFSIZ);
+	      tmp1 = (tmp2 < tmp1) ? tmp2 : tmp1;
+	      SiS_builtin_memcpy(buf3, buf2, BUFSIZ);
+	      tmp2 = time_function(curData->mFunc, buf2, buf1, BUFSIZ);
+	      tmp1 = (tmp2 < tmp1) ? tmp2 : tmp1;
+	      SiS_builtin_memcpy(buf3, buf2, BUFSIZ);
+	      tmp2 = time_function(curData->mFunc, buf2, buf1, BUFSIZ);
+	      tmp1 = (tmp2 < tmp1) ? tmp2 : tmp1;
+	   }
 
 	   if((!frqBuf) || (tmp1 == 0)) {
 	      xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
@@ -728,22 +737,24 @@ static int SiS_BenchmarkMemcpy(ScrnInfoPtr pScrn, SISMCFuncData *MCFunctions,
 }
 
 static vidCopyFunc SiS_GetBestByGrade(ScrnInfoPtr pScrn, SISMCFuncData *MCFunctions,
-                               		unsigned int myCPUflags, vidCopyFunc *UMemCpy)
+			unsigned int myCPUflags, vidCopyFunc *UMemCpy, Bool from)
 {
     int j = 0, best = -1, secondbest = -1, bestSoFar = 10, best2SoFar = 10;
+    int grade;
 
     *UMemCpy = SiS_libc_memcpy;
 
     while(MCFunctions[j].mFunc) {
 	if(myCPUflags & MCFunctions[j].mycpuflag) {
-	   if(MCFunctions[j].grade < bestSoFar) {
+	   grade = from ? MCFunctions[j].gradefrom : MCFunctions[j].grade;
+	   if(grade < bestSoFar) {
 	      best = j;
-	      bestSoFar = MCFunctions[j].grade;
+	      bestSoFar = grade;
 	   }
-	   if(MCFunctions[j].grade < best2SoFar) {
+	   if(grade < best2SoFar) {
 	      if(!MCFunctions[j].reqAlignment) {
 	         secondbest = j;
-		 best2SoFar = MCFunctions[j].grade;
+		 best2SoFar = grade;
 	      }
 	   }
 	}
@@ -751,12 +762,14 @@ static vidCopyFunc SiS_GetBestByGrade(ScrnInfoPtr pScrn, SISMCFuncData *MCFuncti
     }
     if(best >= 0) {
        xf86DrvMsg(pScrn->scrnIndex, X_INFO,
-		"Chose %s method for aligned video data transfers\n",
-		MCFunctions[best].mName);
+		"Chose %s method for aligned data transfers %s video RAM\n",
+		MCFunctions[best].mName,
+		from ? "from" : "to");
        if(secondbest >= 0) {
           xf86DrvMsg(pScrn->scrnIndex, X_INFO,
-		"Chose %s method for unaligned video data transfers\n",
-		   MCFunctions[secondbest].mName);
+		"Chose %s method for unaligned data transfers %s video RAM\n",
+		   MCFunctions[secondbest].mName,
+		   from ? "from" : "to");
           *UMemCpy = MCFunctions[secondbest].mFunc;
        }
        return MCFunctions[best].mFunc;
@@ -894,14 +907,14 @@ PREFETCH_FUNC(SiS_now,MMX,NOW,FEMMS,FEMMS,small_memcpy_i386)
 NOPREFETCH_FUNC(SiS_mmx,MMX,EMMS,EMMS,small_memcpy_i386)
 
 static SISMCFuncData MCFunctions_i386[] = {
-    {SiS_libc_memcpy,   "libc",      SIS_CPUFL_LIBC,  4, FALSE},
-    {SiS_builtin_memcpy,"built-in-1",SIS_CPUFL_BI,    5, FALSE},
-    {SiS_builtin_memcp2,"built-in-2",SIS_CPUFL_BI2,   6, FALSE},
-    {SiS_mmx_memcpy,    "MMX",       SIS_CPUFL_MMX,   3, FALSE},
-    {SiS_sse_memcpy,    "SSE",       SIS_CPUFL_SSE,   1,  TRUE},
-    {SiS_now_memcpy,    "3DNow!",    SIS_CPUFL_3DNOW, 2, FALSE},
-    {SiS_mmxext_memcpy, "MMX2",      SIS_CPUFL_MMX2,  0, FALSE},
-    {NULL,              "",          0,              10, FALSE}
+    {SiS_libc_memcpy,   "libc",      SIS_CPUFL_LIBC,  4,  4, FALSE},
+    {SiS_builtin_memcpy,"built-in-1",SIS_CPUFL_BI,    5,  5, FALSE},
+    {SiS_builtin_memcp2,"built-in-2",SIS_CPUFL_BI2,   6,  6, FALSE},
+    {SiS_mmx_memcpy,    "MMX",       SIS_CPUFL_MMX,   3,  3, FALSE},
+    {SiS_sse_memcpy,    "SSE",       SIS_CPUFL_SSE,   1,  0, TRUE},
+    {SiS_now_memcpy,    "3DNow!",    SIS_CPUFL_3DNOW, 2,  2, FALSE},
+    {SiS_mmxext_memcpy, "MMX2",      SIS_CPUFL_MMX2,  0,  1, FALSE},
+    {NULL,              "",          0,              10, 10, FALSE}
 };
 
 #define Def_FL  (SIS_CPUFL_LIBC | SIS_CPUFL_BI | SIS_CPUFL_BI2)  /* Default methods */
@@ -991,16 +1004,16 @@ static unsigned int SiS_GetCpuFeatures(ScrnInfoPtr pScrn)
     return flags;
 }
 
-#elif defined(__AMD64__) || defined(__amd64__) /* AMD64 specific ***** */
+#elif defined(__AMD64__) || defined(__amd64__) || defined(__x86_64__) /* AMD64 specific ***** */
 
 PREFETCH_FUNC(SiS_sse,SSE64,SSE,,FENCE,small_memcpy_amd64)
 
 static SISMCFuncData MCFunctions_AMD64[] = {
-    {SiS_libc_memcpy,   "libc",      SIS_CPUFL_LIBC, 2, FALSE},
-    {SiS_builtin_memcpy,"built-in-1",SIS_CPUFL_BI,   1, FALSE},
-    {SiS_builtin_memcp2,"built-in-2",SIS_CPUFL_BI2,  3, FALSE},
-    {SiS_sse_memcpy,    "SSE",       SIS_CPUFL_SSE,  0,  TRUE},
-    {NULL,              "",          0,             10, FALSE}
+    {SiS_libc_memcpy,   "libc",      SIS_CPUFL_LIBC, 2,  2, FALSE},
+    {SiS_builtin_memcpy,"built-in-1",SIS_CPUFL_BI,   1,  1, FALSE},
+    {SiS_builtin_memcp2,"built-in-2",SIS_CPUFL_BI2,  3,  3, FALSE},
+    {SiS_sse_memcpy,    "SSE",       SIS_CPUFL_SSE,  0,  0, TRUE},
+    {NULL,              "",          0,             10, 10, FALSE}
 };
 
 #define Def_FL  (SIS_CPUFL_LIBC | SIS_CPUFL_BI | SIS_CPUFL_BI2)
@@ -1029,11 +1042,11 @@ static unsigned int SiS_GetCpuFeatures(ScrnInfoPtr pScrn)
 
 #ifdef SiS_canBenchmark
 static vidCopyFunc
-SiSVidCopyInitGen(ScreenPtr pScreen, SISMCFuncData *MCFunctions, vidCopyFunc *UMemCpy)
+SiSVidCopyInitGen(ScreenPtr pScreen, SISMCFuncData *MCFunctions, vidCopyFunc *UMemCpy, Bool from)
 {
     ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum];
     SISPtr pSiS = SISPTR(pScrn);
-    FBLinearPtr tmpFbBuffer = NULL;
+    void *fbhandle = NULL;
     char  *frqBuf = NULL;
     UChar *buf1, *buf2, *buf3;
     double cpuFreq = 0.0;
@@ -1061,26 +1074,32 @@ SiSVidCopyInitGen(ScreenPtr pScreen, SISMCFuncData *MCFunctions, vidCopyFunc *UM
 #endif
 
     /* Allocate buffers */
-    if(!(tmpFbBuffer = SiS_AllocBuffers(pScrn, &buf1, &buf2, &buf3))) {
+    if(!(fbhandle = SiS_AllocBuffers(pScrn, &buf1, &buf2, &buf3))) {
        xf86DrvMsg(pScrn->scrnIndex, X_INFO,
        		"Failed to allocate video RAM for video data transfer benchmark\n");
-       return SiS_GetBestByGrade(pScrn, MCFunctions, myCPUflags, UMemCpy);
+       return SiS_GetBestByGrade(pScrn, MCFunctions, myCPUflags, UMemCpy, from);
     }
 
     /* Perform Benchmark */
-    best = SiS_BenchmarkMemcpy(pScrn, MCFunctions, myCPUflags, buf1, buf2, buf3,
-				frqBuf, cpuFreq, UMemCpy, &secondbest);
+    best = SiS_BenchmarkMemcpy(pScrn, MCFunctions, myCPUflags, buf1,
+    				(UChar *)(((unsigned long)buf2 + 15) & ~15),
+				(UChar *)(((unsigned long)buf3 + 15) & ~15),
+				frqBuf, cpuFreq, UMemCpy, &secondbest, from);
 
     /* Free buffers */
-    xf86FreeOffscreenLinear(tmpFbBuffer);
+    SISFreeFBMemory(pScrn, &fbhandle);
     xfree(buf2);
     xfree(buf3);
 
     xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
-	       "Using %s method for aligned video data transfers\n", MCFunctions[best].mName);
+	       "Using %s method for aligned data transfers %s video RAM\n",
+	       MCFunctions[best].mName,
+	       from ? "from" : "to");
 
     xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
-	       "Using %s method for unaligned video data transfers\n", MCFunctions[secondbest].mName);
+	       "Using %s method for unaligned data transfers %s video RAM\n",
+	       MCFunctions[secondbest].mName,
+	       from ? "from" : "to");
 
     return MCFunctions[best].mFunc;
 }
@@ -1116,12 +1135,12 @@ SiSGetCPUFlags(ScrnInfoPtr pScrn)
 /*		(SiSGetCPUFlags must be called before this one)       */
 /**********************************************************************/
 
-vidCopyFunc SiSVidCopyInit(ScreenPtr pScreen, vidCopyFunc *UMemCpy)
+vidCopyFunc SiSVidCopyInit(ScreenPtr pScreen, vidCopyFunc *UMemCpy, Bool from)
 {
 #if defined(__i386__) && defined(SiS_canBenchmark)
-    return(SiSVidCopyInitGen(pScreen, MCFunctions_i386, UMemCpy));
-#elif (defined(__AMD64__) || defined(__amd64__)) && defined(SiS_canBenchmark)
-    return(SiSVidCopyInitGen(pScreen, MCFunctions_AMD64, UMemCpy));
+    return(SiSVidCopyInitGen(pScreen, MCFunctions_i386, UMemCpy, from));
+#elif (defined(__AMD64__) || defined(__amd64__) || defined(__x86_64__)) && defined(SiS_canBenchmark)
+    return(SiSVidCopyInitGen(pScreen, MCFunctions_AMD64, UMemCpy, from));
 #else /* Other cases: Use libc memcpy() */
     *UMemCpy = SiS_libc_memcpy;
     return SiS_libc_memcpy;

@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/vstruct.h,v 1.15 2005/06/27 15:56:53 twini Exp $ */
+/* $XdotOrg$ */
 /*
  * General structure definitions for universal mode switching modules
  *
@@ -246,6 +246,7 @@ struct SiS_Private
 	unsigned int			VideoMemorySize;
 #endif
 	SISIOADDRESS			IOAddress;
+	SISIOADDRESS			IOAddress2;  /* For dual chip XGI volari */
 
 #ifdef SIS_LINUX_KERNEL
 	SISIOADDRESS			RelIO;
@@ -261,6 +262,7 @@ struct SiS_Private
 	SISIOADDRESS			SiS_P3c8;
 	SISIOADDRESS			SiS_P3c9;
 	SISIOADDRESS			SiS_P3cb;
+	SISIOADDRESS			SiS_P3cc;
 	SISIOADDRESS			SiS_P3cd;
 	SISIOADDRESS			SiS_P3da;
 	SISIOADDRESS			SiS_Part1Port;
@@ -285,6 +287,7 @@ struct SiS_Private
 	BOOLEAN				SiS_ROMNew;
 	BOOLEAN				SiS_NeedRomModeData;
 	BOOLEAN				PanelSelfDetected;
+	BOOLEAN				DDCPortMixup;
 	int				SiS_CHOverScan;
 	BOOLEAN				SiS_CHSOverScan;
 	BOOLEAN				SiS_ChSW;

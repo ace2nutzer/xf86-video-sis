@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/initextx.c,v 1.1 2005/06/27 15:56:52 twini Exp $ */
+/* $XdotOrg$ */
 /*
  * X.org/XFree86 specific extensions to init.c/init301.c
  *
@@ -736,7 +736,7 @@ SiS_FindPanelFromDB(SISPtr pSiS, unsigned short panelvendor, unsigned short pane
 unsigned short
 SiS_SenseLCDDDC(struct SiS_Private *SiS_Pr, SISPtr pSiS)
 {
-   unsigned short DDCdatatype, paneltype, flag, xres=0, yres=0;
+   unsigned short DDCdatatype, paneltype, adapternum, flag, xres=0, yres=0;
    unsigned short index, myindex, lumsize, numcodes, panelvendor, panelproduct;
    int maxx=0, maxy=0, prefx=0, prefy=0;
    unsigned char cr37=0, seekcode;
@@ -758,7 +758,18 @@ SiS_SenseLCDDDC(struct SiS_Private *SiS_Pr, SISPtr pSiS)
    if(!(pSiS->VBFlags & (VB_301|VB_301B|VB_301C|VB_302B))) return 0;
    if(pSiS->VBFlags & VB_30xBDH) return 0;
 
-   if(SiS_InitDDCRegs(SiS_Pr, pSiS->VBFlags, pSiS->VGAEngine, 1, 0, FALSE) == 0xFFFF) return 0;
+   /* Specific for XGI_40/Rev 2 (XGI V3XT): This card has CRT1's
+    * and CRT2's DDC ports physically connected to each other. There
+    * is no connection to the video bridge's DDC port, both DDC
+    * channels are routed to the GPU. Smart. If both CRT1 (CRT) and
+    * CRT2 (VGA or LCD) are connected, DDC will fail. Hence, no
+    * reliable panel detection here...
+    */
+   adapternum = 1;
+   if(SiS_Pr->DDCPortMixup) adapternum = 0;
+
+   if(SiS_InitDDCRegs(SiS_Pr, pSiS->VBFlags, pSiS->VGAEngine, adapternum, 0, FALSE) == 0xFFFF)
+      return 0;
 
    SiS_Pr->SiS_DDC_SecAddr = 0x00;
 
@@ -1374,14 +1385,27 @@ SiS_SenseLCDDDC(struct SiS_Private *SiS_Pr, SISPtr pSiS)
 unsigned short
 SiS_SenseVGA2DDC(struct SiS_Private *SiS_Pr, SISPtr pSiS)
 {
-   unsigned short DDCdatatype,flag;
+   unsigned short DDCdatatype, flag;
    BOOLEAN foundcrt = FALSE;
    int retry;
    unsigned char buffer[256];
 
-   if(!(pSiS->VBFlags & (VB_301|VB_301B|VB_301C|VB_302B))) return 0;
+   if(!(pSiS->VBFlags & VB_SISVGA2BRIDGE)) return 0;
 
-   if(SiS_InitDDCRegs(SiS_Pr, pSiS->VBFlags, pSiS->VGAEngine, 2, 0, FALSE) == 0xFFFF) return 0;
+   /* Specific for XGI_40/Rev 2 (XGI V3XT): This card has CRT1's
+    * and CRT2's DDC ports physically connected to each other. There
+    * is no connection to the video bridge's DDC port, both DDC
+    * channels are routed to the GPU. Smart. If both CRT1 (CRT) and
+    * CRT2 (VGA or LCD) are connected, DDC will fail. If a CRT is
+    * connected to the DVI-I port, it will report "analog" as well,
+    * so we never know if the monitor is connected to CRT1 or CRT2.
+    * Hence, no reliable CRT detection here... we need to fall back to
+    * the sensing stuff in sis_vb.c.
+    */
+   if(SiS_Pr->DDCPortMixup) return 0;
+
+   if(SiS_InitDDCRegs(SiS_Pr, pSiS->VBFlags, pSiS->VGAEngine, 2, 0, FALSE) == 0xFFFF)
+      return 0;
 
    SiS_Pr->SiS_DDC_SecAddr = 0x00;
 

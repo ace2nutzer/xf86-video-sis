@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/sis_vb.c,v 1.22 2005/06/27 15:56:53 twini Exp $ */
+/* $XdotOrg$ */
 /*
  * Video bridge detection and configuration for 300, 315 and 330 series
  *
@@ -193,7 +193,7 @@ SiS_SISDetectCRT1(ScrnInfoPtr pScrn)
 #endif
     }
 
-    if(temp == 0xffff) {
+    if((temp == 0xffff) && (!pSiS->SiS_Pr->DDCPortMixup)) {
        i = 3;
        do {
           temp = SiS_HandleDDC(pSiS->SiS_Pr, pSiS->VBFlags, pSiS->VGAEngine, 0, 0, NULL);
@@ -700,7 +700,10 @@ void SISCRT2PreInit(ScrnInfoPtr pScrn, Bool quiet)
 
     inSISIDXREG(SISCR, 0x32, CR32);
 
-    if(CR32 & 0x10)  pSiS->VBFlags |= CRT2_VGA;
+    if(CR32 & 0x10) pSiS->VBFlags |= CRT2_VGA;
+
+    /* See the comment in initextx.c/SiS_SenseVGA2DDC() */
+    if(pSiS->SiS_Pr->DDCPortMixup) return;
 
 #ifdef SISDUALHEAD
     if((!pSiS->DualHeadMode) || (!pSiS->SecondHead)) {
@@ -828,16 +831,18 @@ SISSense30x(ScrnInfoPtr pScrn, Bool quiet)
 
     if(pSiS->SiS_Pr->UseROM) {
        if(pSiS->VGAEngine == SIS_300_VGA) {
-          if(pSiS->VBFlags & VB_301) {
+	  if(pSiS->VBFlags & VB_301) {
 	     inSISIDXREG(SISPART4,0x01,myflag);
-             if(!(myflag & 0x04)) {
-                vga2 = GETROMWORD(0xf8); svhs = GETROMWORD(0xfa); cvbs = GETROMWORD(0xfc);
+	     if(!(myflag & 0x04)) {
+		vga2 = GETROMWORD(0xf8); svhs = GETROMWORD(0xfa); cvbs = GETROMWORD(0xfc);
 	     }
 	  }
 	  biosflag = pSiS->BIOS[0xfe];
        } else if((pSiS->Chipset == PCI_CHIP_SIS660) ||
-                 (pSiS->Chipset == PCI_CHIP_SIS340)) {
-          if(pSiS->ROM661New) {
+	         (pSiS->Chipset == PCI_CHIP_SIS340) ||
+		 (pSiS->Chipset == PCI_CHIP_XGIXG20) ||
+		 (pSiS->Chipset == PCI_CHIP_XGIXG40)) {
+	  if(pSiS->ROM661New) {
 	     biosflag = 2;
 	     vga2 = GETROMWORD(0x63);
 	     if(pSiS->BIOS[0x6f] & 0x01) {
@@ -848,8 +853,8 @@ SISSense30x(ScrnInfoPtr pScrn, Bool quiet)
 	  }
        } else if(!pSiS->ROM661New) {
 #if 0	  /* eg. 1.15.23 has wrong values here */
-          myflag = 0;
-          if(pSiS->VBFlags & VB_301) {
+	  myflag = 0;
+	  if(pSiS->VBFlags & VB_301) {
 	     if(pSiS->Chipset == PCI_CHIP_SIS330) {
 	        myflag = 0xe5; i = 0x11b;
 	     } else {
@@ -872,6 +877,17 @@ SISSense30x(ScrnInfoPtr pScrn, Bool quiet)
 
     if(!(pSiS->VBFlags & VB_SISVGA2BRIDGE)) {
        vga2 = vga2_c = 0;
+    }
+
+    if(pSiS->ChipType >= XGI_20) {
+       /* These boards have a s-video connector, but its
+	* pins are routed both the bridge's composite and
+	* svideo pins. What for, is beyond me. Anyway,
+	* since a svideo connected TV now is also being
+	* detected as a composite connected one, we don't
+	* check for composite if svideo is detected.
+	*/
+	biosflag &= ~0x02;
     }
 
     inSISIDXREG(SISSR,0x1e,backupSR_1e);
@@ -902,10 +918,10 @@ SISSense30x(ScrnInfoPtr pScrn, Bool quiet)
 
     if(vga2_c || vga2) {
        if(SISDoSense(pScrn, vga2, vga2_c)) {
-          if(biosflag & 0x01) {
+	  if(biosflag & 0x01) {
 	     if(!quiet) {
 	        xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
-	            "SiS30x: Detected TV connected to SCART output\n");
+		    "SiS30x: Detected TV connected to SCART output\n");
 	     }
 	     pSiS->VBFlags |= TV_SCART;
 	     orSISIDXREG(SISCR, 0x32, 0x04);
@@ -913,7 +929,7 @@ SISSense30x(ScrnInfoPtr pScrn, Bool quiet)
 	  } else {
 	     if(!quiet) {
 	        xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
-	            "SiS30x: Detected secondary VGA connection\n");
+		    "SiS30x: Detected secondary VGA connection\n");
 	     }
 	     pSiS->VBFlags |= VGA2_CONNECTED;
 	     orSISIDXREG(SISCR, 0x32, 0x10);
@@ -932,21 +948,21 @@ SISSense30x(ScrnInfoPtr pScrn, Bool quiet)
 
     if((pSiS->VGAEngine == SIS_315_VGA) && (pSiS->VBFlags & VB_SISYPBPRBRIDGE)) {
        if(pSiS->SenseYPbPr) {
-          outSISIDXREG(SISPART2,0x4d,(backupP2_4d | 0x10));
-          SiS_DDC2Delay(pSiS->SiS_Pr, 0x2000);
+	  outSISIDXREG(SISPART2,0x4d,(backupP2_4d | 0x10));
+	  SiS_DDC2Delay(pSiS->SiS_Pr, 0x2000);
 	  /* New BIOS (2.x) uses vga2 sensing here for all bridges >301LV */
-          if((result = SISDoSense(pScrn, svhs, 0x0604))) {
-             if((result = SISDoSense(pScrn, cvbs, 0x0804))) {
-	        if(!quiet) {
-	           xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
-     			"SiS30x: Detected TV connected to YPbPr component output\n");
+	  if((result = SISDoSense(pScrn, svhs, 0x0604))) {
+	     if((result = SISDoSense(pScrn, cvbs, 0x0804))) {
+		if(!quiet) {
+		   xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
+			"SiS30x: Detected TV connected to YPbPr component output\n");
 		}
-	        orSISIDXREG(SISCR,0x32,0x80);
-	        pSiS->VBFlags |= TV_YPBPR;
-	        pSiS->postVBCR32 |= 0x80;
+		orSISIDXREG(SISCR,0x32,0x80);
+		pSiS->VBFlags |= TV_YPBPR;
+		pSiS->postVBCR32 |= 0x80;
 	     }
-          }
-          outSISIDXREG(SISPART2,0x4d,backupP2_4d);
+	  }
+	  outSISIDXREG(SISPART2,0x4d,backupP2_4d);
        }
     }
 
@@ -956,17 +972,17 @@ SISSense30x(ScrnInfoPtr pScrn, Bool quiet)
     if(!(pSiS->VBFlags & TV_YPBPR)) {
 
        if((result = SISDoSense(pScrn, svhs, svhs_c))) {
-          if(!quiet) {
-             xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
-     		  "SiS30x: Detected TV connected to SVIDEO output\n");
-  	  }
-          pSiS->VBFlags |= TV_SVIDEO;
-          orSISIDXREG(SISCR, 0x32, 0x02);
-          pSiS->postVBCR32 |= 0x02;
+	  if(!quiet) {
+	     xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
+		  "SiS30x: Detected TV connected to SVIDEO output\n");
+	  }
+	  pSiS->VBFlags |= TV_SVIDEO;
+	  orSISIDXREG(SISCR, 0x32, 0x02);
+	  pSiS->postVBCR32 |= 0x02;
        }
 
        if((biosflag & 0x02) || (!result)) {
-          if(SISDoSense(pScrn, cvbs, cvbs_c)) {
+	  if(SISDoSense(pScrn, cvbs, cvbs_c)) {
 	     if(!quiet) {
 	        xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
 	             "SiS30x: Detected TV connected to COMPOSITE output\n");
@@ -974,7 +990,7 @@ SISSense30x(ScrnInfoPtr pScrn, Bool quiet)
 	     pSiS->VBFlags |= TV_AVIDEO;
 	     orSISIDXREG(SISCR, 0x32, 0x01);
 	     pSiS->postVBCR32 |= 0x01;
-          }
+	  }
        }
 
     }

@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/sis_videostr.h,v 1.1 2005/04/21 21:30:56 twini Exp $ */
+/* $XdotOrg$ */
 /*
  * Xv driver for SiS 300, 315 and 330 series
  *
@@ -40,7 +40,7 @@
    (SISPortPrivPtr)((SISPTR(pScrn))->adaptor->pPortPrivates[0].ptr)
 
 typedef struct {
-    FBLinearPtr	 linear;
+    void *	 handle;
     CARD32	 bufAddr[2];
 
     UChar	 currentBuf;
@@ -117,6 +117,7 @@ typedef struct {
     Bool	 is760;
     Bool	 is340;
     Bool	 is761;
+    Bool	 isXGI;
 
 } SISPortPrivRec, *SISPortPrivPtr;
 

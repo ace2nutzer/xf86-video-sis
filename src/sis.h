@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/sis.h,v 1.40 2005/06/29 22:11:28 twini Exp $ */
+/* $XdotOrg$ */
 /*
  * Main global data and definitions
  *
@@ -36,8 +36,8 @@
 #define _SIS_H_
 
 #define SISDRIVERVERSIONYEAR    5
-#define SISDRIVERVERSIONMONTH   6
-#define SISDRIVERVERSIONDAY     27
+#define SISDRIVERVERSIONMONTH   7
+#define SISDRIVERVERSIONDAY     4
 #define SISDRIVERREVISION       1
 
 #define SISDRIVERIVERSION ((SISDRIVERVERSIONYEAR << 16) |  \
@@ -83,7 +83,6 @@
 #include "xf86PciInfo.h"
 #include "xf86Cursor.h"
 #include "xf86cmap.h"
-#include "xaa.h"
 #include "vbe.h"
 
 #define SIS_HaveDriverFuncs 0
@@ -124,7 +123,7 @@
 
 /* SIS_USE_BIOS_SCRATCH: Save/restore mode number in BIOS scratch area? */
 #undef SIS_USE_BIOS_SCRATCH
-#if defined(i386) || defined(__i386) || defined(__i386__) || defined(__AMD64__) || defined(__amd64__)
+#if defined(i386) || defined(__i386) || defined(__i386__) || defined(__AMD64__) || defined(__amd64__) || defined(__x86_64__)
 #define SIS_USE_BIOS_SCRATCH
 #endif
 
@@ -190,24 +189,49 @@
 
 #define ENABLE_YPBPR		/* Include YPbPr support on SiS bridges (315 series and 661/741/760) */
 
-#define SISVRAMQ		/* Use VRAM queue mode on 315 series */
+#define SISVRAMQ		/* Use VRAM queue mode on 315/330/340/XGI series */
 
 #undef INCL_YUV_BLIT_ADAPTOR
 #ifdef SISVRAMQ
 #define INCL_YUV_BLIT_ADAPTOR	/* Include support for YUV->RGB blit adaptors (VRAM queue mode only) */
 #endif
 
+#if 1
+#define SIS_USE_XAA		/* Include code for XAA */
+#endif
+
+#ifdef SISVRAMQ
+#ifdef XORG_VERSION_CURRENT
+#ifdef SIS_HAVE_EXA
+#if 1
+#define SIS_USE_EXA		/* Include code for EXA */
+#endif
+#endif
+#endif
+#endif
+
 #if 0
 #define SISDEINT		/* Include Xv deinterlacer code (not functional yet!) */
 #endif
 
-#if 1
+#if 0
 #define XV_SD_DEPRECATED	/* Include deprecated XV SD interface for SiSCtrl */
 #endif
 
 /* End of configurable stuff --------------------------------- */
 
 #define UNLOCK_ALWAYS		/* Always unlock the registers (should be set!) */
+
+#if !defined(SIS_USE_XAA) && !defined(SIS_USE_EXA)
+#define SIS_USE_XAA
+#endif
+
+#ifdef SIS_USE_XAA
+#include "xaa.h"
+#endif
+#ifdef SIS_USE_EXA
+#include "exa.h"
+#endif
 
 /* Need that for SiSCtrl and Pseudo-Xinerama */
 #define NEED_REPLIES				/* ? */
@@ -259,6 +283,18 @@
 #endif
 #ifndef PCI_CHIP_SIS340
 #define PCI_CHIP_SIS340		0x0340
+#endif
+
+#ifndef PCI_VENDOR_XGI
+#define PCI_VENDOR_XGI		0x18ca
+#endif
+
+#ifndef PCI_CHIP_XGIXG20
+#define PCI_CHIP_XGIXG20	0x0020
+#endif
+
+#ifndef PCI_CHIP_XGIXG40
+#define PCI_CHIP_XGIXG40	0x0040
 #endif
 
 /* pSiS->Flags (old series only) */
@@ -433,7 +469,7 @@ typedef unsigned char  UChar;
 #define SIS_530_VGA 1
 #define SIS_OLD_VGA 2
 #define SIS_300_VGA 3
-#define SIS_315_VGA 4   /* Includes 330/660/661/741/760/340/761 and M versions thereof */
+#define SIS_315_VGA 4   /* Includes 330/660/661/741/760/340/761 and M versions thereof, XGI */
 
 /* pSiS->oldChipset */
 #define OC_UNKNOWN   0
@@ -470,12 +506,16 @@ typedef unsigned char  UChar;
 #define SiSCF_IsM66x        (SiSCF_IsM661 | SiSCF_IsM741 | SiSCF_IsM760 | SiSCF_IsM661M)
 #define SiSCF_Is315USB      0x00001000  /* USB2VGA dongle */
 #define SiSCF_Is315E	    0x00002000  /* 315E (lower clocks) */
+#define SiSCF_IsXGIV3	    SiSCF_Is651 /* Volari V3(XT)  (If neither XGI... set, is V8) */
+#define SiSCF_IsXGIV5	    SiSCF_IsM650/* Volari V5 */
+#define SiSCF_IsXGIDUO	    SiSCF_IsM652/* Volari Duo */
 /* ... */
 #define SiSCF_315Core       0x00010000  /* 3D: Real 315 */
 #define SiSCF_Real256ECore  0x00020000  /* 3D: Similar to 315 core, no T&L? (65x, 661, 740, 741) */
 #define SiSCF_XabreCore     0x00040000  /* 3D: Real Xabre */
 #define SiSCF_Ultra256Core  0x00080000  /* 3D: aka "Mirage 2"; similar to Xabre, no T&L?, no P:Shader? (760) */
 #define SiSCF_MMIOPalette   0x00100000  /* HW supports MMIO palette writing/reading */
+#define SiSCF_IsXGI	    0x00200000  /* Is XGI chip (Z7, V3, V5, V8) */
 #define SiSCF_UseLCDA       0x01000000
 #define SiSCF_760LFB        0x08000000  /* 76x: LFB active (if not set, UMA only) */
 #define SiSCF_760UMA        0x10000000  /* 76x: UMA active (if not set, LFB only) */
@@ -539,6 +579,7 @@ typedef unsigned char  UChar;
 #define SiS_SD2_NEEDUSESSE     0x00020000   /* Need "UseSSE" option to use SSE (otherwise auto) */
 #define SiS_SD2_NODDCSUPPORT   0x00040000   /* No hardware DDC support (USB) */
 #define SiS_SD2_SUPPORTXVDEINT 0x00080000   /* Xv deinterlacing supported (n/a, for future use) */
+#define SiS_SD2_ISXGI	       0x00100000   /* Is XGI chip */
 /* ... */
 #define SiS_SD2_NOOVERLAY      0x80000000   /* No video overlay */
 
@@ -599,12 +640,12 @@ typedef struct {
     UChar  sisRegsATTR[22];
     UChar  sisRegsGR[10];
     UChar  sisDAC[768];
-    UChar  sisRegs3C4[0x50];
+    UChar  sisRegs3C4[0x80];
     UChar  sisRegs3D4[0x90];
     UChar  sisRegs3C2;
     UChar  sisCapt[0x60];
     UChar  sisVid[0x50];
-    UChar  VBPart1[0x50];
+    UChar  VBPart1[0x80];
     UChar  VBPart2[0x100];
     UChar  VBPart3[0x50];
     UChar  VBPart4[0x50];
@@ -691,6 +732,7 @@ typedef struct {
     int			OptROMUsage;
     int			OptUseOEM;
     Bool		NoAccel;
+    Bool		useEXA;
     int			forceCRT1;
     int			DSTN, FSTN;
     Bool		XvOnCRT2;
@@ -761,11 +803,8 @@ typedef struct {
     Bool		BenchMemCpy;
     Bool		HaveFastVidCpy;
     vidCopyFunc		SiSFastVidCopy, SiSFastMemCopy;
+    vidCopyFunc		SiSFastVidCopyFrom, SiSFastMemCopyFrom;
     unsigned int	CPUFlags;
-    Bool		SiS760VLFB;		/* video area for UMA+LFB reserved in LFB */
-    ULong		SiS760VLFBBase; 	/* Base of reserved video ram in LFB (address) */
-    unsigned int	SiS760VLFBOffset;	/* Base of reserved video ram in LFB (offset) */
-    ULong		SiS760VLFBSize;		/* Total size of reserved video ram in LFB (bytes) */
 #ifdef SIS_NEED_MAP_IOP
     CARD32		IOPAddress;		/* I/O port physical address */
     UChar		*IOPBase;		/* I/O port linear address */
@@ -865,31 +904,46 @@ typedef struct {
     short		scrnOffset;		/* Screen pitch (data) */
     short		scrnPitch;		/* Screen pitch (display; regarding interlace) */
     short		DstColor;
-    int			xcurrent;		/* for temp use in accel */
-    int			ycurrent;		/* for temp use in accel */
     unsigned int	SiS310_AccelDepth;	/* used in accel for 315 series */
-    int			Xdirection;		/* for temp use in accel */
-    int			Ydirection;		/* for temp use in accel */
-    int			sisPatternReg[4];
-    int			ROPReg;
-    int			CommandReg;
     int			MaxCMDQueueLen;
     int			CurCMDQueueLen;
     int			MinCMDQueueLen;
     CARD16		CursorSize;		/* Size of HWCursor area (bytes) */
     CARD32		cursorOffset;		/* see sis_driver.c and sis_cursor.c */
-    int			DstX;
-    int			DstY;
-    UChar 		*XAAScanlineColorExpandBuffers[2];
-    CARD32		AccelFlags;
+    Bool		useEXA;
+    void 		(*SyncAccel)(ScrnInfoPtr pScrn);
+    void		(*FillRect)(ScrnInfoPtr pScrn, int x, int y, int w, int h, int color);
+    void		(*BlitRect)(ScrnInfoPtr pScrn, int srcx, int srcy, int dstx, int dsty,
+					int w, int h, int color);
+    int			CommandReg;
     Bool		ClipEnabled;
+    int			Xdirection;		/* for temp use in accel */
+    int			Ydirection;		/* for temp use in accel */
+#ifdef SIS_USE_XAA
+    XAAInfoRecPtr	AccelInfoPtr;
+    UChar 		*XAAScanlineColorExpandBuffers[2];
     Bool		DoColorExpand;
     Bool		ColorExpandBusy;
+    int			xcurrent;		/* for temp use in accel */
+    int			ycurrent;		/* for temp use in accel */
+    int			sisPatternReg[4];
+    int			ROPReg;
+#endif
+#ifdef SIS_USE_EXA
+    ExaDriverPtr	EXADriverPtr;
+    int			fillPitch, fillBpp, fillXoffs;
+    CARD32		fillDstBase;
+    int			copySXoffs, copyDXoffs, copyBpp;
+    int			copySPitch, copyDPitch;
+    CARD32		copySrcBase, copyDstBase;
+    int			copyXdir, copyYdir;
+    ExaOffscreenArea *	exa_scratch;
+    unsigned int 	exa_scratch_next;
+#endif
     Bool		alphaBlitBusy;
     SISRegRec		SavedReg;
     SISRegRec		ModeReg;
     xf86CursorInfoPtr	CursorInfoPtr;
-    XAAInfoRecPtr	AccelInfoPtr;
     CloseScreenProcPtr	CloseScreen;
     Bool		(*ModeInit)(ScrnInfoPtr pScrn, DisplayModePtr mode);
     void		(*SiSSave)(ScrnInfoPtr pScrn, SISRegPtr sisreg);
@@ -931,8 +985,15 @@ typedef struct {
     unsigned int	DRIheapstart, DRIheapend;
     Bool		NeedFlush;	/* Need to flush cmd buf mem (760) */
 
+#ifdef SIS_USE_XAA
     void		(*RenderCallback)(ScrnInfoPtr);
     Time		RenderTime;
+    FBLinearPtr		AccelLinearScratch;
+#endif
+#ifdef SIS_USE_EXA
+    void		(*ExaRenderCallback)(ScrnInfoPtr);
+    Time		ExaRenderTime;
+#endif
     UChar		*RenderAccelArray;
     Bool		doRender;
 
@@ -944,8 +1005,6 @@ typedef struct {
     UChar		*ColorExpandBufferAddr[32];
     CARD32		ColorExpandBufferScreenOffset[32];
     CARD32		ColorExpandBase;
-    int			ImageWriteBufferSize;
-    UChar		*ImageWriteBufferAddr;
 
     int			Rotate, Reflect;
     void		(*PointerMoved)(int index, int x, int y);
@@ -1104,11 +1163,6 @@ typedef struct {
     unsigned int	xv_sd_result;
 #endif /* XV_SD_DEPRECATED */
     int			xv_sisdirectunlocked;
-    Bool		SiS760VLFB;		/* video area for UMA+LFB reserved in LFB */
-    ULong		SiS760VLFBBase; 	/* Base of reserved video ram in LFB (address) */
-    unsigned int	SiS760VLFBOffset;	/* Base of reserved video ram in LFB (offset) */
-    ULong		SiS760VLFBSize;		/* Total size of reserved video ram in LFB (bytes) */
-    ULong		SiS760VLFBHSize; 	/* Size of reserved video ram in LFB per head (bytes) */
     int			SiS76xLFBSize;
     int			SiS76xUMASize;
     int			CRT1isoff;
@@ -1141,8 +1195,6 @@ typedef struct {
     CARD32		colorKey;
     CARD32		MiscFlags;
     int			UsePanelScaler, CenterLCD;
-    FBLinearPtr		AccelLinearScratch;
-    void		(*AccelRenderCallback)(ScrnInfoPtr);
     float		zClearVal;
     ULong		bClrColor, dwColor;
     int			AllowHotkey;
@@ -1173,6 +1225,7 @@ typedef struct {
     Bool		NeedCopyFastVidCpy;
     Bool		SiSFastVidCopyDone;
     vidCopyFunc		SiSFastVidCopy, SiSFastMemCopy;
+    vidCopyFunc		SiSFastVidCopyFrom, SiSFastMemCopyFrom;
     unsigned int	CPUFlags;
 #ifndef SISCHECKOSSSE
     Bool		XvSSEMemcpy;
@@ -1338,10 +1391,11 @@ extern Bool  SISDGAInit(ScreenPtr pScreen);
 
 /* For extended mempy() support */
 extern unsigned int SiSGetCPUFlags(ScrnInfoPtr pScrn);
-extern vidCopyFunc SiSVidCopyInit(ScreenPtr pScreen, vidCopyFunc *UMemCpy);
+extern vidCopyFunc SiSVidCopyInit(ScreenPtr pScreen, vidCopyFunc *UMemCpy, Bool from);
 extern vidCopyFunc SiSVidCopyGetDefault(void);
 
 extern void  SiSMemCopyToVideoRam(SISPtr pSiS, UChar *to, UChar *from, int size);
+extern void  SiSMemCopyFromVideoRam(SISPtr pSiS, UChar *to, UChar *from, int size);
 
 extern void  SiS_SetCHTVlumabandwidthcvbs(ScrnInfoPtr pScrn, int val);
 extern void  SiS_SetCHTVlumabandwidthsvideo(ScrnInfoPtr pScrn, int val);

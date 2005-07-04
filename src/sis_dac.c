@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/sis_dac.c,v 1.16 2005/06/27 15:56:53 twini Exp $ */
+/* $XdotOrg$ */
 /*
  * DAC helper functions (Save/Restore, MemClk, etc)
  *
@@ -732,7 +732,7 @@ SiS315Save(ScrnInfoPtr pScrn, SISRegPtr sisReg)
 #endif
 
     /* Save SR registers */
-    for(i = 0x00; i <= 0x3F; i++) {
+    for(i = 0x00; i <= 0x60; i++) {
        inSISIDXREG(SISSR, i, sisReg->sisRegs3C4[i]);
 #ifdef TWDEBUG
        xf86DrvMsg(pScrn->scrnIndex, X_INFO,
@@ -1044,7 +1044,7 @@ SiS301BSave(ScrnInfoPtr pScrn, SISRegPtr sisReg)
     SISPtr  pSiS = SISPTR(pScrn);
     int     Part1max, Part2max, Part3max, Part4max;
 
-    Part1max = 0x4c;
+    Part1max = 0x60;
     Part2max = 0x4d;
     Part3max = 0x3e;
     Part4max = 0x23;
@@ -1297,6 +1297,8 @@ SiSMclk(SISPtr pSiS)
     case PCI_CHIP_SIS330:
     case PCI_CHIP_SIS660:
     case PCI_CHIP_SIS340:
+    case PCI_CHIP_XGIXG20:
+    case PCI_CHIP_XGIXG40:
 
 	/* Numerator */
 	inSISIDXREG(SISSR, 0x28, Num);
@@ -1487,6 +1489,8 @@ int SiSMemBandWidth(ScrnInfoPtr pScrn, Bool IsForCRT2)
 	case PCI_CHIP_SIS330:
 	case PCI_CHIP_SIS660:
 	case PCI_CHIP_SIS340:
+	case PCI_CHIP_XGIXG20:
+	case PCI_CHIP_XGIXG40:
 		switch(pSiS->Chipset) {
 		case PCI_CHIP_SIS300:
 		    magic = magicDED[bus/64];
@@ -1521,6 +1525,8 @@ int SiSMemBandWidth(ScrnInfoPtr pScrn, Bool IsForCRT2)
 		    }
 		    max = 680000;
 		case PCI_CHIP_SIS340:
+		case PCI_CHIP_XGIXG20:
+		case PCI_CHIP_XGIXG40:
 		    magic = magicDED[bus/64];
 		    max = 800000;
 		    break;
@@ -1962,6 +1968,8 @@ SISDACPreInit(ScrnInfoPtr pScrn)
        case PCI_CHIP_SIS330:
        case PCI_CHIP_SIS660:
        case PCI_CHIP_SIS340:
+       case PCI_CHIP_XGIXG20:
+       case PCI_CHIP_XGIXG40:
           pSiS->SiSSave     = SiS315Save;
           pSiS->SiSRestore  = SiS315Restore;
           break;

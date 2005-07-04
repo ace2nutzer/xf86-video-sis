@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/sis6326_video.c,v 1.15 2005/04/21 21:30:56 twini Exp $ */
+/* $XdotOrg$ */
 /*
  * Xv driver for SiS 5597/5598, 6326 and 530/620.
  *
@@ -33,7 +33,9 @@
 
 #include "sis.h"
 
+#ifdef SIS_USE_XAA
 #include "xf86fbman.h"
+#endif
 #include "xf86xv.h"
 #include "regionstr.h"
 #include <X11/extensions/Xv.h>
@@ -71,7 +73,8 @@ static int 	SIS6326QueryImageAttributes(ScrnInfoPtr,
 static void 	SIS6326VideoTimerCallback(ScrnInfoPtr pScrn, Time now);
 static void     SIS6326InitOffscreenImages(ScreenPtr pScrn);
 
-extern FBLinearPtr SISAllocateOverlayMemory(ScrnInfoPtr pScrn, FBLinearPtr linear, int size);
+extern unsigned int	SISAllocateFBMemory(ScrnInfoPtr pScrn, void **handle, int bytesize);
+extern void		SISFreeFBMemory(ScrnInfoPtr pScrn, void **handle);
 
 #define MAKE_ATOM(a) MakeAtom(a, sizeof(a) - 1, TRUE)
 
@@ -342,7 +345,7 @@ typedef struct {
 } SISOverlayRec, *SISOverlayPtr;
 
 typedef struct {
-    FBLinearPtr  linear;
+    void *       handle;
     CARD32       bufAddr[2];
 
     unsigned char currentBuf;
@@ -568,7 +571,7 @@ SIS6326SetupImageVideo(ScreenPtr pScreen)
 
     pPriv->videoStatus = 0;
     pPriv->currentBuf  = 0;
-    pPriv->linear      = NULL;
+    pPriv->handle      = NULL;
     pPriv->grabbedByV4L= FALSE;
 
     SIS6326SetPortDefaults(pScrn, pPriv);
@@ -1187,17 +1190,6 @@ SIS6326DisplayVideo(ScrnInfoPtr pScrn, SISPortPrivPtr pPriv)
 }
 
 static void
-SIS6326FreeOverlayMemory(ScrnInfoPtr pScrn)
-{
-    SISPortPrivPtr pPriv = GET_PORT_PRIVATE(pScrn);
-
-    if(pPriv->linear) {
-       xf86FreeOffscreenLinear(pPriv->linear);
-       pPriv->linear = NULL;
-    }
-}
-
-static void
 SIS6326StopVideo(ScrnInfoPtr pScrn, pointer data, Bool shutdown)
 {
   SISPortPrivPtr pPriv = (SISPortPrivPtr)data;
@@ -1212,7 +1204,7 @@ SIS6326StopVideo(ScrnInfoPtr pScrn, pointer data, Bool shutdown)
         close_overlay(pSiS, pPriv);
         pPriv->mustwait = 1;
      }
-     SIS6326FreeOverlayMemory(pScrn);
+     SISFreeFBMemory(pScrn, &pPriv->handle);
      pPriv->videoStatus = 0;
      pSiS->VideoTimerCallback = NULL;
   } else {
@@ -1239,7 +1231,6 @@ SIS6326PutImage(
    SISPtr pSiS = SISPTR(pScrn);
    SISPortPrivPtr pPriv = (SISPortPrivPtr)data;
    int totalSize=0;
-   int depth = pSiS->CurrentLayout.bitsPerPixel >> 3;
    CARD32 *src, *dest;
    unsigned long i;
 
@@ -1304,13 +1295,10 @@ SIS6326PutImage(
 
    pPriv->totalSize = totalSize;
 
-   /* allocate memory (we do doublebuffering) - size is in pixels */
-   if(!(pPriv->linear = SISAllocateOverlayMemory(pScrn, pPriv->linear,
-					((totalSize + depth - 1) / depth) << 1)))
+   /* allocate memory (we do doublebuffering) - size is in bytes */
+   if(!(pPriv->bufAddr[0] = SISAllocateFBMemory(pScrn, &pPriv->handle, totalSize << 1)))
       return BadAlloc;
 
-   /* fixup pointers */
-   pPriv->bufAddr[0] = (pPriv->linear->offset * depth);
    pPriv->bufAddr[1] = pPriv->bufAddr[0] + totalSize;
 
    /* copy data */
@@ -1448,7 +1436,7 @@ SIS6326VideoTimerCallback(ScrnInfoPtr pScrn, Time now)
 	     }
           } else if(pPriv->videoStatus & FREE_TIMER) {
              if(pPriv->freeTime < now) {
-		SIS6326FreeOverlayMemory(pScrn);
+		SISFreeFBMemory(pScrn, &pPriv->handle);
 		pPriv->mustwait = 1;
 		pPriv->videoStatus = 0;
 	     }
@@ -1471,7 +1459,7 @@ SIS6326AllocSurface (
 {
     SISPtr pSiS = SISPTR(pScrn);
     SISPortPrivPtr pPriv = GET_PORT_PRIVATE(pScrn);
-    int size, depth;
+    int size;
 
     if((w < IMAGE_MIN_WIDTH) || (h < IMAGE_MIN_HEIGHT))
        return BadValue;
@@ -1487,18 +1475,13 @@ SIS6326AllocSurface (
     if(pPriv->grabbedByV4L)
        return BadAlloc;
 
-    depth = pSiS->CurrentLayout.bitsPerPixel >> 3;
-
     w = (w + 1) & ~1;
     pPriv->pitch = ((w << 1) + 63) & ~63; /* Only packed pixel modes supported */
     size = h * pPriv->pitch;
-    pPriv->linear = SISAllocateOverlayMemory(pScrn, pPriv->linear, ((size + depth - 1) / depth));
-    if(!pPriv->linear)
+    if(!(pPriv->offset = SISAllocateFBMemory(pScrn, &pPriv->handle, size)))
        return BadAlloc;
 
     pPriv->totalSize = size;
-
-    pPriv->offset    = pPriv->linear->offset * depth;
 
     surface->width   = w;
     surface->height  = h;
@@ -1537,7 +1520,7 @@ SIS6326FreeSurface (XF86SurfacePtr surface)
 
     if(pPriv->grabbedByV4L) {
        SIS6326StopSurface(surface);
-       SIS6326FreeOverlayMemory(surface->pScrn);
+       SISFreeFBMemory(surface->pScrn, &pPriv->handle);
        pPriv->grabbedByV4L = FALSE;
     }
     return Success;

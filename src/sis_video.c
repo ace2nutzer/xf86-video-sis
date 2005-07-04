@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/sis_video.c,v 1.22 2005/06/27 15:56:53 twini Exp $ */
+/* $XdotOrg$ */
 /*
  * Xv driver for SiS 300, 315 and 330 series.
  *
@@ -47,11 +47,12 @@
  *  SiSM650/651: Full register range, two overlays (one used for CRT1, one for CRT2)
  *  SiS330: Full register range, one overlay (used for both CRT1 and CRT2 alt.)
  *  SiS661/741/760: Full register range, two overlays (one used for CRT1, one for CRT2)
- *  SiS340: - not finished yet; dda stuff missing - 2 overlays. Extended registers for DDA.
- *  SiS761: - not finished yet; dda stuff missing - 1 overlay. Extended registers for DDA.
+ *  SiS340: - ? overlays. Extended registers for DDA.
+ *  SiS761: - ? overlays. Extended registers for DDA?
+ *  XGI Volari V5/V8: 1 Overlay. Extended registers for DDA.
  *
  * Help for reading the code:
- * 315/550/650/740/M650/651/330/661/741/760/340/761 = SIS_315_VGA
+ * 315/550/650/740/M650/651/330/661/741/76x/340/XGI = SIS_315_VGA
  * 300/630/730                                      = SIS_300_VGA
  * For chipsets with 2 overlays, hasTwoOverlays will be true
  *
@@ -94,12 +95,13 @@
  */
 
 #include "sis.h"
+#ifdef SIS_USE_XAA
 #include "xf86fbman.h"
+#endif
 #include "regionstr.h"
 
 #include "xf86xv.h"
 #include <X11/extensions/Xv.h>
-#include "xaa.h"
 #include "dixstruct.h"
 #include "fourcc.h"
 
@@ -480,7 +482,9 @@ SISResetVideo(ScrnInfoPtr pScrn)
        } else { /* 661, 741 */
           setvideoregmask(pSiS, Index_VI_V_Buf_Start_Over, 0x2c, 0x3c);
        }
-    } else if(pSiS->Chipset == PCI_CHIP_SIS340) {
+    } else if((pSiS->Chipset == PCI_CHIP_SIS340) ||
+	      (pSiS->Chipset == PCI_CHIP_XGIXG20) ||
+	      (pSiS->Chipset == PCI_CHIP_XGIXG40)) {
        /* Disable contrast enhancement (?) */
        setvideoregmask(pSiS, Index_VI_Key_Overlay_OP, 0x00, 0x10);
        /* Threshold high */
@@ -558,7 +562,7 @@ SISResetVideo(ScrnInfoPtr pScrn)
 	   default: 	 temp = 0x3c;
 	   }
 	   setvideoregmask(pSiS, Index_VI_V_Buf_Start_Over, temp, 0x3c);
-	} else if(pSiS->Chipset == PCI_CHIP_SIS340) {
+	} else if(pSiS->Chipset == PCI_CHIP_SIS340) {  /* 2 overlays? */
 	   setvideoregmask(pSiS, Index_VI_Key_Overlay_OP, 0x00, 0x10);
 	   setvideoregmask(pSiS, 0xb5, 0x00, 0x01);
 	   setvideoregmask(pSiS, 0xb6, 0x00, 0x01);
@@ -805,7 +809,7 @@ set_maxencoding(SISPtr pSiS, SISPortPrivPtr pPriv)
        half = IMAGE_MAX_WIDTH_315 >> 1;
        if(pPriv->is661741760) {
           half = 768 * 2;
-       } else if(pPriv->is340) {
+       } else if(pPriv->is340) { /* 2 overlays? */
           DummyEncoding.width = IMAGE_MAX_WIDTH_340;
 	  half = 1280; /* ? */
        } else if(pPriv->is761) {
@@ -889,7 +893,7 @@ SISSetupImageVideo(ScreenPtr pScreen)
 
     pPriv->videoStatus = 0;
     pPriv->currentBuf  = 0;
-    pPriv->linear      = NULL;
+    pPriv->handle      = NULL;
     pPriv->grabbedByV4L= FALSE;
     pPriv->NoOverlay   = FALSE;
     pPriv->PrevOverlay = FALSE;
@@ -897,14 +901,16 @@ SISSetupImageVideo(ScreenPtr pScreen)
 			  (pSiS->ChipType <= SIS_760)) ? TRUE : FALSE;
     pPriv->is760       = (pSiS->ChipType == SIS_760)   ? TRUE : FALSE;
     pPriv->is761       = (pSiS->ChipType == SIS_761)   ? TRUE : FALSE;
-    pPriv->is340       = (pSiS->Chipset == PCI_CHIP_SIS340)       ? TRUE : FALSE;
+    pPriv->is340       = (pSiS->Chipset == PCI_CHIP_SIS340) ? TRUE : FALSE;
+    pPriv->isXGI       = (pSiS->Chipset == PCI_CHIP_XGIXG20 ||
+			  pSiS->Chipset == PCI_CHIP_XGIXG40) ? TRUE : FALSE;
 
     /* Setup chipset type helpers */
     set_hastwooverlays(pSiS, pPriv);
     set_allowswitchcrt(pSiS, pPriv);
 
     pPriv->havetapscaler = FALSE;
-    if(pPriv->is340 || pPriv->is761) {
+    if(pPriv->is340 || pPriv->is761 || pPriv->isXGI) {
        pPriv->havetapscaler = TRUE;
     }
 
@@ -1035,7 +1041,9 @@ SISSetupImageVideo(ScreenPtr pScreen)
 #endif
 
     pSiS->xv_sisdirectunlocked = 0;
+#ifdef XV_SD_DEPRECATED
     pSiS->xv_sd_result = 0;
+#endif
 
     /* 300 series require double words for addresses and pitches,
      * 315/330 series require word.
@@ -1096,6 +1104,8 @@ SISSetupImageVideo(ScreenPtr pScreen)
           pPriv->linebufMergeLimit = 1280;		/* should be 1280 */
        } else if(pPriv->is761) {
           pPriv->linebufMergeLimit = 1536;		/* should be 1536 */
+       } else if(pPriv->isXGI) {
+          pPriv->linebufMergeLimit = 720;		/* Should be 1280, FIXME */
        } else if(!(pPriv->hasTwoOverlays)) {
           pPriv->linebufMergeLimit = 720;		/* should be 960 */
        }
@@ -1890,7 +1900,7 @@ calc_line_buf_size(CARD32 srcW, CARD8 wHPre, CARD8 planar, SISPortPrivPtr pPriv)
 		I <<= 7;
 		break;
 	    case 6:
-		if(pPriv->is340) {  /* 761 ? */
+		if(pPriv->is340 || pPriv->isXGI) {  /* 761 ? */
 		   shift += 11;
 		   mask <<= shift;
 		   I = srcW >> shift;
@@ -2271,7 +2281,9 @@ set_disablegfx(SISPtr pSiS, Bool mybool, SISOverlayPtr pOverlay)
     /* For CRT1 ONLY!!! */
     if((!(pSiS->ChipFlags & SiSCF_Is65x)) &&
        (pSiS->Chipset != PCI_CHIP_SIS660) &&
-       (pSiS->Chipset != PCI_CHIP_SIS340)) {
+       (pSiS->Chipset != PCI_CHIP_SIS340) &&
+       (pSiS->Chipset != PCI_CHIP_XGIXG20) &&
+       (pSiS->Chipset != PCI_CHIP_XGIXG40)) {
        setvideoregmask(pSiS, Index_VI_Control_Misc2, mybool ? 0x04 : 0x00, 0x04);
        if(mybool) pOverlay->keyOP = VI_ROP_Always;
     }
@@ -2360,13 +2372,13 @@ set_overlay(SISPtr pSiS, SISOverlayPtr pOverlay, SISPortPrivPtr pPriv, int index
 #ifdef SISMERGED
     if(pSiS->MergedFB && iscrt2) {
        setvideoreg(pSiS, Index_VI_Line_Buffer_Size, (CARD8)pOverlay->lineBufSize2);
-       if(pPriv->is340) { /* 761 ? */
+       if(pPriv->is340 || pPriv->isXGI) { /* 761 ? */
           setvideoreg(pSiS, Index_VI_Line_Buffer_Size_High, (CARD8)(pOverlay->lineBufSize2 >> 8));
        }
     } else {
 #endif
        setvideoreg(pSiS, Index_VI_Line_Buffer_Size, (CARD8)pOverlay->lineBufSize);
-       if(pPriv->is340) { /* 761 ? */
+       if(pPriv->is340 || pPriv->isXGI) { /* 761 ? */
           setvideoreg(pSiS, Index_VI_Line_Buffer_Size_High, (CARD8)(pOverlay->lineBufSize >> 8));
        }
 #ifdef SISMERGED
@@ -3330,100 +3342,106 @@ MIRROR:
  *        Memory management      *
  *********************************/
 
-FBLinearPtr
-SISAllocateOverlayMemory(
+unsigned int
+SISAllocateFBMemory(
   ScrnInfoPtr pScrn,
-  FBLinearPtr linear,
-  int size
-){
-   ScreenPtr pScreen;
-   FBLinearPtr new_linear;
-
-   if(linear) {
-      if(linear->size >= size) return linear;
-
-      if(xf86ResizeOffscreenLinear(linear, size)) return linear;
-
-      xf86FreeOffscreenLinear(linear);
-   }
-
-   pScreen = screenInfo.screens[pScrn->scrnIndex];
-
-   new_linear = xf86AllocateOffscreenLinear(pScreen, size, 8,
-                                            NULL, NULL, NULL);
-
-   if(!new_linear) {
-      int max_size;
-
-      xf86QueryLargestOffscreenLinear(pScreen, &max_size, 8,
-				       PRIORITY_EXTREME);
-
-      if(max_size < size) return NULL;
-
-      xf86PurgeUnlockedOffscreenAreas(pScreen);
-      new_linear = xf86AllocateOffscreenLinear(pScreen, size, 8,
-                                                 NULL, NULL, NULL);
-   }
-   if(!new_linear)
-      xf86DrvMsg(pScrn->scrnIndex, X_INFO,
-	           "Xv: Failed to allocate %d pixels of linear video memory\n", size);
-#ifdef TWDEBUG
-   else
-      xf86DrvMsg(pScrn->scrnIndex, X_INFO,
-	           "Xv: Allocated %d pixels of linear video memory\n", size);
-#endif
-
-   return new_linear;
-}
-
-static FBLinearPtr
-SISAllocateRealOverlayMemory(
-  ScrnInfoPtr pScrn,
-  FBLinearPtr linear,
-  int size,
+  void **handle,
   int bytesize
 ){
    SISPtr pSiS = SISPTR(pScrn);
+   ScreenPtr pScreen = screenInfo.screens[pScrn->scrnIndex];
 
-   if(!pSiS->SiS760VLFB) {
-
-      return(SISAllocateOverlayMemory(pScrn, linear, size));
-
-   } else {
-
+#ifdef SIS_USE_XAA
+   if(!pSiS->useEXA) {
+      FBLinearPtr linear = (FBLinearPtr)(*handle);
+      FBLinearPtr new_linear;
       int depth = pSiS->CurrentLayout.bitsPerPixel >> 3;
+      int size = ((bytesize + depth - 1) / depth);
 
-      if(bytesize > pSiS->SiS760VLFBHSize) return NULL;
+      if(linear) {
+         if(linear->size >= size) {
+	    return (unsigned int)(linear->offset * depth);
+	 }
 
-      if(linear == NULL) {
-         linear = xalloc(sizeof(FBLinear));
-	 if(linear == NULL) return NULL;
-	 linear->pScreen = NULL;
-	 linear->granularity = 0;
-	 linear->MoveLinearCallback = NULL;
-	 linear->RemoveLinearCallback = NULL;
-	 linear->devPrivate.uval = SISPRIVLINID;
+         if(xf86ResizeOffscreenLinear(linear, size)) {
+	    return (unsigned int)(linear->offset * depth);
+	 }
+
+         xf86FreeOffscreenLinear(linear);
+	 *handle = NULL;
       }
-      linear->offset = pSiS->SiS760VLFBOffset / depth;
-      linear->size = pSiS->SiS760VLFBHSize / depth;
-      return linear;
 
+      new_linear = xf86AllocateOffscreenLinear(pScreen, size, 8, NULL, NULL, NULL);
+
+      if(!new_linear) {
+         int max_size;
+
+         xf86QueryLargestOffscreenLinear(pScreen, &max_size, 8, PRIORITY_EXTREME);
+
+         if(max_size < size)
+	    return 0;
+
+         xf86PurgeUnlockedOffscreenAreas(pScreen);
+         new_linear = xf86AllocateOffscreenLinear(pScreen, size, 8, NULL, NULL, NULL);
+      }
+      if(!new_linear) {
+         xf86DrvMsg(pScrn->scrnIndex, X_INFO,
+	           "Xv: Failed to allocate %d pixels of linear video memory\n", size);
+	 return 0;
+      } else {
+         *handle = (void *)new_linear;
+	 return (unsigned int)(new_linear->offset * depth);
+      }
    }
+#endif
+#ifdef SIS_USE_EXA
+   if(pSiS->useEXA && !pSiS->NoAccel) {
+      ExaOffscreenArea *area = (ExaOffscreenArea *)(*handle);
+
+      if(area) {
+	 if(area->size <= bytesize) return (unsigned int)(area->offset);
+
+	 exaOffscreenFree(pScreen, area);
+	 *handle = NULL;
+      }
+
+      if(!(area = exaOffscreenAlloc(pScreen, bytesize, 8, TRUE, NULL, NULL))) {
+	 xf86DrvMsg(pScrn->scrnIndex, X_INFO,
+	           "Xv: Failed to allocate %d bytes of video memory\n", bytesize);
+	 return 0;
+      } else {
+	 *handle = (void *)area;
+	 return (unsigned int)(area->offset);
+      }
+   }
+#endif
+
+   return 0;
 }
 
-static void
-SISFreeOverlayMemory(ScrnInfoPtr pScrn)
+void
+SISFreeFBMemory(ScrnInfoPtr pScrn, void **handle)
 {
-    SISPortPrivPtr pPriv = GET_PORT_PRIVATE(pScrn);
+    SISPtr pSiS = SISPTR(pScrn);
+#ifdef SIS_USE_EXA
+    ScreenPtr pScreen = screenInfo.screens[pScrn->scrnIndex];
+#endif
 
-    if(pPriv->linear) {
-       if(pPriv->linear->devPrivate.uval != SISPRIVLINID) {
-          xf86FreeOffscreenLinear(pPriv->linear);
-       } else {
-          xfree(pPriv->linear);
+#ifdef SIS_USE_XAA
+    if(!pSiS->useEXA) {
+       if(*handle) {
+          xf86FreeOffscreenLinear((FBLinearPtr)(*handle));
        }
-       pPriv->linear = NULL;
     }
+#endif
+#ifdef SIS_USE_EXA
+   if(pSiS->useEXA && !pSiS->NoAccel) {
+      if(*handle) {
+         exaOffscreenFree(pScreen, (ExaOffscreenArea *)(*handle));
+      }
+   }
+#endif
+   *handle = NULL;
 }
 
 /*********************************
@@ -3445,7 +3463,7 @@ SISStopVideo(ScrnInfoPtr pScrn, pointer data, Bool shutdown)
         close_overlay(pSiS, pPriv);
         pPriv->mustwait = 1;
      }
-     SISFreeOverlayMemory(pScrn);
+     SISFreeFBMemory(pScrn, &pPriv->handle);
      pPriv->videoStatus = 0;
   } else {
      if(pPriv->videoStatus & CLIENT_VIDEO_ON) {
@@ -3475,10 +3493,12 @@ SISPutImage(
 ){
    SISPtr pSiS = SISPTR(pScrn);
    SISPortPrivPtr pPriv = (SISPortPrivPtr)data;
+#ifdef SIS_USE_XAA
    XAAInfoRecPtr pXAA = pSiS->AccelInfoPtr;
-
-   int totalSize = 0, depth = pSiS->CurrentLayout.bitsPerPixel >> 3;
+   int depth = pSiS->CurrentLayout.bitsPerPixel >> 3;
    int myreds[] = { 0x000000ff, 0x0000f800, 0, 0x00ff0000 };
+#endif
+   int totalSize = 0;
 #ifdef SISDEINT
    Bool	deintfm = (pPriv->deinterlacemethod > 1) ? TRUE : FALSE;
 #endif
@@ -3559,13 +3579,10 @@ SISPutImage(
    totalSize += 15;
    totalSize &= ~15; /* in bytes */
 
-   /* allocate memory (we do doublebuffering) - size is in pixels! */
-   if(!(pPriv->linear = SISAllocateRealOverlayMemory(pScrn, pPriv->linear,
-				((totalSize + depth - 1) / depth) << 1, totalSize)))
+   /* allocate memory (we do doublebuffering) - size is in bytes */
+   if(!(pPriv->bufAddr[0] = SISAllocateFBMemory(pScrn, &pPriv->handle, totalSize << 1)))
       return BadAlloc;
 
-   /* fixup pointers */
-   pPriv->bufAddr[0] = (pPriv->linear->offset * depth);
 #ifdef SISDEINT
    if(deintfm) {
       pPriv->bufAddr[1] = pPriv->bufAddr[0] + pPriv->srcPitch;
@@ -3620,6 +3637,7 @@ SISPutImage(
      }
      /* draw these */
      pPriv->PrevOverlay = pPriv->NoOverlay;
+#ifdef SIS_USE_XAA
      if((pPriv->NoOverlay) && pXAA && pXAA->FillMono8x8PatternRects) {
         (*pXAA->FillMono8x8PatternRects)(pScrn, myreds[depth-1],
 			0x000000, GXcopy, ~0,
@@ -3627,16 +3645,19 @@ SISPutImage(
 			REGION_RECTS(clipBoxes),
 			0x00422418, 0x18244200, 0, 0);
      } else {
+#endif
         if(!pSiS->disablecolorkeycurrent) {
 #if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,1,99,1,0)
            (*pXAA->FillSolidRects)(pScrn, pPriv->colorKey, GXcopy, ~0,
                            REGION_NUM_RECTS(clipBoxes),
                            REGION_RECTS(clipBoxes));
 #else
-	   xf86XVFillKeyHelper(pScrn->pScreen, pPriv->colorKey, clipBoxes);
+	   xf86XVFillKeyHelper(pScrn->pScreen, (pPriv->NoOverlay) ? 0x00ff0000 : pPriv->colorKey, clipBoxes);
 #endif
 	}
+#ifdef SIS_USE_XAA
      }
+#endif
 
    }
 
@@ -3740,31 +3761,22 @@ SISAllocSurface (
 {
     SISPtr pSiS = SISPTR(pScrn);
     SISPortPrivPtr pPriv = GET_PORT_PRIVATE(pScrn);
-    int size, depth;
-
-#ifdef TWDEBUG
-    xf86DrvMsg(pScrn->scrnIndex, X_INFO, "Xv: SISAllocSurface called\n");
-#endif
+    int size;
 
     if((w < IMAGE_MIN_WIDTH) || (h < IMAGE_MIN_HEIGHT))
-          return BadValue;
+       return BadValue;
+
     if((w > DummyEncoding.width) || (h > DummyEncoding.height))
-    	  return BadValue;
+       return BadValue;
 
     if(pPriv->grabbedByV4L)
-    	return BadAlloc;
+       return BadAlloc;
 
-    depth = pSiS->CurrentLayout.bitsPerPixel >> 3;
     w = (w + 1) & ~1;
     pPriv->pitch = ((w << 1) + 63) & ~63; /* Only packed pixel modes supported */
     size = h * pPriv->pitch;
-    pPriv->linear = SISAllocateRealOverlayMemory(pScrn, pPriv->linear,
-    					((size + depth - 1) / depth), size);
-
-    if(!pPriv->linear)
-    	return BadAlloc;
-
-    pPriv->offset    = pPriv->linear->offset * depth;
+    if(!(pPriv->offset = SISAllocateFBMemory(pScrn, &pPriv->handle, size)))
+       return BadAlloc;
 
     surface->width   = w;
     surface->height  = h;
@@ -3803,7 +3815,7 @@ SISFreeSurface (XF86SurfacePtr surface)
 
     if(pPriv->grabbedByV4L) {
        SISStopSurface(surface);
-       SISFreeOverlayMemory(surface->pScrn);
+       SISFreeFBMemory(surface->pScrn, &pPriv->handle);
        pPriv->grabbedByV4L = FALSE;
     }
     return Success;
@@ -3844,12 +3856,10 @@ SISDisplaySurface (
 )
 {
    ScrnInfoPtr pScrn = surface->pScrn;
-   SISPtr pSiS = SISPTR(pScrn);
    SISPortPrivPtr pPriv = (SISPortPrivPtr)(surface->devPrivate.ptr);
+#ifdef SIS_USE_XAA
+   SISPtr pSiS = SISPTR(pScrn);
    int myreds[] = { 0x000000ff, 0x0000f800, 0, 0x00ff0000 };
-
-#ifdef TWDEBUG
-   xf86DrvMsg(pScrn->scrnIndex, X_INFO, "Xv: DisplaySurface called\n");
 #endif
 
    if(!pPriv->grabbedByV4L) return Success;
@@ -3871,6 +3881,7 @@ SISDisplaySurface (
    SISDisplayVideo(pScrn, pPriv);
 
    if(pPriv->autopaintColorKey) {
+#ifdef SIS_USE_XAA
       XAAInfoRecPtr pXAA = pSiS->AccelInfoPtr;
 
       if((pPriv->NoOverlay) && pXAA && pXAA->FillMono8x8PatternRects) {
@@ -3882,14 +3893,17 @@ SISDisplaySurface (
 			0x00422418, 0x18244200, 0, 0);
 
       } else {
+#endif
 #if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,1,99,1,0)
    	 (*pXAA->FillSolidRects)(pScrn, pPriv->colorKey, GXcopy, ~0,
                         REGION_NUM_RECTS(clipBoxes),
                         REGION_RECTS(clipBoxes));
 #else
-         xf86XVFillKeyHelper(pScrn->pScreen, pPriv->colorKey, clipBoxes);
+         xf86XVFillKeyHelper(pScrn->pScreen, (pPriv->NoOverlay) ? 0x00ff0000 : pPriv->colorKey, clipBoxes);
 #endif
+#ifdef SIS_USE_XAA
       }
+#endif
    }
 
    pPriv->videoStatus = CLIENT_VIDEO_ON;
@@ -4023,7 +4037,11 @@ SISSetupBlitVideo(ScreenPtr pScreen)
    SISBPortPrivPtr pPriv;
    int i;
 
-   if(!pSiS->AccelInfoPtr) return NULL;
+#ifdef SIS_USE_XAA
+   if(!pSiS->useEXA) {
+      if(!pSiS->AccelInfoPtr) return NULL;
+   }
+#endif
 
    if(!(adapt = xcalloc(1, sizeof(XF86VideoAdaptorRec) +
     			   (sizeof(DevUnion) * NUM_BLIT_PORTS) +
@@ -4057,7 +4075,7 @@ SISSetupBlitVideo(ScreenPtr pScreen)
 #endif
       pPriv->videoStatus[i] = 0;
       pPriv->currentBuf[i]  = 0;
-      pPriv->linear[i]      = NULL;
+      pPriv->handle[i]      = NULL;
    }
 
    /* Scanline trigger not implemented by hardware! */
@@ -4091,18 +4109,6 @@ SISSetupBlitVideo(ScreenPtr pScreen)
    SISSetPortDefaultsBlit(pScrn, pPriv);
 
    return adapt;
-}
-
-static void
-SISFreeBlitMemory(ScrnInfoPtr pScrn, int index)
-{
-   SISPtr pSiS = SISPTR(pScrn);
-   SISBPortPrivPtr pPriv = (SISBPortPrivPtr)(pSiS->blitPriv);
-
-   if(pPriv->linear[index]) {
-      xf86FreeOffscreenLinear(pPriv->linear[index]);
-      pPriv->linear[index] = NULL;
-   }
 }
 
 static int
@@ -4149,10 +4155,9 @@ SISStopVideoBlit(ScrnInfoPtr pScrn, ULong index, Bool shutdown)
    REGION_EMPTY(pScrn->pScreen, &pPriv->blitClip[index]);
 
    if(shutdown) {
-      XAAInfoRecPtr pXAA = pSiS->AccelInfoPtr;
+      (*pSiS->SyncAccel)(pScrn);
       pPriv->videoStatus[index] = 0;
-      if(pXAA && pXAA->Sync) (pXAA->Sync)(pScrn);
-      SISFreeBlitMemory(pScrn, (int)index);
+      SISFreeFBMemory(pScrn, &pPriv->handle[(int)index]);
    }
 }
 
@@ -4175,7 +4180,6 @@ SISPutImageBlit(
 #endif
    BoxPtr pbox = REGION_RECTS(clipBoxes);
    int    nbox = REGION_NUM_RECTS(clipBoxes);
-   int    depth = pSiS->CurrentLayout.bitsPerPixel >> 3;
    CARD32 dstbase = 0, offsety, offsetuv, temp;
    int    totalSize, bytesize=0, h, w, wb, srcPitch;
    int 	  xoffset = 0, yoffset = 0, left, right, top, bottom;
@@ -4211,12 +4215,9 @@ SISPutImageBlit(
    }
 
    /* allocate memory (we do doublebuffering) */
-   if(!(pPriv->linear[index] = SISAllocateOverlayMemory(pScrn, pPriv->linear[index],
-   			((totalSize + depth - 1) / depth) << 1)))
+   if(!(pPriv->bufAddr[index][0] = SISAllocateFBMemory(pScrn, &pPriv->handle[index], totalSize << 1)))
       return BadAlloc;
 
-   /* fixup pointers */
-   pPriv->bufAddr[index][0] = (pPriv->linear[index]->offset * depth);
    pPriv->bufAddr[index][1] = pPriv->bufAddr[index][0] + totalSize;
 
    if(drw_w > width) {
@@ -4324,7 +4325,7 @@ SISPutImageBlit(
    MyPacket.P12_YPitch = MyPacket.P12_UVPitch = srcPitch;
    MyPacket.P12_DstAddr = dstbase;
    MyPacket.P12_DstPitch = pSiS->scrnOffset;
-   MyPacket.P12_DstHeight = 0xffff;
+   MyPacket.P12_DstHeight = 0x0fff;
 
    MyPacket.P12_Command |= pPriv->AccelCmd		|
 			   SRCVIDEO			|
@@ -4565,7 +4566,9 @@ SISVideoTimerCallback(ScrnInfoPtr pScrn, Time now)
 {
     SISPtr          pSiS = SISPTR(pScrn);
     SISPortPrivPtr  pPriv = NULL;
+#ifdef INCL_YUV_BLIT_ADAPTOR
     SISBPortPrivPtr pPrivBlit = NULL;
+#endif
     UChar           sridx, cridx;
     Bool	    setcallback = FALSE;
 
@@ -4591,7 +4594,7 @@ SISVideoTimerCallback(ScrnInfoPtr pScrn, Time now)
 	     }
           } else if(pPriv->videoStatus & FREE_TIMER) {
 	     if(pPriv->freeTime < now) {
-                SISFreeOverlayMemory(pScrn);
+                SISFreeFBMemory(pScrn, &pPriv->handle);
 	        pPriv->mustwait = 1;
                 pPriv->videoStatus = 0;
              } else {
@@ -4608,7 +4611,7 @@ SISVideoTimerCallback(ScrnInfoPtr pScrn, Time now)
        for(i = 0; i < NUM_BLIT_PORTS; i++) {
           if(pPrivBlit->videoStatus[i] & FREE_TIMER) {
 	     if(pPrivBlit->freeTime[i] < now) {
-                SISFreeBlitMemory(pScrn, i);
+                SISFreeFBMemory(pScrn, &pPrivBlit->handle[i]);
                 pPrivBlit->videoStatus[i] = 0;
 	     } else {
 	        setcallback = TRUE;

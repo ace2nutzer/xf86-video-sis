@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/vgatypes.h,v 1.10 2005/06/27 15:56:53 twini Exp $ */
+/* $XdotOrg$ */
 /*
  * General type definitions for universal mode switching modules
  *
@@ -115,6 +115,8 @@ typedef enum _SIS_CHIP_TYPE {
     SIS_340 = 55,
     SIS_341,
     SIS_342,
+    XGI_20  = 75,
+    XGI_40,
     MAX_SIS_CHIP
 } SIS_CHIP_TYPE;
 

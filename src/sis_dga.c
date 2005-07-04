@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/sis_dga.c,v 1.8 2005/03/11 14:39:48 twini Exp $ */
+/* $XdotOrg$ */
 /*
  * SiS DGA handling
  *
@@ -35,26 +35,24 @@
  */
 
 #include "sis.h"
-#include "xaa.h"
 #include "dgaproc.h"
 
 #include "sis_regs.h"
 
 #ifndef NEW_DGAOPENFRAMEBUFFER
 static Bool SIS_OpenFramebuffer(ScrnInfoPtr, char **, UChar **,
-                    int *, int *, int *);
+			int *, int *, int *);
 #else
 static Bool SIS_OpenFramebuffer(ScrnInfoPtr, char **, unsigned int *,
-		    unsigned int *, unsigned int *, unsigned int *);
+			unsigned int *, unsigned int *, unsigned int *);
 #endif
 static Bool SIS_SetMode(ScrnInfoPtr, DGAModePtr);
 static void SIS_Sync(ScrnInfoPtr);
 static int  SIS_GetViewport(ScrnInfoPtr);
 static void SIS_SetViewport(ScrnInfoPtr, int, int, int);
-static void SIS_FillRect(ScrnInfoPtr, int, int, int, int, ULong);
+static void SIS_FillRect(ScrnInfoPtr, int, int, int, int, unsigned long);
 static void SIS_BlitRect(ScrnInfoPtr, int, int, int, int, int, int);
-static void SIS_BlitTransRect(ScrnInfoPtr, int, int, int, int, int, int,
-                    ULong);
+static void SIS_BlitTransRect(ScrnInfoPtr, int, int, int, int, int, int, unsigned long);
 
 static
 DGAFunctionRec SISDGAFuncs = {
@@ -318,6 +316,41 @@ SISDGAInit(ScreenPtr pScreen)
 }
 
 static Bool
+SIS_OpenFramebuffer(
+   ScrnInfoPtr pScrn,
+   char **name,
+#ifndef NEW_DGAOPENFRAMEBUFFER
+   UChar **mem,
+   int *size,
+   int *offset,
+   int *flags
+#else
+   unsigned int *mem,
+   unsigned int *size,
+   unsigned int *offset,
+   unsigned int *flags
+#endif
+){
+    SISPtr pSiS = SISPTR(pScrn);
+
+    *name = NULL;       /* no special device */
+#ifndef NEW_DGAOPENFRAMEBUFFER
+    *mem = (UChar *)pSiS->FbAddress;
+#else
+    *mem = pSiS->FbAddress;
+#endif
+    *size = pSiS->maxxfbmem;
+    *offset = 0;
+#ifndef NEW_DGAOPENFRAMEBUFFER
+    *flags = DGA_NEED_ROOT;
+#else
+    *flags = 0;
+#endif
+
+    return TRUE;
+}
+
+static Bool
 SIS_SetMode(
    ScrnInfoPtr pScrn,
    DGAModePtr pMode
@@ -386,28 +419,29 @@ SIS_SetViewport(
 }
 
 static void
-SIS_FillRect (
-   ScrnInfoPtr pScrn,
-   int x, int y, int w, int h,
-   ULong color
-){
-    SISPtr pSiS = SISPTR(pScrn);
-
-    if(pSiS->AccelInfoPtr) {
-      (*pSiS->AccelInfoPtr->SetupForSolidFill)(pScrn, color, GXcopy, ~0);
-      (*pSiS->AccelInfoPtr->SubsequentSolidFillRect)(pScrn, x, y, w, h);
-      SET_SYNC_FLAG(pSiS->AccelInfoPtr);
-    }
-}
-
-static void
 SIS_Sync(
    ScrnInfoPtr pScrn
 ){
     SISPtr pSiS = SISPTR(pScrn);
 
-    if(pSiS->AccelInfoPtr) {
-      (*pSiS->AccelInfoPtr->Sync)(pScrn);
+    (*pSiS->SyncAccel)(pScrn);
+}
+
+static void
+SIS_FillRect(
+   ScrnInfoPtr pScrn,
+   int x, int y, int w, int h,
+   unsigned long color
+){
+    SISPtr pSiS = SISPTR(pScrn);
+
+    if(pSiS->FillRect) {
+       (*pSiS->FillRect)(pScrn, x, y, w, h, (int)color);
+#ifdef SIS_USE_XAA
+       if(!pSiS->useEXA && pSiS->AccelInfoPtr) {
+          SET_SYNC_FLAG(pSiS->AccelInfoPtr);
+       }
+#endif
     }
 }
 
@@ -420,15 +454,13 @@ SIS_BlitRect(
 ){
     SISPtr pSiS = SISPTR(pScrn);
 
-    if(pSiS->AccelInfoPtr) {
-      int xdir = ((srcx < dstx) && (srcy == dsty)) ? -1 : 1;
-      int ydir = (srcy < dsty) ? -1 : 1;
-
-      (*pSiS->AccelInfoPtr->SetupForScreenToScreenCopy)(
-          pScrn, xdir, ydir, GXcopy, (CARD32)~0, -1);
-      (*pSiS->AccelInfoPtr->SubsequentScreenToScreenCopy)(
-          pScrn, srcx, srcy, dstx, dsty, w, h);
-      SET_SYNC_FLAG(pSiS->AccelInfoPtr);
+    if(pSiS->BlitRect) {
+       (*pSiS->BlitRect)(pScrn, srcx, srcy, dstx, dsty, w, h, -1);
+#ifdef SIS_USE_XAA
+       if(!pSiS->useEXA && pSiS->AccelInfoPtr) {
+          SET_SYNC_FLAG(pSiS->AccelInfoPtr);
+       }
+#endif
     }
 }
 
@@ -442,50 +474,15 @@ SIS_BlitTransRect(
 ){
     SISPtr pSiS = SISPTR(pScrn);
 
-    if(pSiS->AccelInfoPtr) {
-       int xdir = ((srcx < dstx) && (srcy == dsty)) ? -1 : 1;
-       int ydir = (srcy < dsty) ? -1 : 1;
-
-       (*pSiS->AccelInfoPtr->SetupForScreenToScreenCopy)(
-          pScrn, xdir, ydir, GXcopy, ~0, color);
-       (*pSiS->AccelInfoPtr->SubsequentScreenToScreenCopy)(
-          pScrn, srcx, srcy, dstx, dsty, w, h);
-       SET_SYNC_FLAG(pSiS->AccelInfoPtr);
+    if(pSiS->BlitRect) {
+       (*pSiS->BlitRect)(pScrn, srcx, srcy, dstx, dsty, w, h, (int)color);
+#ifdef SIS_USE_XAA
+       if(!pSiS->useEXA && pSiS->AccelInfoPtr) {
+          SET_SYNC_FLAG(pSiS->AccelInfoPtr);
+       }
+#endif
     }
 }
 
-static Bool
-SIS_OpenFramebuffer(
-   ScrnInfoPtr pScrn,
-   char **name,
-#ifndef NEW_DGAOPENFRAMEBUFFER
-   UChar **mem,
-   int *size,
-   int *offset,
-   int *flags
-#else
-   unsigned int *mem,
-   unsigned int *size,
-   unsigned int *offset,
-   unsigned int *flags
-#endif
-){
-    SISPtr pSiS = SISPTR(pScrn);
 
-    *name = NULL;       /* no special device */
-#ifndef NEW_DGAOPENFRAMEBUFFER
-    *mem = (UChar *)pSiS->FbAddress;
-#else
-    *mem = pSiS->FbAddress;
-#endif
-    *size = pSiS->maxxfbmem;
-    *offset = 0;
-#ifndef NEW_DGAOPENFRAMEBUFFER
-    *flags = DGA_NEED_ROOT;
-#else
-    *flags = 0;
-#endif
-
-    return TRUE;
-}
 

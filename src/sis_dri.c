@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/sis_dri.c,v 1.18 2005/06/27 17:18:06 twini Exp $ */
+/* $XdotOrg$ */
 /*
  * DRI wrapper for 300 and 315 series
  *
@@ -330,7 +330,11 @@ SISDRIScreenInit(ScreenPtr pScreen)
    * the (non-AGP) command queue, located
    * at the offset sarea->cmdQueueOffset
    */
+#if DRIINFO_MAJOR_VERSION <= 4
   pDRIInfo->frameBufferPhysicalAddress = pSIS->realFbAddress;
+#else
+  pDRIInfo->frameBufferPhysicalAddress = (pointer)pSIS->realFbAddress;
+#endif
   pDRIInfo->frameBufferSize = pSIS->FbMapSize;
 
   /* scrnOffset is being calulated in sis_vga.c */

@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/sis_vga.c,v 1.14 2005/06/27 15:56:53 twini Exp $ */
+/* $XdotOrg$ */
 /*
  * Mode setup and basic video bridge detection
  *
@@ -318,6 +318,9 @@ SISInit(ScrnInfoPtr pScrn, DisplayModePtr mode)
     /* save screen pitch for acceleration functions */
     pSiS->scrnOffset = pSiS->CurrentLayout.displayWidth *
 			((pSiS->CurrentLayout.bitsPerPixel + 7) / 8);
+
+    /* Set accelerator dest color depth to 0 - not supported on 530/620 */
+    pSiS->DstColor = 0;
 
     if(!pSiS->UseVESA) {
 
@@ -883,8 +886,6 @@ SIS300Init(ScrnInfoPtr pScrn, DisplayModePtr mode)
 	        pSiS->DstColor = (short) 0x8000;
 	    pSiS->SiS310_AccelDepth = 0x00010000;
 	    break;
-	case 24:
-	    break;
 	case 32:
 	    pSiS->DstColor = (short) 0xC000;
 	    pSiS->SiS310_AccelDepth = 0x00020000;
@@ -1020,7 +1021,7 @@ void SISVGAPreInit(ScrnInfoPtr pScrn)
 #if 0
     UChar sr17=0;
 #endif
-    static const char  *ChrontelTypeStr[] = {
+    static const char *ChrontelTypeStr[] = {
 	"7004",
 	"7005",
 	"7007",
@@ -1031,7 +1032,7 @@ void SISVGAPreInit(ScrnInfoPtr pScrn)
 	"7020",
 	"(unknown)"
     };
-    static const char  *SiSVBTypeStr[] = {
+    static const char *SiSVBTypeStr[] = {
 	"301",		/* 0 */
 	"301B",		/* 1 */
 	"301B-DH",	/* 2 */
@@ -1054,6 +1055,8 @@ void SISVGAPreInit(ScrnInfoPtr pScrn)
        case PCI_CHIP_SIS330:
        case PCI_CHIP_SIS660:
        case PCI_CHIP_SIS340:
+       case PCI_CHIP_XGIXG20:
+       case PCI_CHIP_XGIXG40:
           pSiS->ModeInit = SIS300Init;
           break;
        default:
@@ -1075,6 +1078,10 @@ void SISVGAPreInit(ScrnInfoPtr pScrn)
 
     /* Videobridges only available for 300/315/330/340 series */
     if((pSiS->VGAEngine != SIS_300_VGA) && (pSiS->VGAEngine != SIS_315_VGA))
+       return;
+
+    /* No video bridge ever on XGI Z7 (XG20) */
+    if(pSiS->ChipType == XGI_20)
        return;
 
     inSISIDXREG(SISPART4, 0x00, temp);

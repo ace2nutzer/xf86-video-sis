@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/sis310_accel.h,v 1.7 2005/03/11 14:39:48 twini Exp $ */
+/* $XdotOrg$ */
 /*
  * 2D Acceleration for SiS 315 and Xabre series
  * Definitions for the SIS engine communication.
@@ -293,6 +293,8 @@
   { \
      while( (SIS_MMIO_IN16(pSiS->IOBase, Q_STATUS+2) & 0x8000) != 0x8000) {}; \
      while( (SIS_MMIO_IN16(pSiS->IOBase, Q_STATUS+2) & 0x8000) != 0x8000) {}; \
+     while( (SIS_MMIO_IN16(pSiS->IOBase, Q_STATUS+2) & 0x8000) != 0x8000) {}; \
+     while( (SIS_MMIO_IN16(pSiS->IOBase, Q_STATUS+2) & 0x8000) != 0x8000) {}; \
   }
 
 #define SiSSetupSRCDSTBase(srcbase,dstbase) \
@@ -576,6 +578,20 @@
 	 pointer tt = (char *)pSiS->cmdQueueBase + ttt; \
 	 SIS_WQINDEX(0) = (CARD32)(SIS_SPKC_HEADER + COMMAND_READY);	\
 	 SIS_WQINDEX(1) = (CARD32)(pSiS->CommandReg); 			\
+	 SIS_WQINDEX(2) = (CARD32)(SIS_NIL_CMD); 			\
+	 SIS_WQINDEX(3) = (CARD32)(SIS_NIL_CMD); 			\
+	 if(pSiS->NeedFlush) dummybuf = SIS_RQINDEX(3);  		\
+	 SiSUpdateQueue \
+	 SiSSetHwWP(ttt); \
+      }
+
+#define SiSDualPipe(disable) \
+      { \
+	 CARD32 ttt = SiSGetSwWP(); \
+	 CARD32 _tmp = SIS_MMIO_IN32(pSiS->IOBase, FIRE_TRIGGER) & ~(1 << 10);	\
+	 pointer tt = (char *)pSiS->cmdQueueBase + ttt; \
+	 SIS_WQINDEX(0) = (CARD32)(SIS_SPKC_HEADER + FIRE_TRIGGER);	\
+	 SIS_WQINDEX(1) = (CARD32)(_tmp | ((disable & 1) << 10)); 	\
 	 SIS_WQINDEX(2) = (CARD32)(SIS_NIL_CMD); 			\
 	 SIS_WQINDEX(3) = (CARD32)(SIS_NIL_CMD); 			\
 	 if(pSiS->NeedFlush) dummybuf = SIS_RQINDEX(3);  		\

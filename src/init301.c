@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/init301.c,v 1.23 2005/06/27 15:56:52 twini Exp $ */
+/* $XdotOrg$ */
 /*
  * Mode initializing code (CRT2 section)
  for SiS 300/305/540/630/730 and
@@ -54,14 +54,6 @@
  * Formerly based on non-functional code-fragements for 300 series by SiS, Inc.
  * Used by permission.
  *
- * TW says: This code looks awful, I know. But please don't do anything about
- * this otherwise debugging will be hell.
- * The code is extremely fragile as regards the different chipsets, different
- * video bridges and combinations thereof. If anything is changed, extreme
- * care has to be taken that that change doesn't break it for other chipsets,
- * bridges or combinations thereof.
- * All comments in this file are by me, regardless if marked TW or not.
- *
  */
 
 #if 1
@@ -101,7 +93,9 @@ static void		SiS_SetCH70xx(struct SiS_Private *SiS_Pr, unsigned short reg, unsig
 void
 SiS_UnLockCRT2(struct SiS_Private *SiS_Pr)
 {
-   if(SiS_Pr->ChipType >= SIS_315H)
+   if(SiS_Pr->ChipType == XGI_20)
+      return;
+   else if(SiS_Pr->ChipType >= SIS_315H)
       SiS_SetRegOR(SiS_Pr->SiS_Part1Port,0x2f,0x01);
    else
       SiS_SetRegOR(SiS_Pr->SiS_Part1Port,0x24,0x01);
@@ -113,7 +107,9 @@ static
 void
 SiS_LockCRT2(struct SiS_Private *SiS_Pr)
 {
-   if(SiS_Pr->ChipType >= SIS_315H)
+   if(SiS_Pr->ChipType == XGI_20)
+      return;
+   else if(SiS_Pr->ChipType >= SIS_315H)
       SiS_SetRegAND(SiS_Pr->SiS_Part1Port,0x2F,0xFE);
    else
       SiS_SetRegAND(SiS_Pr->SiS_Part1Port,0x24,0xFE);
@@ -957,18 +953,18 @@ void
 SiS_GetVBInfo(struct SiS_Private *SiS_Pr, unsigned short ModeNo,
 		unsigned short ModeIdIndex, int checkcrt2mode)
 {
-   unsigned short tempax,tempbx, temp;
+   unsigned short tempax, tempbx, temp;
    unsigned short modeflag, resinfo = 0;
 
+   SiS_Pr->SiS_SetFlag = 0;
+
    modeflag = SiS_GetModeFlag(SiS_Pr, ModeNo, ModeIdIndex);
+
+   SiS_Pr->SiS_ModeType = modeflag & ModeTypeMask;
 
    if((ModeNo > 0x13) && (!SiS_Pr->UseCustomMode)) {
       resinfo = SiS_Pr->SiS_EModeIDTable[ModeIdIndex].Ext_RESINFO;
    }
-
-   SiS_Pr->SiS_SetFlag = 0;
-
-   SiS_Pr->SiS_ModeType = modeflag & ModeTypeMask;
 
    tempbx = 0;
 
@@ -3980,11 +3976,11 @@ SiS_DisableBridge(struct SiS_Private *SiS_Pr)
 	   }
 
 	   if(!(SiS_IsNotM650orLater(SiS_Pr))) {
-	      if(SiS_Pr->ChipType < SIS_340) {
+	      /* if(SiS_Pr->ChipType < SIS_340) {*/
 		 tempah = 0xef;
 		 if(SiS_IsVAMode(SiS_Pr)) tempah = 0xf7;
 		 SiS_SetRegAND(SiS_Pr->SiS_Part1Port,0x4c,tempah);
-	      }
+	      /*}*/
 	   }
 
 	   if(SiS_Pr->SiS_VBType & VB_SIS301LV302LV) {
@@ -4153,9 +4149,9 @@ SiS_DisableBridge(struct SiS_Private *SiS_Pr)
 #ifdef SIS315H	/* 315 series */
 
 	if(!(SiS_IsNotM650orLater(SiS_Pr))) {
-	   if(SiS_Pr->ChipType < SIS_340) {
+	   /*if(SiS_Pr->ChipType < SIS_340) { */ /* XGI needs this */
 	      SiS_SetRegAND(SiS_Pr->SiS_Part1Port,0x4c,~0x18);
-	   }
+	   /* } */
 	}
 
 	if(SiS_Pr->SiS_IF_DEF_CH70xx != 0) {
@@ -4381,14 +4377,14 @@ SiS_EnableBridge(struct SiS_Private *SiS_Pr)
 	 }
 
 	 if(!(SiS_IsNotM650orLater(SiS_Pr))) {
-	    if(SiS_Pr->ChipType < SIS_340) {
+	    /*if(SiS_Pr->ChipType < SIS_340) { */
 	       tempah = 0x10;
 	       if(SiS_LCDAEnabled(SiS_Pr)) {
 		  if(SiS_TVEnabled(SiS_Pr)) tempah = 0x18;
 		  else			    tempah = 0x08;
 	       }
 	       SiS_SetReg(SiS_Pr->SiS_Part1Port,0x4c,tempah);
-	    }
+	    /*}*/
 	 }
 
 	 if(SiS_Pr->SiS_VBType & VB_SIS301LV302LV) {
@@ -4448,6 +4444,16 @@ SiS_EnableBridge(struct SiS_Private *SiS_Pr)
 
 	 SiS_SetRegANDOR(SiS_Pr->SiS_Part2Port,0x00,0x1f,0x20);
 	 SiS_SetRegOR(SiS_Pr->SiS_Part1Port,0x2e,0x80);
+
+	 if(SiS_Pr->SiS_VBType & (VB_SIS302LV | VB_SIS302ELV | VB_SIS301C)) {
+	    if( (SiS_LCDAEnabled(SiS_Pr)) ||
+	        (SiS_CRT2IsLCD(SiS_Pr)) ) {
+	       /* Enable "LVDS PLL power on" (even on 301C) */
+	       SiS_SetRegAND(SiS_Pr->SiS_Part4Port,0x2a,0x7f);
+	       /* Enable "LVDS Driver Power on" (even on 301C) */
+	       SiS_SetRegAND(SiS_Pr->SiS_Part4Port,0x30,0x7f);
+	    }
+	 }
 
 	 tempah = 0xc0;
 	 if(SiS_IsDualEdge(SiS_Pr)) {
@@ -4741,9 +4747,9 @@ SiS_EnableBridge(struct SiS_Private *SiS_Pr)
 #ifdef SIS315H    /* 315 series */
 
        if(!(SiS_IsNotM650orLater(SiS_Pr))) {
-	  if(SiS_Pr->ChipType < SIS_340) {
+	  /*if(SiS_Pr->ChipType < SIS_340) {*/  /* XGI needs this */
 	     SiS_SetRegOR(SiS_Pr->SiS_Part1Port,0x4c,0x18);
-	  }
+	  /*}*/
        }
 
        if(SiS_Pr->SiS_IF_DEF_CH70xx == 0) {
@@ -9377,10 +9383,12 @@ SiS_HandleDDC(struct SiS_Private *SiS_Pr, unsigned int VBFlags, int VGAEngine,
 	    (buffer[4] == 0xff) && (buffer[5] == 0xff) &&
 	    (buffer[6] == 0xff) && (buffer[7] == 0x00) &&
 	    (buffer[0x12] == 1)) {
-	    if(adaptnum == 1) {
-	       if(!(buffer[0x14] & 0x80)) result = 0xFFFE;
-	    } else {
-	       if(buffer[0x14] & 0x80)    result = 0xFFFE;
+	    if(!SiS_Pr->DDCPortMixup) {
+	       if(adaptnum == 1) {
+	          if(!(buffer[0x14] & 0x80)) result = 0xFFFE;
+	       } else {
+	          if(buffer[0x14] & 0x80)    result = 0xFFFE;
+	       }
 	    }
 	 }
       }
@@ -10293,7 +10301,16 @@ SetDelayComp661(struct SiS_Private *SiS_Pr, unsigned short ModeNo,
    else                      delay = (SiS_Pr->SiS_RefIndex[RTI].Ext_PDC >> 4);
    delay |= (delay << 8);
 
-   if(SiS_Pr->SiS_VBInfo & SetCRT2ToTV) {
+   if(SiS_Pr->ChipType >= XGI_20) {
+
+      delay = 0x0606;
+
+   } else if(SiS_Pr->ChipType >= SIS_340) {
+
+      delay = 0x0606;
+      /* TODO (eventually) */
+
+   } else if(SiS_Pr->SiS_VBInfo & SetCRT2ToTV) {
 
       /* 3. TV */
 
@@ -10425,6 +10442,10 @@ SetPanelParms661(struct SiS_Private *SiS_Pr)
    unsigned char  *ROMAddr = SiS_Pr->VirtualRomBase;
    unsigned short romptr, temp1, temp2;
 
+   if(SiS_Pr->SiS_VBType & (VB_SIS301LV | VB_SIS302LV | VB_SIS302ELV | VB_SIS301C)) {
+      SiS_SetRegAND(SiS_Pr->SiS_Part4Port,0x24,0x0f);
+   }
+
    if(SiS_Pr->SiS_VBType & (VB_SIS301LV | VB_SIS302LV | VB_SIS302ELV)) {
       if(SiS_Pr->LVDSHL != -1) {
          SiS_SetRegANDOR(SiS_Pr->SiS_Part4Port,0x24,0xfc,SiS_Pr->LVDSHL);
@@ -10476,23 +10497,24 @@ SiS_OEM310Setting(struct SiS_Private *SiS_Pr, unsigned short ModeNo, unsigned sh
 }
 
 static void
-SiS_OEM661Setting(struct SiS_Private *SiS_Pr, unsigned short ModeNo,unsigned short ModeIdIndex, unsigned short RRTI)
+SiS_OEM661Setting(struct SiS_Private *SiS_Pr, unsigned short ModeNo,
+			unsigned short ModeIdIndex, unsigned short RRTI)
 {
    if(SiS_Pr->SiS_VBType & VB_SISVB) {
 
-      SetDelayComp661(SiS_Pr,ModeNo,ModeIdIndex,RRTI);
+      SetDelayComp661(SiS_Pr, ModeNo, ModeIdIndex, RRTI);
 
       if(SiS_Pr->SiS_VBInfo & (SetCRT2ToLCD | SetCRT2ToLCDA)) {
-         SetCRT2SyncDither661(SiS_Pr,ModeNo,RRTI);
+         SetCRT2SyncDither661(SiS_Pr, ModeNo, RRTI);
          SetPanelParms661(SiS_Pr);
       }
 
       if(SiS_Pr->SiS_VBInfo & SetCRT2ToTV) {
-         SetPhaseIncr(SiS_Pr,ModeNo,ModeIdIndex);
-         SetYFilter(SiS_Pr,ModeNo,ModeIdIndex);
-         SetAntiFlicker(SiS_Pr,ModeNo,ModeIdIndex);
+         SetPhaseIncr(SiS_Pr, ModeNo, ModeIdIndex);
+         SetYFilter(SiS_Pr, ModeNo, ModeIdIndex);
+         SetAntiFlicker(SiS_Pr, ModeNo, ModeIdIndex);
          if(SiS_Pr->SiS_VBType & VB_SIS301) {
-            SetEdgeEnhance(SiS_Pr,ModeNo,ModeIdIndex);
+            SetEdgeEnhance(SiS_Pr, ModeNo, ModeIdIndex);
          }
       }
    }

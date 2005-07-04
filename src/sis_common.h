@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/sis_common.h,v 1.5 2005/03/11 14:39:48 twini Exp $ */
+/* $XdotOrg$ */
 /*
  * Common header definitions for SiS 2D/3D/DRM suite
  *

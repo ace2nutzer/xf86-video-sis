@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/sis_utility.c,v 1.4 2005/06/29 23:06:12 twini Exp $ */
+/* $XdotOrg$ */
 /*
  * SiS driver utility interface & routines
  *
@@ -375,11 +375,7 @@ SISSwitchCRT1Status(ScrnInfoPtr pScrn, int onoff, Bool quiet)
     pSiS->VBFlags = pSiS->VBFlags_backup = vbflags;
 
     /* Sync the accelerators */
-    if(!pSiS->NoAccel) {
-       if(pSiS->AccelInfoPtr) {
-	  (*pSiS->AccelInfoPtr->Sync)(pScrn);
-       }
-    }
+    (*pSiS->SyncAccel)(pScrn);
 
     pSiS->skipswitchcheck = TRUE;
     if(!(pScrn->SwitchMode(pScrn->scrnIndex, pScrn->currentMode, 0))) {
@@ -405,20 +401,12 @@ SISRedetectCRT2Devices(ScrnInfoPtr pScrn)
 #endif
 
     /* Sync the accelerators */
-    if(!pSiS->NoAccel) {
-       if(pSiS->AccelInfoPtr) {
-          (*pSiS->AccelInfoPtr->Sync)(pScrn);
-       }
-    }
+    (*pSiS->SyncAccel)(pScrn);
 
     if(SISRedetectCRT2Type(pScrn)) {
        /* If this returns TRUE, we need to reset the display mode */
        /* Sync the accelerators */
-       if(!pSiS->NoAccel) {
-          if(pSiS->AccelInfoPtr) {
-             (*pSiS->AccelInfoPtr->Sync)(pScrn);
-          }
-       }
+       (*pSiS->SyncAccel)(pScrn);
        pSiS->skipswitchcheck = TRUE;
        if(!(pScrn->SwitchMode(pScrn->scrnIndex, pScrn->currentMode, 0))) {
           pSiS->skipswitchcheck = FALSE;
@@ -536,11 +524,7 @@ SISSwitchCRT2Type(ScrnInfoPtr pScrn, ULong newvbflags, Bool quiet)
     }
 
     /* Sync the accelerators */
-    if(!pSiS->NoAccel) {
-       if(pSiS->AccelInfoPtr) {
-          (*pSiS->AccelInfoPtr->Sync)(pScrn);
-       }
-    }
+    (*pSiS->SyncAccel)(pScrn);
 
     pSiS->VBFlags = pSiS->VBFlags_backup = newvbflags;
 
@@ -2230,6 +2214,7 @@ SISSetPortUtilAttribute(ScrnInfoPtr pScrn, Atom attribute,
 #ifdef TWDEBUG
   } else if(attribute == pSiS->xv_STR) {
      ULong port;
+     CARD8 reg;
      switch((value & 0xff000000) >> 24) {
      case 0x00: port = SISSR;    break;
      case 0x01: port = SISPART1; break;
@@ -2241,6 +2226,8 @@ SISSetPortUtilAttribute(ScrnInfoPtr pScrn, Atom attribute,
      default:   return BadValue;
      }
      outSISIDXREG(port,((value & 0x00ff0000) >> 16), ((value & 0x0000ff00) >> 8));
+     inSISIDXREG(port, ((value & 0x00ff0000) >> 16), reg);
+     xf86DrvMsg(0, 0, "SetREG %x -> %x -> %x\n", ((value & 0x00ff0000) >> 16), ((value & 0x0000ff00) >> 8), reg);
 #endif
   } else {
      return BadMatch;

@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/initdef.h,v 1.18 2005/06/27 15:56:52 twini Exp $ */
+/* $XdotOrg$ */
 /*
  * Global definitions for init.c and init301.c
  *
