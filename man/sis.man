@@ -56,8 +56,8 @@ for SiS5597/5598, 530/620 and 6326/AGP/DVD
 for SiS300/305, 540 and 630/730
 .PP
 .B 315/330/340 series
-for SiS315, 55x and 661/741/760/761 (plus M, FX, MX, GX variants thereof) and all
-XGI chips.
+for SiS315, 55x, 330, 661/741/76x (plus M, FX, MX, GX variants thereof), 340
+and all XGI chips.
 .PP
 .SH CONFIGURATION DETAILS
 Please refer to __myxconfigfile__(__filemansuffix__) for general configuration
@@ -99,8 +99,8 @@ above) and reflection are mutually exclusive.
 Default: no reflection.
 .TP
 .BI "Option \*qCRT1Gamma\*q \*q" boolean \*q
-Enable or disable gamma correction. (On the 300 and 315/330 series, this
-option only affects CRT1 output).
+Enable or disable gamma correction. (On the 300 and 315/330/340 series,
+this option only affects CRT1 output).
 Default: Gamma correction is enabled.
 .PP
 .I "2. Old series specific information"
@@ -195,9 +195,9 @@ yields the best results, hence it is the default.
 .PP
 .I "2. 300 and 315/330/340 series specific information"
 .PP
-The 300 and 315/330/340 series feature two CRT controllers and very often
-come with a video bridge for controlling LCD and TV output. Hereinafter, the
-term
+The 300 and 315/330/340 series, except the XGI Z7, feature two CRT
+controllers and very often come with a video bridge for controlling LCD
+and TV output. Hereinafter, the term
 .B CRT1
 refers to the VGA output of the chip, and
 .B CRT2
@@ -235,27 +235,29 @@ video bridges if running NTSC or PAL-M at 1024x768.
 .PP
 About XVideo support
 .PP
-XVideo is supported on all chipsets of both families. However, there
+XVideo is supported on all chipsets of both families (except the XGI Volari
+Z7 which lacks hardware support for video overlays). However, there
 are some differences in hardware features which cause limitations.
 The 300 series as well as the SiS55x, M650, 651, 661FX, M661FX, M661MX,
-741, 741GX, M741, 760, M760 support two video overlays. The SiS315/H/PRO,
-650/740, 330 and the XGI chips support only one such overlay. On chips with
-two overlays, one overlay is used for CRT1, the other for CRT2. On the other
-chipsets, the option
+741, 741GX, M741, 76x, M76x support two video overlays. The SiS315/H/PRO,
+650/740, 330, 340 and the XGI Volari V3, V5 and V8 chips support only one such
+overlay. On chips with two overlays, one overlay is used for CRT1, the other
+for CRT2. On the other chipsets, the option
 .B \*qXvOnCRT2\*q
-can be used to select the desired output channel.
+can be used to select the desired output device (CRT1 or CRT2).
 .PP
 About Merged Framebuffer support
 .PP
-Merged framebuffer mode is similar to dual head/Xinerama mode, but has a
-few advantages which make me recommend it strongly over Xinerama. Please
-see http://www.winischhofer.at/linuxsisvga.shtml for detailed
-information.
+Merged framebuffer mode is similar to dual head/Xinerama mode (for using two
+output devices of one card at the same time), but has a few advantages which
+make me recommend it strongly over Xinerama. Please see
+http://www.winischhofer.at/linuxsisvga.shtml for detailed information.
 .PP
 About dual-head support
 .PP
-Dual head mode with or without Xinerama is fully supported. Note that
-colordepth 8 is not supported in dual head mode.
+Dual head mode with or without Xinerama is fully supported, be it with one card
+driving two outputs, be it two cards. Note that colordepth 8 is not supported in
+dual head mode if run on one card with two outputs.
 .PP
 The following driver
 .B Options
@@ -408,13 +410,14 @@ If you started sisfb without the mem argument, sisfb will reserve
 .TP
 4096KB in all other cases.
 .PP
-If you intend to use DRI on an integrated chipset, I recommend setting the
-total video memory in the BIOS setup utility to 64MB in order to at least
-overcome the lack of memory swap functions.
+If you intend to use DRI on an integrated chipset (540, 630, 730), I recommend
+setting the total video memory in the BIOS setup utility to 64MB.
 .PP
-As of Linux 2.6.3 and under *BSD, sisfb is not required for memory management.
-Hence, this option is mandatory on such systems not running sisfb to decide
-how much memory X should reserve for DRI.
+PLEASE NOTE: As of Linux 2.6.3 and under *BSD, sisfb is not required for
+memory management. Hence, this option is mandatory on such systems not
+running sisfb to decide how much memory X should reserve for DRI. If the
+option is omitted, DRI will have no memory assigned, and all DRI applications
+will quit with errors like "failed to allocate Z-buffer" or the like.
 .TP
 .BI "Option \*qDRI\*q \*q" boolean \*q
 This option allows enabling or disabling DRI. By default, DRI is on.
