@@ -2879,7 +2879,7 @@ SiS_MapVGAMem(ScrnInfoPtr pScrn)
 
     /* Map 64k VGA window for saving/restoring CGA fonts */
     pSiS->VGAMapSize = 0x10000;
-    pSiS->VGAMapPhys = 0; /* Default */
+    pSiS->VGAMapPhys = 0;	/* Default */
     if(!pSiS->Primary) {
        /* If secondary, set Phys to beginning of our video RAM */
        pSiS->VGAMapPhys = pSiS->PciInfo->memBase[0];
@@ -8228,7 +8228,7 @@ SISScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
 	   * byte won't be touched (which is why we set this manually
 	   * then).
 	   */
-          UChar myoldmode = SiS_GetSetModeID(pScrn,0xFF);
+          UChar myoldmode = SiS_GetSetModeID(pScrn, 0xFF);
 	  UChar cr30, cr31;
 
           /* Read CR34 which the BIOS sets to the current mode number for CRT2
@@ -13317,34 +13317,58 @@ SISWaitVBRetrace(ScrnInfoPtr pScrn)
 #define MODEID_OFF 0x449
 
 UChar
-SiS_GetSetModeID(ScrnInfoPtr pScrn, UChar id)
-{
-    return(SiS_GetSetBIOSScratch(pScrn, MODEID_OFF, id));
-}
-
-UChar
 SiS_GetSetBIOSScratch(ScrnInfoPtr pScrn, UShort offset, UChar value)
 {
     UChar ret = 0;
 #ifdef SIS_USE_BIOS_SCRATCH
     UChar *base;
+#endif
 
-    base = xf86MapVidMem(pScrn->scrnIndex, VIDMEM_MMIO, 0, 0x2000);
-    if(!base) {
-       SISErrorLog(pScrn, "(Could not map BIOS scratch area)\n");
-       return 0;
+    /* For some reasons (like detecting the current display mode),
+     * we need to read (or write-back) values from the BIOS
+     * scratch area. This area is only valid for the primary
+     * graphics card. For the secondary, we just return some
+     * defaults and ignore requests to write data. As regards
+     * the display mode: If sisfb is loaded for the secondary
+     * card, it very probably has set a mode, but in any case
+     * informed us via its info packet. So this here will not be
+     * called for mode detection in this case.
+     */
+
+    switch(offset) {
+    case 0x489:
+       ret = 0x11;  /* Default VGA Info */
+       break;
+    case MODEID_OFF:
+       ret = 0x03;  /* Default current display mode */
+       break;
     }
 
-    ret = *(base + offset);
+#ifdef SIS_USE_BIOS_SCRATCH
+    if(SISPTR(pScrn)->Primary) {
+       base = xf86MapVidMem(pScrn->scrnIndex, VIDMEM_MMIO, 0, 0x2000);
+       if(!base) {
+          SISErrorLog(pScrn, "(Could not map BIOS scratch area)\n");
+          return ret;
+       }
 
-    /* value != 0xff means: set register */
-    if(value != 0xff) {
-       *(base + offset) = value;
+       ret = *(base + offset);
+
+       /* value != 0xff means: set register */
+       if(value != 0xff) {
+          *(base + offset) = value;
+       }
+
+       xf86UnMapVidMem(pScrn->scrnIndex, base, 0x2000);
     }
-
-    xf86UnMapVidMem(pScrn->scrnIndex, base, 0x2000);
 #endif
     return ret;
+}
+
+UChar
+SiS_GetSetModeID(ScrnInfoPtr pScrn, UChar id)
+{
+    return(SiS_GetSetBIOSScratch(pScrn, MODEID_OFF, id));
 }
 
 void
