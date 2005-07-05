@@ -645,6 +645,7 @@ SiSAccelInit(ScreenPtr pScreen)
     pSiS->exa_scratch = NULL;
 #endif
 
+#if 1
 #ifdef SIS_USE_EXA
     if(!pSiS->NoAccel) {
        if(pSiS->useEXA && pScrn->bitsPerPixel == 24) {
@@ -658,6 +659,7 @@ SiSAccelInit(ScreenPtr pScreen)
 	  }
        }
     }
+#endif
 #endif
 
     if(!pSiS->NoAccel) {
@@ -772,8 +774,8 @@ SiSAccelInit(ScreenPtr pScreen)
 	     xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
 		"Not enough video RAM for offscreen memory manager. Xv disabled\n");
 	  }
-	  pSiS->EXADriverPtr->card.offscreenByteAlign = 16;	/* src/dst: double quad word boundary */
-	  pSiS->EXADriverPtr->card.offscreenPitch = 8;
+	  pSiS->EXADriverPtr->card.offscreenByteAlign = 8;	/* src/dst: double quad word boundary */
+	  pSiS->EXADriverPtr->card.offscreenPitch = 1;
 	  pSiS->EXADriverPtr->card.maxX = 2047;
 	  pSiS->EXADriverPtr->card.maxY = 2047;
 

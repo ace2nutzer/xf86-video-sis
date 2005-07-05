@@ -564,7 +564,8 @@ SiSOptions(ScrnInfoPtr pScrn)
        pSiS->HWCursor = FALSE;
     }
 
-    if(pSiS->Chipset == PCI_CHIP_SIS550) {
+    if((pSiS->Chipset == PCI_CHIP_SIS550) ||
+       (pSiS->Chipset == PCI_CHIP_XGIXG20)) {
        /* Alpha blending not supported */
        pSiS->doRender = FALSE;
     }
@@ -585,7 +586,12 @@ SiSOptions(ScrnInfoPtr pScrn)
        pSiS->OptUseColorCursorBlend = 1;
        pSiS->OptColorCursorBlendThreshold = 0x37000000;
     } else if(pSiS->VGAEngine == SIS_315_VGA) {
-       pSiS->OptUseColorCursor = 1;
+       if(pSiS->Chipset == PCI_CHIP_XGIXG20) {
+          /* No color HW cursor on Z7 */
+          pSiS->OptUseColorCursor = 0;
+       } else {
+          pSiS->OptUseColorCursor = 1;
+       }
     }
 #endif
 
@@ -675,10 +681,13 @@ SiSOptions(ScrnInfoPtr pScrn)
 #endif
 
     /* RenderAcceleration
-     * En/Disables RENDER acceleration (315/330 series only, not 550)
+     * En/Disables RENDER acceleration (315/330/340 series only, not 550, not XGI Z7)
      */
 #ifdef SIS_USE_XAA
-    if((pSiS->VGAEngine == SIS_315_VGA) && (pSiS->Chipset != PCI_CHIP_SIS550) && (!pSiS->NoAccel)) {
+    if((pSiS->VGAEngine == SIS_315_VGA)   &&
+       (pSiS->Chipset != PCI_CHIP_SIS550) &&
+       (pSiS->Chipset != PCI_CHIP_XGIXG20) &&
+       (!pSiS->NoAccel)) {
        if(xf86GetOptValBool(pSiS->Options, OPTION_RENDER, &pSiS->doRender)) {
 	  if(!pSiS->doRender) {
 	     xf86DrvMsg(pScrn->scrnIndex, X_CONFIG, "RENDER Acceleration disabled\n");
@@ -717,7 +726,9 @@ SiSOptions(ScrnInfoPtr pScrn)
 #if XF86_VERSION_CURRENT >= XF86_VERSION_NUMERIC(4,2,99,0,0)
 #ifdef ARGB_CURSOR
 #ifdef SIS_ARGB_CURSOR
-    if((pSiS->HWCursor) && ((pSiS->VGAEngine == SIS_300_VGA) || (pSiS->VGAEngine == SIS_315_VGA))) {
+    if((pSiS->HWCursor) &&
+       ((pSiS->VGAEngine == SIS_300_VGA) || (pSiS->VGAEngine == SIS_315_VGA)) &&
+       (pSiS->Chipset != PCI_CHIP_XGIXG20)) {
 
        from = X_DEFAULT;
        if(xf86GetOptValBool(pSiS->Options, OPTION_USERGBCURSOR, &pSiS->OptUseColorCursor)) {

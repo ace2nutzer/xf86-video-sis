@@ -567,11 +567,10 @@ SISProbe(DriverPtr drv, int flags)
 {
     int     i;
     GDevPtr *devSections;
-    int     *usedChips;
+    int     *usedChipsSiS, *usedChipsXGI;
     int     numDevSections;
-    int     numUsed;
+    int     numUsed, numUsedSiS, numUsedXGI;
     Bool    foundScreen = FALSE;
-    PciChipsets *myPciChipsets;
 
     /*
      * The aim here is to find all cards that this driver can handle,
@@ -619,24 +618,23 @@ SISProbe(DriverPtr drv, int flags)
        return FALSE;
     }
 
-    myPciChipsets = SISPciChipsets;
-
-    numUsed = xf86MatchPciInstances(SIS_NAME, PCI_VENDOR_SIS,
+    numUsedSiS = xf86MatchPciInstances(SIS_NAME, PCI_VENDOR_SIS,
 			SISChipsets, SISPciChipsets, devSections,
-			numDevSections, drv, &usedChips);
+			numDevSections, drv, &usedChipsSiS);
 
-    if(numUsed <= 0) {
+    ErrorF("DEBUG: numUsed after SiS check: %d\n", numUsedSiS);
 
-       myPciChipsets = XGIPciChipsets;
-
-       numUsed = xf86MatchPciInstances(SIS_NAME, PCI_VENDOR_XGI,
+    numUsedXGI = xf86MatchPciInstances(SIS_NAME, PCI_VENDOR_XGI,
 			XGIChipsets, XGIPciChipsets, devSections,
-			numDevSections, drv, &usedChips);
+			numDevSections, drv, &usedChipsXGI);
 
-    }
+    ErrorF("DEBUG: numUsed after XGI check: %d\n", numUsedXGI);
+
 
     /* Free it since we don't need that list after this */
     xfree(devSections);
+
+    numUsed = numUsedSiS + numUsedXGI;
 
     if(numUsed <= 0)
        return FALSE;
@@ -655,9 +653,10 @@ SISProbe(DriverPtr drv, int flags)
 	/* Allocate a ScrnInfoRec and claim the slot */
 	pScrn = NULL;
 
-	if((pScrn = xf86ConfigPciEntity(pScrn, 0, usedChips[i],
-					myPciChipsets, NULL, NULL,
-					NULL, NULL, NULL))) {
+	if((pScrn = xf86ConfigPciEntity(pScrn, 0,
+			(i < numUsedSiS) ? usedChipsSiS[i] : usedChipsXGI[i-numUsedSiS],
+			(i < numUsedSiS) ? SISPciChipsets  : XGIPciChipsets,
+			NULL, NULL, NULL, NULL, NULL))) {
 	    /* Fill in what we can of the ScrnInfoRec */
 	    pScrn->driverVersion    = SIS_CURRENT_VERSION;
 	    pScrn->driverName       = SIS_DRIVER_NAME;
@@ -679,8 +678,10 @@ SISProbe(DriverPtr drv, int flags)
 	    foundScreen = TRUE;
 	}
 
+	ErrorF("Inside look, before GetEntityInfo %d\n", i);
+
 #ifdef SISDUALHEAD
-	pEnt = xf86GetEntityInfo(usedChips[i]);
+	pEnt = xf86GetEntityInfo((i < numUsedSiS) ? usedChipsSiS[i] : usedChipsXGI[i-numUsedSiS]);
 
 	if(pEnt->chipset == PCI_CHIP_SIS630 || pEnt->chipset == PCI_CHIP_SIS540 ||
 	   pEnt->chipset == PCI_CHIP_SIS650 || pEnt->chipset == PCI_CHIP_SIS550 ||
@@ -692,7 +693,7 @@ SISProbe(DriverPtr drv, int flags)
 	    SISEntPtr pSiSEnt = NULL;
 	    DevUnion  *pPriv;
 
-	    xf86SetEntitySharable(usedChips[i]);
+	    xf86SetEntitySharable((i < numUsedSiS) ? usedChipsSiS[i] : usedChipsXGI[i-numUsedSiS]);
 	    if(SISEntityIndex < 0) {
 	       SISEntityIndex = xf86AllocateEntityPrivateIndex();
 	    }
@@ -713,7 +714,9 @@ SISProbe(DriverPtr drv, int flags)
 
     }
 
-    xfree(usedChips);
+    if(usedChipsSiS) xfree(usedChipsSiS);
+    if(usedChipsXGI) xfree(usedChipsXGI);
+
     return foundScreen;
 }
 
@@ -3418,7 +3421,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	  pSiS->ChipType = XGI_20;
 	  pSiS->VGAEngine = SIS_315_VGA;
 	  pSiS->ChipFlags |= (SiSCF_XabreCore | SiSCF_MMIOPalette | SiSCF_IsXGI);
-	  pSiS->SiS_SD2_Flags |= (SiS_SD2_SUPPORTXVHUESAT | SiS_SD2_ISXGI);
+	  pSiS->SiS_SD2_Flags |= (SiS_SD2_NOOVERLAY | SiS_SD2_ISXGI);
 	  pSiS->myCR63 = 0x53;
 	  pSiS->NewCRLayout = TRUE;
 	  break;
@@ -8610,7 +8613,7 @@ SISScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
     /* Initialize Xv */
     pSiS->ResetXv = pSiS->ResetXvGamma = pSiS->ResetXvDisplay = NULL;
 #if (XF86_VERSION_CURRENT >= XF86_VERSION_NUMERIC(4,3,99,0,0)) || (defined(XvExtension))
-    if(!pSiS->NoXvideo) {
+    if((!pSiS->NoXvideo) && (!(pSiS->SiS_SD2_Flags & SiS_SD2_NOOVERLAY))) {
 
        if((pSiS->VGAEngine == SIS_300_VGA) ||
 	  (pSiS->VGAEngine == SIS_315_VGA)) {

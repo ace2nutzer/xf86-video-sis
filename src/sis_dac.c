@@ -1525,10 +1525,13 @@ int SiSMemBandWidth(ScrnInfoPtr pScrn, Bool IsForCRT2)
 		    }
 		    max = 680000;
 		case PCI_CHIP_SIS340:
-		case PCI_CHIP_XGIXG20:
 		case PCI_CHIP_XGIXG40:
 		    magic = magicDED[bus/64];
 		    max = 800000;
+		    break;
+		case PCI_CHIP_XGIXG20:
+		    magic = magicDED[bus/64];
+		    max = 332000;
 		    break;
 		}
 
