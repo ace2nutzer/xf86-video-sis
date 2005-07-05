@@ -622,14 +622,9 @@ SISProbe(DriverPtr drv, int flags)
 			SISChipsets, SISPciChipsets, devSections,
 			numDevSections, drv, &usedChipsSiS);
 
-    ErrorF("DEBUG: numUsed after SiS check: %d\n", numUsedSiS);
-
     numUsedXGI = xf86MatchPciInstances(SIS_NAME, PCI_VENDOR_XGI,
 			XGIChipsets, XGIPciChipsets, devSections,
 			numDevSections, drv, &usedChipsXGI);
-
-    ErrorF("DEBUG: numUsed after XGI check: %d\n", numUsedXGI);
-
 
     /* Free it since we don't need that list after this */
     xfree(devSections);
@@ -677,8 +672,6 @@ SISProbe(DriverPtr drv, int flags)
 #endif
 	    foundScreen = TRUE;
 	}
-
-	ErrorF("Inside look, before GetEntityInfo %d\n", i);
 
 #ifdef SISDUALHEAD
 	pEnt = xf86GetEntityInfo((i < numUsedSiS) ? usedChipsSiS[i] : usedChipsXGI[i-numUsedSiS]);
