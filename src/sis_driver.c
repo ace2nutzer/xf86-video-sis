@@ -4701,10 +4701,12 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	   }
        }
 
-       xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
+       if(!(pSiS->SiS_SD2_Flags & SiS_SD2_NOOVERLAY)) {
+          xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
 		"Hardware supports %s video overlay%s\n",
 		pSiS->hasTwoOverlays ? "two" : "one",
 		pSiS->hasTwoOverlays ? "s" : "");
+       }
 
        if(pSiS->SiS_SD2_Flags & SiS_SD2_SUPPORT760OO) {
 	  xf86DrvMsg(pScrn->scrnIndex, X_INFO,
@@ -5081,12 +5083,16 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
     if((!pSiS->DualHeadMode) || (pSiS->SecondHead)) {
 #endif
        xf86DrvMsg(pScrn->scrnIndex, pSiS->CRT1gammaGiven ? X_CONFIG : X_INFO,
-	     "CRT1 gamma correction is %s\n",
+	     "%samma correction is %s\n",
+	     (pSiS->VBFlags & VB_VIDEOBRIDGE) ? "CRT1 g" : "G",
 	     pSiS->CRT1gamma ? "enabled" : "disabled");
 
-       if((pSiS->VGAEngine == SIS_315_VGA) && (!(pSiS->NoXvideo))) {
+       if((pSiS->VGAEngine == SIS_315_VGA)	&&
+          (!(pSiS->NoXvideo))			&&
+	  (!(pSiS->SiS_SD2_Flags & SiS_SD2_NOOVERLAY))) {
 	  xf86DrvMsg(pScrn->scrnIndex, pSiS->XvGammaGiven ? X_CONFIG : X_INFO,
-		"Separate Xv gamma correction for CRT1 is %s\n",
+		"Separate Xv gamma correction %sis %s\n",
+		(pSiS->VBFlags & VB_VIDEOBRIDGE) ? "for CRT1 " : "",
 		pSiS->XvGamma ? "enabled" : "disabled");
 	  if(pSiS->XvGamma) {
 	     xf86DrvMsg(pScrn->scrnIndex, pSiS->XvGammaGiven ? X_CONFIG : X_INFO,
@@ -5096,7 +5102,8 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 		(float)((float)pSiS->XvGammaBlue / 1000));
 	     if(!pSiS->CRT1gamma) {
 		xf86DrvMsg(pScrn->scrnIndex, X_INFO,
-		   "Xv gamma correction requires CRT1 gamma correction enabled\n");
+		   "Xv gamma correction requires %samma correction enabled\n",
+		   (pSiS->VBFlags & VB_VIDEOBRIDGE) ? "CRT1 g" : "G");
 	     }
 	  }
        }
@@ -5116,8 +5123,10 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
        if(pSiS->CRT2gamma) {
           if( ((pSiS->VGAEngine != SIS_300_VGA) && (pSiS->VGAEngine != SIS_315_VGA)) ||
               (!(pSiS->VBFlags & VB_SISBRIDGE)) ) {
-	     xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
+	     if(pSiS->VBFlags & VB_VIDEOBRIDGE) {
+	        xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
 			"CRT2 gamma correction not supported by hardware\n");
+	     }
 	     pSiS->CRT2gamma = pSiS->CRT2SepGamma = FALSE;
           } else if((pSiS->VBFlags & VB_30xBDH) && (pSiS->VBFlags & CRT2_LCD)) {
 	     isDH = TRUE;
@@ -5439,7 +5448,9 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
     }
 
     if((pSiS->VGAEngine == SIS_315_VGA) || (pSiS->VGAEngine == SIS_300_VGA)) {
-       if((!pSiS->NoXvideo) && (!pSiS->hasTwoOverlays)) {
+       if((!pSiS->NoXvideo)		&&
+          (!pSiS->hasTwoOverlays)	&&
+	  (!(pSiS->SiS_SD2_Flags & SiS_SD2_NOOVERLAY))) {
 	  xf86DrvMsg(pScrn->scrnIndex, from,
 	      "Using Xv overlay by default on CRT%d\n",
 	      pSiS->XvOnCRT2 ? 2 : 1);
