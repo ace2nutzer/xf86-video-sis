@@ -80,10 +80,12 @@ extern char *DRICreatePCIBusID(pciVideoPtr PciInfo);
   while((SIS_MMIO_IN16(pSiS->IOBase, BR(16)+2) & 0xE000) != 0xE000){}; \
   SIS_MMIO_IN16(pSiS->IOBase, 0x8240);
 
-/* Idle function for 315/330 series */
+/* Idle function for 315/330/340 series and XGI */
 #define Q_STATUS 0x85CC
 #define SiS315Idle \
   { \
+  while( (SIS_MMIO_IN16(pSiS->IOBase, Q_STATUS+2) & 0x8000) != 0x8000){}; \
+  while( (SIS_MMIO_IN16(pSiS->IOBase, Q_STATUS+2) & 0x8000) != 0x8000){}; \
   while( (SIS_MMIO_IN16(pSiS->IOBase, Q_STATUS+2) & 0x8000) != 0x8000){}; \
   while( (SIS_MMIO_IN16(pSiS->IOBase, Q_STATUS+2) & 0x8000) != 0x8000){}; \
   }
@@ -94,8 +96,13 @@ extern void GlxSetVisualConfigs(
     void **configprivs
 );
 
+/* The kernel's "sis" DRM module handles all chipsets */
 static char SISKernelDriverName[] = "sis";
-static char SISClientDriverName[] = "sis";
+
+/* The client side DRI drivers are different: */
+static char SISClientDriverNameSiS300[] = "sis";	/* 300, 540, 630, 730 */
+static char SISClientDriverNameSiS315[] = "sis315";	/* All of 315/330 series */
+static char SISClientDriverNameXGI[]    = "xgi";	/* XGI V3, V5, V8 */
 
 static Bool SISInitVisualConfigs(ScreenPtr pScreen);
 static Bool SISCreateContext(ScreenPtr pScreen, VisualPtr visual,
@@ -294,7 +301,13 @@ SISDRIScreenInit(ScreenPtr pScreen)
   pSIS->pDRIInfo = pDRIInfo;
 
   pDRIInfo->drmDriverName = SISKernelDriverName;
-  pDRIInfo->clientDriverName = SISClientDriverName;
+  if(pSIS->VGAEngine == SIS_300_VGA) {
+     pDRIInfo->clientDriverName = SISClientDriverNameSiS300;
+  } else if(pSIS->ChipFlags & SiSCF_IsXGI) {
+     pDRIInfo->clientDriverName = SISClientDriverNameXGI;
+  } else {
+     pDRIInfo->clientDriverName = SISClientDriverNameSiS315;
+  }
 
 #ifdef SISHAVECREATEBUSID
   if(xf86LoaderCheckSymbol("DRICreatePCIBusID")) {
@@ -360,7 +373,8 @@ SISDRIScreenInit(ScreenPtr pScreen)
    * in the SAREA header
    */
   if(sizeof(XF86DRISAREARec) + sizeof(SISSAREAPriv) > SAREA_MAX) {
-     xf86DrvMsg(pScrn->scrnIndex, X_ERROR, "[dri] Data does not fit in SAREA. Disabling the DRI.\n");
+     xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
+		"[dri] Data does not fit in SAREA. Disabling the DRI.\n");
      return FALSE;
   }
   pDRIInfo->SAREASize = SAREA_MAX;

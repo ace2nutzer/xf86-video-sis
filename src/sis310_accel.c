@@ -1,7 +1,7 @@
 /* $XFree86$ */
 /* $XdotOrg$ */
 /*
- * 2D Acceleration for SiS 315 and 330 series
+ * 2D Acceleration for SiS 315, 330 and 340 series
  *
  * Copyright (C) 2001-2005 by Thomas Winischhofer, Vienna, Austria
  *

@@ -181,7 +181,7 @@ static PciChipsets SISPciChipsets[] = {
 
 static SymTabRec XGIChipsets[] = {
     { PCI_CHIP_XGIXG20,     "Volari Z7 (XG20)" },
-    { PCI_CHIP_XGIXG40,     "Volari V3/V5/V8/Duo (XG40)" },
+    { PCI_CHIP_XGIXG40,     "Volari V3XT/V5/V8/Duo (XG40)" },
     { -1,                   NULL }
 };
 
@@ -4574,6 +4574,79 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	* 4. No MaxXFBMem, no sisfb: Use all memory
 	*/
 	pSiS->maxxfbmem = pSiS->availMem;
+
+	/* ... except on chipsets, for which DRI is
+	 * supported: If DRI is enabled, we now limit
+	 * ourselves to a reasonable default:
+	 */
+
+	if(pSiS->loadDRI) {
+	   if(pSiS->FbBaseOffset) {
+	      /* a. DRI heap BELOW framebuffer */
+	      /* See how much UMA and LFB memory we have,
+	       * and calculate a reasonable default. We
+	       * use more vram for ourselves because these
+	       * chips are eg. capable of larger Xv
+	       * overlays, etc.
+	       */
+	      unsigned long total = (pSiS->SiS76xLFBSize + pSiS->SiS76xUMASize) / 1024;
+	      unsigned long mymax;
+	      if(total <= 16384)			/* <= 16MB: Use 8MB for X */
+	         mymax = 8192 * 1024;
+	      else if(total <= 32768)			/* <= 32MB: Use 16MB for X */
+	         mymax = 16384 * 1024;
+	      else					/* Otherwise: Use 20MB for X */
+	         mymax = 20 * 1024 * 1024;
+	      /* availMem is right now adjusted to not use the UMA
+	       * area. Make sure that our default doesn't reach
+	       * into the UMA area either.
+	       */
+	      if(pSiS->availMem > mymax) {
+		 /* Write our default to maxxfbmem */
+		 pSiS->maxxfbmem = mymax;
+		 /* Revert our changes to availMem */
+		 pSiS->availMem += pSiS->FbBaseOffset;
+		 /* Use our default setting */
+		 pSiS->FbBaseOffset = pSiS->availMem - pSiS->maxxfbmem;
+		 pSiS->availMem -= pSiS->FbBaseOffset;
+	      }
+	   } else {
+	      /* b. DRI heap ABOVE framebuffer (traditional layout) */
+	      /* See how much video memory we have, and calculate
+	       * a reasonable default.
+	       * Since DRI is pointless with less than 4MB of total
+	       * video RAM, we disable it in that case.
+	       */
+	      if(pScrn->videoRam <= 4096)
+	         pSiS->loadDRI = FALSE;
+	      else if(pScrn->videoRam <= 8192)		/* <= 8MB: Use 4MB for X */
+	         pSiS->maxxfbmem = 4096 * 1024;
+	      else if(pScrn->videoRam <= 16384)		/* <= 16MB: Use 8MB for X */
+	         pSiS->maxxfbmem = 8192 * 1024;
+#ifdef SISMERGED					/* Otherwise: --- */
+	      else if(pSiS->MergedFB) {
+	         if(pScrn->videoRam <= 65536)
+	            pSiS->maxxfbmem = 16384 * 1024;	/* If MergedFB and <=64MB, use 16MB for X */
+		 else
+		    pSiS->maxxfbmem = 20 * 1024 * 1024;	/* If MergedFB and > 64MB, use 20MB for X */
+	      }
+#endif
+	        else if(pSiS->VGAEngine == SIS_315_VGA) {
+	         if(pScrn->videoRam <= 65536)
+	            pSiS->maxxfbmem = 16384 * 1024;	/* On >=315 series and <=64MB, use 16MB */
+		 else
+		    pSiS->maxxfbmem = 20 * 1024 * 1024;	/* On >=315 series and > 64MB, use 20MB */
+	      } else
+	         pSiS->maxxfbmem = 12288 * 1024;	/* On <315 series, use 12MB */
+
+	      /* A final check */
+	      if(pSiS->maxxfbmem > pSiS->availMem) {
+		 pSiS->maxxfbmem = pSiS->availMem;
+		 pSiS->loadDRI = FALSE;
+	      }
+	   }
+
+	}
     }
 
     xf86DrvMsg(pScrn->scrnIndex, X_INFO, "Using %dK of framebuffer memory at offset %dK\n",
