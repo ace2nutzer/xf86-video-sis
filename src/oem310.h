@@ -1,7 +1,7 @@
 /* $XFree86$ */
 /* $XdotOrg$ */
 /*
- * OEM Data for 315/330 series
+ * OEM Data for 315/330/340 series
  *
  * Copyright (C) 2001-2005 by Thomas Winischhofer, Vienna, Austria
  *

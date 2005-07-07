@@ -428,9 +428,9 @@ sis315Setup(ScrnInfoPtr pScrn)
     case PCI_CHIP_XGIXG20:
     case PCI_CHIP_XGIXG40:
 
-       pSiS->IsAGPCard = TRUE;
-
        if(pSiS->ChipType != XGI_20) {	/* SIS340, XGI_40 */
+
+          pSiS->IsAGPCard = TRUE;
 
           if(pSiS->ChipRev == 2) {
 	     if(config1 & 0x01) config1 = 0x02;

@@ -3113,17 +3113,23 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
     pSiS->pInt = NULL;
     if(!pSiS->Primary) {
 #if !defined(__alpha__)
-       xf86DrvMsg(pScrn->scrnIndex, X_INFO,
+       /* Now check if the adapter has been initialized before,
+        * ie its memory and i/o resources are enabled.
+	* -- No, don't do this - works only on some boards.
+	*/
+       /*unsigned short pcireg04 = pciReadWord(pSiS->PciTag, 0x04);
+       if((pcireg04 & 0x03) != 0x03) { */
+          /* If not, soft-boot the card through int10 */
+          xf86DrvMsg(pScrn->scrnIndex, X_INFO,
 		"Initializing display adapter through int10\n");
+          if(xf86LoadSubModule(pScrn, "int10")) {
+	     xf86LoaderReqSymLists(int10Symbols, NULL);
+	     pSiS->pInt = xf86InitInt10(pSiS->pEnt->index);
 #endif
-       if(xf86LoadSubModule(pScrn, "int10")) {
-	  xf86LoaderReqSymLists(int10Symbols, NULL);
-#if !defined(__alpha__)
-	  pSiS->pInt = xf86InitInt10(pSiS->pEnt->index);
-#endif
-       } else {
-	  SISErrorLog(pScrn, "Could not load int10 module\n");
-       }
+          } else {
+	     SISErrorLog(pScrn, "Could not load int10 module\n");
+          }
+       /*}*/
     }
 
 #if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,2,99,0,0)
@@ -3525,7 +3531,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 
 		   if(pSiS->sisfbfound) {
 		      xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
-			     "%s: SiS kernel fb driver (sisfb) %d.%d.%d detected (PCI: %d:%d.%d)\n",
+			     "%s: SiS kernel fb driver (sisfb) %d.%d.%d detected (PCI:%02d:%02d.%d)\n",
 				&name[5],
 				mysisfbinfo->sisfb_version,
 				mysisfbinfo->sisfb_revision,
@@ -3551,25 +3557,25 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 			 pSiS->sisfbDSTN = mysisfbinfo->sisfb_curdstn;
 			 pSiS->sisfbxSTN = TRUE;
 			 xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
-				"sisfb: memory heap starts at %dKB, size %dKB, viewport at %dKB\n",
+				"sisfb: memory heap at %dKB, size %dKB, viewport at %dKB\n",
 				(int)pSiS->sisfbHeapStart, (int)pSiS->sisfbHeapSize,
 				(int)pSiS->sisfbVideoOffset/1024);
 		      } else {
 			 xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
-				"sisfb: memory heap starts at %dKB\n", (int)pSiS->sisfbHeapStart);
+				"sisfb: memory heap at %dKB\n", (int)pSiS->sisfbHeapStart);
 		      }
 		      xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
 				"sisfb: using video mode 0x%02x\n", mysisfbinfo->fbvidmode);
 		      pSiS->OldMode = mysisfbinfo->fbvidmode;
 		      if(sisfbversion >= 0x010506) {
 			 xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
-				"sisfb: %sreserved HW cursor, using %s cmd queue\n",
-				(mysisfbinfo->sisfb_caps & 0x80) ? "" : "not ",
-				(mysisfbinfo->sisfb_caps & 0x40) ? "SiS300 Turbo" :
-				   (mysisfbinfo->sisfb_caps & 0x20) ? "SiS315/330/340 AGP" :
-				      (mysisfbinfo->sisfb_caps & 0x10) ? "SiS315/330/340 VRAM" :
-					(mysisfbinfo->sisfb_caps & 0x08) ? "SiS315/330/340 MMIO" :
-					   "no");
+				"sisfb: using %s, reserved %dK\n",
+				(mysisfbinfo->sisfb_caps & 0x40) ? "SiS300 series Turboqueue" :
+				   (mysisfbinfo->sisfb_caps & 0x20) ? "SiS315/330/340 series AGP command queue" :
+				      (mysisfbinfo->sisfb_caps & 0x10) ? "SiS315/330/340 series VRAM command queue" :
+					(mysisfbinfo->sisfb_caps & 0x08) ? "SiS315/330/340 series MMIO mode" :
+					   "no command queue",
+				(mysisfbinfo->sisfb_caps & 0x78) ? (int)mysisfbinfo->sisfb_tqlen : 0);
 		      }
 		      if(sisfbversion >= 0x01050A) {
 			 /* We can trust the pdc value if sisfb is of recent version */
@@ -3691,6 +3697,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	     pSiSEnt->DisableDual = FALSE;
 	     pSiSEnt->BIOS = NULL;
 	     pSiSEnt->ROM661New = FALSE;
+	     pSiSEnt->HaveXGIBIOS = FALSE;
 	     pSiSEnt->SiS_Pr = NULL;
 	     pSiSEnt->RenderAccelArray = NULL;
 	     pSiSEnt->SiSFastVidCopy = pSiSEnt->SiSFastMemCopy = NULL;
@@ -3774,9 +3781,6 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
        }
        pSiS->SiS_Pr->SiS_MyCR63 = pSiS->myCR63;
        pSiS->SiS_Pr->DDCPortMixup = FALSE;
-       if((pSiS->ChipType == XGI_40) && (pSiS->ChipFlags & SiSCF_IsXGIV3)) {
-          pSiS->SiS_Pr->DDCPortMixup = TRUE;
-       }
     }
 
     /* Get our relocated IO registers */
@@ -3985,17 +3989,18 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
     pSiS->BIOS = NULL;
     pSiS->SiS_Pr->UseROM = FALSE;
     pSiS->ROM661New = FALSE;
+    pSiS->HaveXGIBIOS = FALSE;
 
     /* Don't use BIOS image for XGI - different layout. */
 
-    if(((pSiS->VGAEngine == SIS_300_VGA) || (pSiS->VGAEngine == SIS_315_VGA)) &&
-       (!(pSiS->SiS_SD2_Flags & SiS_SD2_ISXGI))) {
+    if((pSiS->VGAEngine == SIS_300_VGA) || (pSiS->VGAEngine == SIS_315_VGA)) {
 #ifdef SISDUALHEAD
        if(pSiSEnt) {
 	  if(pSiSEnt->BIOS) {
 	     pSiS->BIOS = pSiSEnt->BIOS;
 	     pSiS->SiS_Pr->VirtualRomBase = pSiS->BIOS;
 	     pSiS->ROM661New = pSiSEnt->ROM661New;
+	     pSiS->HaveXGIBIOS = pSiSEnt->HaveXGIBIOS;
 	  }
        }
 #endif
@@ -4057,22 +4062,43 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
              } else {
 		UShort romptr;
 		pSiS->SiS_Pr->VirtualRomBase = pSiS->BIOS;
-		pSiS->ROM661New = SiSDetermineROMLayout661(pSiS->SiS_Pr);
+		if(pSiS->ChipFlags & SiSCF_IsXGI) {
+		   pSiS->HaveXGIBIOS = TRUE;
+		   pSiS->SiS_Pr->UseROM = FALSE;
+		   if(pSiS->ChipFlags & SiSCF_IsXGIV3) {
+		      if(!(pSiS->BIOS[0x1d1] & 0x01)) {
+			 pSiS->SiS_Pr->DDCPortMixup = TRUE;
+		      }
+	           }
+	        } else {
+		   pSiS->ROM661New = SiSDetermineROMLayout661(pSiS->SiS_Pr);
+		}
 		romptr = pSiS->BIOS[0x16] | (pSiS->BIOS[0x17] << 8);
 		xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
 			"Video BIOS version \"%7s\" found (%s data layout)\n",
-			&pSiS->BIOS[romptr], pSiS->ROM661New ? "new" : "old");
+			&pSiS->BIOS[romptr], pSiS->ROM661New ? "new SiS" :
+				(pSiS->HaveXGIBIOS ? "XGI" : "old SiS"));
+		if(pSiS->SiS_Pr->DDCPortMixup) {
+		   xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
+			"*** Buggy XGI V3XT card detected: If VGA and DVI are connected at the\n");
+		   xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
+			"*** same time, BIOS and driver will be unable to detect DVI connection.\n");
+		}
 #ifdef SISDUALHEAD
 		if(pSiSEnt) {
 		   pSiSEnt->BIOS = pSiS->BIOS;
 		   pSiSEnt->ROM661New = pSiS->ROM661New;
+		   pSiSEnt->HaveXGIBIOS = pSiS->HaveXGIBIOS;
 		}
 #endif
 	     }
           }
        }
-       if(pSiS->BIOS) pSiS->SiS_Pr->UseROM = TRUE;
-       else           pSiS->SiS_Pr->UseROM = FALSE;
+
+       if(!(pSiS->ChipFlags & SiSCF_IsXGI)) {
+          if(pSiS->BIOS) pSiS->SiS_Pr->UseROM = TRUE;
+          else           pSiS->SiS_Pr->UseROM = FALSE;
+       }
     }
 
     /* Evaluate options */

@@ -839,9 +839,7 @@ SISSense30x(ScrnInfoPtr pScrn, Bool quiet)
 	  }
 	  biosflag = pSiS->BIOS[0xfe];
        } else if((pSiS->Chipset == PCI_CHIP_SIS660) ||
-	         (pSiS->Chipset == PCI_CHIP_SIS340) ||
-		 (pSiS->Chipset == PCI_CHIP_XGIXG20) ||
-		 (pSiS->Chipset == PCI_CHIP_XGIXG40)) {
+	         (pSiS->Chipset == PCI_CHIP_SIS340)) {
 	  if(pSiS->ROM661New) {
 	     biosflag = 2;
 	     vga2 = GETROMWORD(0x63);
@@ -851,43 +849,28 @@ SISSense30x(ScrnInfoPtr pScrn, Bool quiet)
 	     svhs = cvbs = GETROMWORD(0x65);
 	     if(pSiS->BIOS[0x5d] & 0x04) biosflag |= 0x01;
 	  }
-       } else if(!pSiS->ROM661New) {
-#if 0	  /* eg. 1.15.23 has wrong values here */
-	  myflag = 0;
-	  if(pSiS->VBFlags & VB_301) {
-	     if(pSiS->Chipset == PCI_CHIP_SIS330) {
-	        myflag = 0xe5; i = 0x11b;
-	     } else {
-	        myflag = 0xbd; i = 0xf3
-	     }
-	  } else if(pSiS->VBFlags & (VB_301B|VB_302B|VB_301LV|VB_302LV)) {
-	     if(pSiS->Chipset == PCI_CHIP_SIS330) {
-	        myflag = 0xeb; i = 0x11b;
-	     } else {
-	        myflag = 0xc3; i = 0xf3
-	     }
-	  }
-	  if(myflag) {
-	     biosflag = pSiS->BIOS[i];    vga2 = GETROMWORD(myflag);
-	     svhs = GETROMWORD(myflag+2); cvbs = GETROMWORD(myflag+4);
-	  }
-#endif
+       }
+       /* No "else", some BIOSes carry wrong data */
+    }
+
+    if(pSiS->ChipType >= XGI_20) {
+       if(pSiS->HaveXGIBIOS) {
+          biosflag = pSiS->BIOS[0x58] & 0x03;
+       } else {
+          /* These boards have a s-video connector, but its
+	   * pins are routed both the bridge's composite and
+	   * svideo pins. What for, is beyond me. Anyway,
+	   * since a svideo connected TV now is also being
+	   * detected as a composite connected one, we don't
+	   * check for composite if svideo is detected - unless
+	   * the BIOS flags tell us otherwise.
+	   */
+	   biosflag &= ~0x02;
        }
     }
 
     if(!(pSiS->VBFlags & VB_SISVGA2BRIDGE)) {
        vga2 = vga2_c = 0;
-    }
-
-    if(pSiS->ChipType >= XGI_20) {
-       /* These boards have a s-video connector, but its
-	* pins are routed both the bridge's composite and
-	* svideo pins. What for, is beyond me. Anyway,
-	* since a svideo connected TV now is also being
-	* detected as a composite connected one, we don't
-	* check for composite if svideo is detected.
-	*/
-	biosflag &= ~0x02;
     }
 
     inSISIDXREG(SISSR,0x1e,backupSR_1e);

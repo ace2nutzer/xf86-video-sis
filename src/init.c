@@ -2,9 +2,9 @@
 /* $XdotOrg$ */
 /*
  * Mode initializing code (CRT1 section) for
- * for SiS 300/305/540/630/730 and
- *     SiS 315/550/[M]650/651/[M]661[FGM]X/[M]74x[GX]/330/[M]76x[GX]
- *     XGI Volari V3[XT]/V5/V8, Z7
+ * for SiS 300/305/540/630/730,
+ *     SiS 315/550/[M]650/651/[M]661[FGM]X/[M]74x[GX]/330/[M]76x[GX],
+ *     XGI Volari V3XT/V5/V8, Z7
  * (Universal module for Linux kernel framebuffer and X.org/XFree86 4.x)
  *
  * Copyright (C) 2001-2005 by Thomas Winischhofer, Vienna, Austria
@@ -1235,7 +1235,10 @@ SiSDetermineROMLayout661(struct SiS_Private *SiS_Pr)
    unsigned char  *ROMAddr  = SiS_Pr->VirtualRomBase;
    unsigned short romversoffs, romvmaj = 1, romvmin = 0;
 
-   if(SiS_Pr->ChipType >= SIS_761) {
+   if(SiS_Pr->ChipType >= XGI_20) {
+      /* XGI ROMs don't qualify */
+      return FALSE;
+   } else if(SiS_Pr->ChipType >= SIS_761) {
       /* I very much assume 761, 340 and newer will use new layout */
       return TRUE;
    } else if(SiS_Pr->ChipType >= SIS_661) {
@@ -1290,9 +1293,8 @@ SiSDetermineROMUsage(struct SiS_Private *SiS_Pr)
 	  */
 	 SiS_Pr->SiS_UseROM = TRUE;
       } else if(SiS_Pr->ChipType >= XGI_20) {
-         /* We don't use the ROM on these, as we 1) don't really
-	  * need it, and 2) the image does not conform to any
-	  * so far known data structure.
+         /* We don't use the ROM on these, as we don't really
+	  * need it.
 	  */
          SiS_Pr->SiS_UseROM = FALSE;
       } else {

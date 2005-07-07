@@ -1351,7 +1351,9 @@ struct _SISFB_INFO {
 	CARD32	sisfb_curfstn;			/* currently running FSTN/DSTN mode */
 	CARD32	sisfb_curdstn;
 
-	CARD8 reserved[192];			/* for future use */
+	CARD16	sisfb_pci_vendor;		/* PCI vendor (SiS or XGI) */
+
+	CARD8 reserved[190];			/* for future use */
 };
 
 /* Mandatory functions */

@@ -2,8 +2,9 @@
 /* $XdotOrg$ */
 /*
  * Mode initializing code (CRT2 section)
- for SiS 300/305/540/630/730 and
- *     SiS 315/550/[M]650/651/[M]661[FGM]X/[M]74x[GX]/330/[M]76x[GX]
+ * for SiS 300/305/540/630/730,
+ *     SiS 315/550/[M]650/651/[M]661[FGM]X/[M]74x[GX]/330/[M]76x[GX],
+ *     XGI V3XT/V5/V8, Z7
  * (Universal module for Linux kernel framebuffer and X.org/XFree86 4.x)
  *
  * Copyright (C) 2001-2005 by Thomas Winischhofer, Vienna, Austria

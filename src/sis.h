@@ -799,6 +799,7 @@ typedef struct {
     UChar		OldMode;
     int			HWCursorMBufNum, HWCursorCBufNum;
     Bool		ROM661New;
+    Bool		HaveXGIBIOS;
     Bool		XvUseMemcpy;
     Bool		BenchMemCpy;
     Bool		HaveFastVidCpy;
@@ -1215,6 +1216,7 @@ typedef struct {
     int			HWCursorMBufNum, HWCursorCBufNum;
     ULong		mmioSize;
     Bool		ROM661New;
+    Bool		HaveXGIBIOS;
     Bool		NewCRLayout;
     Bool		skipswitchcheck;
     unsigned int	VBFlagsInit;
