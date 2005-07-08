@@ -555,11 +555,11 @@ SiS300Save(ScrnInfoPtr pScrn, SISRegPtr sisReg)
 #ifndef TWDEBUG
     if(!pSiS->UseVESA) {
 #endif
-       if(pSiS->VBFlags2 & (VB2_LVDS|VB2_CHRONTEL))
+       if(pSiS->VBFlags2 & (VB2_LVDS | VB2_CHRONTEL))
           SiSLVDSChrontelSave(pScrn, sisReg);
        else if(pSiS->VBFlags2 & VB2_301)
           SiS301Save(pScrn, sisReg);
-       else if(pSiS->VBFlags2 & (VB2_301B|VB2_301C|VB2_302B|VB2_301LV|VB2_302LV|VB2_302ELV))
+       else if(pSiS->VBFlags2 & VB2_30xBLV)
           SiS301BSave(pScrn, sisReg);
 #ifndef TWDEBUG
     }
@@ -652,7 +652,7 @@ SiS300Restore(ScrnInfoPtr pScrn, SISRegPtr sisReg)
     }
 
     /* Restore VCLK and ECLK */
-    if(pSiS->VBFlags2 & (VB2_LVDS | VB2_301B | VB2_301C)) {
+    if(pSiS->VBFlags2 & (VB2_LVDS | VB2_30xB)) {
        outSISIDXREG(SISSR,0x31,0x20);
        outSISIDXREG(SISSR,0x2b,sisReg->sisRegs3C4[0x2b]);
        outSISIDXREG(SISSR,0x2c,sisReg->sisRegs3C4[0x2c]);
@@ -666,7 +666,7 @@ SiS300Restore(ScrnInfoPtr pScrn, SISRegPtr sisReg)
     outSISIDXREG(SISSR,0x2b,sisReg->sisRegs3C4[0x2b]);
     outSISIDXREG(SISSR,0x2c,sisReg->sisRegs3C4[0x2c]);
     outSISIDXREG(SISSR,0x2d,0x80);
-    if(pSiS->VBFlags2 & (VB2_LVDS | VB2_301B | VB2_301C)) {
+    if(pSiS->VBFlags2 & (VB2_LVDS | VB2_30xB)) {
        outSISIDXREG(SISSR,0x31,0x20);
        outSISIDXREG(SISSR,0x2e,sisReg->sisRegs3C4[0x2e]);
        outSISIDXREG(SISSR,0x2f,sisReg->sisRegs3C4[0x2f]);
@@ -702,11 +702,11 @@ SiS300Restore(ScrnInfoPtr pScrn, SISRegPtr sisReg)
 
     /* Restore panel link/video bridge registers */
     if(!(pSiS->UseVESA)) {
-       if(pSiS->VBFlags2 & (VB2_LVDS|VB2_CHRONTEL))
+       if(pSiS->VBFlags2 & (VB2_LVDS | VB2_CHRONTEL))
           SiSLVDSChrontelRestore(pScrn, sisReg);
        else if(pSiS->VBFlags2 & VB2_301)
           SiS301Restore(pScrn, sisReg);
-       else if(pSiS->VBFlags2 & (VB2_301B|VB2_301C|VB2_302B|VB2_301LV|VB2_302LV|VB2_302ELV))
+       else if(pSiS->VBFlags2 & VB2_30xBLV)
           SiS301BRestore(pScrn, sisReg);
     }
 
@@ -777,11 +777,11 @@ SiS315Save(ScrnInfoPtr pScrn, SISRegPtr sisReg)
 #ifndef TWDEBUG
     if(!pSiS->UseVESA) {
 #endif
-       if(pSiS->VBFlags2 & (VB2_LVDS|VB2_CHRONTEL))
+       if(pSiS->VBFlags2 & (VB2_LVDS | VB2_CHRONTEL))
           SiSLVDSChrontelSave(pScrn, sisReg);
        else if(pSiS->VBFlags2 & VB2_301)
           SiS301Save(pScrn, sisReg);
-       else if(pSiS->VBFlags2 & (VB2_301B|VB2_301C|VB2_302B|VB2_301LV|VB2_302LV|VB2_302ELV))
+       else if(pSiS->VBFlags2 & VB2_30xBLV)
           SiS301BSave(pScrn, sisReg);
 #ifndef TWDEBUG
     }
@@ -901,11 +901,11 @@ SiS315Restore(ScrnInfoPtr pScrn, SISRegPtr sisReg)
 
     /* Restore panel link/video bridge registers */
     if(!(pSiS->UseVESA)) {
-       if(pSiS->VBFlags2 & (VB2_LVDS|VB2_CHRONTEL))
+       if(pSiS->VBFlags2 & (VB2_LVDS | VB2_CHRONTEL))
           SiSLVDSChrontelRestore(pScrn, sisReg);
        else if(pSiS->VBFlags2 & VB2_301)
           SiS301Restore(pScrn, sisReg);
-       else if(pSiS->VBFlags2 & (VB2_301B|VB2_301C|VB2_302B|VB2_301LV|VB2_302LV|VB2_302ELV))
+       else if(pSiS->VBFlags2 & VB2_30xBLV)
           SiS301BRestore(pScrn, sisReg);
     }
 
@@ -1048,13 +1048,12 @@ SiS301BSave(ScrnInfoPtr pScrn, SISRegPtr sisReg)
     Part2max = 0x4d;
     Part3max = 0x3e;
     Part4max = 0x23;
-    if(pSiS->VBFlags2 & (VB2_301C|VB2_302ELV)) {
+    if(pSiS->VBFlags2 & (VB2_301LV | VB2_302LV)) {
+       Part4max = 0x34;
+    } else if(pSiS->VBFlags2 & (VB2_301C | VB2_302ELV)) {
        Part2max = 0xff;
        Part4max = 0x3c;
-    }
-    if(pSiS->VBFlags2 & (VB2_301LV|VB2_302LV)) {
-       Part4max = 0x34;
-    }
+    } /* TODO for 307 */
 
     SiSVBSave(pScrn, sisReg, Part1max, Part2max, Part3max, Part4max);
 
@@ -1073,13 +1072,12 @@ SiS301BRestore(ScrnInfoPtr pScrn, SISRegPtr sisReg)
     Part2max = 0x4d;
     Part3max = 0x3e;
     Part4max = 0x22;
-    if(pSiS->VBFlags2 & (VB2_301C|VB2_302ELV)) {
-       Part2max = 0xff;
-       Part4max = 0x3c;
-    }
     if(pSiS->VBFlags2 & (VB2_301LV|VB2_302LV)) {
        Part4max = 0x34;
-    }
+    } else if(pSiS->VBFlags2 & (VB2_301C|VB2_302ELV)) {
+       Part2max = 0xff;
+       Part4max = 0x3c;
+    } /* TODO for 307 */
 
     SiSRegInit(pSiS->SiS_Pr, pSiS->RelIO + 0x30);
     SiSSetLVDSetc(pSiS->SiS_Pr, 0);
@@ -1402,7 +1400,7 @@ SiSEstimateCRT2Clock(ScrnInfoPtr pScrn, Bool FakeForCRT2)
 	   } else if((pSiS->VBLCDFlags & VB_LCD_CUSTOM) && (pSiS->SiS_Pr->CP_MaxClock)) {
 	      return pSiS->SiS_Pr->CP_MaxClock;
 	   } else {
-	      if(pSiS->VBFlags2 & VB2_301C) return 162000;
+	      if(pSiS->VBFlags2 & VB2_30xC) return 162000;
 	      else                          return 108000;
 	   }
 	} else if(pSiS->VBFlags & CRT2_TV) {
@@ -1548,6 +1546,7 @@ int SiSMemBandWidth(ScrnInfoPtr pScrn, Bool IsForCRT2)
 		    maxcrt2 = 135000;
 		    if(pSiS->VBFlags2 & (VB2_301B|VB2_302B)) maxcrt2 = 162000;
 		    else if(pSiS->VBFlags2 & VB2_301C)       maxcrt2 = 203000;
+		    else if(pSiS->VBFlags2 & VB2_307T)       maxcrt2 = 203000; /* TODO */
 		    /* if(pSiS->VBFlags2 & VB2_30xBDH)       maxcrt2 = 100000;
 		       Ignore 301B-DH here; seems the current version is like
 		       301B anyway */

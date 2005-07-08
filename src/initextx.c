@@ -377,7 +377,7 @@ SiSBuildBuiltInModeList(ScrnInfoPtr pScrn, BOOLEAN includelcdmodes, BOOLEAN isfo
 
 		  l = SiS_PlasmaTable[i].plasmamodes[k] & 0x3f;
 
-		  if(pSiS->VBFlags2 & (VB2_301 | VB2_301B | VB2_302B | VB2_301LV)) {
+		  if(!(pSiS->VBFlags2 & VB2_LCDOVER1280BRIDGE)) {
 		     if(isfordvi) {
 		        if(SiS_PlasmaMode[l].VDisplay > 1024) continue;
 		     }
@@ -899,7 +899,7 @@ SiS_SenseLCDDDC(struct SiS_Private *SiS_Pr, SISPtr pSiS)
 		}
 		break;
 	    case 1600:
-		if((pSiS->VGAEngine == SIS_315_VGA) && (pSiS->VBFlags2 & VB2_301C)) {
+		if((pSiS->VGAEngine == SIS_315_VGA) && (pSiS->VBFlags2 & VB2_30xC)) {
 		   if(yres == 1200) {
 		      if( (pclk == 16200) &&
 			  (phb == (2160 - 1600)) &&
@@ -1042,11 +1042,11 @@ SiS_SenseLCDDDC(struct SiS_Private *SiS_Pr, SISPtr pSiS)
 		  (SiS_Pr->CP_VSyncStart[i] > SiS_Pr->CP_VSyncEnd[i])			  ||
 		  (SiS_Pr->CP_VSyncStart[i] > SiS_Pr->CP_VTotal[i])			  ||
 		  (SiS_Pr->CP_VSyncEnd[i] > SiS_Pr->CP_VTotal[i])			  ||
-		  (((pSiS->VBFlags2 & VB2_301C) && (SiS_Pr->CP_Clock[i] > 162500)) ||
-		   ((!(pSiS->VBFlags2 & VB2_301C))        &&
-		    ( (SiS_Pr->CP_Clock[i] > 110500)  ||
+		  (((pSiS->VBFlags2 & VB2_30xC) && (SiS_Pr->CP_Clock[i] > 162500)) ||
+		   ((!(pSiS->VBFlags2 & VB2_30xC))        &&
+		    ( (SiS_Pr->CP_Clock[i] > 110500)  ||		/* TODO for 307 */
 		      (SiS_Pr->CP_VDisplay[i] > 1024) ||
-		      (SiS_Pr->CP_HDisplay[i] > 1600) )))					  ||
+		      (SiS_Pr->CP_HDisplay[i] > 1600) )))				  ||
 		  (buffer[base+17] & 0x80)) {
 
 		  SiS_Pr->CP_DataValid[i] = FALSE;
@@ -1298,11 +1298,11 @@ SiS_SenseLCDDDC(struct SiS_Private *SiS_Pr, SISPtr pSiS)
 	       (SiS_Pr->CP_VSyncStart[i] > SiS_Pr->CP_VSyncEnd[i])  			||
 	       (SiS_Pr->CP_VSyncStart[i] > SiS_Pr->CP_VTotal[i])    			||
 	       (SiS_Pr->CP_VSyncEnd[i] > SiS_Pr->CP_VTotal[i])      			||
-	       (((pSiS->VBFlags2 & VB2_301C) && (SiS_Pr->CP_Clock[i] > 162500)) ||
-	        ((!(pSiS->VBFlags2 & VB2_301C))        &&
+	       (((pSiS->VBFlags2 & VB2_30xC) && (SiS_Pr->CP_Clock[i] > 162500)) ||
+	        ((!(pSiS->VBFlags2 & VB2_30xC))        &&
 		 ( (SiS_Pr->CP_Clock[i] > 110500)  ||
 		   (SiS_Pr->CP_VDisplay[i] > 1024) ||
-		   (SiS_Pr->CP_HDisplay[i] > 1600) )))	||
+		   (SiS_Pr->CP_HDisplay[i] > 1600) )))					||
 	       (buffer[index + 17] & 0x80)) {
 
 	       SiS_Pr->CP_DataValid[i] = FALSE;
