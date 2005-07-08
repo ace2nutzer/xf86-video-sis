@@ -484,7 +484,8 @@ extern void		SiS_Generic_ConvertCRData(struct SiS_Private *SiS_Pr, unsigned char
 				int xres, int yres, DisplayModePtr current);
 
 extern unsigned short	SiS_InitDDCRegs(struct SiS_Private *SiS_Pr, unsigned int VBFlags, int VGAEngine,
-                		unsigned short adaptnum, unsigned short DDCdatatype, BOOLEAN checkcr32);
+                		unsigned short adaptnum, unsigned short DDCdatatype, BOOLEAN checkcr32,
+				unsigned int VBFlags2);
 extern unsigned short	SiS_ProbeDDC(struct SiS_Private *SiS_Pr);
 extern unsigned short	SiS_ReadDDC(struct SiS_Private *SiS_Pr, unsigned short DDCdatatype,
 				unsigned char *buffer);

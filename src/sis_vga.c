@@ -1092,39 +1092,46 @@ void SISVGAPreInit(ScrnInfoPtr pScrn)
 	temp1 &= 0xff;
 
 	if(temp1 >= 0xC0) {
-	   if(SISIsUMC(pSiS)) pSiS->VBFlags2 |= VB_SISUMC;
+	   if(SISIsUMC(pSiS)) pSiS->VBFlags2 |= VB2_SISUMC;
 	}
 
         if(temp1 >= 0xE0) {
 		inSISIDXREG(SISPART4, 0x39, temp2);
 		if(temp2 == 0xff) {
-		   pSiS->VBFlags |= VB_302LV;
+		   pSiS->VBFlags |= VB_302LV;	/* Deprecated */
+		   pSiS->VBFlags2 |= VB2_302LV;
 		   sistypeidx = 4;
 		} else {
-		   pSiS->VBFlags |= VB_301C;   	/* VB_302ELV; */
+		   pSiS->VBFlags |= VB_301C;	/* VB_302ELV; */  /* Deprecated */
+		   pSiS->VBFlags2 |= VB2_301C;	/* VB_302ELV; */
 		   sistypeidx = 5; 		/* 6; */
 		}
 	} else if(temp1 >= 0xD0) {
-		pSiS->VBFlags |= VB_301LV;
+		pSiS->VBFlags |= VB_301LV;	/* Deprecated */
+		pSiS->VBFlags2 |= VB2_301LV;
 		sistypeidx = 3;
 	} else if(temp1 >= 0xC0) {
-		pSiS->VBFlags |= VB_301C;
+		pSiS->VBFlags |= VB_301C;	/* Deprecated */
+		pSiS->VBFlags2 |= VB2_301C;
 		sistypeidx = 5;
 	} else if(temp1 >= 0xB0) {
-		pSiS->VBFlags |= VB_301B;
+		pSiS->VBFlags |= VB_301B;	/* Deprecated */
+		pSiS->VBFlags2 |= VB2_301B;
 		sistypeidx = 1;
 		inSISIDXREG(SISPART4, 0x23, temp2);
 		if(!(temp2 & 0x02)) {
-		   pSiS->VBFlags |= VB_30xBDH;
+		   pSiS->VBFlags |= VB_30xBDH;	/* Deprecated */
+		   pSiS->VBFlags2 |= VB2_30xBDH;
 		   sistypeidx = 2;
 		}
 	} else {
-		pSiS->VBFlags |= VB_301;
+		pSiS->VBFlags |= VB_301;	/* Deprecated */
+		pSiS->VBFlags2 |= VB2_301;
 		sistypeidx = 0;
 	}
 
 	xf86DrvMsg(pScrn->scrnIndex, X_PROBED, detectvb, SiSVBTypeStr[sistypeidx],
-				(pSiS->VBFlags2 & VB_SISUMC) ? "UMC-0" : "Charter/UMC-1", 1, temp1);
+				(pSiS->VBFlags2 & VB2_SISUMC) ? "UMC-0" : "Charter/UMC-1", 1, temp1);
 
 	SISSense30x(pScrn, FALSE);
 
@@ -1134,22 +1141,25 @@ void SISVGAPreInit(ScrnInfoPtr pScrn)
 	temp1 &= 0xff;
 
 	if(temp1 >= 0xC0) {
-	   if(SISIsUMC(pSiS)) pSiS->VBFlags2 |= VB_SISUMC;
+	   if(SISIsUMC(pSiS)) pSiS->VBFlags2 |= VB2_SISUMC;
 	}
 
 	if(temp1 >= 0xE0) {
-		pSiS->VBFlags |= VB_302LV;
+		pSiS->VBFlags |= VB_302LV;	/* Deprecated */
+		pSiS->VBFlags2 |= VB2_302LV;
 		sistypeidx = 4;
 	} else if(temp1 >= 0xD0) {
-		pSiS->VBFlags |= VB_301LV;
+		pSiS->VBFlags |= VB_301LV;	/* Deprecated */
+		pSiS->VBFlags2 |= VB2_301LV;
 		sistypeidx = 3;
 	} else {
-		pSiS->VBFlags |= VB_302B;
+		pSiS->VBFlags |= VB_302B;	/* Deprecated */
+		pSiS->VBFlags2 |= VB2_302B;
 		sistypeidx = 7;
 	}
 
 	xf86DrvMsg(pScrn->scrnIndex, X_PROBED, detectvb, SiSVBTypeStr[sistypeidx],
-				(pSiS->VBFlags2 & VB_SISUMC) ? "UMC-0" : "Charter/UMC-1", 2, temp1);
+				(pSiS->VBFlags2 & VB2_SISUMC) ? "UMC-0" : "Charter/UMC-1", 2, temp1);
 
 	SISSense30x(pScrn, FALSE);
 
@@ -1182,7 +1192,8 @@ void SISVGAPreInit(ScrnInfoPtr pScrn)
 	}
 
 	if((temp >= lowerlimitlvds) && (temp <= upperlimitlvds)) {
-	   pSiS->VBFlags |= VB_LVDS;
+	   pSiS->VBFlags |= VB_LVDS;	/* Deprecated */
+	   pSiS->VBFlags2 |= VB2_LVDS;
 	   xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
 	          "Detected LVDS transmitter (External chip ID %d)\n", temp);
 	}
@@ -1214,7 +1225,8 @@ void SISVGAPreInit(ScrnInfoPtr pScrn)
 	      pSiS->postVBCR32 &= ~0x07;
 	   } else if((temp1 >= 0x19) && (temp1 <= 200)) {
 	      /* We only support device ids 0x19-200; other values may indicate DDC problems */
-	      pSiS->VBFlags |= VB_CHRONTEL;
+	      pSiS->VBFlags |= VB_CHRONTEL;	/* Deprecated */
+	      pSiS->VBFlags2 |= VB2_CHRONTEL;
 	      switch (temp1) {
 		case 0x32: temp2 = 0; pSiS->ChrontelType = CHRONTEL_700x; break;
 		case 0x3A: temp2 = 1; pSiS->ChrontelType = CHRONTEL_700x; break;
@@ -1253,12 +1265,14 @@ void SISVGAPreInit(ScrnInfoPtr pScrn)
 	   }
 	}
 	if((pSiS->NewCRLayout) && (temp == 4)) {
-	   pSiS->VBFlags |= VB_CONEXANT;
+	   pSiS->VBFlags |= VB_CONEXANT;	/* Deprecated */
+	   pSiS->VBFlags2 |= VB2_CONEXANT;
 	   xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
 	               "Detected Conexant video bridge - UNSUPPORTED\n");
 	}
 	if((pSiS->VGAEngine == SIS_300_VGA) && (temp == 3)) {
-	    pSiS->VBFlags |= VB_TRUMPION;
+	    pSiS->VBFlags |= VB_TRUMPION;	/* Deprecated */
+	    pSiS->VBFlags2 |= VB2_TRUMPION;
 	    xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
 	               "Detected Trumpion Zurac (I/II/III) LVDS scaler\n");
 	}
@@ -1319,7 +1333,7 @@ void SISVGAPreInit(ScrnInfoPtr pScrn)
      */
     if(pSiS->VGAEngine == SIS_315_VGA) {
 
-       if(pSiS->VBFlags & (VB_301C | VB_302B | VB_301LV | VB_302LV | VB_302ELV)) {
+       if(pSiS->VBFlags2 & VB2_SISLCDABRIDGE) {
           if(pSiS->sisfblcda != 0xff) {
 	     if((pSiS->sisfblcda & 0x03) == 0x03) {
 		pSiS->SiS_Pr->SiS_UseLCDA = TRUE;

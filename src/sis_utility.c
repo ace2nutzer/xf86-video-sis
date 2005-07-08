@@ -447,7 +447,7 @@ SISSwitchCRT2Type(ScrnInfoPtr pScrn, ULong newvbflags, Bool quiet)
        pSiS->VGAEngine != SIS_315_VGA) return FALSE;
 
     /* Only if there is a video bridge */
-    if(!(pSiS->VBFlags & VB_VIDEOBRIDGE)) return FALSE;
+    if(!(pSiS->VBFlags2 & VB2_VIDEOBRIDGE)) return FALSE;
 
 #ifdef SISDUALHEAD
     if(pSiS->DualHeadMode) return FALSE;
@@ -906,6 +906,7 @@ SiSHandleSiSDirectCommand(xSiSCtrlCommandReply *sdcbuf)
       sdcbuf->sdc_result[2] = pSiS->SiS_SD_Flags;
       sdcbuf->sdc_result[3] = pSiS->SiS_SD2_Flags;
       sdcbuf->sdc_result[4] = pSiS->detectedCRT2Devices;
+      sdcbuf->sdc_result[5] = pSiS->VBFlags2;
       break;
 
    case SDC_CMD_GETVBFLAGSVERSION:
@@ -914,6 +915,7 @@ SiSHandleSiSDirectCommand(xSiSCtrlCommandReply *sdcbuf)
 
    case SDC_CMD_GETVBFLAGS:
       sdcbuf->sdc_result[0] = pSiS->VBFlags;
+      sdcbuf->sdc_result[1] = pSiS->VBFlags2;
       break;
 
    case SDC_CMD_CHECKMODEFORCRT2:

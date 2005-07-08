@@ -624,6 +624,11 @@ sis550Setup(ScrnInfoPtr pScrn)
 	     alldone = TRUE;
 	  }
 
+	  if(pSiS->ChipType >= SIS_761) {
+	     pSiS->IsAGPCard = FALSE;
+	     pSiS->IsPCIExpress = TRUE;
+	  }
+
        } else {  /* 661, 741 */
 
 	  int dimmnum;

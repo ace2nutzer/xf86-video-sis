@@ -1439,14 +1439,14 @@ calc_scale_factor(SISOverlayPtr pOverlay, ScrnInfoPtr pScrn,
   /* Stretch image due to panel link scaling */
   if(pSiS->VBFlags & (CRT2_LCD | CRT1_LCDA)) {
      if(pPriv->bridgeIsSlave) {
-	if(pSiS->VBFlags & (VB_LVDS | VB_30xBDH)) {
+	if(pSiS->VBFlags2 & (VB2_LVDS | VB2_30xBDH)) {
 	   if(pSiS->MiscFlags & MISC_PANELLINKSCALER) {
 	      dstH = (dstH * LCDheight) / pOverlay->SCREENheight;
 	   }
 	}
      } else if((iscrt2 && (pSiS->VBFlags & CRT2_LCD)) ||
 	       (!iscrt2 && (pSiS->VBFlags & CRT1_LCDA))) {
-	if(pSiS->VBFlags & (VB_LVDS | VB_30xBDH | CRT1_LCDA)) {
+	if((pSiS->VBFlags2 & (VB2_LVDS | VB2_30xBDH)) || (pSiS->VBFlags & CRT1_LCDA)) {
 	   if(pSiS->MiscFlags & MISC_PANELLINKSCALER) {
 	      dstH = (dstH * LCDheight) / pOverlay->SCREENheight;
 	      if(pPriv->displayMode == DISPMODE_MIRROR) flag = 1;
@@ -1608,7 +1608,7 @@ calc_scale_factor_2(SISOverlayPtr pOverlay, ScrnInfoPtr pScrn,
 
   /* Stretch image due to panel link scaling */
   if(pSiS->VBFlags & CRT2_LCD) {
-     if(pSiS->VBFlags & (VB_LVDS | VB_30xBDH)) {
+     if(pSiS->VBFlags2 & (VB2_LVDS | VB2_30xBDH)) {
 	if(pSiS->MiscFlags & MISC_PANELLINKSCALER) {
 	   dstH = (dstH * LCDheight) / pOverlay->SCREENheight2;
 	   flag = 1;

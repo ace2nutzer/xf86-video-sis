@@ -67,7 +67,8 @@ extern void		SiS_SetCH70xxANDOR(struct SiS_Private *SiS_Pr, unsigned short reg, 
 extern void		SiS_DDC2Delay(struct SiS_Private *SiS_Pr, unsigned short delaytime);
 extern unsigned short	SiS_ReadDDC1Bit(struct SiS_Private *SiS_Pr);
 extern unsigned short	SiS_HandleDDC(struct SiS_Private *SiS_Pr, unsigned int VBFlags, int VGAEngine,
-                              unsigned short adaptnum, unsigned short DDCdatatype, unsigned char *buffer);
+                              unsigned short adaptnum, unsigned short DDCdatatype, unsigned char *buffer,
+			      unsigned int VBFlags2);
 extern void		SiS_SetChrontelGPIO(struct SiS_Private *SiS_Pr, unsigned short myvbinfo);
 extern void		SiS_DisplayOn(struct SiS_Private *SiS_Pr);
 extern unsigned char	SiS_GetSetModeID(ScrnInfoPtr pScrn, unsigned char id);

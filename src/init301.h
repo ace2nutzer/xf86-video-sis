@@ -69,8 +69,10 @@
 #endif
 #include <linux/config.h>
 #include <linux/version.h>
-#include <asm/io.h>
 #include <linux/types.h>
+#include <asm/io.h>
+#include <linux/fb.h>
+#include "sis.h"
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,5,0)
 #include <linux/sisfb.h>
 #else
@@ -414,19 +416,19 @@ void		SiS_DDC2Delay(struct SiS_Private *SiS_Pr, unsigned short delaytime);
 unsigned short	SiS_ReadDDC1Bit(struct SiS_Private *SiS_Pr);
 unsigned short	SiS_HandleDDC(struct SiS_Private *SiS_Pr, unsigned int VBFlags, int VGAEngine,
 			unsigned short adaptnum, unsigned short DDCdatatype,
-			unsigned char *buffer);
+			unsigned char *buffer, unsigned int VBFlags2);
 
 #ifdef SIS_XORG_XF86
 unsigned short		SiS_InitDDCRegs(struct SiS_Private *SiS_Pr, unsigned int VBFlags,
 				int VGAEngine, unsigned short adaptnum, unsigned short DDCdatatype,
-				BOOLEAN checkcr32);
+				BOOLEAN checkcr32, unsigned int VBFlags2);
 unsigned short		SiS_ProbeDDC(struct SiS_Private *SiS_Pr);
 unsigned short		SiS_ReadDDC(struct SiS_Private *SiS_Pr, unsigned short DDCdatatype,
 				unsigned char *buffer);
 #else
 static unsigned short	SiS_InitDDCRegs(struct SiS_Private *SiS_Pr, unsigned int VBFlags,
 				int VGAEngine, unsigned short adaptnum, unsigned short DDCdatatype,
-				BOOLEAN checkcr32);
+				BOOLEAN checkcr32, unsigned int VBFlags2);
 static unsigned short	SiS_ProbeDDC(struct SiS_Private *SiS_Pr);
 static unsigned short	SiS_ReadDDC(struct SiS_Private *SiS_Pr, unsigned short DDCdatatype,
 				unsigned char *buffer);

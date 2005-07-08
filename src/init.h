@@ -78,6 +78,7 @@
 #include <linux/types.h>
 #include <asm/io.h>
 #include <linux/fb.h>
+#include "sis.h"
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,5,0)
 #include <linux/sisfb.h>
 #else
@@ -1515,11 +1516,12 @@ unsigned short	SiS_GetModeID(int VGAEngine, unsigned int VBFlags, int HDisplay, 
 #endif
 unsigned short	SiS_GetModeID_LCD(int VGAEngine, unsigned int VBFlags, int HDisplay,
 				int VDisplay, int Depth, BOOLEAN FSTN,
-				unsigned short CustomT, int LCDwith, int LCDheight);
+				unsigned short CustomT, int LCDwith, int LCDheight,
+				unsigned int VBFlags2);
 unsigned short	SiS_GetModeID_TV(int VGAEngine, unsigned int VBFlags, int HDisplay,
-				int VDisplay, int Depth);
+				int VDisplay, int Depth, unsigned int VBFlags2);
 unsigned short	SiS_GetModeID_VGA2(int VGAEngine, unsigned int VBFlags, int HDisplay,
-				int VDisplay, int Depth);
+				int VDisplay, int Depth, unsigned int VBFlags2);
 
 void		SiS_SetReg(SISIOADDRESS port, unsigned short index, unsigned short data);
 void		SiS_SetRegByte(SISIOADDRESS port, unsigned short data);

@@ -150,7 +150,7 @@ SiS310HideCursor(ScrnInfoPtr pScrn)
 #endif
        sis310DisableHWCursor()
        sis310SetCursorPositionY(2000, 0)
-       if(pSiS->VBFlags & VB_VIDEOBRIDGE) {
+       if(pSiS->VBFlags2 & VB2_VIDEOBRIDGE) {
 	  sis301DisableHWCursor310()
 	  sis301SetCursorPositionY310(2000, 0)
        }
@@ -855,7 +855,7 @@ SiS310LoadCursorImage(ScrnInfoPtr pScrn, UChar *src)
        if(pSiS->ChipFlags & SiSCF_CRT2HWCKaputt) {
           sis301SetCursorAddress310(cursor_addr2)
        } else {
-	  if((pSiS->UseHWARGBCursor) && (!pSiS->VBFlags & DISPTYPE_CRT1)) {
+	  if((pSiS->UseHWARGBCursor) && (!(pSiS->VBFlags & DISPTYPE_CRT1))) {
 	     status2 = sis301GetCursorStatus310;
 	     sis301DisableHWCursor310()
 	     SISWaitRetraceCRT2(pScrn);
@@ -1148,7 +1148,7 @@ SiS300LoadCursorImageARGB(ScrnInfoPtr pScrn, CursorPtr pCurs)
     if(status1) sis300SetCursorStatus(status1)
 
     if(pSiS->VBFlags & CRT2_ENABLE) {
-       if((!pSiS->UseHWARGBCursor) && (!pSiS->VBFlags & DISPTYPE_CRT1)) {
+       if((!pSiS->UseHWARGBCursor) && (!(pSiS->VBFlags & DISPTYPE_CRT1))) {
 	  status2 = sis301GetCursorStatus;
 	  sis301DisableHWCursor()
 	  SISWaitRetraceCRT2(pScrn);
@@ -1279,7 +1279,7 @@ static void SiS310LoadCursorImageARGB(ScrnInfoPtr pScrn, CursorPtr pCurs)
        if(pSiS->ChipFlags & SiSCF_CRT2HWCKaputt) {
           sis301SetCursorAddress310(cursor_addr)
        } else {
-          if((!pSiS->UseHWARGBCursor) && (!pSiS->VBFlags & DISPTYPE_CRT1)) {
+          if((!pSiS->UseHWARGBCursor) && (!(pSiS->VBFlags & DISPTYPE_CRT1))) {
 	     status2 = sis301GetCursorStatus310;
 	     sis301DisableHWCursor310()
 	     SISWaitRetraceCRT2(pScrn);

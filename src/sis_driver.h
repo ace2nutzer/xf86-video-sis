@@ -1467,11 +1467,11 @@ extern unsigned short	SiS_GetModeID(int VGAEngine, unsigned int VBFlags, int HDi
 				int Depth, BOOLEAN FSTN, int LCDwith, int LCDheight);
 extern unsigned short	SiS_GetModeID_LCD(int VGAEngine, unsigned int VBFlags, int HDisplay,
 				int VDisplay, int Depth, BOOLEAN FSTN, unsigned short CustomT,
-				int LCDwith, int LCDheight);
+				int LCDwith, int LCDheight, unsigned int VBFlags2);
 extern unsigned short	SiS_GetModeID_TV(int VGAEngine, unsigned int VBFlags, int HDisplay,
-				int VDisplay, int Depth);
+				int VDisplay, int Depth, unsigned int VBFlags2);
 extern unsigned short	SiS_GetModeID_VGA2(int VGAEngine, unsigned int VBFlags, int HDisplay,
-				int VDisplay, int Depth);
+				int VDisplay, int Depth, unsigned int VBFlags2);
 extern int		SiSTranslateToVESA(ScrnInfoPtr pScrn, int modenumber);
 extern int		SiSTranslateToOldMode(int modenumber);
 extern BOOLEAN		SiSDetermineROMLayout661(struct SiS_Private *SiS_Pr);

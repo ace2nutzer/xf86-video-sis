@@ -377,7 +377,7 @@ SiSBuildBuiltInModeList(ScrnInfoPtr pScrn, BOOLEAN includelcdmodes, BOOLEAN isfo
 
 		  l = SiS_PlasmaTable[i].plasmamodes[k] & 0x3f;
 
-		  if(pSiS->VBFlags & (VB_301|VB_301B|VB_302B|VB_301LV)) {
+		  if(pSiS->VBFlags2 & (VB2_301 | VB2_301B | VB2_302B | VB2_301LV)) {
 		     if(isfordvi) {
 		        if(SiS_PlasmaMode[l].VDisplay > 1024) continue;
 		     }
@@ -755,10 +755,10 @@ SiS_SenseLCDDDC(struct SiS_Private *SiS_Pr, SISPtr pSiS)
    SiS_Pr->CP_PrefClock = 0;
    SiS_Pr->PanelSelfDetected = FALSE;
 
-   if(!(pSiS->VBFlags & (VB_301|VB_301B|VB_301C|VB_302B))) return 0;
-   if(pSiS->VBFlags & VB_30xBDH) return 0;
+   if(!(pSiS->VBFlags2 & VB2_SISTMDSBRIDGE)) return 0;
+   if(pSiS->VBFlags2 & VB2_30xBDH) return 0;
 
-   /* Specific for XGI_40/Rev 2 (XGI V3XT): This card has CRT1's
+   /* Specific for XGI_40/Rev 2/A01 (XGI V3XT A01): This card has CRT1's
     * and CRT2's DDC ports physically connected to each other. There
     * is no connection to the video bridge's DDC port, both DDC
     * channels are routed to the GPU. Smart. If both CRT1 (CRT) and
@@ -768,7 +768,7 @@ SiS_SenseLCDDDC(struct SiS_Private *SiS_Pr, SISPtr pSiS)
    adapternum = 1;
    if(SiS_Pr->DDCPortMixup) adapternum = 0;
 
-   if(SiS_InitDDCRegs(SiS_Pr, pSiS->VBFlags, pSiS->VGAEngine, adapternum, 0, FALSE) == 0xFFFF)
+   if(SiS_InitDDCRegs(SiS_Pr, pSiS->VBFlags, pSiS->VGAEngine, adapternum, 0, FALSE, pSiS->VBFlags2) == 0xFFFF)
       return 0;
 
    SiS_Pr->SiS_DDC_SecAddr = 0x00;
@@ -899,7 +899,7 @@ SiS_SenseLCDDDC(struct SiS_Private *SiS_Pr, SISPtr pSiS)
 		}
 		break;
 	    case 1600:
-		if((pSiS->VGAEngine == SIS_315_VGA) && (pSiS->VBFlags & VB_301C)) {
+		if((pSiS->VGAEngine == SIS_315_VGA) && (pSiS->VBFlags2 & VB2_301C)) {
 		   if(yres == 1200) {
 		      if( (pclk == 16200) &&
 			  (phb == (2160 - 1600)) &&
@@ -1042,10 +1042,11 @@ SiS_SenseLCDDDC(struct SiS_Private *SiS_Pr, SISPtr pSiS)
 		  (SiS_Pr->CP_VSyncStart[i] > SiS_Pr->CP_VSyncEnd[i])			  ||
 		  (SiS_Pr->CP_VSyncStart[i] > SiS_Pr->CP_VTotal[i])			  ||
 		  (SiS_Pr->CP_VSyncEnd[i] > SiS_Pr->CP_VTotal[i])			  ||
-		  (((pSiS->VBFlags & VB_301C) && (SiS_Pr->CP_Clock[i] > 162500)) ||
-		   ((!(pSiS->VBFlags & VB_301C)) &&
-		    ((SiS_Pr->CP_Clock[i] > 110500) || (SiS_Pr->CP_VDisplay[i] > 1024) ||
-		     (SiS_Pr->CP_HDisplay[i] > 1600))))					  ||
+		  (((pSiS->VBFlags2 & VB2_301C) && (SiS_Pr->CP_Clock[i] > 162500)) ||
+		   ((!(pSiS->VBFlags2 & VB2_301C))        &&
+		    ( (SiS_Pr->CP_Clock[i] > 110500)  ||
+		      (SiS_Pr->CP_VDisplay[i] > 1024) ||
+		      (SiS_Pr->CP_HDisplay[i] > 1600) )))					  ||
 		  (buffer[base+17] & 0x80)) {
 
 		  SiS_Pr->CP_DataValid[i] = FALSE;
@@ -1297,10 +1298,11 @@ SiS_SenseLCDDDC(struct SiS_Private *SiS_Pr, SISPtr pSiS)
 	       (SiS_Pr->CP_VSyncStart[i] > SiS_Pr->CP_VSyncEnd[i])  			||
 	       (SiS_Pr->CP_VSyncStart[i] > SiS_Pr->CP_VTotal[i])    			||
 	       (SiS_Pr->CP_VSyncEnd[i] > SiS_Pr->CP_VTotal[i])      			||
-	       (((pSiS->VBFlags & VB_301C) && (SiS_Pr->CP_Clock[i] > 162500)) ||
-	        ((!(pSiS->VBFlags & VB_301C)) &&
-		 ((SiS_Pr->CP_Clock[i] > 110500) || (SiS_Pr->CP_VDisplay[i] > 1024) ||
-		  (SiS_Pr->CP_HDisplay[i] > 1600))))	||
+	       (((pSiS->VBFlags2 & VB2_301C) && (SiS_Pr->CP_Clock[i] > 162500)) ||
+	        ((!(pSiS->VBFlags2 & VB2_301C))        &&
+		 ( (SiS_Pr->CP_Clock[i] > 110500)  ||
+		   (SiS_Pr->CP_VDisplay[i] > 1024) ||
+		   (SiS_Pr->CP_HDisplay[i] > 1600) )))	||
 	       (buffer[index + 17] & 0x80)) {
 
 	       SiS_Pr->CP_DataValid[i] = FALSE;
@@ -1390,9 +1392,9 @@ SiS_SenseVGA2DDC(struct SiS_Private *SiS_Pr, SISPtr pSiS)
    int retry;
    unsigned char buffer[256];
 
-   if(!(pSiS->VBFlags & VB_SISVGA2BRIDGE)) return 0;
+   if(!(pSiS->VBFlags2 & VB2_SISVGA2BRIDGE)) return 0;
 
-   /* Specific for XGI_40/Rev 2 (XGI V3XT): This card has CRT1's
+   /* Specific for XGI_40/Rev 2/A01 (XGI V3XT A01): This card has CRT1's
     * and CRT2's DDC ports physically connected to each other. There
     * is no connection to the video bridge's DDC port, both DDC
     * channels are routed to the GPU. Smart. If both CRT1 (CRT) and
@@ -1404,7 +1406,7 @@ SiS_SenseVGA2DDC(struct SiS_Private *SiS_Pr, SISPtr pSiS)
     */
    if(SiS_Pr->DDCPortMixup) return 0;
 
-   if(SiS_InitDDCRegs(SiS_Pr, pSiS->VBFlags, pSiS->VGAEngine, 2, 0, FALSE) == 0xFFFF)
+   if(SiS_InitDDCRegs(SiS_Pr, pSiS->VBFlags, pSiS->VGAEngine, 2, 0, FALSE, pSiS->VBFlags2) == 0xFFFF)
       return 0;
 
    SiS_Pr->SiS_DDC_SecAddr = 0x00;
