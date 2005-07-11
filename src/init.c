@@ -56,6 +56,10 @@
  * Used by permission.
  */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "init.h"
 
 #ifdef SIS300

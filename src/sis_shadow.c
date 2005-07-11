@@ -29,6 +29,10 @@
  * active when DGA is active and vice versa.
  */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "sis.h"
 #include "servermd.h"
 

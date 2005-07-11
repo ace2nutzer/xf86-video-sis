@@ -34,6 +34,10 @@
  *           Thomas Winischhofer <thomas@winischhofer.net>
  */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "sis.h"
 #include "dgaproc.h"
 

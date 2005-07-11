@@ -57,6 +57,10 @@
  *
  */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #if 1
 #define SET_EMI		/* 302LV/ELV: Set EMI values */
 #endif

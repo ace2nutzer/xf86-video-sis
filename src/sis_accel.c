@@ -34,6 +34,10 @@
  *	     Thomas Winischhofer <thomas@winischhofer.net>.
  */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "sis.h"
 #include "sis_regs.h"
 #ifdef SIS_USE_XAA

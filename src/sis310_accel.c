@@ -34,6 +34,10 @@
  *
  */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "sis.h"
 #define SIS_NEED_MYMMIO
 #define SIS_NEED_ACCELBUF
