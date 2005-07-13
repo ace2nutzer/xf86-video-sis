@@ -3117,26 +3117,19 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 #endif
 
     pSiS->pInt = NULL;
-    if(!pSiS->Primary) {
 #if !defined(__alpha__)
-       /* Now check if the adapter has been initialized before,
-        * ie its memory and i/o resources are enabled.
-	* -- No, don't do this - works only on some boards.
-	*/
-       /*unsigned short pcireg04 = pciReadWord(pSiS->PciTag, 0x04);
-       if((pcireg04 & 0x03) != 0x03) { */
-          /* If not, soft-boot the card through int10 */
+    if(!pSiS->Primary) {
+          /* Soft-boot the card through int10 */
           xf86DrvMsg(pScrn->scrnIndex, X_INFO,
 		"Initializing display adapter through int10\n");
           if(xf86LoadSubModule(pScrn, "int10")) {
 	     xf86LoaderReqSymLists(int10Symbols, NULL);
 	     pSiS->pInt = xf86InitInt10(pSiS->pEnt->index);
-#endif
           } else {
 	     SISErrorLog(pScrn, "Could not load int10 module\n");
           }
-       /*}*/
     }
+#endif
 
 #if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,2,99,0,0)
     {
@@ -3268,6 +3261,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 #ifdef SIS_USE_EXA
     pSiS->ExaRenderCallback = NULL;
 #endif
+    pSiS->InitAccel = SiSPseudo;
     pSiS->SyncAccel = SiSPseudo;
     pSiS->FillRect  = NULL;
     pSiS->BlitRect  = NULL;
@@ -4069,7 +4063,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 		UShort romptr;
 		pSiS->SiS_Pr->VirtualRomBase = pSiS->BIOS;
 		if(pSiS->ChipFlags & SiSCF_IsXGI) {
-		   pSiS->HaveXGIBIOS = TRUE;
+		   pSiS->HaveXGIBIOS = pSiS->SiS_Pr->SiS_XGIROM = TRUE;
 		   pSiS->SiS_Pr->UseROM = FALSE;
 		   if(pSiS->ChipFlags & SiSCF_IsXGIV3) {
 		      if(!(pSiS->BIOS[0x1d1] & 0x01)) {
@@ -12561,6 +12555,14 @@ SiSPostSetMode(ScrnInfoPtr pScrn, SISRegPtr sisReg)
        if(pSiS->ChipType >= SIS_330) {
           /* Enable HWCursor protection (Y pos as trigger) */
           andSISIDXREG(SISCR, 0x5b, ~0x30);
+       }
+    }
+
+    /* Re-initialize accelerator engine */
+    /* (We are sync'ed here) */
+    if(!pSiS->NoAccel) {
+       if(pSiS->InitAccel) {
+          (pSiS->InitAccel)(pScrn);
        }
     }
 

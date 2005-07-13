@@ -1300,6 +1300,8 @@ SiSDetermineROMUsage(struct SiS_Private *SiS_Pr)
    SiS_Pr->SiS_ROMNew = FALSE;
    SiS_Pr->SiS_PWDOffset = 0;
 
+   if(SiS_Pr->ChipType >= XGI_20) return;
+
    if((ROMAddr) && (SiS_Pr->UseROM)) {
       if(SiS_Pr->ChipType == SIS_300) {
 	 /* 300: We check if the code starts below 0x220 by
@@ -1313,11 +1315,6 @@ SiSDetermineROMUsage(struct SiS_Private *SiS_Pr)
 	  * the others do as well
 	  */
 	 SiS_Pr->SiS_UseROM = TRUE;
-      } else if(SiS_Pr->ChipType >= XGI_20) {
-         /* We don't use the ROM on these, as we don't really
-	  * need it.
-	  */
-         SiS_Pr->SiS_UseROM = FALSE;
       } else {
 	 /* 315/330 series stick to the standard(s) */
 	 SiS_Pr->SiS_UseROM = TRUE;
@@ -3090,6 +3087,10 @@ SiS_InitVB(struct SiS_Private *SiS_Pr)
    SiS_Pr->Init_P4_0E = 0;
    if(SiS_Pr->SiS_ROMNew) {
       SiS_Pr->Init_P4_0E = ROMAddr[0x82];
+   } else if(SiS_Pr->ChipType >= XGI_40) {
+      if(SiS_Pr->SiS_XGIROM) {
+         SiS_Pr->Init_P4_0E = ROMAddr[0x80];
+      }
    }
 }
 
@@ -3112,8 +3113,10 @@ SiS_ResetVB(struct SiS_Private *SiS_Pr)
 	 SiS_SetReg(SiS_Pr->SiS_Part1Port,0x02,temp);
       }
    } else if(SiS_Pr->ChipType >= XGI_40) {
+      temp = 0x40;
+      if(SiS_Pr->SiS_XGIROM) temp |= ROMAddr[0x7e];
       /* Can we do this on any chipset? */
-      SiS_SetRegOR(SiS_Pr->SiS_Part1Port,0x02,0x40);
+      SiS_SetReg(SiS_Pr->SiS_Part1Port,0x02,temp);
    }
 #endif
 }

@@ -727,7 +727,7 @@ static void
 SiS315Save(ScrnInfoPtr pScrn, SISRegPtr sisReg)
 {
     SISPtr pSiS = SISPTR(pScrn);
-    int i;
+    int i, max;
 
     PDEBUG(xf86DrvMsgVerb(pScrn->scrnIndex, X_INFO, 3, "SiS315Save()\n"));
 
@@ -748,7 +748,9 @@ SiS315Save(ScrnInfoPtr pScrn, SISRegPtr sisReg)
     sisReg->sisMMIO85C0 = SIS_MMIO_IN32(pSiS->IOBase, 0x85C0);
 
     /* Save CR registers */
-    for(i = 0x00; i <= 0x7c; i++)  {
+    max = 0x7c;
+    if(pSiS->ChipType >= XGI_20) max = 0xff;
+    for(i = 0x00; i <= max; i++)  {
        inSISIDXREG(SISCR, i, sisReg->sisRegs3D4[i]);
 #ifdef TWDEBUG
        xf86DrvMsg(pScrn->scrnIndex, X_INFO,
@@ -1532,7 +1534,7 @@ int SiSMemBandWidth(ScrnInfoPtr pScrn, Bool IsForCRT2)
 		    max = 800000;
 		    break;
 		case PCI_CHIP_XGIXG20:
-		    magic = magicDED[bus/64];
+		    magic = 1.0; /* magicDED[bus/64]; */
 		    max = 332000;
 		    break;
 		}

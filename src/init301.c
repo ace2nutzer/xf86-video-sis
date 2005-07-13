@@ -1261,8 +1261,10 @@ SiS_SetTVMode(struct SiS_Private *SiS_Pr, unsigned short ModeNo, unsigned short 
 	    romindex = 0xfe;
 	 } else if(SiS_Pr->ChipType >= SIS_315H) {
 	    temp = 0x38;
-	    romindex = 0xf3;
-	    if(SiS_Pr->ChipType >= SIS_330) romindex = 0x11b;
+	    if(SiS_Pr->ChipType < XGI_20) {
+	       romindex = 0xf3;
+	       if(SiS_Pr->ChipType >= SIS_330) romindex = 0x11b;
+	    }
 	 }
 	 if(temp) {
 	    if(romindex && SiS_Pr->SiS_UseROM && (!(SiS_Pr->SiS_ROMNew))) {
@@ -7380,6 +7382,8 @@ SiS_SetGroup4_C_ELV(struct SiS_Private *SiS_Pr, unsigned short ModeNo, unsigned 
 
    if(!(SiS_Pr->SiS_VBType & VB_SIS30xCLV)) return;
    if(!(SiS_Pr->SiS_VBInfo & (SetCRT2ToHiVision | SetCRT2ToYPbPr525750))) return;
+
+   if(SiS_Pr->ChipType >= XGI_20) return;
 
    if((SiS_Pr->ChipType >= SIS_661) && (SiS_Pr->SiS_ROMNew)) {
       if(!(ROMAddr[0x61] & 0x04)) return;

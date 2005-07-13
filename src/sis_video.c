@@ -48,8 +48,8 @@
  *  SiS330: Full register range, one overlay (used for both CRT1 and CRT2 alt.)
  *  SiS661/741/760: Full register range, two overlays (one used for CRT1, one for CRT2)
  *  SiS340: - ? overlays. Extended registers for DDA.
- *  SiS761: - ? overlays. Extended registers for DDA?
- *  XGI Volari V5/V8: 1 Overlay. Extended registers for DDA.
+ *  SiS761: - ? overlays. Extended registers for DDA.
+ *  XGI Volari V3XT/V5/V8: 1 Overlay. Extended registers for DDA.
  *
  * Help for reading the code:
  * 315/550/650/740/M650/651/330/661/741/76x/340/XGI = SIS_315_VGA
@@ -512,6 +512,7 @@ SISResetVideo(ScrnInfoPtr pScrn)
        /* ? */
        setvideoregmask(pSiS, 0xb6, 0x02, 0x02);
        set_dda_regs(pSiS, 1.0);
+       setvideoregmask(pSiS, Index_VI_V_Buf_Start_Over, 0x00, 0x3c);
     }
 
     if((pSiS->ChipFlags & SiSCF_Is65x) || (pPriv->is661741760)) {
@@ -566,6 +567,8 @@ SISResetVideo(ScrnInfoPtr pScrn)
 	   default: 	 temp = 0x3c;
 	   }
 	   setvideoregmask(pSiS, Index_VI_V_Buf_Start_Over, temp, 0x3c);
+	} else if(pPriv->is761) {
+	   setvideoregmask(pSiS, Index_VI_V_Buf_Start_Over, 0x00, 0x3c);
 	} else if(pSiS->Chipset == PCI_CHIP_SIS340) {  /* 2 overlays? */
 	   setvideoregmask(pSiS, Index_VI_Key_Overlay_OP, 0x00, 0x10);
 	   setvideoregmask(pSiS, 0xb5, 0x00, 0x01);
@@ -1107,7 +1110,7 @@ SISSetupImageVideo(ScreenPtr pScreen)
        } else if(pPriv->is340) {
           pPriv->linebufMergeLimit = 1280;		/* should be 1280 */
        } else if(pPriv->is761) {
-          pPriv->linebufMergeLimit = 1536;		/* should be 1536 */
+          pPriv->linebufMergeLimit = 1280;		/* should be 1536 */
        } else if(pPriv->isXGI) {
           pPriv->linebufMergeLimit = 1280;		/* FIXME */
        } else if(!(pPriv->hasTwoOverlays)) {
@@ -1904,7 +1907,7 @@ calc_line_buf_size(CARD32 srcW, CARD8 wHPre, CARD8 planar, SISPortPrivPtr pPriv)
 		I <<= 7;
 		break;
 	    case 6:
-		if(pPriv->is340 || pPriv->isXGI) {  /* 761 ? */
+		if(pPriv->is340 || pPriv->isXGI || pPriv->is761) {
 		   shift += 11;
 		   mask <<= shift;
 		   I = srcW >> shift;
@@ -2376,13 +2379,13 @@ set_overlay(SISPtr pSiS, SISOverlayPtr pOverlay, SISPortPrivPtr pPriv, int index
 #ifdef SISMERGED
     if(pSiS->MergedFB && iscrt2) {
        setvideoreg(pSiS, Index_VI_Line_Buffer_Size, (CARD8)pOverlay->lineBufSize2);
-       if(pPriv->is340 || pPriv->isXGI) { /* 761 ? */
+       if(pPriv->is340 || pPriv->is761 || pPriv->isXGI) {
           setvideoreg(pSiS, Index_VI_Line_Buffer_Size_High, (CARD8)(pOverlay->lineBufSize2 >> 8));
        }
     } else {
 #endif
        setvideoreg(pSiS, Index_VI_Line_Buffer_Size, (CARD8)pOverlay->lineBufSize);
-       if(pPriv->is340 || pPriv->isXGI) { /* 761 ? */
+       if(pPriv->is340 || pPriv->is761 || pPriv->isXGI) {
           setvideoreg(pSiS, Index_VI_Line_Buffer_Size_High, (CARD8)(pOverlay->lineBufSize >> 8));
        }
 #ifdef SISMERGED

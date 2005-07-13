@@ -1102,34 +1102,34 @@ void SISVGAPreInit(ScrnInfoPtr pScrn)
         if(temp1 >= 0xE0) {
 		inSISIDXREG(SISPART4, 0x39, temp2);
 		if(temp2 == 0xff) {
-		   pSiS->VBFlags |= VB_302LV;	/* Deprecated */
+		   pSiS->VBFlags |= OLDVB_302LV;	/* Deprecated */
 		   pSiS->VBFlags2 |= VB2_302LV;
 		   sistypeidx = 4;
 		} else {
-		   pSiS->VBFlags |= VB_301C;	/* VB_302ELV; */  /* Deprecated */
+		   pSiS->VBFlags |= OLDVB_301C;	/* VB_302ELV; */  /* Deprecated */
 		   pSiS->VBFlags2 |= VB2_301C;	/* VB_302ELV; */
 		   sistypeidx = 5; 		/* 6; */
 		}
 	} else if(temp1 >= 0xD0) {
-		pSiS->VBFlags |= VB_301LV;	/* Deprecated */
+		pSiS->VBFlags |= OLDVB_301LV;	/* Deprecated */
 		pSiS->VBFlags2 |= VB2_301LV;
 		sistypeidx = 3;
 	} else if(temp1 >= 0xC0) {
-		pSiS->VBFlags |= VB_301C;	/* Deprecated */
+		pSiS->VBFlags |= OLDVB_301C;	/* Deprecated */
 		pSiS->VBFlags2 |= VB2_301C;
 		sistypeidx = 5;
 	} else if(temp1 >= 0xB0) {
-		pSiS->VBFlags |= VB_301B;	/* Deprecated */
+		pSiS->VBFlags |= OLDVB_301B;	/* Deprecated */
 		pSiS->VBFlags2 |= VB2_301B;
 		sistypeidx = 1;
 		inSISIDXREG(SISPART4, 0x23, temp2);
 		if(!(temp2 & 0x02)) {
-		   pSiS->VBFlags |= VB_30xBDH;	/* Deprecated */
+		   pSiS->VBFlags |= OLDVB_30xBDH;	/* Deprecated */
 		   pSiS->VBFlags2 |= VB2_30xBDH;
 		   sistypeidx = 2;
 		}
 	} else {
-		pSiS->VBFlags |= VB_301;	/* Deprecated */
+		pSiS->VBFlags |= OLDVB_301;	/* Deprecated */
 		pSiS->VBFlags2 |= VB2_301;
 		sistypeidx = 0;
 	}
@@ -1149,15 +1149,15 @@ void SISVGAPreInit(ScrnInfoPtr pScrn)
 	}
 
 	if(temp1 >= 0xE0) {
-		pSiS->VBFlags |= VB_302LV;	/* Deprecated */
+		pSiS->VBFlags |= OLDVB_302LV;	/* Deprecated */
 		pSiS->VBFlags2 |= VB2_302LV;
 		sistypeidx = 4;
 	} else if(temp1 >= 0xD0) {
-		pSiS->VBFlags |= VB_301LV;	/* Deprecated */
+		pSiS->VBFlags |= OLDVB_301LV;	/* Deprecated */
 		pSiS->VBFlags2 |= VB2_301LV;
 		sistypeidx = 3;
 	} else {
-		pSiS->VBFlags |= VB_302B;	/* Deprecated */
+		pSiS->VBFlags |= OLDVB_302B;	/* Deprecated */
 		pSiS->VBFlags2 |= VB2_302B;
 		sistypeidx = 7;
 	}
@@ -1196,7 +1196,7 @@ void SISVGAPreInit(ScrnInfoPtr pScrn)
 	}
 
 	if((temp >= lowerlimitlvds) && (temp <= upperlimitlvds)) {
-	   pSiS->VBFlags |= VB_LVDS;	/* Deprecated */
+	   pSiS->VBFlags |= OLDVB_LVDS;	/* Deprecated */
 	   pSiS->VBFlags2 |= VB2_LVDS;
 	   xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
 	          "Detected LVDS transmitter (External chip ID %d)\n", temp);
@@ -1229,7 +1229,7 @@ void SISVGAPreInit(ScrnInfoPtr pScrn)
 	      pSiS->postVBCR32 &= ~0x07;
 	   } else if((temp1 >= 0x19) && (temp1 <= 200)) {
 	      /* We only support device ids 0x19-200; other values may indicate DDC problems */
-	      pSiS->VBFlags |= VB_CHRONTEL;	/* Deprecated */
+	      pSiS->VBFlags |= OLDVB_CHRONTEL;	/* Deprecated */
 	      pSiS->VBFlags2 |= VB2_CHRONTEL;
 	      switch (temp1) {
 		case 0x32: temp2 = 0; pSiS->ChrontelType = CHRONTEL_700x; break;
@@ -1269,13 +1269,13 @@ void SISVGAPreInit(ScrnInfoPtr pScrn)
 	   }
 	}
 	if((pSiS->NewCRLayout) && (temp == 4)) {
-	   pSiS->VBFlags |= VB_CONEXANT;	/* Deprecated */
+	   pSiS->VBFlags |= OLDVB_CONEXANT;	/* Deprecated */
 	   pSiS->VBFlags2 |= VB2_CONEXANT;
 	   xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
 	               "Detected Conexant video bridge - UNSUPPORTED\n");
 	}
 	if((pSiS->VGAEngine == SIS_300_VGA) && (temp == 3)) {
-	    pSiS->VBFlags |= VB_TRUMPION;	/* Deprecated */
+	    pSiS->VBFlags |= OLDVB_TRUMPION;	/* Deprecated */
 	    pSiS->VBFlags2 |= VB2_TRUMPION;
 	    xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
 	               "Detected Trumpion Zurac (I/II/III) LVDS scaler\n");

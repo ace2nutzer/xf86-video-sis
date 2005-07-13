@@ -450,12 +450,17 @@ sis315Setup(ScrnInfoPtr pScrn)
 	     config2 = (config2 & 0x02) >> 1;
           }
 
+	  pSiS->BusWidth = (config & 0x02) ? 64 : 32;
+
        } else {				/* XGI_20 (Z7) */
 
-          config1 = 0x00;
+	  config1 = 0x00;
 	  inSISIDXREG(SISCR, 0x97, config2);
 	  config2 &= 0x01;
-	  if(config2) config2++;
+	  config2 <<= 1;	/* 0 or 2 */
+
+	  pSiS->BusWidth = (config & 0x02) ? 32 :
+				((config & 0x01) ? 16 : 8);
 
        }
 
@@ -465,23 +470,6 @@ sis315Setup(ScrnInfoPtr pScrn)
        pSiS->MemClock = SiSMclk(pSiS);
 
        pSiS->MemClock *= 2; /* at least DDR */
-
-       pSiS->BusWidth = (config & 0x02) ? 64 : 32;
-
-#if 0
-       inSISIDXREG(SISCR,0x97,config);
-       if(!(config & 0x10)) {
-	  inSISIDXREG(SISSR,0x39,config);
-	  config = (config & 0x02) >> 1;
-       } else config &= 0x01;
-
-       if(config) {
-	  pSiS->MemClock *= 2; /* DDR2, do this ? */
-	  pSiS->BusWidth = 32; /* DDR2, do this ? */
-       } else {
-	  pSiS->BusWidth = 64;
-       }
-#endif
 
        break;
 

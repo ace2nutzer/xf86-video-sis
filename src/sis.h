@@ -37,7 +37,7 @@
 
 #define SISDRIVERVERSIONYEAR    5
 #define SISDRIVERVERSIONMONTH   7
-#define SISDRIVERVERSIONDAY     8
+#define SISDRIVERVERSIONDAY     12
 #define SISDRIVERREVISION       1
 
 #define SISDRIVERIVERSION ((SISDRIVERVERSIONYEAR << 16) |  \
@@ -325,47 +325,30 @@
 #define TV_AVIDEO		0x00000100
 #define TV_SVIDEO		0x00000200
 #define TV_SCART		0x00000400
-#define VB_CONEXANT		0x00000800   /* 661 series only */
-#define VB_TRUMPION		VB_CONEXANT  /* 300 series only */
+#define OLDVB_CONEXANT		0x00000800	/* Definition deprecated (now VBFlags2) */
+#define OLDVB_TRUMPION		OLDVB_CONEXANT	/* Definition deprecated (now VBFlags2) */
 #define TV_PALM			0x00001000
 #define TV_PALN			0x00002000
 #define TV_NTSCJ		TV_PALM
-#define VB_302ELV		0x00004000
+#define OLDVB_302ELV		0x00004000	/* Definition deprecated (now VBFlags2) */
 #define TV_CHSCART		0x00008000
 #define TV_CHYPBPR525I		0x00010000
 #define CRT1_VGA		0x00000000	/* ZERO - no mask! */
 #define CRT1_LCDA		0x00020000
 #define VGA2_CONNECTED		0x00040000
 #define DISPTYPE_CRT1		0x00080000  	/* CRT1 connected and used */
-#define VB_301			0x00100000	/* Video bridge type */
-#define VB_301B			0x00200000
-#define VB_302B			0x00400000
-#define VB_30xBDH		0x00800000      /* 30xB DH version (w/o LCD support) */
-#define VB_LVDS			0x01000000
-#define VB_CHRONTEL		0x02000000
-#define VB_301LV		0x04000000
-#define VB_302LV		0x08000000
-#define VB_301C			0x10000000
+#define OLDVB_301		0x00100000	/* Definition deprecated (now VBFlags2) */
+#define OLDVB_301B		0x00200000	/* Definition deprecated (now VBFlags2) */
+#define OLDVB_302B		0x00400000	/* Definition deprecated (now VBFlags2) */
+#define OLDVB_30xBDH		0x00800000      /* Definition deprecated (now VBFlags2) */
+#define OLDVB_LVDS		0x01000000	/* Definition deprecated (now VBFlags2) */
+#define OLDVB_CHRONTEL		0x02000000	/* Definition deprecated (now VBFlags2) */
+#define OLDVB_301LV		0x04000000	/* Definition deprecated (now VBFlags2) */
+#define OLDVB_302LV		0x08000000	/* Definition deprecated (now VBFlags2) */
+#define OLDVB_301C		0x10000000	/* Definition deprecated (now VBFlags2) */
 #define SINGLE_MODE		0x20000000   	/* CRT1 or CRT2; determined by DISPTYPE_CRTx */
 #define MIRROR_MODE		0x40000000   	/* CRT1 + CRT2 identical (mirror mode) */
 #define DUALVIEW_MODE		0x80000000   	/* CRT1 + CRT2 independent (dual head mode) */
-
-/* pSiS->VBFlags2 (static stuff only!) */
-#define VB2_SISUMC		0x00000001
-#define VB2_301			0x00000002	/* Video bridge type */
-#define VB2_301B		0x00000004
-#define VB2_301C		0x00000008
-#define VB2_307T		0x00000010
-#define VB2_302B		0x00000800
-#define VB2_301LV		0x00001000
-#define VB2_302LV		0x00002000
-#define VB2_302ELV		0x00004000
-#define VB2_307LV		0x00008000
-#define VB2_30xBDH		0x08000000      /* 30xB DH version (w/o LCD support) */
-#define VB2_CONEXANT		0x10000000
-#define VB2_TRUMPION		0x20000000
-#define VB2_LVDS		0x40000000
-#define VB2_CHRONTEL		0x80000000
 
 /* Aliases: */
 #define CRT2_ENABLE		(CRT2_LCD | CRT2_TV | CRT2_VGA)
@@ -391,20 +374,22 @@
 #define VB_DISPMODE_DUAL	DUALVIEW_MODE 	/* alias */
 #define DISPLAY_MODE		(SINGLE_MODE | MIRROR_MODE | DUALVIEW_MODE)
 
-#if 0
-#define VIB_SISBRIDGE		(VB_301 | VB_301B | VB_301C | VB_302B | VB_301LV | VB_302LV | VB_302ELV)
-#define VIB_SISTVBRIDGE		(VB_301 | VB_301B | VB_301C | VB_302B | VB_301LV | VB_302LV)
-#define VIB_VIDEOBRIDGE		(VB_SISBRIDGE | VB_LVDS | VB_CHRONTEL | VB_CONEXANT)
-#define VIB_SISLVDSBRIDGE	(VB_301LV | VB_302LV | VB_302ELV)
-#define VIB_SISTMDSBRIDGE	(VB_301 | VB_301B | VB_301C | VB_302B)
-#define VIB_SISTMDSLCDABRIDGE	(VB_301C)
-#define VIB_SISVGA2BRIDGE	(VB_301 | VB_301B | VB_301C | VB_302B)
-#define VIB_SISLCDABRIDGE	(VB_301C | VB_302B | VB_301LV | VB_302LV | VB_302ELV)
-#define VIB_SISHIVISIONBRIDGE	(VB_301 | VB_301B | VB_302B)
-#define VIB_SISYPBPRBRIDGE	(VB_301C | VB_301LV | VB_302LV | VB_302ELV)
-#define VIB_SISYPBPRARBRIDGE	(VB_301C)
-#define VIB_SISTAP4SCALER	(VB_301C | VB_302ELV)
-#endif
+/* pSiS->VBFlags2 (static stuff only!) */
+#define VB2_SISUMC		0x00000001
+#define VB2_301			0x00000002	/* Video bridge type */
+#define VB2_301B		0x00000004
+#define VB2_301C		0x00000008
+#define VB2_307T		0x00000010
+#define VB2_302B		0x00000800
+#define VB2_301LV		0x00001000
+#define VB2_302LV		0x00002000
+#define VB2_302ELV		0x00004000
+#define VB2_307LV		0x00008000
+#define VB2_30xBDH		0x08000000      /* 30xB DH version (w/o LCD support) */
+#define VB2_CONEXANT		0x10000000	/* >=661 series only */
+#define VB2_TRUMPION		0x20000000	/* 300 series only */
+#define VB2_LVDS		0x40000000
+#define VB2_CHRONTEL		0x80000000
 
 #define VB2_SISLVDSBRIDGE	(VB2_301LV | VB2_302LV | VB2_302ELV | VB2_307LV)
 #define VB2_SISTMDSBRIDGE	(VB2_301   | VB2_301B  | VB2_301C   | VB2_302B | VB2_307T)
@@ -456,6 +441,7 @@
 #define VB_LCD_320x240		0x00080000
 #define VB_LCD_856x480		0x00100000
 #define VB_LCD_1280x854		0x00200000
+#define VB_LCD_1920x1200	0x00400000
 #define VB_LCD_UNKNOWN		0x10000000
 #define VB_LCD_BARCO1366	0x20000000
 #define VB_LCD_CUSTOM		0x40000000
@@ -685,7 +671,7 @@ typedef struct {
     UChar  sisRegsGR[10];
     UChar  sisDAC[768];
     UChar  sisRegs3C4[0x80];
-    UChar  sisRegs3D4[0x90];
+    UChar  sisRegs3D4[0xff];
     UChar  sisRegs3C2;
     UChar  sisCapt[0x60];
     UChar  sisVid[0x50];
@@ -956,6 +942,7 @@ typedef struct {
     CARD16		CursorSize;		/* Size of HWCursor area (bytes) */
     CARD32		cursorOffset;		/* see sis_driver.c and sis_cursor.c */
     Bool		useEXA;
+    void 		(*InitAccel)(ScrnInfoPtr pScrn);
     void 		(*SyncAccel)(ScrnInfoPtr pScrn);
     void		(*FillRect)(ScrnInfoPtr pScrn, int x, int y, int w, int h, int color);
     void		(*BlitRect)(ScrnInfoPtr pScrn, int srcx, int srcy, int dstx, int dsty,

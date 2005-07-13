@@ -248,21 +248,26 @@ SiSInitializeAccelerator(ScrnInfoPtr pScrn)
 	pSiS->DoColorExpand = FALSE;
 #endif
 	pSiS->alphaBlitBusy = FALSE;
+
+	if(!pSiS->NoAccel) {
+
 #ifndef SISVRAMQ
-	if(pSiS->ChipFlags & SiSCF_Integrated) {
-	   CmdQueLen = 0;
-	} else {
-	   CmdQueLen = ((128 * 1024) / 4) - 64;
-	}
+	   if(pSiS->ChipFlags & SiSCF_Integrated) {
+	      CmdQueLen = 0;
+	   } else {
+	      CmdQueLen = ((128 * 1024) / 4) - 64;
+	   }
 #endif
 
 #ifdef SISVRAMQ
-	if(pSiS->ChipType == XGI_40) {
-	   SiSSync(pScrn);
-	   SiSDualPipe(1);	/* 1 = disable, 0 = enable */
-	   SiSSync(pScrn);
-	}
+	   if(pSiS->ChipType == XGI_40) {
+	      SiSSync(pScrn);
+	      SiSDualPipe(1);	/* 1 = disable, 0 = enable */
+	      SiSSync(pScrn);
+	   }
 #endif
+
+	}
 }
 
 static void
@@ -2058,6 +2063,7 @@ SiS315AccelInit(ScreenPtr pScreen)
 
 	   SiSInitializeAccelerator(pScrn);
 
+	   pSiS->InitAccel = SiSInitializeAccelerator;
 	   pSiS->SyncAccel = SiSSyncAccel;
 	   pSiS->FillRect  = SiSDGAFillRect;
 	   pSiS->BlitRect  = SiSDGABlitRect;

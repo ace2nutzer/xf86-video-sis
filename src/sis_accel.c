@@ -63,6 +63,12 @@ extern Bool SiSDownloadFromScreen(PixmapPtr pSrc, int x, int y, int w, int h, ch
 extern UChar SiSGetCopyROP(int rop);
 extern UChar SiSGetPatternROP(int rop);
 
+static void
+SiSInitializeAccelerator(ScrnInfoPtr pScrn)
+{
+    /* Nothing here yet */
+}
+
 /* sync */
 static void
 SiSSync(ScrnInfoPtr pScrn)
@@ -685,6 +691,9 @@ SiSAccelInit(ScreenPtr pScreen)
 
     if(!pSiS->NoAccel) {
 
+       SiSInitializeAccelerator(pScrn);
+
+       pSiS->InitAccel = SiSInitializeAccelerator;
        pSiS->SyncAccel = SiSSyncAccel;
        pSiS->FillRect  = SiSDGAFillRect;
        pSiS->BlitRect  = SiSDGABlitRect;

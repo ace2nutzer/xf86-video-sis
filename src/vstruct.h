@@ -285,6 +285,7 @@ struct SiS_Private
 #endif
 	BOOLEAN				SiS_UseROM;
 	BOOLEAN				SiS_ROMNew;
+	BOOLEAN				SiS_XGIROM;
 	BOOLEAN				SiS_NeedRomModeData;
 	BOOLEAN				PanelSelfDetected;
 	BOOLEAN				DDCPortMixup;

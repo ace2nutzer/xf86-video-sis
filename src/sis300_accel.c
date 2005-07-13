@@ -1114,6 +1114,7 @@ SiS300AccelInit(ScreenPtr pScreen)
 
 	   SiSInitializeAccelerator(pScrn);
 
+	   pSiS->InitAccel = SiSInitializeAccelerator;
 	   pSiS->SyncAccel = SiSSyncAccel;
 	   pSiS->FillRect  = SiSDGAFillRect;
 	   pSiS->BlitRect  = SiSDGABlitRect;
