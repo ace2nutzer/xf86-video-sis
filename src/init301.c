@@ -443,9 +443,9 @@ SiS_CR36BIOSWord23d(struct SiS_Private *SiS_Pr)
 /*********************************************/
 
 void
-SiS_DDC2Delay(struct SiS_Private *SiS_Pr, unsigned short delaytime)
+SiS_DDC2Delay(struct SiS_Private *SiS_Pr, unsigned int delaytime)
 {
-   unsigned short i, j;
+   unsigned int i, j;
 
    for(i = 0; i < delaytime; i++) {
       j += SiS_GetReg(SiS_Pr->SiS_P3c4,0x05);
@@ -456,16 +456,7 @@ SiS_DDC2Delay(struct SiS_Private *SiS_Pr, unsigned short delaytime)
 static void
 SiS_GenericDelay(struct SiS_Private *SiS_Pr, unsigned short delay)
 {
-   unsigned short temp, flag;
-
-   flag = SiS_GetRegByte(0x61) & 0x10;
-
-   while(delay) {
-      temp = SiS_GetRegByte(0x61) & 0x10;
-      if(temp == flag) continue;
-      flag = temp;
-      delay--;
-   }
+   SiS_DDC2Delay(SiS_Pr, delay * 36);
 }
 #endif
 
@@ -474,7 +465,7 @@ static void
 SiS_LongDelay(struct SiS_Private *SiS_Pr, unsigned short delay)
 {
    while(delay--) {
-      SiS_GenericDelay(SiS_Pr,0x19df);
+      SiS_GenericDelay(SiS_Pr, 6623);
    }
 }
 #endif
@@ -484,7 +475,7 @@ static void
 SiS_ShortDelay(struct SiS_Private *SiS_Pr, unsigned short delay)
 {
    while(delay--) {
-      SiS_GenericDelay(SiS_Pr,0x42);
+      SiS_GenericDelay(SiS_Pr, 66);
    }
 }
 #endif
@@ -4423,7 +4414,7 @@ SiS_EnableBridge(struct SiS_Private *SiS_Pr)
 		  SiS_SetRegOR(SiS_Pr->SiS_Part4Port,0x26,0x02);
 		  SiS_PanelDelayLoop(SiS_Pr, 3, 2);
 		  if(SiS_Pr->SiS_VBType & VB_SISEMI) {
-		     SiS_GenericDelay(SiS_Pr, 0x4500);
+		     SiS_GenericDelay(SiS_Pr, 17664);
 		  }
 	       }
 	    }
@@ -4492,7 +4483,7 @@ SiS_EnableBridge(struct SiS_Private *SiS_Pr)
 #ifdef SET_EMI
 	       if(SiS_Pr->SiS_VBType & VB_SISEMI) {
 		  SiS_SetRegAND(SiS_Pr->SiS_Part4Port,0x30,0x0c);
-		  SiS_GenericDelay(SiS_Pr, 0x800);
+		  SiS_GenericDelay(SiS_Pr, 2048);
 	       }
 #endif
 	       SiS_SetRegOR(SiS_Pr->SiS_Part4Port,0x27,0x0c);
@@ -4609,7 +4600,7 @@ SiS_EnableBridge(struct SiS_Private *SiS_Pr)
 
 		  if(!(SiS_Pr->OverruleEMI && (!r30) && (!r31) && (!r32) && (!r33))) {
 		     SiS_SetRegOR(SiS_Pr->SiS_Part4Port,0x30,0x20); /* Reset */
-		     SiS_GenericDelay(SiS_Pr, 0x800);
+		     SiS_GenericDelay(SiS_Pr, 2048);
 		  }
 		  SiS_SetReg(SiS_Pr->SiS_Part4Port,0x31,r31);
 		  SiS_SetReg(SiS_Pr->SiS_Part4Port,0x32,r32);
@@ -4630,7 +4621,7 @@ SiS_EnableBridge(struct SiS_Private *SiS_Pr)
 			SiS_WaitVBRetrace(SiS_Pr);
 			SiS_WaitVBRetrace(SiS_Pr);
 			if(SiS_Pr->SiS_CustomT == CUT_ASUSA2H_2) {
-			   SiS_GenericDelay(SiS_Pr, 0x500);
+			   SiS_GenericDelay(SiS_Pr, 1280);
 			}
 			SiS_SetRegOR(SiS_Pr->SiS_Part4Port,0x30,0x40);   /* Enable */
 		     }
@@ -4647,7 +4638,7 @@ SiS_EnableBridge(struct SiS_Private *SiS_Pr)
 		  }
 		  SiS_WaitVBRetrace(SiS_Pr);
 		  if(SiS_Pr->SiS_VBType & VB_SISEMI) {
-		     SiS_GenericDelay(SiS_Pr, 0x800);
+		     SiS_GenericDelay(SiS_Pr, 2048);
 		     SiS_WaitVBRetrace(SiS_Pr);
 		  }
 		  SiS_SetRegOR(SiS_Pr->SiS_Part4Port,0x26,0x01);
@@ -8379,7 +8370,7 @@ SiS_Chrontel701xOff(struct SiS_Private *SiS_Pr)
   if(SiS_Pr->SiS_IF_DEF_CH70xx == 2) {
      if(SiS_Pr->ChipType == SIS_740) {
         SiS_LongDelay(SiS_Pr, 1);
-	SiS_GenericDelay(SiS_Pr, 0x16ff);
+	SiS_GenericDelay(SiS_Pr, 5887);
 	SiS_SetCH701x(SiS_Pr,0x76,0xac);
 	SiS_SetCH701x(SiS_Pr,0x66,0x00);
      } else {
@@ -8488,7 +8479,7 @@ SiS_ChrontelDoSomething3(struct SiS_Private *SiS_Pr, unsigned short ModeNo)
         SiS_SetCH701x(SiS_Pr,0x66,0x45);  /* Panel power on */
         SiS_SetCH701x(SiS_Pr,0x76,0xaf);  /* All power on */
         SiS_LongDelay(SiS_Pr, 1);
-        SiS_GenericDelay(SiS_Pr, 0x16ff);
+        SiS_GenericDelay(SiS_Pr, 5887);
 
      } else {  /* 650 */
 
@@ -8505,13 +8496,13 @@ SiS_ChrontelDoSomething3(struct SiS_Private *SiS_Pr, unsigned short ModeNo)
         SiS_SetCH701x(SiS_Pr,0x66,temp);
         if(ModeNo > 0x13) {
            if(SiS_WeHaveBacklightCtrl(SiS_Pr)) {
-	      SiS_GenericDelay(SiS_Pr, 0x3ff);
+	      SiS_GenericDelay(SiS_Pr, 1023);
 	   } else {
-	      SiS_GenericDelay(SiS_Pr, 0x2ff);
+	      SiS_GenericDelay(SiS_Pr, 767);
 	   }
         } else {
            if(!temp1)
-	      SiS_GenericDelay(SiS_Pr, 0x2ff);
+	      SiS_GenericDelay(SiS_Pr, 767);
         }
         temp = SiS_GetCH701x(SiS_Pr,0x76);
         temp |= 0x03;

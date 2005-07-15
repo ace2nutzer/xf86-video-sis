@@ -64,7 +64,7 @@ extern void		SiS_SetCH701x(struct SiS_Private *SiS_Pr, unsigned short reg, unsig
 extern unsigned short	SiS_GetCH70xx(struct SiS_Private *SiS_Pr, unsigned short reg);
 extern void		SiS_SetCH70xx(struct SiS_Private *SiS_Pr, unsigned short reg, unsigned char val);
 extern void		SiS_SetCH70xxANDOR(struct SiS_Private *SiS_Pr, unsigned short reg, unsigned char orval, unsigned char andval);
-extern void		SiS_DDC2Delay(struct SiS_Private *SiS_Pr, unsigned short delaytime);
+extern void		SiS_DDC2Delay(struct SiS_Private *SiS_Pr, unsigned int delaytime);
 extern unsigned short	SiS_ReadDDC1Bit(struct SiS_Private *SiS_Pr);
 extern unsigned short	SiS_HandleDDC(struct SiS_Private *SiS_Pr, unsigned int VBFlags, int VGAEngine,
                               unsigned short adaptnum, unsigned short DDCdatatype, unsigned char *buffer,

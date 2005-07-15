@@ -1493,6 +1493,8 @@ SiS_CheckMemorySize(struct SiS_Private *SiS_Pr, unsigned short ModeNo,
    unsigned short modeflag = SiS_GetModeFlag(SiS_Pr, ModeNo, ModeIdIndex);
    unsigned short memorysize = ((modeflag & MemoryInfoFlag) >> MemorySizeShift) + 1;
 
+   if(!AdapterMemSize) return TRUE;
+
    if(AdapterMemSize < memorysize) return FALSE;
    return TRUE;
 }
@@ -1577,6 +1579,8 @@ SiS_ClearBuffer(struct SiS_Private *SiS_Pr, unsigned short ModeNo)
    unsigned int   memsize = SiS_Pr->VideoMemorySize;
    unsigned short SISIOMEMTYPE *pBuffer;
    int i;
+
+   if(!memaddr || !memsize) return;
 
    if(SiS_Pr->SiS_ModeType >= ModeEGA) {
       if(ModeNo > 0x13) {

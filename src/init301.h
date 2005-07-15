@@ -412,7 +412,7 @@ static  BOOLEAN	SiS_SetTrumpionBlock(struct SiS_Private *SiS_Pr, unsigned char *
 void		SiS_SetChrontelGPIO(struct SiS_Private *SiS_Pr, unsigned short myvbinfo);
 #endif
 
-void		SiS_DDC2Delay(struct SiS_Private *SiS_Pr, unsigned short delaytime);
+void		SiS_DDC2Delay(struct SiS_Private *SiS_Pr, unsigned int delaytime);
 unsigned short	SiS_ReadDDC1Bit(struct SiS_Private *SiS_Pr);
 unsigned short	SiS_HandleDDC(struct SiS_Private *SiS_Pr, unsigned int VBFlags, int VGAEngine,
 			unsigned short adaptnum, unsigned short DDCdatatype,
