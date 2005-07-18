@@ -3406,7 +3406,7 @@ SISAllocateFBMemory(
       ExaOffscreenArea *area = (ExaOffscreenArea *)(*handle);
 
       if(area) {
-	 if(area->size <= bytesize) return (unsigned int)(area->offset);
+	 if(area->size >= bytesize) return (unsigned int)(area->offset);
 
 	 exaOffscreenFree(pScreen, area);
 	 *handle = NULL;
