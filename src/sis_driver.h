@@ -1353,7 +1353,13 @@ struct _SISFB_INFO {
 
 	CARD16	sisfb_pci_vendor;		/* PCI vendor (SiS or XGI) */
 
-	CARD8 reserved[190];			/* for future use */
+	CARD32	sisfb_vbflags2;
+
+	CARD8	sisfb_can_post;			/* sisfb can POST this card */
+	CARD8	sisfb_card_posted;		/* card is POSTED */
+	CARD8	sisfb_was_boot_device;		/* This card was the boot video device (ie is primary) */
+
+	CARD8 reserved[183];			/* for future use */
 };
 
 /* Mandatory functions */

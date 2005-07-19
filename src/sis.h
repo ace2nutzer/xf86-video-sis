@@ -37,7 +37,7 @@
 
 #define SISDRIVERVERSIONYEAR    5
 #define SISDRIVERVERSIONMONTH   7
-#define SISDRIVERVERSIONDAY     15
+#define SISDRIVERVERSIONDAY     20
 #define SISDRIVERREVISION       1
 
 #define SISDRIVERIVERSION ((SISDRIVERVERSIONYEAR << 16) |  \
@@ -250,6 +250,20 @@
 #ifdef XORG_VERSION_CURRENT
 #if XORG_VERSION_CURRENT >= XORG_VERSION_NUMERIC(6,8,99,13,0)
 #define SISGAMMARAMP		/* Driver can set gamma ramp; requires additional symbols in xf86sym.h */
+#endif
+#endif
+
+#if 0	/* Perhaps for future use */
+#if 1
+#define SIS_PCI_BUS(a) (a)->bus
+#define SIS_PCI_DEVICE(a) (a)->device
+#define SIS_PCI_FUNC(a) (a)->func
+#define SIS_PCI_TAG(a) pciTag((a)->bus, (a)->device, (a)->func);
+#else
+#define SIS_PCI_BUS(a) (a)->pciid.bus
+#define SIS_PCI_DEVICE(a) (a)->pciid.device
+#define SIS_PCI_FUNC(a) (a)->pciid.func
+#define SIS_PCI_TAG(a) pciTag(&((a)->pciid));
 #endif
 #endif
 
@@ -664,6 +678,9 @@ typedef unsigned char  UChar;
 #define SIS_CPUFL_SSE2  0x0080
 #define SIS_CPUFL_FLAG  0x8000
 
+/* Convenience macro for sisfb version checks */
+#define SISFB_VERSION(a,b,c) ((a << 16) | (b << 8) | c)
+
 /* For backup of register contents */
 typedef struct {
     UChar  sisRegMiscOut;
@@ -867,6 +884,7 @@ typedef struct _region {
 typedef struct {
     ScrnInfoPtr		pScrn;
     pciVideoPtr		PciInfo;
+    int			PciBus, PciDevice, PciFunc;
     PCITAG		PciTag;
     EntityInfoPtr	pEnt;
     int			Chipset;
@@ -1102,6 +1120,7 @@ typedef struct {
     UShort		SiS_DDC2_Data;
     UShort		SiS_DDC2_Clk;
     Bool		Primary;		/* Display adapter is primary */
+    Bool		VGADecodingEnabled;	/* a0000 memory adress decoding is enabled */
     xf86Int10InfoPtr	pInt;			/* Our int10 */
     int			oldChipset;		/* Type of old chipset */
     int			RealVideoRam;		/* 6326 can only address 4MB, but TQ can be above */
@@ -1149,6 +1168,7 @@ typedef struct {
     unsigned int	sisfbHeapSize, sisfbVideoOffset;
     Bool		sisfbxSTN;
     unsigned int	sisfbDSTN, sisfbFSTN;
+    Bool		sisfbcanpost, sisfbcardposted, sisfbprimary;
     char		sisfbdevname[16];
     int			EMI;
     int			PRGB;

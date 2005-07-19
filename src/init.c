@@ -1095,10 +1095,11 @@ SiSInitPCIetc(struct SiS_Private *SiS_Pr)
    case SIS_630:
    case SIS_730:
       /* Set - PCI LINEAR ADDRESSING ENABLE (0x80)
-       *     - RELOCATED VGA IO  (0x20)
-       *     - MMIO ENABLE (0x1)
+       *     - RELOCATED VGA IO ENABLED (0x20)
+       *     - MMIO ENABLED (0x01)
+       * Leave other bits untouched.
        */
-      SiS_SetReg(SiS_Pr->SiS_P3c4,0x20,0xa1);
+      SiS_SetRegOR(SiS_Pr->SiS_P3c4,0x20,0xa1);
       /*  - Enable 2D (0x40)
        *  - Enable 3D (0x02)
        *  - Enable 3D Vertex command fetch (0x10) ?
@@ -1121,7 +1122,8 @@ SiSInitPCIetc(struct SiS_Private *SiS_Pr)
    case SIS_761:
    case SIS_340:
    case XGI_40:
-      SiS_SetReg(SiS_Pr->SiS_P3c4,0x20,0xa1);
+      /* See above */
+      SiS_SetRegOR(SiS_Pr->SiS_P3c4,0x20,0xa1);
       /*  - Enable 3D G/L transformation engine (0x80)
        *  - Enable 2D (0x40)
        *  - Enable 3D vertex command fetch (0x10)
@@ -1132,7 +1134,8 @@ SiSInitPCIetc(struct SiS_Private *SiS_Pr)
       break;
    case XGI_20:
    case SIS_550:
-      SiS_SetReg(SiS_Pr->SiS_P3c4,0x20,0xa1);
+      /* See above */
+      SiS_SetRegOR(SiS_Pr->SiS_P3c4,0x20,0xa1);
       /* No 3D engine ! */
       /*  - Enable 2D (0x40)
        *  - disable 3D
@@ -3126,7 +3129,7 @@ SiS_ResetVB(struct SiS_Private *SiS_Pr)
 }
 
 /*********************************************/
-/*         HELPER: SET VIDEO REGISTERS       */
+/*    HELPER: SET VIDEO/CAPTURE REGISTERS    */
 /*********************************************/
 
 static void
@@ -3147,6 +3150,55 @@ SiS_StrangeStuff(struct SiS_Private *SiS_Pr)
       SiS_SetRegAND(SiS_Pr->SiS_VidPlay, 0x3f, 0xef);
    }
    /* !!! This does not support modes < 0x13 !!! */
+#endif
+}
+
+/*********************************************/
+/*     HELPER: SET AGP TIMING FOR SiS760     */
+/*********************************************/
+
+static void
+SiS_Handle760(struct SiS_Private *SiS_Pr)
+{
+#ifdef SIS315H
+   unsigned int somebase;
+   unsigned char temp1, temp2, temp3;
+
+   if( (SiS_Pr->ChipType != SIS_760)                         ||
+       ((SiS_GetReg(SiS_Pr->SiS_P3d4, 0x5c) & 0xf8) != 0x80) ||
+       (!(SiS_Pr->SiS_SysFlags & SF_760LFB))                 ||
+       (!(SiS_Pr->SiS_SysFlags & SF_760UMA)) )
+      return;
+
+#ifdef SIS_LINUX_KERNEL
+   somebase = sisfb_read_mio_pci_word(SiS_Pr, 0x74);
+#else
+   somebase = pciReadWord(0x00001000, 0x74);
+#endif
+   somebase &= 0xffff;
+
+   if(somebase == 0) return;
+
+   temp3 = SiS_GetRegByte((somebase + 0x85)) & 0xb7;
+
+   if(SiS_GetReg(SiS_Pr->SiS_P3d4,0x31) & 0x40) {
+      temp1 = 0x21;
+      temp2 = 0x03;
+      temp3 |= 0x08;
+   } else {
+      temp1 = 0x25;
+      temp2 = 0x0b;
+   }
+
+#ifdef SIS_LINUX_KERNEL
+   sisfb_write_nbridge_pci_byte(SiS_Pr, 0x7e, temp1);
+   sisfb_write_nbridge_pci_byte(SiS_Pr, 0x8d, temp2);
+#else
+   pciWriteByte(0x00000000, 0x7e, temp1);
+   pciWriteByte(0x00000000, 0x8d, temp2);
+#endif
+
+   SiS_SetRegByte((somebase + 0x85), temp3);
 #endif
 }
 
@@ -3386,6 +3438,8 @@ SiSSetMode(struct SiS_Private *SiS_Pr, unsigned short ModeNo)
 
    SiS_CloseCRTC(SiS_Pr);
 
+   SiS_Handle760(SiS_Pr);
+
 #ifdef SIS_LINUX_KERNEL
    /* We never lock registers in XF86 */
    if(KeepLockReg != 0xA1) SiS_SetReg(SiS_Pr->SiS_P3c4,0x05,0x00);
@@ -3602,6 +3656,8 @@ SiSBIOSSetModeCRT2(struct SiS_Private *SiS_Pr, ScrnInfoPtr pScrn,
    /* SetPitch: Adapt to virtual size & position */
    SiS_SetPitchCRT2(SiS_Pr, pScrn);
 
+   SiS_Handle760(SiS_Pr);
+
    return TRUE;
 }
 
@@ -3776,6 +3832,8 @@ SiSBIOSSetModeCRT1(struct SiS_Private *SiS_Pr, ScrnInfoPtr pScrn,
          SiS_SetReg(SiS_Pr->SiS_P3d4,0x35,backupreg);
       }
    }
+
+   SiS_Handle760(SiS_Pr);
 
    /* Backup/Set ModeNo in BIOS scratch area */
    SiS_GetSetModeID(pScrn,ModeNo);

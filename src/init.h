@@ -78,6 +78,9 @@
 #include <linux/types.h>
 #include <asm/io.h>
 #include <linux/fb.h>
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,5,0)
+#include <video/fbcon.h>
+#endif
 #include "sis.h"
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,5,0)
 #include <linux/sisfb.h>
@@ -1631,6 +1634,12 @@ extern unsigned short 	SiS_GetModeNumber(ScrnInfoPtr pScrn, DisplayModePtr mode,
 extern unsigned int	sisfb_read_nbridge_pci_dword(struct SiS_Private *SiS_Pr, int reg);
 extern void		sisfb_write_nbridge_pci_dword(struct SiS_Private *SiS_Pr, int reg,
 				unsigned int val);
+extern unsigned int	sisfb_read_lpc_pci_dword(struct SiS_Private *SiS_Pr, int reg);
+#endif
+#ifdef SIS315H
+extern void		sisfb_write_nbridge_pci_byte(struct SiS_Private *SiS_Pr, int reg,
+				unsigned char val);
+extern unsigned int	sisfb_read_mio_pci_word(struct SiS_Private *SiS_Pr, int reg);
 #endif
 #endif
 

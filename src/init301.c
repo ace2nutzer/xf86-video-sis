@@ -3867,12 +3867,14 @@ SiS_GetLVDSDesData(struct SiS_Private *SiS_Pr, unsigned short ModeNo, unsigned s
 /*********************************************/
 
 #ifdef SIS315H
-static void
+static int
 SiS_HandlePWD(struct SiS_Private *SiS_Pr)
 {
+   int ret = 0;
 #ifdef SET_PWD
    unsigned char *ROMAddr = SiS_Pr->VirtualRomBase;
    unsigned short romptr = GetLCDStructPtr661_2(SiS_Pr);
+   unsigned char  drivermode = SiS_GetReg(SiS_Pr->SiS_P3d4,0x31) & 0x40;
    unsigned short temp;
 
    if( (SiS_Pr->SiS_VBType & VB_SISPWD) &&
@@ -3884,10 +3886,19 @@ SiS_HandlePWD(struct SiS_Private *SiS_Pr)
       SiS_SetReg(SiS_Pr->SiS_Part4Port,0x2e,ROMAddr[romptr + SiS_Pr->SiS_PWDOffset + 3]);
       SiS_SetReg(SiS_Pr->SiS_Part4Port,0x2f,ROMAddr[romptr + SiS_Pr->SiS_PWDOffset + 4]);
       temp = 0x00;
-      if(ROMAddr[romptr + 2] & (0x06 << 1)) temp = 0x80;
+      if((ROMAddr[romptr + 2] & (0x06 << 1)) && !drivermode) {
+         temp = 0x80;
+	 ret = 1;
+      }
       SiS_SetRegANDOR(SiS_Pr->SiS_Part4Port,0x27,0x7f,temp);
+#ifdef SIS_XORG_XF86
+#ifdef TWDEBUG
+      xf86DrvMsg(0, 0, "Setting PWD %x\n", temp);
+#endif
+#endif
    }
 #endif
+   return ret;
 }
 #endif
 
@@ -3948,6 +3959,7 @@ SiS_DisableBridge(struct SiS_Private *SiS_Pr)
 
 #ifdef SIS315H	   /* 315 series */
 
+	   int didpwd = 0;
 	   BOOLEAN custom1 = ((SiS_Pr->SiS_CustomT == CUT_COMPAQ1280) ||
 	                      (SiS_Pr->SiS_CustomT == CUT_CLEVO1400)) ? TRUE : FALSE;
 
@@ -3963,13 +3975,17 @@ SiS_DisableBridge(struct SiS_Private *SiS_Pr)
 	      }
 #endif
 
-	      SiS_HandlePWD(SiS_Pr);
+	      didpwd = SiS_HandlePWD(SiS_Pr);
 
 	      if( (modenum <= 0x13)           ||
 		  (SiS_IsVAMode(SiS_Pr))      ||
 		  (!(SiS_IsDualEdge(SiS_Pr))) ) {
-		 SiS_SetRegAND(SiS_Pr->SiS_Part4Port,0x26,0xFE);
-		 if(custom1) SiS_PanelDelay(SiS_Pr, 3);
+		 if(!didpwd) {
+		    SiS_SetRegAND(SiS_Pr->SiS_Part4Port,0x26,0xfe);
+		    if(custom1) SiS_PanelDelay(SiS_Pr, 3);
+		 } else {
+		    SiS_SetRegAND(SiS_Pr->SiS_Part4Port,0x26,0xfc);
+		 }
 	      }
 
 	      if(!custom1) {
@@ -4046,8 +4062,11 @@ SiS_DisableBridge(struct SiS_Private *SiS_Pr)
 	      if( (!(SiS_IsVAMode(SiS_Pr)))  &&
 		  (!(SiS_CRT2IsLCD(SiS_Pr))) &&
 		  (!(SiS_IsDualEdge(SiS_Pr))) ) {
+
 		 if(custom1) SiS_PanelDelay(SiS_Pr, 2);
-		 SiS_SetRegAND(SiS_Pr->SiS_Part4Port,0x26,0xFD);
+		 if(!didpwd) {
+		    SiS_SetRegAND(SiS_Pr->SiS_Part4Port,0x26,0xFD);
+		 }
 		 if(custom1) SiS_PanelDelay(SiS_Pr, 4);
 	      }
 
@@ -4374,6 +4393,7 @@ SiS_EnableBridge(struct SiS_Private *SiS_Pr)
 
 #ifdef SET_EMI
 	 unsigned char   r30=0, r31=0, r32=0, r33=0, cr36=0;
+	 int didpwd = 0;
 	 /* unsigned short  emidelay=0; */
 #endif
 
@@ -4406,12 +4426,19 @@ SiS_EnableBridge(struct SiS_Private *SiS_Pr)
 	       SiS_SetRegAND(SiS_Pr->SiS_P3c4,0x06,0xE3);
 	    }
 
-	    SiS_HandlePWD(SiS_Pr);
+	    didpwd = SiS_HandlePWD(SiS_Pr);
 
 	    if(SiS_IsVAorLCD(SiS_Pr)) {
-	       if(!(SiS_GetReg(SiS_Pr->SiS_Part4Port,0x26) & 0x02)) {
-		  SiS_PanelDelayLoop(SiS_Pr, 3, 2);
-		  SiS_SetRegOR(SiS_Pr->SiS_Part4Port,0x26,0x02);
+	       if(!didpwd) {
+		  if(!(SiS_GetReg(SiS_Pr->SiS_Part4Port,0x26) & 0x02)) {
+		     SiS_PanelDelayLoop(SiS_Pr, 3, 2);
+		     SiS_SetRegOR(SiS_Pr->SiS_Part4Port,0x26,0x02);
+		     SiS_PanelDelayLoop(SiS_Pr, 3, 2);
+		     if(SiS_Pr->SiS_VBType & VB_SISEMI) {
+		        SiS_GenericDelay(SiS_Pr, 17664);
+		     }
+		  }
+	       } else {
 		  SiS_PanelDelayLoop(SiS_Pr, 3, 2);
 		  if(SiS_Pr->SiS_VBType & VB_SISEMI) {
 		     SiS_GenericDelay(SiS_Pr, 17664);
@@ -4613,6 +4640,7 @@ SiS_EnableBridge(struct SiS_Private *SiS_Pr)
 		  if( (SiS_LCDAEnabled(SiS_Pr)) ||
 		      (SiS_CRT2IsLCD(SiS_Pr)) ) {
 		     if(r30 & 0x40) {
+			SiS_SetRegOR(SiS_Pr->SiS_Part4Port,0x2a,0x80);
 			SiS_PanelDelayLoop(SiS_Pr, 3, 5);
 			if(delaylong) {
 			   SiS_PanelDelayLoop(SiS_Pr, 3, 5);
@@ -4624,6 +4652,7 @@ SiS_EnableBridge(struct SiS_Private *SiS_Pr)
 			   SiS_GenericDelay(SiS_Pr, 1280);
 			}
 			SiS_SetRegOR(SiS_Pr->SiS_Part4Port,0x30,0x40);   /* Enable */
+			SiS_SetRegAND(SiS_Pr->SiS_Part4Port,0x2a,0x7f);
 		     }
 		  }
 #endif
@@ -4641,7 +4670,11 @@ SiS_EnableBridge(struct SiS_Private *SiS_Pr)
 		     SiS_GenericDelay(SiS_Pr, 2048);
 		     SiS_WaitVBRetrace(SiS_Pr);
 		  }
-		  SiS_SetRegOR(SiS_Pr->SiS_Part4Port,0x26,0x01);
+		  if(!didpwd) {
+		     SiS_SetRegOR(SiS_Pr->SiS_Part4Port,0x26,0x01);
+		  } else {
+		     SiS_SetRegOR(SiS_Pr->SiS_Part4Port,0x26,0x03);
+		  }
 	       }
 	    }
 

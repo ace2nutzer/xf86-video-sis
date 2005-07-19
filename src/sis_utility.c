@@ -885,9 +885,9 @@ SiSHandleSiSDirectCommand(xSiSCtrlCommandReply *sdcbuf)
 	 }
 	 sdcbuf->sdc_result[0]  = pSiS->IsAGPCard ? SDC_BUS_TYPE_AGP : SDC_BUS_TYPE_PCI;
 	 if(pSiS->IsPCIExpress) sdcbuf->sdc_result[0] = SDC_BUS_TYPE_PCIE;
-	 sdcbuf->sdc_result[1]  = pSiS->PciInfo->bus;
-	 sdcbuf->sdc_result[2]  = pSiS->PciInfo->device;
-	 sdcbuf->sdc_result[3]  = pSiS->PciInfo->func;
+	 sdcbuf->sdc_result[1]  = pSiS->PciBus;
+	 sdcbuf->sdc_result[2]  = pSiS->PciDevice;
+	 sdcbuf->sdc_result[3]  = pSiS->PciFunc;
 	 sdcbuf->sdc_result[4]  = pSiS->ROM661New ? 1 : (pSiS->HaveXGIBIOS ? 2 : 0),
 	 sdcbuf->sdc_result[5]  = pSiS->ChipFlags;
 	 sdcbuf->sdc_result[6]  = pSiS->ChipType;
@@ -1848,6 +1848,10 @@ SiSCtrlExtInit(ScrnInfoPtr pScrn)
    xSiSCtrlScreenTable *myctrl;
    unsigned int version, revision;
 
+   if((pSiS->VGAEngine != SIS_300_VGA) &&
+      (pSiS->VGAEngine != SIS_315_VGA))
+      return;
+
    pSiS->SCLogQuiet = FALSE;
 
    if(!(myext = CheckExtension(SISCTRL_PROTOCOL_NAME))) {
@@ -2258,7 +2262,7 @@ SISGetPortUtilAttribute(ScrnInfoPtr pScrn,  Atom attribute,
   } else if(attribute == pSiS->xv_GHI) {
      *value = (pSiS->ChipFlags & 0xffff) | (pSiS->ChipType << 16) | (pSiS->ChipRev << 24);
   } else if(attribute == pSiS->xv_GBI) {
-     *value = (pSiS->PciInfo->bus << 16) | (pSiS->PciInfo->device << 8) | pSiS->PciInfo->func;
+     *value = (pSiS->PciBus << 16) | (pSiS->PciDevice << 8) | pSiS->PciFunc;
   } else if(attribute == pSiS->xv_QVV) {
      *value = SIS_VBFlagsVersion;
   } else if(attribute == pSiS->xv_QDD) {

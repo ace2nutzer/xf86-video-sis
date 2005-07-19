@@ -2852,6 +2852,19 @@ SiS_LoadInitVBE(ScrnInfoPtr pScrn)
 {
     SISPtr pSiS = SISPTR(pScrn);
 
+    /* Don't load the VBE module for secondary
+     * cards which sisfb POSTed. We don't want
+     * int10 to overwrite our set up (such as
+     * disabled a0000 memory address decoding).
+     * We don't need the VBE anyway because
+     * the card will never be in text mode,
+     * and we can restore graphics modes just
+     * perfectly.
+     */
+    if( !pSiS->Primary &&
+        pSiS->sisfbcardposted)
+       return;
+
     if(pSiS->pVbe) return;
 
     if(xf86LoadSubModule(pScrn, "vbe")) {
@@ -2879,8 +2892,10 @@ SiS_MapVGAMem(ScrnInfoPtr pScrn)
     /* Map 64k VGA window for saving/restoring CGA fonts */
     pSiS->VGAMapSize = 0x10000;
     pSiS->VGAMapPhys = 0;	/* Default */
-    if(!pSiS->Primary) {
-       /* If secondary, set Phys to beginning of our video RAM */
+    if((!pSiS->Primary) || (!pSiS->VGADecodingEnabled)) {
+       /* If card is secondary or if a0000-address decoding
+        * is disabled, set Phys to beginning of our video RAM.
+	*/
        pSiS->VGAMapPhys = pSiS->PciInfo->memBase[0];
     }
     if(!SiSVGAMapMem(pScrn)) {
@@ -2890,6 +2905,220 @@ SiS_MapVGAMem(ScrnInfoPtr pScrn)
     }
 }
 #endif
+
+static void
+SiS_CheckKernelFB(ScrnInfoPtr pScrn)
+{
+    SISPtr pSiS = SISPTR(pScrn);
+    int        fd, i;
+    CARD32     sisfbinfosize = 0, sisfbversion;
+    sisfb_info *mysisfbinfo;
+    char       name[16];
+
+    pSiS->donttrustpdc = FALSE;
+    pSiS->sisfbpdc = 0xff;
+    pSiS->sisfbpdca = 0xff;
+    pSiS->sisfblcda = 0xff;
+    pSiS->sisfbscalelcd = -1;
+    pSiS->sisfbspecialtiming = CUT_NONE;
+    pSiS->sisfb_haveemi = FALSE;
+    pSiS->sisfbfound = FALSE;
+    pSiS->sisfb_tvposvalid = FALSE;
+    pSiS->sisfbdevname[0] = 0;
+    pSiS->sisfb_havelock = FALSE;
+    pSiS->sisfbHaveNewHeapDef = FALSE;
+    pSiS->sisfbHeapSize = 0;
+    pSiS->sisfbVideoOffset = 0;
+    pSiS->sisfbxSTN = FALSE;
+    pSiS->sisfbcanpost = FALSE;   /* (Old) sisfb can't POST card */
+    pSiS->sisfbcardposted = TRUE; /* If (old) sisfb is running, card must have been POSTed */
+    pSiS->sisfbprimary = FALSE;   /* (Old) sisfb doesn't know */
+
+    if(pSiS->VGAEngine == SIS_300_VGA || pSiS->VGAEngine == SIS_315_VGA) {
+
+       i = 0;
+       do {
+
+	  if(i <= 7) {
+             sprintf(name, "/dev/fb%1d", i);
+	  } else {
+	     sprintf(name, "/dev/fb/%1d", (i - 8));
+	  }
+
+          if((fd = open(name, 'r')) != -1) {
+
+	     Bool gotit = FALSE;
+
+ 	     if(!ioctl(fd, SISFB_GET_INFO_SIZE, &sisfbinfosize)) {
+ 		if((mysisfbinfo = xalloc(sisfbinfosize))) {
+ 		   if(!ioctl(fd, (SISFB_GET_INFO | (sisfbinfosize << 16)), mysisfbinfo)) {
+ 		      gotit = TRUE;
+ 		   } else {
+ 		      xfree(mysisfbinfo);
+ 		      mysisfbinfo = NULL;
+ 		   }
+ 		}
+ 	     } else {
+ 		if((mysisfbinfo = xalloc(sizeof(*mysisfbinfo) + 16))) {
+ 		   if(!ioctl(fd, SISFB_GET_INFO_OLD, mysisfbinfo)) {
+ 		      gotit = TRUE;
+		      xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
+				"Possibly old version of sisfb detected. Please update.\n");
+		   } else {
+		      xfree(mysisfbinfo);
+		      mysisfbinfo = NULL;
+		   }
+		}
+	     }
+
+	     if(gotit) {
+
+		if(mysisfbinfo->sisfb_id == SISFB_ID) {
+
+		   sisfbversion = (mysisfbinfo->sisfb_version << 16) |
+				  (mysisfbinfo->sisfb_revision << 8) |
+				  (mysisfbinfo->sisfb_patchlevel);
+
+	           if(sisfbversion >= SISFB_VERSION(1, 5, 8)) {
+		      /* Added PCI bus/slot/func into in sisfb Version 1.5.08.
+		       * Check this to make sure we run on the same card as sisfb
+		       */
+		      if((mysisfbinfo->sisfb_pcibus  == pSiS->PciBus)    &&
+			 (mysisfbinfo->sisfb_pcislot == pSiS->PciDevice) &&
+			 (mysisfbinfo->sisfb_pcifunc == pSiS->PciFunc)) {
+			 pSiS->sisfbfound = TRUE;
+		      }
+		   } else pSiS->sisfbfound = TRUE;
+
+		   if(pSiS->sisfbfound) {
+		      xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
+			     "%s: SiS kernel fb driver (sisfb) %d.%d.%d detected (PCI:%02d:%02d.%d)\n",
+				&name[5],
+				mysisfbinfo->sisfb_version,
+				mysisfbinfo->sisfb_revision,
+				mysisfbinfo->sisfb_patchlevel,
+				pSiS->PciBus,
+				pSiS->PciDevice,
+				pSiS->PciFunc);
+
+		      /* Added version/rev/pl in sisfb 1.4.0 */
+		      if(mysisfbinfo->sisfb_version == 0) {
+			 xf86DrvMsg(pScrn->scrnIndex, X_INFO,
+				"Old version of sisfb found. Please update.\n");
+		      }
+		      /* Basically, we can't trust the pdc register if sisfb is loaded */
+		      pSiS->donttrustpdc = TRUE;
+		      pSiS->sisfbHeapStart = mysisfbinfo->heapstart;
+
+		      if(sisfbversion >= SISFB_VERSION(1, 7, 20)) {
+			 pSiS->sisfbHeapSize = mysisfbinfo->sisfb_heapsize;
+			 pSiS->sisfbVideoOffset = mysisfbinfo->sisfb_videooffset;
+			 pSiS->sisfbHaveNewHeapDef = TRUE;
+			 pSiS->sisfbFSTN = mysisfbinfo->sisfb_curfstn;
+			 pSiS->sisfbDSTN = mysisfbinfo->sisfb_curdstn;
+			 pSiS->sisfbxSTN = TRUE;
+			 xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
+				"sisfb: memory heap at %dKB, size %dKB, viewport at %dKB\n",
+				(int)pSiS->sisfbHeapStart, (int)pSiS->sisfbHeapSize,
+				(int)pSiS->sisfbVideoOffset/1024);
+		      } else {
+			 xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
+				"sisfb: memory heap at %dKB\n", (int)pSiS->sisfbHeapStart);
+		      }
+		      xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
+				"sisfb: using video mode 0x%02x\n", mysisfbinfo->fbvidmode);
+		      pSiS->OldMode = mysisfbinfo->fbvidmode;
+		      if(sisfbversion >= SISFB_VERSION(1, 5, 6)) {
+			 xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
+				"sisfb: using %s, reserved %dK\n",
+				(mysisfbinfo->sisfb_caps & 0x40) ? "SiS300 series Turboqueue" :
+				   (mysisfbinfo->sisfb_caps & 0x20) ? "SiS315/330/340 series AGP command queue" :
+				      (mysisfbinfo->sisfb_caps & 0x10) ? "SiS315/330/340 series VRAM command queue" :
+					(mysisfbinfo->sisfb_caps & 0x08) ? "SiS315/330/340 series MMIO mode" :
+					   "no command queue",
+				(int)mysisfbinfo->sisfb_tqlen);
+		      }
+		      if(sisfbversion >= SISFB_VERSION(1, 5, 10)) {
+			 /* We can trust the pdc value if sisfb is of recent version */
+			 if(pSiS->VGAEngine == SIS_300_VGA) pSiS->donttrustpdc = FALSE;
+		      }
+		      if(sisfbversion >= SISFB_VERSION(1, 5, 11)) {
+			 if(pSiS->VGAEngine == SIS_300_VGA) {
+			    /* As of 1.5.11, sisfb saved the register for us (300 series) */
+			    pSiS->sisfbpdc = mysisfbinfo->sisfb_lcdpdc;
+			    if(!pSiS->sisfbpdc) pSiS->sisfbpdc = 0xff;
+			 }
+		      }
+		      if(sisfbversion >= SISFB_VERSION(1, 5, 14)) {
+			 if(pSiS->VGAEngine == SIS_315_VGA) {
+			    pSiS->sisfblcda = mysisfbinfo->sisfb_lcda;
+			 }
+		      }
+		      if(sisfbversion >= SISFB_VERSION(1, 6, 13)) {
+			 pSiS->sisfbscalelcd = mysisfbinfo->sisfb_scalelcd;
+			 pSiS->sisfbspecialtiming = mysisfbinfo->sisfb_specialtiming;
+		      }
+		      if(sisfbversion >= SISFB_VERSION(1, 6, 16)) {
+			 if(pSiS->VGAEngine == SIS_315_VGA) {
+			    pSiS->donttrustpdc = FALSE;
+			    pSiS->sisfbpdc = mysisfbinfo->sisfb_lcdpdc;
+			    if(sisfbversion >= SISFB_VERSION(1, 6, 24)) {
+			       pSiS->sisfb_haveemi = mysisfbinfo->sisfb_haveemi ? TRUE : FALSE;
+			       pSiS->sisfb_haveemilcd = TRUE;  /* will match most cases */
+			       pSiS->sisfb_emi30 = mysisfbinfo->sisfb_emi30;
+			       pSiS->sisfb_emi31 = mysisfbinfo->sisfb_emi31;
+			       pSiS->sisfb_emi32 = mysisfbinfo->sisfb_emi32;
+			       pSiS->sisfb_emi33 = mysisfbinfo->sisfb_emi33;
+			    }
+			    if(sisfbversion >= SISFB_VERSION(1, 6, 25)) {
+			       pSiS->sisfb_haveemilcd = mysisfbinfo->sisfb_haveemilcd ? TRUE : FALSE;
+			    }
+			    if(sisfbversion >= SISFB_VERSION(1, 6, 31)) {
+			       pSiS->sisfbpdca = mysisfbinfo->sisfb_lcdpdca;
+			    } else {
+			       if(pSiS->sisfbpdc) {
+				  pSiS->sisfbpdca = (pSiS->sisfbpdc & 0xf0) >> 3;
+				  pSiS->sisfbpdc  = (pSiS->sisfbpdc & 0x0f) << 1;
+			       } else {
+				  pSiS->sisfbpdca = pSiS->sisfbpdc = 0xff;
+			       }
+			    }
+			 }
+		      }
+		      if(sisfbversion >= SISFB_VERSION(1, 7, 0)) {
+		         pSiS->sisfb_havelock = TRUE;
+			 if(sisfbversion >= SISFB_VERSION(1, 7, 1)) {
+			    pSiS->sisfb_tvxpos = mysisfbinfo->sisfb_tvxpos;
+			    pSiS->sisfb_tvypos = mysisfbinfo->sisfb_tvypos;
+			    pSiS->sisfb_tvposvalid = TRUE;
+			 }
+		      }
+		      if(sisfbversion >= SISFB_VERSION(1, 8, 7)) {
+			 pSiS->sisfbcanpost = (mysisfbinfo->sisfb_can_post) ? TRUE : FALSE;
+			 pSiS->sisfbcardposted = (mysisfbinfo->sisfb_card_posted) ? TRUE : FALSE;
+			 pSiS->sisfbprimary = (mysisfbinfo->sisfb_was_boot_device) ? TRUE : FALSE;
+			 /* Validity check */
+			 if(!pSiS->sisfbcardposted) {
+			    pSiS->sisfbprimary = FALSE;
+			 }
+		      }
+		   }
+	        }
+		xfree(mysisfbinfo);
+		mysisfbinfo = NULL;
+	     }
+	     close (fd);
+          }
+	  i++;
+       } while((i <= 15) && (!pSiS->sisfbfound));
+
+       if(pSiS->sisfbfound) {
+          strncpy(pSiS->sisfbdevname, name, 15);
+       } else {
+          xf86DrvMsg(pScrn->scrnIndex, X_PROBED, "sisfb not found\n");
+       }
+    }
+}
 
 static void
 SiSPseudo(ScrnInfoPtr pScrn)
@@ -3028,6 +3257,8 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
     pSiS = SISPTR(pScrn);
     pSiS->pScrn = pScrn;
 
+    pSiS->pInt = NULL;
+
     /* Save PCI Domain Base */
 #if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,2,99,0,0)
     pSiS->IODBase = 0;
@@ -3037,38 +3268,31 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 
     /* Get the entity, and make sure it is PCI. */
     pSiS->pEnt = xf86GetEntityInfo(pScrn->entityList[0]);
-    if(pSiS->pEnt->location.type != BUS_PCI)  {
+    if(pSiS->pEnt->location.type != BUS_PCI) {
        SISErrorLog(pScrn, "Entity's bus type is not PCI\n");
-       SISFreeRec(pScrn);
-       return FALSE;
+       goto my_error_0;
     }
 
 #ifdef SISDUALHEAD
     /* Allocate an entity private if necessary */
     if(xf86IsEntityShared(pScrn->entityList[0])) {
-       pSiSEnt = xf86GetEntityPrivate(pScrn->entityList[0],
-					SISEntityIndex)->ptr;
+       pSiSEnt = xf86GetEntityPrivate(pScrn->entityList[0], SISEntityIndex)->ptr;
        pSiS->entityPrivate = pSiSEnt;
 
        /* If something went wrong, quit here */
        if((pSiSEnt->DisableDual) || (pSiSEnt->ErrorAfterFirst)) {
-	  SISErrorLog(pScrn, "First head encountered fatal error, can't continue\n");
-	  SISFreeRec(pScrn);
-	  return FALSE;
+	  SISErrorLog(pScrn, "First head encountered fatal error, aborting...\n");
+	  goto my_error_0;
        }
     }
 #endif
 
     /* Find the PCI info for this screen */
     pSiS->PciInfo = xf86GetPciInfoForEntity(pSiS->pEnt->index);
-    pSiS->PciTag = pciTag(pSiS->PciInfo->bus, pSiS->PciInfo->device, pSiS->PciInfo->func);
-
-    /* Determine whether this is primary or secondary display adapter */
-    pSiS->Primary = xf86IsPrimaryPci(pSiS->PciInfo);
-    if(!pSiS->Primary) {
-       xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
-	   "This adapter is a secondary display adapter\n");
-    }
+    pSiS->PciBus = ((pciConfigPtr)pSiS->PciInfo->thisCard)->busnum;    /*SIS_PCI_BUS(pSiS->PciInfo);*/
+    pSiS->PciDevice = ((pciConfigPtr)pSiS->PciInfo->thisCard)->devnum; /*SIS_PCI_DEVICE(pSiS->PciInfo);*/
+    pSiS->PciFunc = ((pciConfigPtr)pSiS->PciInfo->thisCard)->funcnum;  /*SIS_PCI_FUNC(pSiS->PciInfo);*/
+    pSiS->PciTag = ((pciConfigPtr)pSiS->PciInfo->thisCard)->tag;       /*SIS_PCI_TAG(pSiS->PciInfo);*/
 
 #ifdef SIS_NEED_MAP_IOP
     /********************************************/
@@ -3085,13 +3309,13 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
     /* IOPortBase, vga support for MIPS and ARM */
     /* is unusable.                             */
     /* (In this driver this is solvable because */
-    /* we have our own vgaHW routines. TODO)    */
+    /* we have our own vgaHW routines. However, */
+    /* we use /dev/port for now instead.)       */
     /********************************************/
     pSiS->IOPAddress = pSiS->IODBase + pSiS->PciInfo->ioBase[2];
     if(!SISMapIOPMem(pScrn)) {
        SISErrorLog(pScrn, "Could not map I/O port area at 0x%x\n", pSiS->IOPAddress);
-       SISFreeRec(pScrn);
-       return FALSE;
+       goto my_error_0;
     } else {
        xf86DrvMsg(pScrn->scrnIndex, X_INFO, "I/O port area mapped to %p, size 128\n", pSiS->IOPBase);
 #if defined(__mips__) || defined(__arm32__)
@@ -3102,128 +3326,55 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
     }
 #endif
 
+    /* Set up i/o port access (for non-x86) */
 #ifdef SISUSEDEVPORT
     if((sisdevport = open("/dev/port", O_RDWR, 0)) == -1) {
        SISErrorLog(pScrn, "Failed to open /dev/port for read/write\n");
-       SISFreeRec(pScrn);
-       return FALSE;
+       goto my_error_0;
     }
     pSiS->sisdevportopen = TRUE;
 #endif
 
-#ifdef SIS_PC_PLATFORM
-    /* Map 64k VGA window for saving/restoring CGA fonts */
-    SiS_MapVGAMem(pScrn);
-#endif
-
-    pSiS->pInt = NULL;
-#if !defined(__alpha__)
-    if(!pSiS->Primary) {
-          /* Soft-boot the card through int10 */
-          xf86DrvMsg(pScrn->scrnIndex, X_INFO,
-		"Initializing display adapter through int10\n");
-          if(xf86LoadSubModule(pScrn, "int10")) {
-	     xf86LoaderReqSymLists(int10Symbols, NULL);
-	     pSiS->pInt = xf86InitInt10(pSiS->pEnt->index);
-          } else {
-	     SISErrorLog(pScrn, "Could not load int10 module\n");
-          }
-    }
-#endif
-
-#if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,2,99,0,0)
+    /*
+     * Set the Chipset and ChipRev, allowing config file entries to
+     * override. DANGEROUS!
+     */
     {
-	resRange vgamem[] = {
-		{ResShrMemBlock,0xA0000,0xAFFFF},
-		{ResShrMemBlock,0xB0000,0xB7FFF},
-		{ResShrMemBlock,0xB8000,0xBFFFF},
-		_END
-	};
-	xf86SetOperatingState(vgamem, pSiS->pEnt->index, ResUnusedOpr);
-    }
-#else
-    xf86SetOperatingState(resVgaMem, pSiS->pEnt->index, ResUnusedOpr);
-#endif
-
-    /* Operations for which memory access is required */
-    pScrn->racMemFlags = RAC_FB | RAC_COLORMAP | RAC_CURSOR | RAC_VIEWPORT;
-    /* Operations for which I/O access is required */
-    pScrn->racIoFlags = RAC_COLORMAP | RAC_CURSOR | RAC_VIEWPORT;
-
-    /* Load ramdac module */
-    if(!xf86LoadSubModule(pScrn, "ramdac")) {
-       SISErrorLog(pScrn, "Could not load ramdac module\n");
-#ifdef SISDUALHEAD
-       if(pSiSEnt) pSiSEnt->ErrorAfterFirst = TRUE;
-#endif
-       if(pSiS->pInt) xf86FreeInt10(pSiS->pInt);
-       SISFreeRec(pScrn);
-       return FALSE;
-    }
-
-    xf86LoaderReqSymLists(ramdacSymbols, NULL);
-
-    /* Set pScrn->monitor */
-    pScrn->monitor = pScrn->confScreen->monitor;
-
-    {
-       /*
-        * Set the Chipset and ChipRev, allowing config file entries to
-        * override. DANGEROUS!
-        */
-
        SymTabRec *myChipsets = SISChipsets;
 
-       if(pSiS->PciInfo->vendor == PCI_VENDOR_XGI)
+       if(pSiS->PciInfo->vendor == PCI_VENDOR_XGI) {
           myChipsets = XGIChipsets;
+       }
 
        if(pSiS->pEnt->device->chipset && *pSiS->pEnt->device->chipset) {
+
           pScrn->chipset = pSiS->pEnt->device->chipset;
           pSiS->Chipset = xf86StringToToken(myChipsets, pScrn->chipset);
-          from = X_CONFIG;
+
        } else if(pSiS->pEnt->device->chipID >= 0) {
+
           pSiS->Chipset = pSiS->pEnt->device->chipID;
           pScrn->chipset = (char *)xf86TokenToString(myChipsets, pSiS->Chipset);
 
-          from = X_CONFIG;
           xf86DrvMsg(pScrn->scrnIndex, X_CONFIG, "ChipID override: 0x%04X\n",
-                                pSiS->Chipset);
+								pSiS->Chipset);
        } else {
-          from = X_PROBED;
+
           pSiS->Chipset = pSiS->PciInfo->chipType;
           pScrn->chipset = (char *)xf86TokenToString(myChipsets, pSiS->Chipset);
+
        }
     }
 
     if(pSiS->pEnt->device->chipRev >= 0) {
+
        pSiS->ChipRev = pSiS->pEnt->device->chipRev;
        xf86DrvMsg(pScrn->scrnIndex, X_CONFIG, "ChipRev override: %d\n",
-                        pSiS->ChipRev);
+								pSiS->ChipRev);
     } else {
-       pSiS->ChipRev = pSiS->PciInfo->chipRev;
-    }
 
-    pSiS->SiS6326Flags = 0;
-    if(pSiS->Chipset == PCI_CHIP_SIS6326) {
-       /* Determine SiS6326 revision. According to SiS the differences are:
-        * Chip name     Chip type      TV-Out       MPEG II decoder
-        * 6326 AGP      Rev. G0/H0     no           no
-        * 6326 DVD      Rev. D2        yes          yes
-        * 6326          Rev. Cx        yes          yes
-        */
-       xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
-		"Chipset is SiS6326 %s (revision 0x%02x)\n",
-		(pSiS->ChipRev == 0xaf) ? "(Ax)" :
-		   ((pSiS->ChipRev == 0x0a) ? "AGP (G0)" :
-		      ((pSiS->ChipRev == 0x0b) ? "AGP (H0)" :
-		          (((pSiS->ChipRev & 0xf0) == 0xd0) ? "DVD (Dx/H0)" :
-			      (((pSiS->ChipRev & 0xf0) == 0x90) ? "(9x)" :
-			          (((pSiS->ChipRev & 0xf0) == 0xc0) ? "(Cx)" :
-				       "(unknown)"))))),
-		pSiS->ChipRev);
-       if((pSiS->ChipRev != 0x0a) && (pSiS->ChipRev != 0x0b)) {
-		pSiS->SiS6326Flags |= SIS6326_HASTV;
-       }
+       pSiS->ChipRev = pSiS->PciInfo->chipRev;
+
     }
 
     /*
@@ -3232,22 +3383,257 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
      */
     if(pScrn->chipset == NULL) {
        SISErrorLog(pScrn, "ChipID 0x%04X is not recognised\n", pSiS->Chipset);
-#ifdef SISDUALHEAD
-       if(pSiSEnt) pSiSEnt->ErrorAfterFirst = TRUE;
-#endif
-       if(pSiS->pInt) xf86FreeInt10(pSiS->pInt);
-       SISFreeRec(pScrn);
-       return FALSE;
+       goto my_error_0;
     }
     if(pSiS->Chipset < 0) {
        SISErrorLog(pScrn, "Chipset \"%s\" is not recognised\n", pScrn->chipset);
-#ifdef SISDUALHEAD
-       if(pSiSEnt) pSiSEnt->ErrorAfterFirst = TRUE;
-#endif
-       if(pSiS->pInt) xf86FreeInt10(pSiS->pInt);
-       SISFreeRec(pScrn);
-       return FALSE;
+       goto my_error_0;
     }
+
+    pSiS->SiS6326Flags = 0;
+
+    /* Determine VGA engine generation */
+    switch(pSiS->Chipset) {
+       case PCI_CHIP_SIS300:
+       case PCI_CHIP_SIS540:
+       case PCI_CHIP_SIS630: /* 630 + 730 */
+          pSiS->VGAEngine = SIS_300_VGA;
+	  break;
+       case PCI_CHIP_SIS315H:
+       case PCI_CHIP_SIS315:
+       case PCI_CHIP_SIS315PRO:
+       case PCI_CHIP_SIS550:
+       case PCI_CHIP_SIS650: /* 650 + 740 */
+       case PCI_CHIP_SIS330:
+       case PCI_CHIP_SIS660: /* 660, 661, 741, 760, 761, 670(?), 770 */
+       case PCI_CHIP_SIS340:
+       case PCI_CHIP_XGIXG20:
+       case PCI_CHIP_XGIXG40:
+          pSiS->VGAEngine = SIS_315_VGA;
+	  break;
+       case PCI_CHIP_SIS530:
+          pSiS->VGAEngine = SIS_530_VGA;
+	  break;
+       case PCI_CHIP_SIS6326:
+          /* Determine SiS6326 revision. According to SiS the differences are:
+	   * Chip name     Chip type      TV-Out       MPEG II decoder
+	   * 6326 AGP      Rev. G0/H0     no           no
+	   * 6326 DVD      Rev. D2        yes          yes
+	   * 6326          Rev. Cx        yes          yes
+	   */
+	  xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
+		"Chipset is SiS6326 %s (revision 0x%02x)\n",
+		(pSiS->ChipRev == 0xaf) ? "(Ax)" :
+		   ((pSiS->ChipRev == 0x0a) ? "AGP (G0)" :
+		      ((pSiS->ChipRev == 0x0b) ? "AGP (H0)" :
+			 (((pSiS->ChipRev & 0xf0) == 0xd0) ? "DVD (Dx/H0)" :
+			    (((pSiS->ChipRev & 0xf0) == 0x90) ? "(9x)" :
+			       (((pSiS->ChipRev & 0xf0) == 0xc0) ? "(Cx)" :
+				  "(unknown)"))))),
+		pSiS->ChipRev);
+	  if((pSiS->ChipRev != 0x0a) && (pSiS->ChipRev != 0x0b)) {
+	     pSiS->SiS6326Flags |= SIS6326_HASTV;
+	  }
+	  /* fall through */
+       default:
+	  pSiS->VGAEngine = SIS_OLD_VGA;
+    }
+
+    /* We don't know about the current mode yet */
+    pSiS->OldMode = 0;
+
+    /* Determine whether this is the primary or a secondary
+     * display adapter. And right here the problem starts:
+     * On machines with integrated SiS chipsets, the system BIOS
+     * usually sets VGA_EN on all PCI-to-PCI bridges in the system
+     * (of which there usually are two: PCI and AGP). This and
+     * the fact that any PCI card POSTed by sisfb naturally has
+     * its PCI resources enabled, leads to X assuming that
+     * there are more than one "primary" cards in the system.
+     * In this case, X treats ALL cards as "secondary" -
+     * which by no means is desireable. If sisfb is running,
+     * we can determine which card really is "primary" (in
+     * terms of if it's the one that occupies the A0000 area
+     * etc.) in a better way (Linux 2.6.12 or later). See below.
+     */
+    if(!(pSiS->Primary = xf86IsPrimaryPci(pSiS->PciInfo))) {
+       xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
+	   SISMYSERVERNAME " assumes this adapter to be secondary\n");
+    }
+
+    /* Now check if sisfb is running, and if so, retrieve
+     * all possible info from it. This also resets all
+     * sisfb_* entries in pSiS regardless of the chipset.
+     */
+    SiS_CheckKernelFB(pScrn);
+
+    /* Now for that primary/secondary mess: Linux kernel
+     * 2.6.12 and later knows what card is primary, and so
+     * does any recent version of sisfb. XFree86/X.org takes
+     * all adapters as "secondary" if more than one card's
+     * memory and i/o resources are enabled, and more than
+     * one PCI bridge in the system has VGA_EN set at server
+     * start. So, let's start thinking: What is this
+     * primary/secondary classification needed for anyway?
+     * (This list might be incomplete for the entire server
+     * infrastructure, but it's complete as regards the driver's
+     * purposes of primary/secondary classification.)
+     *    1) VGA/console font restoring: Here it's irrelevant
+     *       whether more than one card's resources are enabled
+     *       at server start or not. Relevant is whether the card
+     *       occupies the A0000 area at this time. Assuming (?)
+     *       that this does not change during machine up-time,
+     *       it suffices to know which device was the boot video
+     *       device (as determined by Linux 2.6.12 and later).
+     *       Also, this is only relevant if the card is in text
+     *       mode; if it's in graphics mode, fonts aren't saved
+     *       or restored anyway.
+     *       sisfb tells us if that card is considered the boot
+     *       video device. The hardware registers tell us if
+     *       the card's A0000 address decoding is enabled, and if
+     *       the card currently is in text mode. These three bits
+     *       of information are enough to decide on whether or not
+     *       to save/restore fonts.
+     *    2) POSTing. Same here. Relevant is only whether or not
+     *       the card has been POSTed once before. POSTing cards
+     *       on every server start is pretty ugly, especially
+     *       if a framebuffer driver is already handling it.
+     * SiS/XGI cards POSTed by sisfb can coexist well with other
+     * active adapters. So we trust sisfb's information more
+     * than X's (especially as we only use this information for
+     * console font restoring and eventual POSTing.)
+     * What we still need is a way to find out about all this if
+     * sisfb is not running....
+     */
+    if(!pSiS->Primary && pSiS->sisfbprimary) {
+       xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
+		"sisfb reports this adapter to be primary. Seems more reliable.\n");
+       pSiS->Primary = TRUE;
+    }
+
+    /* If the card is "secondary" and has not been
+     * POSTed by sisfb, POST it now through int10.
+     * For cards POSTed by sisfb, we definitely don't
+     * want that as it messes up our set up (eg. the
+     * disabled A0000 area).
+     * The int10 module decides on its own if the
+     * card is primary or secondary. Since it uses
+     * the generic technique described above, and since
+     * for "secondary" cards it needs a real PCI BIOS
+     * ROM, and since integrated chips don't have such
+     * a PCI BIOS ROM, int10 will naturally fail to
+     * find/read the BIOS on such machines. Great.
+     * Using the integrated graphics as "secondary"
+     * (which it will be as soon as X finds more than
+     * one card's mem and i/o resources enabled, and more
+     * than one PCI bridge's VGA_EN bit set during server
+     * start) will therefore prevent us from restoring
+     * the mode using the VBE. That means real fun if
+     * the integrated chip is set up to use the video
+     * bridge output for text mode (which is something
+     * the driver doesn't really support since it's done
+     * pretty much differently on every machine.)
+     */
+#if !defined(__alpha__)
+    if(!pSiS->Primary) {
+       if(!pSiS->sisfbcardposted) {
+	  xf86DrvMsg(pScrn->scrnIndex, X_INFO,
+		"Initializing adapter through int10\n");
+	  if(xf86LoadSubModule(pScrn, "int10")) {
+	     xf86LoaderReqSymLists(int10Symbols, NULL);
+	     pSiS->pInt = xf86InitInt10(pSiS->pEnt->index);
+	  } else {
+	     SISErrorLog(pScrn, "Failed to load int10 module\n");
+	  }
+       } else {
+	  xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
+		"Adapter already initialized by sisfb\n");
+       }
+    }
+#endif
+
+    /* Get the address of our relocated IO registers.
+     * These are enabled by the hardware during cold boot, and
+     * by the BIOS. So we can pretty much rely on that these
+     * are enabled.
+     */
+    pSiS->RelIO = (SISIOADDRESS)(pSiS->PciInfo->ioBase[2] + pSiS->IODBase);
+    xf86DrvMsg(pScrn->scrnIndex, X_PROBED, "Relocated I/O registers at 0x%lX\n",
+           (ULong)pSiS->RelIO);
+
+    /* Unlock extended registers */
+    sisSaveUnlockExtRegisterLock(pSiS, &srlockReg, &crlockReg);
+
+    /* Is a0000 memory address decoding enabled? */
+    pSiS->VGADecodingEnabled = TRUE;
+    switch(pSiS->VGAEngine) {
+    case SIS_OLD_VGA:
+       /* n/a */
+       break;
+    case SIS_530_VGA:
+       inSISIDXREG(SISSR, 0x3d, tempreg);
+       if(tempreg & 0x04) pSiS->VGADecodingEnabled = FALSE;
+       break;
+    case SIS_300_VGA:
+    case SIS_315_VGA:
+       inSISIDXREG(SISSR, 0x20, tempreg);
+       if(tempreg & 0x04) pSiS->VGADecodingEnabled = FALSE;
+       break;
+    }
+
+    if(!pSiS->VGADecodingEnabled) {
+       xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
+		"Standard VGA (0xA0000) memory address decoding is disabled\n");
+    }
+
+#ifdef SIS_PC_PLATFORM
+    /* Map 64k VGA window for saving/restoring CGA fonts.
+     * For secondary cards or if A0000 address decoding
+     * is disabled, this will map the beginning of the
+     * linear (PCI) video RAM instead.
+     */
+    SiS_MapVGAMem(pScrn);
+#endif
+
+    /* Set operating state */
+
+    /* 1. memory */
+    /* [ResUnusedOpr: Resource decoded by hw, but not used]
+     * [ResDisableOpr: Resource is not decoded by hw]
+     * So, if a0000 memory decoding is disabled, one could
+     * argue that we may say so, too. Hm. Quite likely that
+     * the VBE (via int10) will eventually enable it. So we
+     * cowardly say unused instead.
+     */
+    xf86SetOperatingState(resVgaMem, pSiS->pEnt->index, ResUnusedOpr);
+
+    /* 2. i/o */
+    /* Although we only use the relocated i/o ports, the hardware
+     * also decodes the standard VGA port range. This could in
+     * theory be disabled, but I don't dare to do this; in case of
+     * a server crash, the card would be entirely dead. Also, this
+     * would prevent int10 and the VBE from working at all. Generic
+     * access control through the PCI configuration registers does
+     * nicely anyway.
+     */
+    xf86SetOperatingState(resVgaIo, pSiS->pEnt->index, ResUnusedOpr);
+
+    /* Operations for which memory access is required */
+    pScrn->racMemFlags = RAC_FB | RAC_COLORMAP | RAC_CURSOR | RAC_VIEWPORT;
+
+    /* Operations for which I/O access is required */
+    pScrn->racIoFlags = RAC_COLORMAP | RAC_CURSOR | RAC_VIEWPORT;
+
+    /* Load ramdac module */
+    if(!xf86LoadSubModule(pScrn, "ramdac")) {
+       SISErrorLog(pScrn, "Could not load ramdac module\n");
+       goto my_error_1;
+    }
+
+    xf86LoaderReqSymLists(ramdacSymbols, NULL);
+
+    /* Set pScrn->monitor */
+    pScrn->monitor = pScrn->confScreen->monitor;
 
     /* Reset some entries */
     pSiS->SiSFastVidCopy = SiSVidCopyGetDefault();
@@ -3269,7 +3655,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
     /* Always do a ValidMode() inside Switchmode() */
     pSiS->skipswitchcheck = FALSE;
 
-    /* Determine chipset and VGA engine type */
+    /* Determine chipset and its capabilities in detail */
     pSiS->ChipFlags = 0;
     pSiS->SiS_SD_Flags = pSiS->SiS_SD2_Flags = 0;
     pSiS->HWCursorMBufNum = pSiS->HWCursorCBufNum = 0;
@@ -3280,16 +3666,13 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
     switch(pSiS->Chipset) {
        case PCI_CHIP_SIS530:
 	  pSiS->ChipType = SIS_530;
-	  pSiS->VGAEngine = SIS_530_VGA;
 	  break;
        case PCI_CHIP_SIS300:
 	  pSiS->ChipType = SIS_300;
-	  pSiS->VGAEngine = SIS_300_VGA;
 	  pSiS->SiS_SD_Flags |= SiS_SD_IS300SERIES;
 	  break;
        case PCI_CHIP_SIS540:
 	  pSiS->ChipType = SIS_540;
-	  pSiS->VGAEngine = SIS_300_VGA;
 	  pSiS->SiS_SD_Flags |= SiS_SD_IS300SERIES;
 	  break;
        case PCI_CHIP_SIS630: /* 630 + 730 */
@@ -3297,12 +3680,10 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	  if(pciReadLong(0x00000000, 0x00) == 0x07301039) {
 	     pSiS->ChipType = SIS_730;
 	  }
-	  pSiS->VGAEngine = SIS_300_VGA;
 	  pSiS->SiS_SD_Flags |= SiS_SD_IS300SERIES;
 	  break;
        case PCI_CHIP_SIS315H:
 	  pSiS->ChipType = SIS_315H;
-	  pSiS->VGAEngine = SIS_315_VGA;
 	  pSiS->ChipFlags |= (SiSCF_315Core | SiSCF_MMIOPalette);
 	  pSiS->SiS_SD_Flags |= SiS_SD_IS315SERIES;
 	  pSiS->SiS_SD2_Flags |= SiS_SD2_SUPPORTXVHUESAT;
@@ -3313,7 +3694,6 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	  pSiS->Chipset = PCI_CHIP_SIS315H;
 	  pSiS->ChipType = SIS_315;
 	  pSiS->ChipFlags |= (SiSCF_315Core | SiSCF_MMIOPalette);
-	  pSiS->VGAEngine = SIS_315_VGA;
 	  pSiS->SiS_SD_Flags |= SiS_SD_IS315SERIES;
 	  pSiS->SiS_SD2_Flags |= SiS_SD2_SUPPORTXVHUESAT;
 	  pSiS->myCR63 = 0x63;
@@ -3323,7 +3703,6 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	  pSiS->Chipset = PCI_CHIP_SIS315H;
 	  pSiS->ChipType = SIS_315PRO;
 	  pSiS->ChipFlags |= (SiSCF_315Core | SiSCF_MMIOPalette);
-	  pSiS->VGAEngine = SIS_315_VGA;
 	  pSiS->SiS_SD_Flags |= SiS_SD_IS315SERIES;
 	  pSiS->SiS_SD2_Flags |= SiS_SD2_SUPPORTXVHUESAT;
 	  pSiS->myCR63 = 0x63;
@@ -3331,7 +3710,6 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
        case PCI_CHIP_SIS550:
 	  pSiS->ChipType = SIS_550;
 	  pSiS->ChipFlags |= (SiSCF_Integrated | SiSCF_MMIOPalette);
-	  pSiS->VGAEngine = SIS_315_VGA;
 	  pSiS->SiS_SD_Flags |= SiS_SD_IS315SERIES;
 	  pSiS->SiS_SD2_Flags |= SiS_SD2_SUPPORTXVHUESAT;
 	  pSiS->myCR63 = 0x63;
@@ -3341,7 +3719,6 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	  if(pciReadLong(0x00000000, 0x00) == 0x07401039) {
 	     pSiS->ChipType = SIS_740;
 	  }
-	  pSiS->VGAEngine = SIS_315_VGA;
 	  pSiS->ChipFlags |= (SiSCF_Integrated | SiSCF_Real256ECore | SiSCF_MMIOPalette);
 	  pSiS->SiS_SD_Flags |= SiS_SD_IS315SERIES;
 	  pSiS->SiS_SD2_Flags |= SiS_SD2_SUPPORTXVHUESAT;
@@ -3349,7 +3726,6 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	  break;
        case PCI_CHIP_SIS330:
 	  pSiS->ChipType = SIS_330;
-	  pSiS->VGAEngine = SIS_315_VGA;
 	  pSiS->ChipFlags |= (SiSCF_XabreCore | SiSCF_MMIOPalette);
 	  pSiS->SiS_SD_Flags |= SiS_SD_IS330SERIES;
 	  pSiS->SiS_SD2_Flags |= SiS_SD2_SUPPORTXVHUESAT;
@@ -3397,9 +3773,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	      * 0x80 = 760 (CR5F & 0xc0: 0x00 A0, 0x40 A1)
 	      * 0x90 = 741 (CR5F & 0xc0: 0x00 A0,A1 0x40 A2)
 	      * other: 660 (CR5F & 0xc0: 0x00 A0 0x40 A1) (DOA?)
-	      * !!! BUT WE DO NOT HAVE RelIO AT THIS POINT YET !!!
 	      */
-	     pSiS->VGAEngine = SIS_315_VGA;
 	     pSiS->ChipFlags |= (SiSCF_Integrated | SiSCF_MMIOPalette);
 	     pSiS->SiS_SD_Flags |= SiS_SD_IS330SERIES;
 	     pSiS->SiS_SD2_Flags |= SiS_SD2_SUPPORTXVHUESAT;
@@ -3409,7 +3783,6 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	  break;
        case PCI_CHIP_SIS340:
 	  pSiS->ChipType = SIS_340;
-	  pSiS->VGAEngine = SIS_315_VGA;
 	  pSiS->ChipFlags |= (SiSCF_XabreCore | SiSCF_MMIOPalette);
 	  pSiS->SiS_SD_Flags |= SiS_SD_IS340SERIES;
 	  pSiS->SiS_SD2_Flags |= SiS_SD2_SUPPORTXVHUESAT;
@@ -3418,7 +3791,6 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	  break;
        case PCI_CHIP_XGIXG20:
 	  pSiS->ChipType = XGI_20;
-	  pSiS->VGAEngine = SIS_315_VGA;
 	  pSiS->ChipFlags |= (SiSCF_XabreCore | SiSCF_MMIOPalette | SiSCF_IsXGI);
 	  pSiS->SiS_SD2_Flags |= (SiS_SD2_NOOVERLAY | SiS_SD2_ISXGI);
 	  pSiS->myCR63 = 0x53;
@@ -3426,7 +3798,6 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	  break;
        case PCI_CHIP_XGIXG40:
 	  pSiS->ChipType = XGI_40;
-	  pSiS->VGAEngine = SIS_315_VGA;
 	  pSiS->ChipFlags |= (SiSCF_XabreCore | SiSCF_MMIOPalette | SiSCF_IsXGI);
 	  pSiS->SiS_SD2_Flags |= (SiS_SD2_SUPPORTXVHUESAT | SiS_SD2_ISXGI);
 	  pSiS->myCR63 = 0x53;
@@ -3435,222 +3806,11 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	  break;
        default:
 	  pSiS->ChipType = SIS_OLD;
-	  pSiS->VGAEngine = SIS_OLD_VGA;
 	  break;
     }
 
-    /* Now check if sisfb is loaded. Since sisfb only supports
-     * the 300 and 315/330 series, we only do this for these chips.
-     * We use this for checking where sisfb starts its memory
-     * heap in order to automatically detect the correct MaxXFBMem
-     * setting (which normally is given by the option of the same name).
-     * Under a 2.4 kernel, that only works if sisfb is completely
-     * running, ie with a video mode because the fbdev will not be
-     * installed otherwise. Under 2.6 and later, sisfb will install
-     * the framebuffer device in any way and running it with mode=none
-     * is no longer supported (or necessary).
-     */
-
-    pSiS->donttrustpdc = FALSE;
-    pSiS->sisfbpdc = 0xff;
-    pSiS->sisfbpdca = 0xff;
-    pSiS->sisfblcda = 0xff;
-    pSiS->sisfbscalelcd = -1;
-    pSiS->sisfbspecialtiming = CUT_NONE;
-    pSiS->sisfb_haveemi = FALSE;
-    pSiS->OldMode = 0;
-    pSiS->sisfbfound = FALSE;
-    pSiS->sisfb_tvposvalid = FALSE;
-    pSiS->sisfbdevname[0] = 0;
-    pSiS->sisfb_havelock = FALSE;
-    pSiS->sisfbHaveNewHeapDef = FALSE;
-    pSiS->sisfbHeapSize = 0;
-    pSiS->sisfbVideoOffset = 0;
-    pSiS->sisfbxSTN = FALSE;
-
-    if(pSiS->VGAEngine == SIS_300_VGA || pSiS->VGAEngine == SIS_315_VGA) {
-
-       int        fd, i;
-       CARD32     sisfbinfosize = 0, sisfbversion;
-       sisfb_info *mysisfbinfo;
-       char       name[16];
-
-       i=0;
-       do {
-
-	  if(i <= 7) {
-             sprintf(name, "/dev/fb%1d", i);
-	  } else {
-	     sprintf(name, "/dev/fb/%1d", i-8);
-	  }
-
-          if((fd = open(name, 'r')) != -1) {
-
-	     Bool gotit = FALSE;
-
- 	     if(!ioctl(fd, SISFB_GET_INFO_SIZE, &sisfbinfosize)) {
- 		if((mysisfbinfo = xalloc(sisfbinfosize))) {
- 		   if(!ioctl(fd, (SISFB_GET_INFO | (sisfbinfosize << 16)), mysisfbinfo)) {
- 		      gotit = TRUE;
- 		   } else {
- 		      xfree(mysisfbinfo);
- 		      mysisfbinfo = NULL;
- 		   }
- 		}
- 	     } else {
- 		if((mysisfbinfo = xalloc(sizeof(*mysisfbinfo)+16))) {
- 		   if(!ioctl(fd, SISFB_GET_INFO_OLD, mysisfbinfo)) {
- 		      gotit = TRUE;
-		      xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
-				"Possibly old version of sisfb detected. Please update.\n");
-		   } else {
-		      xfree(mysisfbinfo);
-		      mysisfbinfo = NULL;
-		   }
-		}
-	     }
-
-	     if(gotit) {
-
-		if(mysisfbinfo->sisfb_id == SISFB_ID) {
-
-		   sisfbversion = (mysisfbinfo->sisfb_version << 16) |
-				  (mysisfbinfo->sisfb_revision << 8) |
-				  (mysisfbinfo->sisfb_patchlevel);
-
-	           if(sisfbversion >= 0x010508) {
-		      /* Added PCI bus/slot/func into in sisfb Version 1.5.08.
-		       * Check this to make sure we run on the same card as sisfb
-		       */
-		      if((mysisfbinfo->sisfb_pcibus  == pSiS->PciInfo->bus)    &&
-			 (mysisfbinfo->sisfb_pcislot == pSiS->PciInfo->device) &&
-			 (mysisfbinfo->sisfb_pcifunc == pSiS->PciInfo->func) ) {
-			 pSiS->sisfbfound = TRUE;
-		      }
-		   } else pSiS->sisfbfound = TRUE;
-
-		   if(pSiS->sisfbfound) {
-		      xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
-			     "%s: SiS kernel fb driver (sisfb) %d.%d.%d detected (PCI:%02d:%02d.%d)\n",
-				&name[5],
-				mysisfbinfo->sisfb_version,
-				mysisfbinfo->sisfb_revision,
-				mysisfbinfo->sisfb_patchlevel,
-				pSiS->PciInfo->bus,
-				pSiS->PciInfo->device,
-				pSiS->PciInfo->func);
-
-		      /* Added version/rev/pl in sisfb 1.4.0 */
-		      if(mysisfbinfo->sisfb_version == 0) {
-			 xf86DrvMsg(pScrn->scrnIndex, X_INFO,
-				"Old version of sisfb found. Please update.\n");
-		      }
-		      /* Basically, we can't trust the pdc register if sisfb is loaded */
-		      pSiS->donttrustpdc = TRUE;
-		      pSiS->sisfbHeapStart = mysisfbinfo->heapstart;
-
-		      if(sisfbversion >= 0x010714) {
-			 pSiS->sisfbHeapSize = mysisfbinfo->sisfb_heapsize;
-			 pSiS->sisfbVideoOffset = mysisfbinfo->sisfb_videooffset;
-			 pSiS->sisfbHaveNewHeapDef = TRUE;
-			 pSiS->sisfbFSTN = mysisfbinfo->sisfb_curfstn;
-			 pSiS->sisfbDSTN = mysisfbinfo->sisfb_curdstn;
-			 pSiS->sisfbxSTN = TRUE;
-			 xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
-				"sisfb: memory heap at %dKB, size %dKB, viewport at %dKB\n",
-				(int)pSiS->sisfbHeapStart, (int)pSiS->sisfbHeapSize,
-				(int)pSiS->sisfbVideoOffset/1024);
-		      } else {
-			 xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
-				"sisfb: memory heap at %dKB\n", (int)pSiS->sisfbHeapStart);
-		      }
-		      xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
-				"sisfb: using video mode 0x%02x\n", mysisfbinfo->fbvidmode);
-		      pSiS->OldMode = mysisfbinfo->fbvidmode;
-		      if(sisfbversion >= 0x010506) {
-			 xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
-				"sisfb: using %s, reserved %dK\n",
-				(mysisfbinfo->sisfb_caps & 0x40) ? "SiS300 series Turboqueue" :
-				   (mysisfbinfo->sisfb_caps & 0x20) ? "SiS315/330/340 series AGP command queue" :
-				      (mysisfbinfo->sisfb_caps & 0x10) ? "SiS315/330/340 series VRAM command queue" :
-					(mysisfbinfo->sisfb_caps & 0x08) ? "SiS315/330/340 series MMIO mode" :
-					   "no command queue",
-				(mysisfbinfo->sisfb_caps & 0x78) ? (int)mysisfbinfo->sisfb_tqlen : 0);
-		      }
-		      if(sisfbversion >= 0x01050A) {
-			 /* We can trust the pdc value if sisfb is of recent version */
-			 if(pSiS->VGAEngine == SIS_300_VGA) pSiS->donttrustpdc = FALSE;
-		      }
-		      if(sisfbversion >= 0x01050B) {
-			 if(pSiS->VGAEngine == SIS_300_VGA) {
-			    /* As of 1.5.11, sisfb saved the register for us (300 series) */
-			    pSiS->sisfbpdc = mysisfbinfo->sisfb_lcdpdc;
-			    if(!pSiS->sisfbpdc) pSiS->sisfbpdc = 0xff;
-			 }
-		      }
-		      if(sisfbversion >= 0x01050E) {
-			 if(pSiS->VGAEngine == SIS_315_VGA) {
-			    pSiS->sisfblcda = mysisfbinfo->sisfb_lcda;
-			 }
-		      }
-		      if(sisfbversion >= 0x01060D) {
-			 pSiS->sisfbscalelcd = mysisfbinfo->sisfb_scalelcd;
-			 pSiS->sisfbspecialtiming = mysisfbinfo->sisfb_specialtiming;
-		      }
-		      if(sisfbversion >= 0x010610) {
-			 if(pSiS->VGAEngine == SIS_315_VGA) {
-			    pSiS->donttrustpdc = FALSE;
-			    pSiS->sisfbpdc = mysisfbinfo->sisfb_lcdpdc;
-			    if(sisfbversion >= 0x010618) {
-			       pSiS->sisfb_haveemi = mysisfbinfo->sisfb_haveemi ? TRUE : FALSE;
-			       pSiS->sisfb_haveemilcd = TRUE;  /* will match most cases */
-			       pSiS->sisfb_emi30 = mysisfbinfo->sisfb_emi30;
-			       pSiS->sisfb_emi31 = mysisfbinfo->sisfb_emi31;
-			       pSiS->sisfb_emi32 = mysisfbinfo->sisfb_emi32;
-			       pSiS->sisfb_emi33 = mysisfbinfo->sisfb_emi33;
-			    }
-			    if(sisfbversion >= 0x010619) {
-			       pSiS->sisfb_haveemilcd = mysisfbinfo->sisfb_haveemilcd ? TRUE : FALSE;
-			    }
-			    if(sisfbversion >= 0x01061f) {
-			       pSiS->sisfbpdca = mysisfbinfo->sisfb_lcdpdca;
-			    } else {
-			       if(pSiS->sisfbpdc) {
-				  pSiS->sisfbpdca = (pSiS->sisfbpdc & 0xf0) >> 3;
-				  pSiS->sisfbpdc  = (pSiS->sisfbpdc & 0x0f) << 1;
-			       } else {
-				  pSiS->sisfbpdca = pSiS->sisfbpdc = 0xff;
-			       }
-			    }
-			 }
-		      }
-		      if(sisfbversion >= 0x010700) {
-		         pSiS->sisfb_havelock = TRUE;
-			 if(sisfbversion >= 0x010701) {
-			    pSiS->sisfb_tvxpos = mysisfbinfo->sisfb_tvxpos;
-			    pSiS->sisfb_tvypos = mysisfbinfo->sisfb_tvypos;
-			    pSiS->sisfb_tvposvalid = TRUE;
-			 }
-		      }
-		   }
-	        }
-		xfree(mysisfbinfo);
-		mysisfbinfo = NULL;
-	     }
-	     close (fd);
-          }
-	  i++;
-       } while((i <= 15) && (!pSiS->sisfbfound));
-
-       if(pSiS->sisfbfound) {
-          strncpy(pSiS->sisfbdevname, name, 15);
-       } else {
-          xf86DrvMsg(pScrn->scrnIndex, X_PROBED, "sisfb not found\n");
-       }
-    }
-
     /*
-     * The first thing we should figure out is the depth, bpp, etc.
+     * Now back to real business: Figure out the depth, bpp, etc.
      * Set SupportConvert... flags since we use the fb layer which
      * supports this conversion. (24to32 seems not implemented though)
      * Additionally, determine the size of the HWCursor memory area.
@@ -3745,12 +3905,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
     if(!pSiS->SiS_Pr) {
        if(!(pSiS->SiS_Pr = xnfcalloc(sizeof(struct SiS_Private), 1))) {
 	  SISErrorLog(pScrn, "Could not allocate memory for SiS_Pr structure\n");
-#ifdef SISDUALHEAD
-	  if(pSiSEnt) pSiSEnt->ErrorAfterFirst = TRUE;
-#endif
-	  if(pSiS->pInt) xf86FreeInt10(pSiS->pInt);
-	  SISFreeRec(pScrn);
-	  return FALSE;
+	  goto my_error_1;
        }
 #ifdef SISDUALHEAD
        if(pSiSEnt) pSiSEnt->SiS_Pr = pSiS->SiS_Pr;
@@ -3783,15 +3938,10 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
        pSiS->SiS_Pr->DDCPortMixup = FALSE;
     }
 
-    /* Get our relocated IO registers */
-    pSiS->RelIO = (SISIOADDRESS)(pSiS->PciInfo->ioBase[2] + pSiS->IODBase);
-    xf86DrvMsg(pScrn->scrnIndex, X_PROBED, "Relocated I/O registers at 0x%lX\n",
-           (ULong)pSiS->RelIO);
-    pSiS->SiS_Pr->IOAddress = (SISIOADDRESS)(pSiS->RelIO + 0x30);
-
-    /* Initialize SiS Port Reg definitions for externally used
-     * init.c/init301.c functions.
+    /* Copy IO address to SiS_Pr and init the structure for
+     * routines inside init.c/init301.c
      */
+    pSiS->SiS_Pr->IOAddress = (SISIOADDRESS)(pSiS->RelIO + 0x30);
     SiSRegInit(pSiS->SiS_Pr, pSiS->RelIO + 0x30);
 
     /* The following identifies the old chipsets. This is only
@@ -3807,15 +3957,11 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
        case PCI_CHIP_SG86C202:
 	  pSiS->oldChipset = OC_SIS86202; break;
        case PCI_CHIP_SG86C205:
-	  {
-	     UChar temp;
-	     sisSaveUnlockExtRegisterLock(pSiS, &srlockReg, &crlockReg);
-	     inSISIDXREG(SISSR, 0x10, temp);
-	     if(temp & 0x80) pSiS->oldChipset = OC_SIS6205B;
-	     else pSiS->oldChipset = (pSiS->ChipRev == 0x11) ?
-			   OC_SIS6205C : OC_SIS6205A;
-	     break;
-	  }
+	  inSISIDXREG(SISSR, 0x10, tempreg);
+	  if(tempreg & 0x80) pSiS->oldChipset = OC_SIS6205B;
+	  else pSiS->oldChipset = (pSiS->ChipRev == 0x11) ?
+					OC_SIS6205C : OC_SIS6205A;
+	  break;
        case PCI_CHIP_SIS82C204:
 	  pSiS->oldChipset = OC_SIS82204; break;
        case 0x6225:
@@ -3840,12 +3986,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 
     if(!xf86SetDepthBpp(pScrn, 0, 0, 0, pix24flags)) {
        SISErrorLog(pScrn, "xf86SetDepthBpp() error\n");
-#ifdef SISDUALHEAD
-       if(pSiSEnt) pSiSEnt->ErrorAfterFirst = TRUE;
-#endif
-       if(pSiS->pInt) xf86FreeInt10(pSiS->pInt);
-       SISFreeRec(pScrn);
-       return FALSE;
+       goto my_error_1;
     }
 
     /* Check that the returned depth is one we support */
@@ -3869,9 +4010,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
        SISErrorLog(pScrn,
             "Given color depth (%d) is not supported by this driver/chipset\n",
             pScrn->depth);
-       if(pSiS->pInt) xf86FreeInt10(pSiS->pInt);
-       SISFreeRec(pScrn);
-       return FALSE;
+       goto my_error_1;
     }
 
     xf86PrintDepthBpp(pScrn);
@@ -3881,9 +4020,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	((pSiS->VGAEngine == SIS_OLD_VGA) && (pScrn->bitsPerPixel == 32)) ) {
        SISErrorLog(pScrn,
             "Framebuffer bpp %d not supported for this chipset\n", pScrn->bitsPerPixel);
-       if(pSiS->pInt) xf86FreeInt10(pSiS->pInt);
-       SISFreeRec(pScrn);
-       return FALSE;
+       goto my_error_1;
     }
 
     /* Get the depth24 pixmap format */
@@ -3901,12 +4038,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 
         if(!xf86SetWeight(pScrn, zeros, zeros)) {
 	    SISErrorLog(pScrn, "xf86SetWeight() error\n");
-#ifdef SISDUALHEAD
-	    if(pSiSEnt) pSiSEnt->ErrorAfterFirst = TRUE;
-#endif
-	    if(pSiS->pInt) xf86FreeInt10(pSiS->pInt);
-	    SISFreeRec(pScrn);
-	    return FALSE;
+	    goto my_error_1;
         } else {
 	   Bool ret = FALSE;
 	   switch(pScrn->depth) {
@@ -3931,12 +4063,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 		   "RGB weight %d%d%d at depth %d not supported by hardware\n",
 		   (int)pScrn->weight.red, (int)pScrn->weight.green,
 		   (int)pScrn->weight.blue, pScrn->depth);
-#ifdef SISDUALHEAD
-	      if(pSiSEnt) pSiSEnt->ErrorAfterFirst = TRUE;
-#endif
-	      if(pSiS->pInt) xf86FreeInt10(pSiS->pInt);
-	      SISFreeRec(pScrn);
-	      return FALSE;
+	      goto my_error_1;
 	   }
         }
     }
@@ -3948,24 +4075,14 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 
     if(!xf86SetDefaultVisual(pScrn, -1)) {
        SISErrorLog(pScrn, "xf86SetDefaultVisual() error\n");
-#ifdef SISDUALHEAD
-       if(pSiSEnt) pSiSEnt->ErrorAfterFirst = TRUE;
-#endif
-       if(pSiS->pInt) xf86FreeInt10(pSiS->pInt);
-       SISFreeRec(pScrn);
-       return FALSE;
+       goto my_error_1;
     } else {
        /* We don't support DirectColor at > 8bpp */
        if(pScrn->depth > 8 && pScrn->defaultVisual != TrueColor) {
 	  SISErrorLog(pScrn,
 	       "Given default visual (%s) is not supported at depth %d\n",
 	        xf86GetVisualName(pScrn->defaultVisual), pScrn->depth);
-#ifdef SISDUALHEAD
-	  if(pSiSEnt) pSiSEnt->ErrorAfterFirst = TRUE;
-#endif
-	  if(pSiS->pInt) xf86FreeInt10(pSiS->pInt);
-	  SISFreeRec(pScrn);
-	  return FALSE;
+	  goto my_error_1;
        }
     }
 
@@ -3974,15 +4091,9 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
     if((pSiS->DualHeadMode) && (pScrn->bitsPerPixel <= 8)) {
        SISErrorLog(pScrn, "Color depth %d not supported in Dual Head mode.\n",
 			pScrn->bitsPerPixel);
-       if(pSiSEnt) pSiSEnt->ErrorAfterFirst = TRUE;
-       if(pSiS->pInt) xf86FreeInt10(pSiS->pInt);
-       SISFreeRec(pScrn);
-       return FALSE;
+       goto my_error_1;
     }
 #endif
-
-    /* Unlock registers */
-    sisSaveUnlockExtRegisterLock(pSiS, &srlockReg, &crlockReg);
 
     /* Read BIOS for 300 and 315/330/340 series customization */
     pSiS->SiS_Pr->VirtualRomBase = NULL;
@@ -3990,8 +4101,6 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
     pSiS->SiS_Pr->UseROM = FALSE;
     pSiS->ROM661New = FALSE;
     pSiS->HaveXGIBIOS = FALSE;
-
-    /* Don't use BIOS image for XGI - different layout. */
 
     if((pSiS->VGAEngine == SIS_300_VGA) || (pSiS->VGAEngine == SIS_315_VGA)) {
 #ifdef SISDUALHEAD
@@ -4039,7 +4148,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	     }
 
 	     if(!found) {
-		for(segstart=BIOS_BASE; segstart<0x000f0000; segstart+=0x00001000) {
+		for(segstart = BIOS_BASE; segstart < 0x000f0000; segstart += 0x00001000) {
 
 #if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,2,99,0,0)
 		   if(xf86ReadBIOS(segstart, 0, pSiS->BIOS, BIOS_SIZE) != BIOS_SIZE) continue;
@@ -4307,6 +4416,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
        pSiS->FbAddress = pSiS->PciInfo->memBase[0] & 0xFFFFFFF0;
        from = X_PROBED;
     }
+
 #ifdef SISDUALHEAD
     if(pSiS->DualHeadMode)
        xf86DrvMsg(pScrn->scrnIndex, from, "Global linear framebuffer at 0x%lX\n",
@@ -4335,12 +4445,12 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 
     /* Register the PCI-assigned resources */
     if(xf86RegisterResources(pSiS->pEnt->index, NULL, ResExclusive)) {
-       SISErrorLog(pScrn, "xf86RegisterResources() found resource conflicts\n");
+       SISErrorLog(pScrn, "PCI resource conflicts detected\n");
 #ifdef SISDUALHEAD
        if(pSiSEnt) pSiSEnt->ErrorAfterFirst = TRUE;
 #endif
-       if(pSiS->pInt) xf86FreeInt10(pSiS->pInt);
        sisRestoreExtRegisterLock(pSiS,srlockReg,crlockReg);
+       if(pSiS->pInt) xf86FreeInt10(pSiS->pInt);
        SISFreeRec(pScrn);
        return FALSE;
     }
@@ -5472,12 +5582,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 		SISErrorLog(pScrn,
 		    "CRT1 not detected or forced off. Dual Head mode can't initialize.\n");
 		if(pSiSEnt) pSiSEnt->DisableDual = TRUE;
-		if(pSiSEnt) pSiSEnt->ErrorAfterFirst = TRUE;
-		if(pSiS->pInt) xf86FreeInt10(pSiS->pInt);
-		pSiS->pInt = NULL;
-		sisRestoreExtRegisterLock(pSiS,srlockReg,crlockReg);
-		SISFreeRec(pScrn);
-		return FALSE;
+		goto my_error_1;
 	     }
 #endif
 #ifdef SISMERGED
@@ -5524,12 +5629,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 		SISErrorLog(pScrn,
 		   "No CRT2 output selected or no bridge detected. "
 		   "Dual Head mode can't initialize.\n");
-		if(pSiSEnt) pSiSEnt->ErrorAfterFirst = TRUE;
-		if(pSiS->pInt) xf86FreeInt10(pSiS->pInt);
-		pSiS->pInt = NULL;
-		sisRestoreExtRegisterLock(pSiS,srlockReg,crlockReg);
-		SISFreeRec(pScrn);
-		return FALSE;
+		goto my_error_1;
 	     }
 #endif
 #ifdef SISMERGED
@@ -6371,13 +6471,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 
     if(i == -1) {
        SISErrorLog(pScrn, "xf86ValidateModes() error\n");
-#ifdef SISDUALHEAD
-       if(pSiSEnt) pSiSEnt->ErrorAfterFirst = TRUE;
-#endif
-       if(pSiS->pInt) xf86FreeInt10(pSiS->pInt);
-       sisRestoreExtRegisterLock(pSiS,srlockReg,crlockReg);
-       SISFreeRec(pScrn);
-       return FALSE;
+       goto my_error_1;
     }
 
     /* Check the virtual screen against the available memory */
@@ -6388,14 +6482,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	  SISErrorLog(pScrn,
 	     "Virtual screen too big for memory; %ldK needed, %ldK available\n",
 	     memreq/1024, pSiS->maxxfbmem/1024);
-#ifdef SISDUALHEAD
-	  if(pSiSEnt) pSiSEnt->ErrorAfterFirst = TRUE;
-#endif
-	  if(pSiS->pInt) xf86FreeInt10(pSiS->pInt);
-	  pSiS->pInt = NULL;
-	  sisRestoreExtRegisterLock(pSiS,srlockReg,crlockReg);
-	  SISFreeRec(pScrn);
-	  return FALSE;
+	  goto my_error_1;
        }
     }
 
@@ -6448,13 +6535,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 
     if(i == 0 || pScrn->modes == NULL) {
        SISErrorLog(pScrn, "No valid modes found - check VertRefresh/HorizSync\n");
-#ifdef SISDUALHEAD
-       if(pSiSEnt) pSiSEnt->ErrorAfterFirst = TRUE;
-#endif
-       if(pSiS->pInt) xf86FreeInt10(pSiS->pInt);
-       sisRestoreExtRegisterLock(pSiS,srlockReg,crlockReg);
-       SISFreeRec(pScrn);
-       return FALSE;
+       goto my_error_1;
     }
 
     xf86SetCrtcForModes(pScrn, INTERLACE_HALVE_V);
@@ -6744,24 +6825,12 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
       case 32:
 	if(!xf86LoadSubModule(pScrn, "fb")) {
            SISErrorLog(pScrn, "Failed to load fb module");
-#ifdef SISDUALHEAD
-	   if(pSiSEnt) pSiSEnt->ErrorAfterFirst = TRUE;
-#endif
-	   if(pSiS->pInt) xf86FreeInt10(pSiS->pInt);
-	   sisRestoreExtRegisterLock(pSiS,srlockReg,crlockReg);
-	   SISFreeRec(pScrn);
-	   return FALSE;
+	   goto my_error_1;
 	}
 	break;
       default:
 	SISErrorLog(pScrn, "Unsupported framebuffer bpp (%d)\n", pScrn->bitsPerPixel);
-#ifdef SISDUALHEAD
-	if(pSiSEnt) pSiSEnt->ErrorAfterFirst = TRUE;
-#endif
-	if(pSiS->pInt) xf86FreeInt10(pSiS->pInt);
-	sisRestoreExtRegisterLock(pSiS,srlockReg,crlockReg);
-	SISFreeRec(pScrn);
-	return FALSE;
+	goto my_error_1;
     }
     xf86LoaderReqSymLists(fbSymbols, NULL);
 
@@ -6783,13 +6852,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 #endif
        if(modName && (!xf86LoadSubModule(pScrn, modName))) {
 	  SISErrorLog(pScrn, "Could not load %s module\n", modName);
-#ifdef SISDUALHEAD
-	  if(pSiSEnt) pSiSEnt->ErrorAfterFirst = TRUE;
-#endif
-	  if(pSiS->pInt) xf86FreeInt10(pSiS->pInt);
-	  sisRestoreExtRegisterLock(pSiS, srlockReg, crlockReg);
-	  SISFreeRec(pScrn);
-	  return FALSE;
+	  goto my_error_1;
        }
        if(symNames) {
 	  xf86LoaderReqSymLists(symNames, NULL);
@@ -6801,13 +6864,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
     if(pSiS->ShadowFB) {
        if(!xf86LoadSubModule(pScrn, "shadowfb")) {
 	  SISErrorLog(pScrn, "Could not load shadowfb module\n");
-#ifdef SISDUALHEAD
-	  if(pSiSEnt) pSiSEnt->ErrorAfterFirst = TRUE;
-#endif
-	  if(pSiS->pInt) xf86FreeInt10(pSiS->pInt);
-	  sisRestoreExtRegisterLock(pSiS,srlockReg,crlockReg);
-	  SISFreeRec(pScrn);
-	  return FALSE;
+	  goto my_error_1;
        }
        xf86LoaderReqSymLists(shadowSymbols, NULL);
     }
@@ -6896,6 +6953,19 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
     pSiS->VBFlagsInit = pSiS->VBFlags;
 
     return TRUE;
+
+    /* ---- */
+
+my_error_1:
+    sisRestoreExtRegisterLock(pSiS, srlockReg, crlockReg);
+my_error_0:
+#ifdef SISDUALHEAD
+    if(pSiSEnt) pSiSEnt->ErrorAfterFirst = TRUE;
+#endif
+    if(pSiS->pInt) xf86FreeInt10(pSiS->pInt);
+    pSiS->pInt = NULL;
+    SISFreeRec(pScrn);
+    return FALSE;
 }
 
 /*
@@ -7171,7 +7241,7 @@ SISSave(ScrnInfoPtr pScrn)
        SiSVGASave(pScrn, sisReg, flags);
     }
 
-    sisSaveUnlockExtRegisterLock(pSiS,&sisReg->sisRegs3C4[0x05],&sisReg->sisRegs3D4[0x80]);
+    sisSaveUnlockExtRegisterLock(pSiS, &sisReg->sisRegs3C4[0x05], &sisReg->sisRegs3D4[0x80]);
 
     (*pSiS->SiSSave)(pScrn, sisReg);
 
@@ -7288,7 +7358,7 @@ SISModeInit(ScrnInfoPtr pScrn, DisplayModePtr mode)
 	  SISErrorLog(pScrn, "SiSSetVESAMode() failed\n");
 	  return FALSE;
        }
-       sisSaveUnlockExtRegisterLock(pSiS,NULL,NULL);
+       sisSaveUnlockExtRegisterLock(pSiS, NULL, NULL);
        if(pSiS->VGAEngine == SIS_300_VGA || pSiS->VGAEngine == SIS_315_VGA) {
 	  SiSPreSetMode(pScrn, mode, SIS_MODE_SIMU);
 	  SiSPostSetMode(pScrn, &pSiS->ModeReg);
@@ -7538,7 +7608,7 @@ SISSpecialRestore(ScrnInfoPtr pScrn)
     if(temp > 0x13) return;
 
 #ifdef UNLOCK_ALWAYS
-    sisSaveUnlockExtRegisterLock(pSiS, NULL,NULL);
+    sisSaveUnlockExtRegisterLock(pSiS, NULL, NULL);
 #endif
 
     SiS_UnLockCRT2(pSiS->SiS_Pr);
@@ -7658,7 +7728,7 @@ SISRestore(ScrnInfoPtr pScrn)
 #endif
 
 #ifdef UNLOCK_ALWAYS
-       sisSaveUnlockExtRegisterLock(pSiS, NULL,NULL);
+       sisSaveUnlockExtRegisterLock(pSiS, NULL, NULL);
 #endif
 
        /* We must not disable the sequencer if the bridge is in SlaveMode! */
@@ -7872,7 +7942,7 @@ SISRestore(ScrnInfoPtr pScrn)
         SiSVGAProtect(pScrn, TRUE);
 
 #ifdef UNLOCK_ALWAYS
-        sisSaveUnlockExtRegisterLock(pSiS, NULL,NULL);
+        sisSaveUnlockExtRegisterLock(pSiS, NULL, NULL);
 #endif
 
         (*pSiS->SiSRestore)(pScrn, sisReg);
@@ -13502,26 +13572,33 @@ sisSaveUnlockExtRegisterLock(SISPtr pSiS, UChar *reg1, UChar *reg2)
 {
     register UChar val;
     ULong mylockcalls;
+#ifdef TWDEBUG
+    UChar val1, val2;
+    int i;
+#endif
 
     pSiS->lockcalls++;
     mylockcalls = pSiS->lockcalls;
 
     /* check if already unlocked */
     inSISIDXREG(SISSR, 0x05, val);
+
     if(val != 0xa1) {
+
        /* save State */
        if(reg1) *reg1 = val;
+
        /* unlock */
        outSISIDXREG(SISSR, 0x05, 0x86);
+
+       /* Now check again */
        inSISIDXREG(SISSR, 0x05, val);
+
        if(val != 0xA1) {
-#ifdef TWDEBUG
-	  UChar val1, val2;
-	  int i;
-#endif
-          SISErrorLog(pSiS->pScrn,
-               "Failed to unlock sr registers (%p, %lx, 0x%02x; %ld)\n",
-	       (void *)pSiS, (ULong)pSiS->RelIO, val, mylockcalls);
+
+          xf86DrvMsg(pSiS->pScrn->scrnIndex, X_WARNING,
+               "Failed to unlock SR registers at relocated i/o ports\n");
+
 #ifdef TWDEBUG
           for(i = 0; i <= 0x3f; i++) {
 		inSISIDXREG(SISSR, i, val1);
@@ -13531,12 +13608,28 @@ sisSaveUnlockExtRegisterLock(SISPtr pSiS, UChar *reg1, UChar *reg2)
 			i, val1, val2, mylockcalls);
 	  }
 #endif
-          if((pSiS->VGAEngine == SIS_OLD_VGA) || (pSiS->VGAEngine == SIS_530_VGA)) {
-	     /* Emergency measure: unlock at 0x3c4, and try to enable Relocated IO ports */
-	     outSISIDXREG(0x3c4,0x05,0x86);
-	     andSISIDXREG(0x3c4,0x33,~0x20);
-	     outSISIDXREG(SISSR, 0x05, 0x86);
+
+	  /* Emergency measure: unlock at 0x3c4, and try to enable relocated IO ports */
+	  switch(pSiS->VGAEngine) {
+          case SIS_OLD_VGA:
+	  case SIS_530_VGA:
+	     outSISIDXREG(0x3c4, 0x05, 0x86);
+	     andSISIDXREG(0x3c4, 0x33, ~0x20);
+	     break;
+	  case SIS_300_VGA:
+	  case SIS_315_VGA:
+	     outSISIDXREG(0x3c4, 0x05, 0x86);
+	     orSISIDXREG(0x3c4, 0x20, 0x20);
+	     break;
           }
+	  outSISIDXREG(SISSR, 0x05, 0x86);
+	  inSISIDXREG(SISSR, 0x05, val);
+	  if(val != 0xa1) {
+	     SISErrorLog(pSiS->pScrn,
+			"Failed to unlock SR registers (%p, %lx, 0x%02x; %ld)\n",
+			(void *)pSiS, (ULong)pSiS->RelIO, val, mylockcalls);
+	     /* Now await doom... */
+	  }
        }
     }
     if((pSiS->VGAEngine == SIS_OLD_VGA) || (pSiS->VGAEngine == SIS_530_VGA)) {

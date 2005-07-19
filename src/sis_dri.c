@@ -320,9 +320,7 @@ SISDRIScreenInit(ScreenPtr pScreen)
 #endif
      pDRIInfo->busIdString = xalloc(64);
      sprintf(pDRIInfo->busIdString, "PCI:%d:%d:%d",
-	     ((pciConfigPtr)pSIS->PciInfo->thisCard)->busnum,
-	     ((pciConfigPtr)pSIS->PciInfo->thisCard)->devnum,
-	     ((pciConfigPtr)pSIS->PciInfo->thisCard)->funcnum);
+	     pSIS->PciBus, pSIS->PciDevice, pSIS->PciFunc);
 #ifdef SISHAVECREATEBUSID
   }
 #endif
@@ -630,16 +628,12 @@ SISDRIScreenInit(ScreenPtr pScreen)
   /* Eventually grab and enable IRQ */
   pSIS->irqEnabled = FALSE;
   pSIS->irq = drmGetInterruptFromBusID(pSIS->drmSubFD,
-	   ((pciConfigPtr)pSIS->PciInfo->thisCard)->busnum,
-	   ((pciConfigPtr)pSIS->PciInfo->thisCard)->devnum,
-	   ((pciConfigPtr)pSIS->PciInfo->thisCard)->funcnum);
+	   pSIS->PciBus, pSIS->PciDevice, pSIS->PciFunc);
 
   if(pSIS->irq < 0) {
      xf86DrvMsg(pScrn->scrnIndex, X_INFO,
 	  "[drm] No valid IRQ number for device %d:%d:%d (code %d)\n",
-	   ((pciConfigPtr)pSIS->PciInfo->thisCard)->busnum,
-	   ((pciConfigPtr)pSIS->PciInfo->thisCard)->devnum,
-	   ((pciConfigPtr)pSIS->PciInfo->thisCard)->funcnum,
+	   pSIS->PciBus, pSIS->PciDevice, pSIS->PciFunc,
 	   pSIS->irq);
   } else if((drmCtlInstHandler(pSIS->drmSubFD, pSIS->irq)) != 0) {
      xf86DrvMsg(pScrn->scrnIndex, X_INFO,
