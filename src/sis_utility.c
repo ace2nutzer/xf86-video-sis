@@ -38,7 +38,7 @@
 #include "sis.h"
 #define NEED_REPLIES
 #define NEED_EVENTS
-#include "X.h"
+#include <X11/X.h>
 #include "dixstruct.h"
 #define _XF86MISC_SERVER_
 #include <X11/extensions/xf86misc.h>
