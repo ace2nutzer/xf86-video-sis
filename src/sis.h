@@ -36,8 +36,8 @@
 #define _SIS_H_
 
 #define SISDRIVERVERSIONYEAR    5
-#define SISDRIVERVERSIONMONTH   7
-#define SISDRIVERVERSIONDAY     20
+#define SISDRIVERVERSIONMONTH   8
+#define SISDRIVERVERSIONDAY     8
 #define SISDRIVERREVISION       1
 
 #define SISDRIVERIVERSION ((SISDRIVERVERSIONYEAR << 16) |  \
@@ -166,6 +166,7 @@
 #include "xf86drm.h"
 #include "sarea.h"
 #define _XF86DRI_SERVER_
+/*#include "xf86dri.h"*/
 #include "dri.h"
 #include "GL/glxint.h"
 #include "sis_dri.h"
@@ -427,8 +428,11 @@
 #define VB2_30xCLV		(VB2_301C  | VB2_307T   | VB2_302ELV| VB2_307LV)
 #define VB2_SISEMIBRIDGE	(VB2_302LV | VB2_302ELV | VB2_307LV)
 #define VB2_LCD162MHZBRIDGE	(VB2_301C  | VB2_307T)
+/* CRT2/LCD over 1280 (overflow bits in Part4) */
 #define VB2_LCDOVER1280BRIDGE	(VB2_301C  | VB2_307T   | VB2_302LV | VB2_302ELV | VB2_307LV)
+/* CRT2/LCD over 1600? Is this really gonna happen, or will there be LCDA only for large panels? */
 #define VB2_LCDOVER1600BRIDGE	(VB2_307T  | VB2_307LV)
+/* VGA2 up to 202MHz (1600x1200@75) */
 #define VB2_RAMDAC202MHZBRIDGE	(VB2_301C  | VB2_307T)
 
 /* pSiS->VBLCDFlags */
@@ -623,7 +627,12 @@ typedef unsigned char  UChar;
 #define SiS_SD2_SUPPORTXVDEINT 0x00080000   /* Xv deinterlacing supported (n/a, for future use) */
 #define SiS_SD2_ISXGI	       0x00100000   /* Is XGI chip */
 #define SiS_SD2_USEVBFLAGS2    0x00200000   /* Use VBFlags2 for bridge ID */
+#define SiS_SD2_SUPPLTFLAG     0x00400000   /* Driver supports the following 3 flags */
+#define SiS_SD2_ISLAPTOP       0x00800000   /* This machine is (very probably) a laptop */
+#define SiS_SD2_MACHINETYPE2   0x01000000   /* Machine type 2 (for future use) */
+#define SiS_SD2_MACHINETYPE3   0x02000000   /* Machine type 3 (for future use) */
 /* ... */
+#define SiS_SD2_HAVESD34       0x40000000   /* Support SD3 and SD4 flags (for future use) */
 #define SiS_SD2_NOOVERLAY      0x80000000   /* No video overlay */
 
 #define SIS_DIRECTKEY          0x03145792
@@ -1222,7 +1231,7 @@ typedef struct {
     SIS_CP_H
 #endif
     ULong		ChipFlags;
-    ULong		SiS_SD_Flags, SiS_SD2_Flags;
+    ULong		SiS_SD_Flags, SiS_SD2_Flags, SiS_SD3_Flags, SiS_SD4_Flags;
     Bool		UseHWARGBCursor;
     int			OptUseColorCursor;
     int			OptUseColorCursorBlend;

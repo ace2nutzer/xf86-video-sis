@@ -911,6 +911,8 @@ SiSHandleSiSDirectCommand(xSiSCtrlCommandReply *sdcbuf)
       sdcbuf->sdc_result[3] = pSiS->SiS_SD2_Flags;
       sdcbuf->sdc_result[4] = pSiS->detectedCRT2Devices;
       sdcbuf->sdc_result[5] = pSiS->VBFlags2;
+      sdcbuf->sdc_result[6] = pSiS->SiS_SD3_Flags;
+      sdcbuf->sdc_result[7] = pSiS->SiS_SD4_Flags;
       break;
 
    case SDC_CMD_GETVBFLAGSVERSION:

@@ -2825,7 +2825,7 @@ void SISSaveDetectedDevices(ScrnInfoPtr pScrn)
 }
 
 static Bool
-SISCheckBIOS(SISPtr pSiS, UShort mypciid, UShort mypcivendor)
+SISCheckBIOS(SISPtr pSiS, UShort mypciid, UShort mypcivendor, int biossize)
 {
     UShort romptr, pciid;
 
@@ -2834,7 +2834,7 @@ SISCheckBIOS(SISPtr pSiS, UShort mypciid, UShort mypcivendor)
     if((pSiS->BIOS[0] != 0x55) || (pSiS->BIOS[1] != 0xaa)) return FALSE;
 
     romptr = pSiS->BIOS[0x18] | (pSiS->BIOS[0x19] << 8);
-    if(romptr > (BIOS_SIZE - 8)) return FALSE;
+    if(romptr > (biossize - 8)) return FALSE;
     if((pSiS->BIOS[romptr]   != 'P') || (pSiS->BIOS[romptr+1] != 'C') ||
        (pSiS->BIOS[romptr+2] != 'I') || (pSiS->BIOS[romptr+3] != 'R')) return FALSE;
 
@@ -3658,6 +3658,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
     /* Determine chipset and its capabilities in detail */
     pSiS->ChipFlags = 0;
     pSiS->SiS_SD_Flags = pSiS->SiS_SD2_Flags = 0;
+    pSiS->SiS_SD3_Flags = pSiS->SiS_SD4_Flags = 0;
     pSiS->HWCursorMBufNum = pSiS->HWCursorCBufNum = 0;
     pSiS->NeedFlush = FALSE;
     pSiS->NewCRLayout = FALSE;
@@ -4095,7 +4096,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
     }
 #endif
 
-    /* Read BIOS for 300 and 315/330/340 series customization */
+    /* Read BIOS for 300/315/330/340 series customization */
     pSiS->SiS_Pr->VirtualRomBase = NULL;
     pSiS->BIOS = NULL;
     pSiS->SiS_Pr->UseROM = FALSE;
@@ -4122,6 +4123,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	     UShort mypciid = pSiS->Chipset;
 	     UShort mypcivendor = (pSiS->ChipFlags & SiSCF_IsXGI) ? PCI_VENDOR_XGI : PCI_VENDOR_SIS;
 	     Bool   found = FALSE, readpci = FALSE;
+	     int    biossize = BIOS_SIZE;
 
 	     switch(pSiS->ChipType) {
 	     case SIS_315:    mypciid = PCI_CHIP_SIS315;
@@ -4134,15 +4136,16 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	     case SIS_315H:
 	     case SIS_330:
 	     case SIS_340:
-	     case XGI_20:
-	     case XGI_40:
-			      readpci = TRUE;
+	     case XGI_40:     readpci = TRUE;
+			      break;
+	     case XGI_20:     readpci = TRUE;
+			      biossize = 0x8000;
 			      break;
 	     }
 
 	     if(readpci) {
-		xf86ReadPciBIOS(0, pSiS->PciTag, 0, pSiS->BIOS, BIOS_SIZE);
-		if(SISCheckBIOS(pSiS, mypciid, mypcivendor)) {
+		xf86ReadPciBIOS(0, pSiS->PciTag, 0, pSiS->BIOS, biossize);
+		if(SISCheckBIOS(pSiS, mypciid, mypcivendor, biossize)) {
 		   found = TRUE;
 		}
 	     }
@@ -4151,25 +4154,20 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 		for(segstart = BIOS_BASE; segstart < 0x000f0000; segstart += 0x00001000) {
 
 #if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,2,99,0,0)
-		   if(xf86ReadBIOS(segstart, 0, pSiS->BIOS, BIOS_SIZE) != BIOS_SIZE) continue;
+		   if(xf86ReadBIOS(segstart, 0, pSiS->BIOS, biossize) != biossize) continue;
 #else
-		   if(xf86ReadDomainMemory(pSiS->PciTag, segstart, BIOS_SIZE, pSiS->BIOS) != BIOS_SIZE) continue;
+		   if(xf86ReadDomainMemory(pSiS->PciTag, segstart, biossize, pSiS->BIOS) != biossize) continue;
 #endif
 
-		   if(!SISCheckBIOS(pSiS, mypciid, mypcivendor)) continue;
+		   if(!SISCheckBIOS(pSiS, mypciid, mypcivendor, biossize)) continue;
 
 		   found = TRUE;
 		   break;
 		}
              }
 
-	     if(!found) {
-		xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
-			 "Could not find/read video BIOS\n");
-		xfree(pSiS->BIOS);
-		pSiS->BIOS = NULL;
-             } else {
-		UShort romptr;
+	     if(found) {
+		UShort romptr = pSiS->BIOS[0x16] | (pSiS->BIOS[0x17] << 8);
 		pSiS->SiS_Pr->VirtualRomBase = pSiS->BIOS;
 		if(pSiS->ChipFlags & SiSCF_IsXGI) {
 		   pSiS->HaveXGIBIOS = pSiS->SiS_Pr->SiS_XGIROM = TRUE;
@@ -4182,7 +4180,6 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	        } else {
 		   pSiS->ROM661New = SiSDetermineROMLayout661(pSiS->SiS_Pr);
 		}
-		romptr = pSiS->BIOS[0x16] | (pSiS->BIOS[0x17] << 8);
 		xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
 			"Video BIOS version \"%7s\" found (%s data layout)\n",
 			&pSiS->BIOS[romptr], pSiS->ROM661New ? "new SiS" :
@@ -4200,6 +4197,11 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 		   pSiSEnt->HaveXGIBIOS = pSiS->HaveXGIBIOS;
 		}
 #endif
+	     } else {
+	        xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
+			 "Could not find/read video BIOS\n");
+		xfree(pSiS->BIOS);
+		pSiS->BIOS = NULL;
 	     }
           }
        }
@@ -5180,6 +5182,9 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
      *   are mutually exclusive; if no TV is detected, the
      *   code below will default to VGA+LCD, so LCD is driven
      *   via CRT2.)
+     *   (TODO: This might need some modification for the
+     *   307 bridges, if these are capable of driving
+     *   LCDs > 1600 via channel B)
      */
     if((pSiS->SiS_SD_Flags & SiS_SD_SUPPORTLCDA) &&
        (pSiS->VBFlags & CRT2_LCD) &&
@@ -6946,6 +6951,39 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 #ifdef SISMERGED
     if(pSiS->MergedFB) pSiS->SiS_SD_Flags |= SiS_SD_ISMERGEDFB;
 #endif
+
+    /* Try to determine if this is a laptop   */
+    /* (only used for SiSCtrl visualisations) */
+    pSiS->SiS_SD2_Flags |= SiS_SD2_SUPPLTFLAG;
+    pSiS->SiS_SD2_Flags &= ~SiS_SD2_ISLAPTOP;
+    if(pSiS->detectedCRT2Devices & CRT2_LCD) {
+       if(pSiS->VBFlags2 & (VB2_SISLVDSBRIDGE | VB2_LVDS | VB2_30xBDH)) {
+	  /* 1. By bridge type: LVDS in 99% of all cases;
+	   * exclude unusual setups like Barco projectors
+	   * and parallel flat panels. TODO: Exclude
+	   * Sony W1, V1.
+	   */
+	  if((pSiS->SiS_Pr->SiS_CustomT != CUT_BARCO1366) &&
+	     (pSiS->SiS_Pr->SiS_CustomT != CUT_BARCO1024) &&
+	     (pSiS->SiS_Pr->SiS_CustomT != CUT_PANEL848)  &&
+	     (pSiS->SiS_Pr->SiS_CustomT != CUT_PANEL856)  &&
+	     (pSiS->SiS_Pr->SiS_CustomT != CUT_AOP8060)   &&
+	     ( (pSiS->ChipType != SIS_550) ||
+	       (!pSiS->DSTN && !pSiS->FSTN) ) ) {
+	     pSiS->SiS_SD2_Flags |= SiS_SD2_ISLAPTOP;
+	  }
+       } else if((pSiS->VBFlags2 & (VB2_301 | VB2_301C)) &&
+                 (pSiS->VBLCDFlags & (VB_LCD_1280x960  |
+				      VB_LCD_1400x1050 |
+				      VB_LCD_1024x600  |
+				      VB_LCD_1280x800  |
+				      VB_LCD_1280x854))) {
+	  /* 2. By (odd) LCD resolutions on TMDS bridges
+	   * (eg Averatec). TODO: Exclude IBM Netvista.
+	   */
+	  pSiS->SiS_SD2_Flags |= SiS_SD2_ISLAPTOP;
+       }
+    }
 
     if(pSiS->enablesisctrl) pSiS->SiS_SD_Flags |= SiS_SD_ENABLED;
 

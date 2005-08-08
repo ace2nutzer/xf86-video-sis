@@ -1634,7 +1634,6 @@ extern unsigned short 	SiS_GetModeNumber(ScrnInfoPtr pScrn, DisplayModePtr mode,
 extern unsigned int	sisfb_read_nbridge_pci_dword(struct SiS_Private *SiS_Pr, int reg);
 extern void		sisfb_write_nbridge_pci_dword(struct SiS_Private *SiS_Pr, int reg,
 				unsigned int val);
-extern unsigned int	sisfb_read_lpc_pci_dword(struct SiS_Private *SiS_Pr, int reg);
 #endif
 #ifdef SIS315H
 extern void		sisfb_write_nbridge_pci_byte(struct SiS_Private *SiS_Pr, int reg,
