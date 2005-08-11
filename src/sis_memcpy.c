@@ -40,7 +40,7 @@
 extern unsigned int SISAllocateFBMemory(ScrnInfoPtr pScrn, void **handle, int bytesize);
 extern void	    SISFreeFBMemory(ScrnInfoPtr pScrn, void **handle);
 
-#define CPUBUFFERSIZEE 2048      /* Size of /proc/cpuinfo buffer */
+#define CPUBUFFERSIZE 2048       /* Size of /proc/cpuinfo buffer */
 #define BUFFERSIZE (576 * 1152)  /* Matches 720x576 YUV420 */
 
 /************************************************************************/
@@ -798,7 +798,7 @@ static int SiS_ReadProc(char *buf, char *filename)
        return 0;
     }
 
-    count = fread(buf, 1, CPUBUFFERSIZEE, cpuInfoFile);
+    count = fread(buf, 1, CPUBUFFERSIZE, cpuInfoFile);
     if(ferror(cpuInfoFile)) {
        fclose(cpuInfoFile);
        return 0;
@@ -806,7 +806,7 @@ static int SiS_ReadProc(char *buf, char *filename)
 
     fclose(cpuInfoFile);
 
-    if(count >= CPUBUFFERSIZEE - 2) {
+    if(count >= CPUBUFFERSIZE - 2) {
        return 0;
     }
 
@@ -1057,7 +1057,7 @@ SiSVidCopyInitGen(ScreenPtr pScreen, SISMCFuncData *MCFunctions, vidCopyFunc *UM
     unsigned int myCPUflags = pSiS->CPUFlags | Def_FL;
     int best, secondbest;
 #ifdef SiS_haveProc
-    char buf[CPUBUFFERSIZEE];
+    char buf[CPUBUFFERSIZE];
 #endif
 
     *UMemCpy = SiS_libc_memcpy;
