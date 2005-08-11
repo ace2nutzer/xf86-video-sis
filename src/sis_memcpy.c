@@ -40,8 +40,8 @@
 extern unsigned int SISAllocateFBMemory(ScrnInfoPtr pScrn, void **handle, int bytesize);
 extern void	    SISFreeFBMemory(ScrnInfoPtr pScrn, void **handle);
 
-#define CPUBUFSIZE 2048      /* Size of /proc/cpuinfo buffer */
-#define BUFSIZ (576 * 1152)  /* Matches 720x576 YUV420 */
+#define CPUBUFFERSIZEE 2048      /* Size of /proc/cpuinfo buffer */
+#define BUFFERSIZE (576 * 1152)  /* Matches 720x576 YUV420 */
 
 /************************************************************************/
 /*                   arch specific memcpy() routines                    */
@@ -631,18 +631,18 @@ SiS_AllocBuffers(ScrnInfoPtr pScrn, UChar **buf1, UChar **buf2, UChar **buf3)
     unsigned int offset;
     void *handle = NULL;
 
-    if(!(offset = SISAllocateFBMemory(pScrn, &handle, BUFSIZ + 31))) {
+    if(!(offset = SISAllocateFBMemory(pScrn, &handle, BUFFERSIZE + 31))) {
        return NULL;
     }
     (*buf1) = (UChar *)pSiS->FbBase + offset;
     (*buf1) = (UChar *)(((ULong)(*buf1) + 31) & ~31);
 
-    if(!((*buf2) = (UChar *)xalloc(BUFSIZ + 15))) {
+    if(!((*buf2) = (UChar *)xalloc(BUFFERSIZE + 15))) {
        SISFreeFBMemory(pScrn, &handle);
        return NULL;
     }
 
-    if(!((*buf3) = (UChar *)xalloc(BUFSIZ + 15))) {
+    if(!((*buf3) = (UChar *)xalloc(BUFFERSIZE + 15))) {
        xfree((*buf2));
        SISFreeFBMemory(pScrn, &handle);
        return NULL;
@@ -664,7 +664,7 @@ static int SiS_BenchmarkMemcpy(ScrnInfoPtr pScrn, SISMCFuncData *MCFunctions,
     (*best2) = 0;
 
     /* Make probable buf1 and buf2 are not paged out by referencing them */
-    SiS_libc_memcpy(buf1, buf2, BUFSIZ);
+    SiS_libc_memcpy(buf1, buf2, BUFFERSIZE);
 
     xf86DrvMsg(pScrn->scrnIndex, X_INFO,
 	       "Benchmarking %s RAM to %s RAM memory transfer methods:\n",
@@ -685,28 +685,28 @@ static int SiS_BenchmarkMemcpy(ScrnInfoPtr pScrn, SISMCFuncData *MCFunctions,
 	   /* Simulate setup of the video buffer and copy result to framebuffer */
 	   /* Do this 4 times to verify results */
 	   if(!from) {
-	      SiS_builtin_memcpy(buf2, buf3, BUFSIZ);
-	      tmp1 = time_function(curData->mFunc, buf1, buf2, BUFSIZ);
-	      SiS_builtin_memcpy(buf2, buf3, BUFSIZ);
-	      tmp2 = time_function(curData->mFunc, buf1, buf2, BUFSIZ);
+	      SiS_builtin_memcpy(buf2, buf3, BUFFERSIZE);
+	      tmp1 = time_function(curData->mFunc, buf1, buf2, BUFFERSIZE);
+	      SiS_builtin_memcpy(buf2, buf3, BUFFERSIZE);
+	      tmp2 = time_function(curData->mFunc, buf1, buf2, BUFFERSIZE);
 	      tmp1 = (tmp2 < tmp1) ? tmp2 : tmp1;
-	      SiS_builtin_memcpy(buf2, buf3, BUFSIZ);
-	      tmp2 = time_function(curData->mFunc, buf1, buf2, BUFSIZ);
+	      SiS_builtin_memcpy(buf2, buf3, BUFFERSIZE);
+	      tmp2 = time_function(curData->mFunc, buf1, buf2, BUFFERSIZE);
 	      tmp1 = (tmp2 < tmp1) ? tmp2 : tmp1;
-	      SiS_builtin_memcpy(buf2, buf3, BUFSIZ);
-	      tmp2 = time_function(curData->mFunc, buf1, buf2, BUFSIZ);
+	      SiS_builtin_memcpy(buf2, buf3, BUFFERSIZE);
+	      tmp2 = time_function(curData->mFunc, buf1, buf2, BUFFERSIZE);
 	      tmp1 = (tmp2 < tmp1) ? tmp2 : tmp1;
 	   } else {
-	      SiS_builtin_memcpy(buf3, buf2, BUFSIZ);
-	      tmp1 = time_function(curData->mFunc, buf2, buf1, BUFSIZ);
-	      SiS_builtin_memcpy(buf3, buf2, BUFSIZ);
-	      tmp2 = time_function(curData->mFunc, buf2, buf1, BUFSIZ);
+	      SiS_builtin_memcpy(buf3, buf2, BUFFERSIZE);
+	      tmp1 = time_function(curData->mFunc, buf2, buf1, BUFFERSIZE);
+	      SiS_builtin_memcpy(buf3, buf2, BUFFERSIZE);
+	      tmp2 = time_function(curData->mFunc, buf2, buf1, BUFFERSIZE);
 	      tmp1 = (tmp2 < tmp1) ? tmp2 : tmp1;
-	      SiS_builtin_memcpy(buf3, buf2, BUFSIZ);
-	      tmp2 = time_function(curData->mFunc, buf2, buf1, BUFSIZ);
+	      SiS_builtin_memcpy(buf3, buf2, BUFFERSIZE);
+	      tmp2 = time_function(curData->mFunc, buf2, buf1, BUFFERSIZE);
 	      tmp1 = (tmp2 < tmp1) ? tmp2 : tmp1;
-	      SiS_builtin_memcpy(buf3, buf2, BUFSIZ);
-	      tmp2 = time_function(curData->mFunc, buf2, buf1, BUFSIZ);
+	      SiS_builtin_memcpy(buf3, buf2, BUFFERSIZE);
+	      tmp2 = time_function(curData->mFunc, buf2, buf1, BUFFERSIZE);
 	      tmp1 = (tmp2 < tmp1) ? tmp2 : tmp1;
 	   }
 
@@ -717,7 +717,7 @@ static int SiS_BenchmarkMemcpy(ScrnInfoPtr pScrn, SISMCFuncData *MCFunctions,
 	      xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
 			   "\tChecked %s memcpy()... \t%.1f MiB/s\n",
 			   curData->mName,
-			   cpuFreq * 1.e6 * (double)BUFSIZ / ((double)(tmp1) * (double)(0x100000)));
+			   cpuFreq * 1.e6 * (double)BUFFERSIZE / ((double)(tmp1) * (double)(0x100000)));
 	   }
 
 	   if(tmp1 < best) {
@@ -798,7 +798,7 @@ static int SiS_ReadProc(char *buf, char *filename)
        return 0;
     }
 
-    count = fread(buf, 1, CPUBUFSIZE, cpuInfoFile);
+    count = fread(buf, 1, CPUBUFFERSIZEE, cpuInfoFile);
     if(ferror(cpuInfoFile)) {
        fclose(cpuInfoFile);
        return 0;
@@ -806,7 +806,7 @@ static int SiS_ReadProc(char *buf, char *filename)
 
     fclose(cpuInfoFile);
 
-    if(count >= CPUBUFSIZE - 2) {
+    if(count >= CPUBUFFERSIZEE - 2) {
        return 0;
     }
 
@@ -1057,7 +1057,7 @@ SiSVidCopyInitGen(ScreenPtr pScreen, SISMCFuncData *MCFunctions, vidCopyFunc *UM
     unsigned int myCPUflags = pSiS->CPUFlags | Def_FL;
     int best, secondbest;
 #ifdef SiS_haveProc
-    char buf[CPUBUFSIZE];
+    char buf[CPUBUFFERSIZEE];
 #endif
 
     *UMemCpy = SiS_libc_memcpy;

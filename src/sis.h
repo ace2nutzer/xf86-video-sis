@@ -37,7 +37,7 @@
 
 #define SISDRIVERVERSIONYEAR    5
 #define SISDRIVERVERSIONMONTH   8
-#define SISDRIVERVERSIONDAY     8
+#define SISDRIVERVERSIONDAY     11
 #define SISDRIVERREVISION       1
 
 #define SISDRIVERIVERSION ((SISDRIVERVERSIONYEAR << 16) |  \
@@ -166,7 +166,6 @@
 #include "xf86drm.h"
 #include "sarea.h"
 #define _XF86DRI_SERVER_
-/*#include "xf86dri.h"*/
 #include "dri.h"
 #include "GL/glxint.h"
 #include "sis_dri.h"
