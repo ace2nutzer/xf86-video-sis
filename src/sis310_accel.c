@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg$ */
+/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/sis310_accel.c,v 1.23 2005/07/13 17:17:00 twini Exp $ */
 /*
  * 2D Acceleration for SiS 315, 330 and 340 series
  *
@@ -1907,8 +1907,8 @@ SiSUploadToScratch(PixmapPtr pSrc, PixmapPtr pDst)
 	w = pSrc->drawable.width;
 
 	dst_pitch = ((w * (pSrc->drawable.bitsPerPixel >> 3)) +
-		     pSiS->EXADriverPtr->card.offscreenPitch - 1) &
-		    ~(pSiS->EXADriverPtr->card.offscreenPitch - 1);
+		     pSiS->EXADriverPtr->card.pixmapPitchAlign - 1) &
+		    ~(pSiS->EXADriverPtr->card.pixmapPitchAlign - 1);
 
 	size = dst_pitch * pSrc->drawable.height;
 
@@ -1916,8 +1916,8 @@ SiSUploadToScratch(PixmapPtr pSrc, PixmapPtr pDst)
 	   return FALSE;
 
 	pSiS->exa_scratch_next = (pSiS->exa_scratch_next +
-				  pSiS->EXADriverPtr->card.offscreenByteAlign - 1) &
-				  ~(pSiS->EXADriverPtr->card.offscreenByteAlign - 1);
+				  pSiS->EXADriverPtr->card.pixmapOffsetAlign - 1) &
+				  ~(pSiS->EXADriverPtr->card.pixmapOffsetAlign - 1);
 
 	if(pSiS->exa_scratch_next + size >
 	   pSiS->exa_scratch->offset + pSiS->exa_scratch->size) {
@@ -2270,8 +2270,8 @@ SiS315AccelInit(ScreenPtr pScreen)
 		 xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
 			"Not enough video RAM for offscreen memory manager. Xv disabled\n");
 	      }
-	      pSiS->EXADriverPtr->card.offscreenByteAlign = 16;	/* src/dst: double quad word boundary */
-	      pSiS->EXADriverPtr->card.offscreenPitch = 4;	/* pitch:   double word boundary      */
+	      pSiS->EXADriverPtr->card.pixmapOffsetAlign = 16;	/* src/dst: double quad word boundary */
+	      pSiS->EXADriverPtr->card.pixmapPitchAlign = 4;	/* pitch:   double word boundary      */
 	      pSiS->EXADriverPtr->card.maxX = 4095;
 	      pSiS->EXADriverPtr->card.maxY = 4095;
 

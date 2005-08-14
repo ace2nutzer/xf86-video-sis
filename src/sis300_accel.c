@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg$ */
+/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/sis300_accel.c,v 1.15 2005/07/13 17:17:00 twini Exp $ */
 /*
  * 2D Acceleration for SiS 530, 620, 300, 540, 630, 730.
  *
@@ -1248,8 +1248,8 @@ SiS300AccelInit(ScreenPtr pScreen)
 		    xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
 			"Not enough video RAM for offscreen memory manager. Xv disabled\n");
 		 }
-		 pSiS->EXADriverPtr->card.offscreenByteAlign = 16;	/* src/dst: double quad word boundary */
-		 pSiS->EXADriverPtr->card.offscreenPitch = 4;		/* pitch:   double word boundary      */
+		 pSiS->EXADriverPtr->card.pixmapOffsetAlign = 16;	/* src/dst: double quad word boundary */
+		 pSiS->EXADriverPtr->card.pixmapPitchAlign = 4;		/* pitch:   double word boundary      */
 		 if(pSiS->VGAEngine == SIS_300_VGA) {
 		    pSiS->EXADriverPtr->card.maxX = 4095;
 		    pSiS->EXADriverPtr->card.maxY = 4095;
