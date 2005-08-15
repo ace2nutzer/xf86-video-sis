@@ -443,7 +443,6 @@ SISDRIScreenInit(ScreenPtr pScreen)
 
   /* MMIO */
   pSISDRI->regs.size = SISIOMAPSIZE;
-  pSISDRI->regs.map = 0;
   if(drmAddMap(pSIS->drmSubFD, (drm_handle_t)pSIS->IOAddress,
 		pSISDRI->regs.size, DRM_REGISTERS, 0,
 		&pSISDRI->regs.handle) < 0) {
@@ -451,7 +450,7 @@ SISDRIScreenInit(ScreenPtr pScreen)
      return FALSE;
   }
 
-  xf86DrvMsg(pScreen->myNum, X_INFO, "[drm] MMIO registers mapped to 0x%0lx\n",
+  xf86DrvMsg(pScreen->myNum, X_INFO, "[drm] MMIO registers mapped to 0x%0x\n",
 		pSISDRI->regs.handle);
 
   /* AGP */

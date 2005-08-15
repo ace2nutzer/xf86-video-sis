@@ -59,7 +59,7 @@
 #define SIS_NAME                "SIS"
 #define SIS_DRIVER_NAME         "sis"
 #define SIS_MAJOR_VERSION       0
-#define SIS_MINOR_VERSION       7
+#define SIS_MINOR_VERSION       8
 #define SIS_PATCHLEVEL          0
 #define SIS_CURRENT_VERSION     ((SIS_MAJOR_VERSION << 16) | \
                                  (SIS_MINOR_VERSION << 8) | SIS_PATCHLEVEL )
@@ -745,7 +745,7 @@ typedef struct {
     ScrnInfoPtr		pScrn_2;
     UChar		*BIOS;
     struct SiS_Private	*SiS_Pr;
-    ULong		agpHandle;
+    drm_handle_t	agpHandle;
     ULong		agpAddr;
     UChar		*agpBase;
     unsigned int	agpSize;
@@ -1018,7 +1018,7 @@ typedef struct {
     unsigned int	cmdQueueSize_div2;
     unsigned int	cmdQueueSize_div4;
     unsigned int	cmdQueueSize_4_3;
-    ULong 		agpHandle;
+    drm_handle_t	agpHandle;
     ULong		agpAddr;
     UChar 		*agpBase;
     unsigned int	agpSize;
