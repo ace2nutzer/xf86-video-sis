@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/sis310_accel.c,v 1.23 2005/07/13 17:17:00 twini Exp $ */
+/* $XdotOrg$ */
 /*
  * 2D Acceleration for SiS 315, 330 and 340 series
  *

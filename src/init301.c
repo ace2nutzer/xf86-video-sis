@@ -4640,7 +4640,7 @@ SiS_EnableBridge(struct SiS_Private *SiS_Pr)
 		  if( (SiS_LCDAEnabled(SiS_Pr)) ||
 		      (SiS_CRT2IsLCD(SiS_Pr)) ) {
 		     if(r30 & 0x40) {
-			SiS_SetRegOR(SiS_Pr->SiS_Part4Port,0x2a,0x80);
+			/*SiS_SetRegOR(SiS_Pr->SiS_Part4Port,0x2a,0x80);*/
 			SiS_PanelDelayLoop(SiS_Pr, 3, 5);
 			if(delaylong) {
 			   SiS_PanelDelayLoop(SiS_Pr, 3, 5);
@@ -4652,7 +4652,7 @@ SiS_EnableBridge(struct SiS_Private *SiS_Pr)
 			   SiS_GenericDelay(SiS_Pr, 1280);
 			}
 			SiS_SetRegOR(SiS_Pr->SiS_Part4Port,0x30,0x40);   /* Enable */
-			SiS_SetRegAND(SiS_Pr->SiS_Part4Port,0x2a,0x7f);
+			/*SiS_SetRegAND(SiS_Pr->SiS_Part4Port,0x2a,0x7f);*/
 		     }
 		  }
 #endif
