@@ -56,14 +56,6 @@
 #endif
 #endif
 
-#define SIS_NAME                "SIS"
-#define SIS_DRIVER_NAME         "sis"
-#define SIS_MAJOR_VERSION       0
-#define SIS_MINOR_VERSION       8
-#define SIS_PATCHLEVEL          0
-#define SIS_CURRENT_VERSION     ((SIS_MAJOR_VERSION << 16) | \
-                                 (SIS_MINOR_VERSION << 8) | SIS_PATCHLEVEL )
-
 #if 0
 #define TWDEBUG    /* for debugging */
 #endif
@@ -87,6 +79,7 @@
 
 #define SIS_HaveDriverFuncs 0
 
+#undef SISISXORG6899900
 #ifdef XORG_VERSION_CURRENT
 #include "xorgVersion.h"
 #define SISMYSERVERNAME "X.org"
@@ -94,6 +87,9 @@
 #define XF86_VERSION_NUMERIC(major,minor,patch,snap,dummy) \
 	(((major) * 10000000) + ((minor) * 100000) + ((patch) * 1000) + snap)
 #define XF86_VERSION_CURRENT XF86_VERSION_NUMERIC(4,3,99,902,0)
+#endif
+#if XORG_VERSION_CURRENT >= XORG_VERSION_NUMERIC(6,8,99,900,0)
+#define SISISXORG6899900
 #endif
 #if 0
 #ifdef HaveDriverFuncs
@@ -106,6 +102,18 @@
 #include "xf86Version.h"
 #define SISMYSERVERNAME "XFree86"
 #endif
+
+#define SIS_NAME                "SIS"
+#define SIS_DRIVER_NAME         "sis"
+#define SIS_MAJOR_VERSION       0
+#ifdef SISISXORG6899900
+#define SIS_MINOR_VERSION       8	/* DRI changes */
+#else
+#define SIS_MINOR_VERSION       7
+#endif
+#define SIS_PATCHLEVEL          0
+#define SIS_CURRENT_VERSION     ((SIS_MAJOR_VERSION << 16) | \
+                                 (SIS_MINOR_VERSION << 8) | SIS_PATCHLEVEL )
 
 #if (XF86_VERSION_CURRENT >= XF86_VERSION_NUMERIC(4,3,99,0,0)) || (defined(XvExtension))
 #include "xf86xv.h"
@@ -738,6 +746,12 @@ typedef struct {
 /* For extended memcpy() */
 typedef void (*vidCopyFunc)(UChar *, const UChar *, int);
 
+#ifdef SISISXORG6899900
+#define SISAGPHTYPE drm_handle_t
+#else
+#define SISAGPHTYPE ULong
+#endif
+
 /* Dual head private entity structure */
 #ifdef SISDUALHEAD
 typedef struct {
@@ -745,7 +759,7 @@ typedef struct {
     ScrnInfoPtr		pScrn_2;
     UChar		*BIOS;
     struct SiS_Private	*SiS_Pr;
-    drm_handle_t	agpHandle;
+    SISAGPHTYPE		agpHandle;
     ULong		agpAddr;
     UChar		*agpBase;
     unsigned int	agpSize;
@@ -1018,7 +1032,7 @@ typedef struct {
     unsigned int	cmdQueueSize_div2;
     unsigned int	cmdQueueSize_div4;
     unsigned int	cmdQueueSize_4_3;
-    drm_handle_t	agpHandle;
+    SISAGPHTYPE		agpHandle;
     ULong		agpAddr;
     UChar 		*agpBase;
     unsigned int	agpSize;
