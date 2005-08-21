@@ -759,6 +759,7 @@ typedef struct {
     ScrnInfoPtr		pScrn_2;
     UChar		*BIOS;
     struct SiS_Private	*SiS_Pr;
+#ifdef XF86DRI
     SISAGPHTYPE		agpHandle;
     ULong		agpAddr;
     UChar		*agpBase;
@@ -773,7 +774,6 @@ typedef struct {
     UChar       	*agpVtxBufBase;
     unsigned int	agpVtxBufSize;
     unsigned int	agpVtxBufFree;
-#ifdef XF86DRI
     sisRegion		agp;
     int			drmSubFD;
 #endif
@@ -1032,6 +1032,7 @@ typedef struct {
     unsigned int	cmdQueueSize_div2;
     unsigned int	cmdQueueSize_div4;
     unsigned int	cmdQueueSize_4_3;
+#ifdef XF86DRI
     SISAGPHTYPE		agpHandle;
     ULong		agpAddr;
     UChar 		*agpBase;
@@ -1046,7 +1047,6 @@ typedef struct {
     UChar		*agpVtxBufBase;
     unsigned int	agpVtxBufSize;
     unsigned int	agpVtxBufFree;
-#ifdef XF86DRI
     sisRegion		agp;
 #endif
     Bool		AGPInitOK;
