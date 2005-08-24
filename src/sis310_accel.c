@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/sis310_accel.c,v 1.25 2005/08/16 22:06:59 twini Exp $ */
+/* $XdotOrg$ */
 /*
  * 2D Acceleration for SiS 315, 330 and 340 series
  *
@@ -1726,10 +1726,8 @@ SiSPrepareSolid(PixmapPtr pPixmap, int alu, Pixel planemask, Pixel fg)
 	SiSSetupCMDFlag(PATFG)
 	SiSSyncWP
 
-	pSiS->fillDstBase = (CARD32)((unsigned long)pPixmap->devPrivate.ptr -
-				(unsigned long)pSiS->FbBase + FBOFFSET);
-	/* TODO: If dstbase is not aligned, need to align it and fix x coordinates */
-	if(pSiS->fillDstBase & 0x0f) xf86DrvMsg(0, 0, "Fill: Bad dest\n");
+	pSiS->fillDstBase = (CARD32)exaGetPixmapOffset(pPixmap) + FBOFFSET;
+
 	pSiS->fillXoffs = 0;
 
 	return TRUE;
@@ -1776,13 +1774,9 @@ SiSPrepareCopy(PixmapPtr pSrcPixmap, PixmapPtr pDstPixmap, int xdir, int ydir,
 	   return FALSE;
 
 	srcbase = (CARD32)exaGetPixmapOffset(pSrcPixmap) + FBOFFSET;
-	/* TODO: If srcbase is not aligned, need to align it and fix x coordinates */
-	if(srcbase & 0x0f) xf86DrvMsg(0, 0, "Copy: Bad source\n");
 	pSiS->copySXoffs = 0;
 
 	dstbase = (CARD32)exaGetPixmapOffset(pDstPixmap) + FBOFFSET;
-	/* TODO: If dstbase is not aligned, need to align it and fix x coordinates */
-	if(dstbase & 0x0f) xf86DrvMsg(0, 0, "Copy: Bad dest\n");
 	pSiS->copyDXoffs = 0;
 
 	/* TODO: Will there eventually be overlapping blits?
@@ -1794,7 +1788,8 @@ SiSPrepareCopy(PixmapPtr pSrcPixmap, PixmapPtr pDstPixmap, int xdir, int ydir,
 
 	SiSSetupDSTColorDepth((pDstPixmap->drawable.bitsPerPixel >> 4) << 16);
 	SiSCheckQueue(16 * 3);
-	SiSSetupSRCPitchDSTRect((exaGetPixmapPitch(pSrcPixmap) + 3) & ~3, (exaGetPixmapPitch(pDstPixmap) + 3) & ~3, DEV_HEIGHT)
+	SiSSetupSRCPitchDSTRect((exaGetPixmapPitch(pSrcPixmap) + 3) & ~3,
+					(exaGetPixmapPitch(pDstPixmap) + 3) & ~3, DEV_HEIGHT)
 	SiSSetupROP(SiSGetCopyROP(alu))
 	SiSSetupSRCDSTBase(srcbase, dstbase)
 	SiSSyncWP

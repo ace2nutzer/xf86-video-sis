@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/sis300_accel.c,v 1.17 2005/08/16 22:06:59 twini Exp $ */
+/* $XdotOrg$ */
 /*
  * 2D Acceleration for SiS 530, 620, 300, 540, 630, 730.
  *
@@ -922,7 +922,6 @@ SiSPrepareSolid(PixmapPtr pPixmap, int alu, Pixel planemask, Pixel fg)
 	}
 
 	dstbase = (CARD32)exaGetPixmapOffset(pPixmap) + HEADOFFSET;
-	/* TODO: If dstbase is not aligned, need to align it and fix x coordinates */
 	pSiS->fillXoffs = 0;
 
 	SiSSetupPATFG(fg)
@@ -996,11 +995,9 @@ SiSPrepareCopy(PixmapPtr pSrcPixmap, PixmapPtr pDstPixmap, int xdir, int ydir,
 	}
 
 	srcbase = (CARD32)exaGetPixmapOffset(pSrcPixmap) + HEADOFFSET;
-	/* TODO: If srcbase is not aligned, need to align it and fix x coordinates */
 	pSiS->copySXoffs = 0;
 
 	dstbase = (CARD32)exaGetPixmapOffset(pDstPixmap) + HEADOFFSET;
-	/* TODO: If dstbase is not aligned, need to align it and fix x coordinates */
 	pSiS->copyDXoffs = 0;
 
 	SiSSetupSRCBase(srcbase);
