@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg$ */
+/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/sis_accel.c,v 1.17 2005/08/16 22:06:59 twini Exp $ */
 /*
  * 2D acceleration for SiS5597/5598 and 6326
  *
@@ -490,10 +490,9 @@ SiSPrepareSolid(PixmapPtr pPixmap, int alu, Pixel planemask, Pixel fg)
 	if(pPixmap->drawable.bitsPerPixel != pSiS->CurrentLayout.bitsPerPixel)
 	   return FALSE;
 
-	pSiS->fillPitch = (pPixmap->devKind + 7) & ~7;
+	pSiS->fillPitch = (exaGetPixmapPitch(pPixmap) + 7) & ~7;
 	pSiS->fillBpp = (pPixmap->drawable.bitsPerPixel + 7) >> 3;
-	pSiS->fillDstBase = (CARD32)((unsigned long)pPixmap->devPrivate.ptr -
-						(unsigned long)pSiS->FbBase);
+	pSiS->fillDstBase = (CARD32)exaGetPixmapOffset(pPixmap);
 
 	sisBLTSync;
 	sisSETBGROPCOL(SiSGetCopyROP(alu), fg);
@@ -541,12 +540,10 @@ SiSPrepareCopy(PixmapPtr pSrcPixmap, PixmapPtr pDstPixmap, int xdir, int ydir,
 	pSiS->copyXdir = xdir;
 	pSiS->copyYdir = ydir;
 	pSiS->copyBpp = (pSrcPixmap->drawable.bitsPerPixel + 7) >> 3;
-	pSiS->copySPitch = (pSrcPixmap->devKind + 3) & ~3;
-	pSiS->copyDPitch = (pDstPixmap->devKind + 7) & ~7;
-	pSiS->copySrcBase = (CARD32)((unsigned long)pSrcPixmap->devPrivate.ptr -
-						(unsigned long)pSiS->FbBase);
-	pSiS->copyDstBase = (CARD32)((unsigned long)pDstPixmap->devPrivate.ptr -
-						(unsigned long)pSiS->FbBase);
+	pSiS->copySPitch = (exaGetPixmapPitch(pSrcPixmap) + 3) & ~3;
+	pSiS->copyDPitch = (exaGetPixmapPitch(pDstPixmap) + 7) & ~7;
+	pSiS->copySrcBase = (CARD32)exaGetPixmapOffset(pSrcPixmap);
+	pSiS->copyDstBase = (CARD32)exaGetPixmapOffset(pDstPixmap);
 
 	sisBLTSync;
 	sisSETPITCH(pSiS->copySPitch, pSiS->copyDPitch);

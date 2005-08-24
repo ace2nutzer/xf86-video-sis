@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg$ */
+/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/sis300_accel.c,v 1.17 2005/08/16 22:06:59 twini Exp $ */
 /*
  * 2D Acceleration for SiS 530, 620, 300, 540, 630, 730.
  *
@@ -921,13 +921,12 @@ SiSPrepareSolid(PixmapPtr pPixmap, int alu, Pixel planemask, Pixel fg)
 	   }
 	}
 
-	dstbase = (CARD32)((unsigned long)pPixmap->devPrivate.ptr -
-				(unsigned long)pSiS->FbBase + HEADOFFSET);
+	dstbase = (CARD32)exaGetPixmapOffset(pPixmap) + HEADOFFSET;
 	/* TODO: If dstbase is not aligned, need to align it and fix x coordinates */
 	pSiS->fillXoffs = 0;
 
 	SiSSetupPATFG(fg)
-	SiSSetupDSTRect((pPixmap->devKind + 3) & ~3, -1)
+	SiSSetupDSTRect((exaGetPixmapPitch(pPixmap) + 3) & ~3, -1)
 	SiSSetupDSTColorDepth(dstcol[pPixmap->drawable.bitsPerPixel >> 4]);
 	SiSSetupROP(SiSGetPatternROP(alu))
 	SiSSetupDSTBase(dstbase)
@@ -984,8 +983,8 @@ SiSPrepareCopy(PixmapPtr pSrcPixmap, PixmapPtr pDstPixmap, int xdir, int ydir,
 	   return FALSE;
 
 	SiSSetupDSTColorDepth(dstcol[pDstPixmap->drawable.bitsPerPixel >> 4]);
-	SiSSetupSRCPitch((pSrcPixmap->devKind + 3) & ~3)
-	SiSSetupDSTRect((pDstPixmap->devKind + 3) & ~3, -1)
+	SiSSetupSRCPitch((exaGetPixmapPitch(pSrcPixmap) + 3) & ~3)
+	SiSSetupDSTRect((exaGetPixmapPitch(pDstPixmap) + 3) & ~3, -1)
 
 	SiSSetupROP(SiSGetCopyROP(alu))
 
@@ -996,13 +995,11 @@ SiSPrepareCopy(PixmapPtr pSrcPixmap, PixmapPtr pDstPixmap, int xdir, int ydir,
 	   SiSSetupCMDFlag(Y_INC)
 	}
 
-	srcbase = (CARD32)((unsigned long)pSrcPixmap->devPrivate.ptr -
-				(unsigned long)pSiS->FbBase + HEADOFFSET);
+	srcbase = (CARD32)exaGetPixmapOffset(pSrcPixmap) + HEADOFFSET;
 	/* TODO: If srcbase is not aligned, need to align it and fix x coordinates */
 	pSiS->copySXoffs = 0;
 
-	dstbase = (CARD32)((unsigned long)pDstPixmap->devPrivate.ptr -
-				(unsigned long)pSiS->FbBase + HEADOFFSET);
+	dstbase = (CARD32)exaGetPixmapOffset(pDstPixmap) + HEADOFFSET;
 	/* TODO: If dstbase is not aligned, need to align it and fix x coordinates */
 	pSiS->copyDXoffs = 0;
 

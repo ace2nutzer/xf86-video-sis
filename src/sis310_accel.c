@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg$ */
+/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/sis310_accel.c,v 1.25 2005/08/16 22:06:59 twini Exp $ */
 /*
  * 2D Acceleration for SiS 315, 330 and 340 series
  *
@@ -1721,7 +1721,7 @@ SiSPrepareSolid(PixmapPtr pPixmap, int alu, Pixel planemask, Pixel fg)
 
 	SiSSetupDSTColorDepth((pPixmap->drawable.bitsPerPixel >> 4) << 16);
 	SiSCheckQueue(16 * 1);
-	SiSSetupPATFGDSTRect(fg, (pPixmap->devKind + 3) & ~3, DEV_HEIGHT)
+	SiSSetupPATFGDSTRect(fg, (exaGetPixmapPitch(pPixmap) + 3) & ~3, DEV_HEIGHT)
 	SiSSetupROP(SiSGetPatternROP(alu))
 	SiSSetupCMDFlag(PATFG)
 	SiSSyncWP
@@ -1775,14 +1775,12 @@ SiSPrepareCopy(PixmapPtr pSrcPixmap, PixmapPtr pDstPixmap, int xdir, int ydir,
 	   (pDstPixmap->drawable.bitsPerPixel != 32))
 	   return FALSE;
 
-	srcbase = (CARD32)((unsigned long)pSrcPixmap->devPrivate.ptr -
-				(unsigned long)pSiS->FbBase + FBOFFSET);
+	srcbase = (CARD32)exaGetPixmapOffset(pSrcPixmap) + FBOFFSET;
 	/* TODO: If srcbase is not aligned, need to align it and fix x coordinates */
 	if(srcbase & 0x0f) xf86DrvMsg(0, 0, "Copy: Bad source\n");
 	pSiS->copySXoffs = 0;
 
-	dstbase = (CARD32)((unsigned long)pDstPixmap->devPrivate.ptr -
-				(unsigned long)pSiS->FbBase + FBOFFSET);
+	dstbase = (CARD32)exaGetPixmapOffset(pDstPixmap) + FBOFFSET;
 	/* TODO: If dstbase is not aligned, need to align it and fix x coordinates */
 	if(dstbase & 0x0f) xf86DrvMsg(0, 0, "Copy: Bad dest\n");
 	pSiS->copyDXoffs = 0;
@@ -1796,7 +1794,7 @@ SiSPrepareCopy(PixmapPtr pSrcPixmap, PixmapPtr pDstPixmap, int xdir, int ydir,
 
 	SiSSetupDSTColorDepth((pDstPixmap->drawable.bitsPerPixel >> 4) << 16);
 	SiSCheckQueue(16 * 3);
-	SiSSetupSRCPitchDSTRect((pSrcPixmap->devKind + 3) & ~3, (pDstPixmap->devKind + 3) & ~3, DEV_HEIGHT)
+	SiSSetupSRCPitchDSTRect((exaGetPixmapPitch(pSrcPixmap) + 3) & ~3, (exaGetPixmapPitch(pDstPixmap) + 3) & ~3, DEV_HEIGHT)
 	SiSSetupROP(SiSGetCopyROP(alu))
 	SiSSetupSRCDSTBase(srcbase, dstbase)
 	SiSSyncWP
@@ -1880,7 +1878,7 @@ SiSUploadToScreen(PixmapPtr pDst, char *src, int src_pitch)
 	ScrnInfoPtr pScrn = xf86Screens[pDst->drawable.pScreen->myNum];
 	SISPtr pSiS = SISPTR(pScrn);
 	unsigned char *dst = pDst->devPrivate.ptr;
-	int dst_pitch = pDst->devKind;
+	int dst_pitch = exaGetPixmapPitch(pDst);
 	int size = src_pitch < dst_pitch ? src_pitch : dst_pitch;
 	int h = pDst->drawable.height;
 
@@ -1901,7 +1899,7 @@ SiSUploadToScratch(PixmapPtr pSrc, PixmapPtr pDst)
 	ScrnInfoPtr pScrn = xf86Screens[pSrc->drawable.pScreen->myNum];
 	SISPtr pSiS = SISPTR(pScrn);
 	unsigned char *src, *dst;
-	int src_pitch = pSrc->devKind;
+	int src_pitch = exaGetPixmapPitch(pSrc);
 	int dst_pitch, size, w, h, bytes;
 
 	w = pSrc->drawable.width;
@@ -1932,7 +1930,7 @@ SiSUploadToScratch(PixmapPtr pSrc, PixmapPtr pDst)
 	pSiS->exa_scratch_next += size;
 
 	src = pSrc->devPrivate.ptr;
-	src_pitch = pSrc->devKind;
+	src_pitch = exaGetPixmapPitch(pSrc);
 	dst = pDst->devPrivate.ptr;
 
 	bytes = (src_pitch < dst_pitch) ? src_pitch : dst_pitch;
@@ -1956,7 +1954,7 @@ SiSDownloadFromScreen(PixmapPtr pSrc, int x, int y, int w, int h, char *dst, int
 	ScrnInfoPtr pScrn = xf86Screens[pSrc->drawable.pScreen->myNum];
 	SISPtr pSiS = SISPTR(pScrn);
 	unsigned char *src = pSrc->devPrivate.ptr;
-	int src_pitch = pSrc->devKind;
+	int src_pitch = exaGetPixmapPitch(pSrc);
 	int size = src_pitch < dst_pitch ? src_pitch : dst_pitch;
 
 	(pSiS->SyncAccel)(pScrn);
