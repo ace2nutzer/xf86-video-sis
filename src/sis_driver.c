@@ -11789,9 +11789,11 @@ void SiS_SetTVyposoffset(ScrnInfoPtr pScrn, int val)
 #endif
 		p2_01 += val; /* val * 2 */
 		p2_02 += val; /* val * 2 */
-		while((p2_01 <= 0) || (p2_02 <= 0)) {
+		if(!(pSiS->VBFlags & (TV_YPBPR | TV_HIVISION))) {
+		   while((p2_01 <= 0) || (p2_02 <= 0)) {
 		      p2_01 += 2;
 		      p2_02 += 2;
+		   }
 		}
 		SISWaitRetraceCRT2(pScrn);
 		outSISIDXREG(SISPART2,0x01,p2_01);
@@ -11961,17 +11963,23 @@ void SiS_SetTVyscale(ScrnInfoPtr pScrn, int val)
 
       if((pSiS->VBFlags & CRT2_TV) && (pSiS->VBFlags2 & VB2_SISBRIDGE)) {
 
-	 int srindex = -1, newvde, i = 0, j, vlimit, temp;
+	 int srindex = -1, newvde, i = 0, j, vlimit, temp, vdediv;
 	 UChar p3d4_34;
 
 	 if(pSiS->VBFlags & TV_HIVISION) return;
          if((pSiS->VBFlags & TV_YPBPR) &&
-            (pSiS->VBFlags & (TV_YPBPR1080I | TV_YPBPR750P | TV_YPBPR525P))) return;
+            (pSiS->VBFlags & (TV_YPBPR1080I | TV_YPBPR750P/* | TV_YPBPR525P*/))) return;
 
 	 if(pSiS->VBFlags & TV_YPBPR)                 usentsc = TRUE;
          else if(pSiS->VBFlags & (TV_NTSC | TV_PALM)) usentsc = TRUE;
 
-	 vlimit = usentsc ? 259 : 309;
+	 if((pSiS->VBFlags & TV_YPBPR) && (pSiS->VBFlags & TV_YPBPR525P)) {
+	    vlimit = 259 * 2;
+	    vdediv = 1;
+	 } else {
+	    vlimit = usentsc ? 259 : 309;
+	    vdediv = 2;
+	 }
 
 	 inSISIDXREG(SISCR,0x34,p3d4_34);
 
@@ -12108,7 +12116,7 @@ void SiS_SetTVyscale(ScrnInfoPtr pScrn, int val)
 	       do {
 		  inSISIDXREG(SISPART2,0x01,temp);
 		  temp = vlimit - (temp & 0x7f);
-		  if((temp - (((newvde >> 1) - 2) + 9)) > 0) break;
+		  if((temp - (((newvde / vdediv) - 2) + 9)) > 0) break;
 		  myypos = pSiS->tvypos - 1;
 #ifdef SISDUALHEAD
 		  if(pSiSEnt && pSiS->DualHeadMode) myypos = pSiSEnt->tvypos - 1;
@@ -12125,7 +12133,7 @@ void SiS_SetTVyscale(ScrnInfoPtr pScrn, int val)
 	       }
 
 	       if(!(pSiS->VBFlags2 & VB2_301)) {
-		  temp = (newvde >> 1) - 3;
+		  temp = (newvde / vdediv) - 3;
 		  setSISIDXREG(SISPART2,0x46,0x9f,((temp & 0x0300) >> 3));
 		  outSISIDXREG(SISPART2,0x47,(temp & 0xff));
 	       }
@@ -12141,8 +12149,8 @@ void SiS_SetTVyscale(ScrnInfoPtr pScrn, int val)
 	       setSISIDXREG(SISPART1,0x11,0xf0,(SiSTVVScale[srindex].reg[so+5] & 0x0f));
 
 	       setSISIDXREG(SISPART2,0x0a,0x7f,((SiSTVVScale[srindex].reg[so+6] << 7) & 0x80));
-	       outSISIDXREG(SISPART2,0x2f,((newvde / 2) - 2));
-	       setSISIDXREG(SISPART2,0x30,0x3f,((((newvde / 2) - 2) >> 2) & 0xc0));
+	       outSISIDXREG(SISPART2,0x2f,((newvde / vdediv) - 2));
+	       setSISIDXREG(SISPART2,0x30,0x3f,((((newvde / vdediv) - 2) >> 2) & 0xc0));
 
 	       outSISIDXREG(SISPART4,0x13,(SiSTVVScale[srindex].reg[so+7] & 0xff));
 	       outSISIDXREG(SISPART4,0x14,(SiSTVVScale[srindex].reg[so+8] & 0xff));
@@ -12734,6 +12742,7 @@ SiSPostSetMode(ScrnInfoPtr pScrn, SISRegPtr sisReg)
 	   - if this is called by SetModeCRT2, CRT2 mode has changed (duh!)
 	   -> Hence, in both cases, the settings must be re-applied.
      */
+
     if(pSiS->VBFlags & CRT2_TV) {
        int val;
        if(pSiS->VBFlags2 & VB2_CHRONTEL) {

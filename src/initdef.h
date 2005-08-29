@@ -203,6 +203,7 @@
 #define TVSetTVSimuMode		0x0200 /* new 0x200, prev. 0x800 */
 #define TVRPLLDIV2XO		0x0400 /* prev 0x1000 */
 #define TVSetNTSC1024		0x0800 /* new 0x100, prev. 0x2000 */
+#define TVSet525p1024		0x1000 /* TW */
 #define TVAspect43		0x2000
 #define TVAspect169		0x4000
 #define TVAspect43LB		0x8000
