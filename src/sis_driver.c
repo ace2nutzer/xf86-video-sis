@@ -8336,6 +8336,7 @@ SISDisplayPowerManagementSet(ScrnInfoPtr pScrn, int PowerManagementMode, int fla
           if((pSiS->VBFlags2 & VB2_SISBRIDGE) &&
 	     (!(pSiS->VBFlags2 & VB2_30xBDH))) {
 	     if(pSiS->VGAEngine == SIS_300_VGA) {
+	        SiS_UnLockCRT2(pSiS->SiS_Pr);
 	        setSISIDXREG(SISPART1, 0x13, 0x3f, p1_13);
 	     }
 	     if(pSiS->VBFlags2 & VB2_SISLVDSBRIDGE) p2_0 |= 0x20;
@@ -11972,6 +11973,8 @@ void SiS_SetTVyscale(ScrnInfoPtr pScrn, int val)
 
 	 if(pSiS->VBFlags & TV_YPBPR)                 usentsc = TRUE;
          else if(pSiS->VBFlags & (TV_NTSC | TV_PALM)) usentsc = TRUE;
+	 
+	 SiS_UnLockCRT2(pSiS->SiS_Pr);
 
 	 if((pSiS->VBFlags & TV_YPBPR) && (pSiS->VBFlags & TV_YPBPR525P)) {
 	    vlimit = 259 * 2;
@@ -12049,6 +12052,7 @@ void SiS_SetTVyscale(ScrnInfoPtr pScrn, int val)
 #ifdef SISDUALHEAD
 	    if(pSiSEnt) pSiSEnt->tvyscale = pSiS->tvyscale;
 #endif
+
 	    if(pSiS->tvyscale == 0) {
 	       UChar p2_0a = pSiS->p2_0a;
 	       UChar p2_2f = pSiS->p2_2f;
