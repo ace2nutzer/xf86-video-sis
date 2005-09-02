@@ -801,12 +801,8 @@ SiS_GetModeID_TV(int VGAEngine, unsigned int VBFlags, int HDisplay, int VDisplay
              }
 	     break;
 	case 800:
-	     if(VDisplay == 600) ModeIndex = ModeIndex_800x600[Depth];
-	     else if(VDisplay == 480) {
-		if(!((VBFlags & TV_YPBPR) && (VBFlags & TV_YPBPR750P))) {
-		   ModeIndex = ModeIndex_800x480[Depth];
-		}
-	     }
+	     if(VDisplay == 600)      ModeIndex = ModeIndex_800x600[Depth];
+	     else if(VDisplay == 480) ModeIndex = ModeIndex_800x480[Depth];
 	     break;
 	case 960:
 	     if(VGAEngine == SIS_315_VGA) {
@@ -824,7 +820,7 @@ SiS_GetModeID_TV(int VGAEngine, unsigned int VBFlags, int HDisplay, int VDisplay
 		}
 	     } else if(VDisplay == 576) {
 		if( (VBFlags & TV_HIVISION) ||
-		    ((VBFlags & TV_YPBPR) && (VBFlags & TV_YPBPR1080I)) ||
+		    ((VBFlags & TV_YPBPR) && (VBFlags & (TV_YPBPR1080I | TV_YPBPR750P))) ||
 		    ((VBFlags2 & VB2_30xBLV) &&
 		     ((!(VBFlags & (TV_YPBPR | TV_PALM))) && (VBFlags & TV_PAL))) ) {
 		   ModeIndex = ModeIndex_1024x576[Depth];

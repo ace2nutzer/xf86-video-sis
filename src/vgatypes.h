@@ -120,6 +120,7 @@ typedef enum _SIS_CHIP_TYPE {
     MAX_SIS_CHIP
 } SIS_CHIP_TYPE;
 
+#undef OLD1280720P
 
 #endif
 

@@ -83,6 +83,11 @@ struct SiS_TVData {
 	unsigned char  RY4COE;
 };
 
+struct SiS_Tap4scalerP2 {
+	unsigned short de;
+	unsigned char  reg[64];
+};
+
 struct SiS_LVDSData {
 	unsigned short VGAHT;
 	unsigned short VGAVT;

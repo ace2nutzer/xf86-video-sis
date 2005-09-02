@@ -1108,7 +1108,6 @@ CheckAndOverruleV(ScrnInfoPtr pScrn, MonPtr monitor)
    return ret;
 }
 
-
 /* Some helper functions for MergedFB mode */
 
 #ifdef SISMERGED
@@ -11621,8 +11620,6 @@ void SiS_SetTVxposoffset(ScrnInfoPtr pScrn, int val)
 		   if(x < 0) x = 0;
 		   SiS_SetCH700x(pSiS->SiS_Pr, 0x0a, (x & 0xff));
 		   SiS_SetCH70xxANDOR(pSiS->SiS_Pr, 0x08, ((x & 0x0100) >> 7), 0xFD);
-		   /* xf86DrvMsg(0, 0, "Writing X %x, reading %x (%x)\n", x, SiS_GetCH700x(pSiS->SiS_Pr,0x0a),
-		   		SiS_GetCH700x(pSiS->SiS_Pr,0x08)); */
 	       }
 	       break;
 	    case CHRONTEL_701x:
@@ -11636,6 +11633,7 @@ void SiS_SetTVxposoffset(ScrnInfoPtr pScrn, int val)
 
 	        UChar p2_1f,p2_20,p2_2b,p2_42,p2_43;
 		UShort temp;
+		int mult;
 
 		p2_1f = pSiS->p2_1f;
 		p2_20 = pSiS->p2_20;
@@ -11651,14 +11649,20 @@ void SiS_SetTVxposoffset(ScrnInfoPtr pScrn, int val)
 		   p2_43 = pSiSEnt->p2_43;
 		}
 #endif
+		mult = 2;
+		if(pSiS->VBFlags & TV_YPBPR) {
+		   if(pSiS->VBFlags & (TV_YPBPR1080I | TV_YPBPR750P)) {
+		      mult = 4;
+		   }
+		}
 
 		temp = p2_1f | ((p2_20 & 0xf0) << 4);
-		temp += (val * 2);
+		temp += (val * mult);
 		p2_1f = temp & 0xff;
 		p2_20 = (temp & 0xf00) >> 4;
-		p2_2b = ((p2_2b & 0x0f) + (val * 2)) & 0x0f;
+		p2_2b = ((p2_2b & 0x0f) + (val * mult)) & 0x0f;
 		temp = p2_43 | ((p2_42 & 0xf0) << 4);
-		temp += (val * 2);
+		temp += (val * mult);
 		p2_43 = temp & 0xff;
 		p2_42 = (temp & 0xf00) >> 4;
 		SISWaitRetraceCRT2(pScrn);
@@ -11766,8 +11770,6 @@ void SiS_SetTVyposoffset(ScrnInfoPtr pScrn, int val)
 		   if(y < 0) y = 0;
 		   SiS_SetCH700x(pSiS->SiS_Pr, 0x0b, (y & 0xff));
 		   SiS_SetCH70xxANDOR(pSiS->SiS_Pr, 0x08, ((y & 0x0100) >> 8), 0xFE);
-		   /* xf86DrvMsg(0, 0, "Writing Y %x, reading %x (%x)\n", y, SiS_GetCH700x(pSiS->SiS_Pr,0x0b),
-		   			SiS_GetCH700x(pSiS->SiS_Pr,0x08)); */
 	       }
 	       break;
 	    case CHRONTEL_701x:
@@ -11779,7 +11781,14 @@ void SiS_SetTVyposoffset(ScrnInfoPtr pScrn, int val)
 
 	    if((val >= -32) && (val <= 32)) {
 		char p2_01, p2_02;
-		val /= 2;  /* 4 */
+
+		if( (pSiS->VBFlags & TV_HIVISION) ||
+		    ((pSiS->VBFlags & TV_YPBPR) && (pSiS->VBFlags & (TV_YPBPR1080I|TV_YPBPR750P))) ) {
+		   val *= 2;
+		} else {
+		   val /= 2;  /* 4 */
+		}
+
 		p2_01 = pSiS->p2_01;
 		p2_02 = pSiS->p2_02;
 #ifdef SISDUALHEAD
@@ -11795,7 +11804,18 @@ void SiS_SetTVyposoffset(ScrnInfoPtr pScrn, int val)
 		      p2_01 += 2;
 		      p2_02 += 2;
 		   }
+		} else if((pSiS->VBFlags & TV_YPBPR) && (pSiS->VBFlags & TV_YPBPR1080I)) {
+		   while(p2_01 <= 8) {
+		      p2_01 += 2;
+		      p2_02 += 2;
+		   }
+		} else if((pSiS->VBFlags & TV_YPBPR) && (pSiS->VBFlags & TV_YPBPR750P)) {
+		   while(p2_01 <= 10) {
+		      p2_01 += 2;
+		      p2_02 += 2;
+		   }
 		}
+
 		SISWaitRetraceCRT2(pScrn);
 		outSISIDXREG(SISPART2,0x01,p2_01);
 		outSISIDXREG(SISPART2,0x02,p2_02);
@@ -11885,7 +11905,7 @@ void SiS_SetTVxscale(ScrnInfoPtr pScrn, int val)
 	 if((val >= -16) && (val <= 16)) {
 
 	    UChar p2_44,p2_45,p2_46;
-	    int scalingfactor;
+	    int scalingfactor, mult;
 
 	    p2_44 = pSiS->p2_44;
 	    p2_45 = pSiS->p2_45 & 0x3f;
@@ -11899,13 +11919,24 @@ void SiS_SetTVxscale(ScrnInfoPtr pScrn, int val)
 #endif
 	    scalingfactor = (p2_46 << 13) | ((p2_45 & 0x1f) << 8) | p2_44;
 
+	    mult = 64;
+	    if(pSiS->VBFlags & TV_YPBPR) {
+	       if(pSiS->VBFlags & TV_YPBPR1080I) {
+	          mult = 190;
+	       } else if(pSiS->VBFlags & TV_YPBPR750P) {
+	          mult = 360;
+	       }
+	    } else if(pSiS->VBFlags & TV_HIVISION) {
+	       mult = 190;
+	    }
+
 	    if(val < 0) {
 	       p2_45 &= 0xdf;
-	       scalingfactor += ((-val) * 64);
+	       scalingfactor += ((-val) * mult);
 	       if(scalingfactor > 0xffff) scalingfactor = 0xffff;
 	    } else if(val > 0) {
 	       p2_45 &= 0xdf;
-	       scalingfactor -= (val * 64);
+	       scalingfactor -= (val * mult);
 	       if(scalingfactor < 1) scalingfactor = 1;
 	    }
 
@@ -11943,7 +11974,6 @@ int SiS_GetTVxscale(ScrnInfoPtr pScrn)
 void SiS_SetTVyscale(ScrnInfoPtr pScrn, int val)
 {
    SISPtr pSiS = SISPTR(pScrn);
-   Bool usentsc = FALSE;
 #ifdef SISDUALHEAD
    SISEntPtr pSiSEnt = pSiS->entityPrivate;
 #endif
@@ -11960,26 +11990,36 @@ void SiS_SetTVyscale(ScrnInfoPtr pScrn, int val)
    if(pSiSEnt) pSiSEnt->tvyscale = val;
 #endif
 
-   if(pSiS->VGAEngine == SIS_315_VGA || pSiS->VGAEngine == SIS_315_VGA) {
+   if(pSiS->VGAEngine == SIS_300_VGA || pSiS->VGAEngine == SIS_315_VGA) {
 
       if((pSiS->VBFlags & CRT2_TV) && (pSiS->VBFlags2 & VB2_SISBRIDGE)) {
 
 	 int srindex = -1, newvde, i = 0, j, vlimit, temp, vdediv;
+	 int hdclk = 0;
 	 UChar p3d4_34;
+	 Bool found = FALSE;
+	 Bool usentsc = FALSE;
+	 Bool is750p = FALSE;
+	 Bool is1080i = FALSE;
 
-	 if(pSiS->VBFlags & TV_HIVISION) return;
-         if((pSiS->VBFlags & TV_YPBPR) &&
-            (pSiS->VBFlags & (TV_YPBPR1080I | TV_YPBPR750P/* | TV_YPBPR525P*/))) return;
-
-	 if(pSiS->VBFlags & TV_YPBPR)                 usentsc = TRUE;
-         else if(pSiS->VBFlags & (TV_NTSC | TV_PALM)) usentsc = TRUE;
-	 
 	 SiS_UnLockCRT2(pSiS->SiS_Pr);
 
 	 if((pSiS->VBFlags & TV_YPBPR) && (pSiS->VBFlags & TV_YPBPR525P)) {
-	    vlimit = 259 * 2;
+	    vlimit = 525 - 7;
 	    vdediv = 1;
+	    usentsc = TRUE;
+	 } else if((pSiS->VBFlags & TV_YPBPR) && (pSiS->VBFlags & TV_YPBPR750P)) {
+	    vlimit = 750 - 7;
+	    vdediv = 1;
+	    is750p = TRUE;
+	 } else if(((pSiS->VBFlags & TV_YPBPR) && (pSiS->VBFlags & TV_YPBPR1080I)) ||
+	           (pSiS->VBFlags & TV_HIVISION)) {
+	    vlimit = (1125 - 7) / 2;
+	    vdediv = 2;
+	    is1080i = TRUE;
 	 } else {
+	    if(pSiS->VBFlags & TV_YPBPR)                 usentsc = TRUE;
+            else if(pSiS->VBFlags & (TV_NTSC | TV_PALM)) usentsc = TRUE;
 	    vlimit = usentsc ? 259 : 309;
 	    vdediv = 2;
 	 }
@@ -11987,30 +12027,34 @@ void SiS_SetTVyscale(ScrnInfoPtr pScrn, int val)
 	 inSISIDXREG(SISCR,0x34,p3d4_34);
 
 	 switch((p3d4_34 & 0x7f)) {
-	 case 0x70:   /* 800x480 */
-	 case 0x7a:
-	 case 0x76:
-	    /* can scale PAL only */
-	    if(usentsc) break;
-	    /* fall through */
-#if 0
 	 case 0x50:   /* 320x240 - hdclk mode */
 	 case 0x56:
 	 case 0x53:
-#endif
+	    hdclk = 1;
+	    /* fall through */
 	 case 0x2e:   /* 640x480 */
 	 case 0x44:
 	 case 0x62:
-	    srindex  = usentsc ? 0 : 21;
+	    if(is1080i) {
+	       srindex = 98;
+	    } else if(is750p) {
+	       srindex = 42;
+	    } else {
+	       srindex  = usentsc ? 0 : 21;
+	    }
 	    break;
 	 case 0x31:   /* 720x480 */
 	 case 0x33:
 	 case 0x35:
-	    if(pSiS->VGAEngine == SIS_315_VGA) {
-	       if(!usentsc) {
-	          srindex = 21;
-	          break;
-	       }
+	    if(is1080i) {
+	       /* n/a */
+	       break;
+	    } else if(is750p) {
+	       srindex = 49;
+	       break;
+	    } else if(!usentsc) {
+	       srindex = 21;
+	       break;
 	    }
 	    /* fall through */
 	 case 0x32:   /* 720x576 */
@@ -12019,166 +12063,285 @@ void SiS_SetTVyscale(ScrnInfoPtr pScrn, int val)
 	 case 0x5f:   /* 768x576 */
 	 case 0x60:
 	 case 0x61:
-            if(pSiS->VGAEngine == SIS_315_VGA) {
+	    if(is1080i) {
+	       /* n/a */
+	       break;
+	    } else if(is750p) {
+	       srindex = 56;
+	    } else {
 	       srindex  = usentsc ? 7 : 28;
 	    }
 	    break;
-#if 0
+	 case 0x70:   /* 800x480 */
+	 case 0x7a:
+	 case 0x76:
+	    if(is1080i) {
+	       srindex = 105;
+	    } else if(is750p) {
+	       srindex = 63;
+	    } else if(!usentsc) {
+	       /* can scale PAL only */
+	       srindex = 21;
+	    }
+	    break;
 	 case 0x51:   /* 400x300 - hdclk mode */
 	 case 0x57:
 	 case 0x54:
-#endif
+	    hdclk = 1;
+	    /* fall through */
 	 case 0x30:   /* 800x600 */
 	 case 0x47:
 	 case 0x63:
-	    srindex  = usentsc ? 14 : 35;
+	    if(is1080i) {
+	       srindex = 112;
+	    } else if(is750p) {
+	       srindex = 70;
+	    } else {
+	       srindex  = usentsc ? 14 : 35;
+	    }
+	    break;
+	 case 0x71:	/* 1024x576 */
+	 case 0x74:
+	 case 0x77:
+	    if(is1080i) {
+	       srindex = 119;
+	    } else if(is750p) {
+	       srindex = 77;
+	    }
+	    break;
+	 case 0x52:	/* 512x384 */
+	 case 0x58:
+	 case 0x5c:
+	    if(is1080i || is750p) {
+	       hdclk = 1;
+	    } else {
+	       break;
+	    }
+	 case 0x38:	/* 1024x768 */
+	 case 0x4a:
+	 case 0x64:
+	    if(is1080i) {
+	       srindex = 126;
+	    } else if(is750p) {
+	       srindex = 84;
+	    }
+	    break;
+	 case 0x79:	/* 1280x720 */
+	 case 0x75:
+	 case 0x78:
+	    if(is1080i) {
+	       srindex = 133;
+	    } else if(is750p) {
+	       srindex = 91;
+	    }
+	    break;
+	 case 0x3a:	/* 1280x1024 */
+	 case 0x4d:
+	 case 0x65:
+	    if(is1080i) {
+	       srindex = 140;
+	    }
+	    break;
 	 }
 
-	 if(srindex >= 0) {
-	    Bool found = FALSE;
-	    if(pSiS->tvyscale != 0) {
-	       for(j=0; j<=1; j++) {
-		  for(i=0; i<=6; i++) {
-		     if(SiSTVVScale[srindex+i].sindex == pSiS->tvyscale) {
-		        found = TRUE;
-		        break;
-		     }
+	 if(srindex < 0) return;
+
+	 if(pSiS->tvyscale != 0) {
+	    for(j = 0; j <= 1; j++) {
+	       for(i = 0; i <= 6; i++) {
+		  if(SiSTVVScale[srindex+i].sindex == pSiS->tvyscale) {
+		     found = TRUE;
+		     break;
 		  }
-		  if(found) break;
-		  if(pSiS->tvyscale > 0) pSiS->tvyscale--;
-		  else pSiS->tvyscale++;
+	       }
+	       if(found) break;
+	       if(pSiS->tvyscale > 0) pSiS->tvyscale--;
+	       else pSiS->tvyscale++;
+	    }
+	 }
+
+#ifdef SISDUALHEAD
+	 if(pSiSEnt) pSiSEnt->tvyscale = pSiS->tvyscale;
+#endif
+
+	 if(pSiS->tvyscale == 0) {
+	    UChar p2_0a = pSiS->p2_0a;
+	    UChar p2_2f = pSiS->p2_2f;
+	    UChar p2_30 = pSiS->p2_30;
+	    UChar p2_46 = pSiS->p2_46;
+	    UChar p2_47 = pSiS->p2_47;
+	    UChar p1scaling[9], p4scaling[9];
+	    UChar *p2scaling;
+
+	    for(i = 0; i < 9; i++) {
+	        p1scaling[i] = pSiS->scalingp1[i];
+		p4scaling[i] = pSiS->scalingp4[i];
+	    }
+	    p2scaling = &pSiS->scalingp2[0];
+
+#ifdef SISDUALHEAD
+	    if(pSiSEnt && pSiS->DualHeadMode) {
+	       p2_0a = pSiSEnt->p2_0a;
+	       p2_2f = pSiSEnt->p2_2f;
+	       p2_30 = pSiSEnt->p2_30;
+	       p2_46 = pSiSEnt->p2_46;
+	       p2_47 = pSiSEnt->p2_47;
+	       for(i = 0; i < 9; i++) {
+		  p1scaling[i] = pSiSEnt->scalingp1[i];
+		  p4scaling[i] = pSiSEnt->scalingp4[i];
+	       }
+	       p2scaling = &pSiSEnt->scalingp2[0];
+	    }
+#endif
+            SISWaitRetraceCRT2(pScrn);
+	    if(pSiS->VBFlags2 & VB2_SISTAP4SCALER) {
+	       for(i = 0; i < 64; i++) {
+	          outSISIDXREG(SISPART2,(0xc0 + i),p2scaling[i]);
 	       }
 	    }
+	    for(i = 0; i < 9; i++) {
+	       outSISIDXREG(SISPART1,SiSScalingP1Regs[i],p1scaling[i]);
+	    }
+	    for(i = 0; i < 9; i++) {
+	       outSISIDXREG(SISPART4,SiSScalingP4Regs[i],p4scaling[i]);
+	    }
+
+	    setSISIDXREG(SISPART2,0x0a,0x7f,(p2_0a & 0x80));
+	    outSISIDXREG(SISPART2,0x2f,p2_2f);
+	    setSISIDXREG(SISPART2,0x30,0x3f,(p2_30 & 0xc0));
+	    if(!(pSiS->VBFlags2 & VB2_301)) {
+	       setSISIDXREG(SISPART2,0x46,0x9f,(p2_46 & 0x60));
+	       outSISIDXREG(SISPART2,0x47,p2_47);
+	    }
+
+	 } else {
+
+	    int realvde, j, srindex301c, myypos, watchdog = 32;
+	    unsigned short temp1, temp2, vgahde, vgaht, vgavt;
+	    int p1div = 1;
+	    ULong calctemp;
+
+	    srindex += i;
+	    srindex301c = srindex * 64;
+	    newvde = SiSTVVScale[srindex].ScaleVDE;
+	    realvde = SiSTVVScale[srindex].RealVDE;
+
+	    if(vdediv == 1) p1div = 2;
+
+	    do {
+	       inSISIDXREG(SISPART2,0x01,temp);
+	       temp = vlimit - ((temp & 0x7f) / p1div);
+	       if((temp - (((newvde / vdediv) - 2) + 9)) > 0) break;
+	       myypos = pSiS->tvypos - 1;
 #ifdef SISDUALHEAD
-	    if(pSiSEnt) pSiSEnt->tvyscale = pSiS->tvyscale;
+	       if(pSiSEnt && pSiS->DualHeadMode) myypos = pSiSEnt->tvypos - 1;
 #endif
+	       SiS_SetTVyposoffset(pScrn, myypos);
+	    } while(watchdog--);
 
-	    if(pSiS->tvyscale == 0) {
-	       UChar p2_0a = pSiS->p2_0a;
-	       UChar p2_2f = pSiS->p2_2f;
-	       UChar p2_30 = pSiS->p2_30;
-	       UChar p2_46 = pSiS->p2_46;
-	       UChar p2_47 = pSiS->p2_47;
-	       UChar p1scaling[9], p4scaling[9];
-	       UChar *p2scaling;
+	    SISWaitRetraceCRT2(pScrn);
 
-	       for(i=0; i<9; i++) {
-		  p1scaling[i] = pSiS->scalingp1[i];
+	    if(pSiS->VBFlags2 & VB2_SISTAP4SCALER) {
+	       if(is1080i || is750p) {
+	          srindex301c = 42 * 64;
 	       }
-	       for(i=0; i<9; i++) {
-		  p4scaling[i] = pSiS->scalingp4[i];
+	       for(j=0; j<64; j++) {
+		  outSISIDXREG(SISPART2,(0xc0 + j), SiS301CScaling[srindex301c + j]);
 	       }
-	       p2scaling = &pSiS->scalingp2[0];
-#ifdef SISDUALHEAD
-	       if(pSiSEnt && pSiS->DualHeadMode) {
-		  p2_0a = pSiSEnt->p2_0a;
-		  p2_2f = pSiSEnt->p2_2f;
-		  p2_30 = pSiSEnt->p2_30;
-		  p2_46 = pSiSEnt->p2_46;
-		  p2_47 = pSiSEnt->p2_47;
-		  for(i=0; i<9; i++) {
-		     p1scaling[i] = pSiSEnt->scalingp1[i];
-		  }
-		  for(i=0; i<9; i++) {
-		     p4scaling[i] = pSiSEnt->scalingp4[i];
-		  }
-		  p2scaling = &pSiSEnt->scalingp2[0];
-	       }
-#endif
-               SISWaitRetraceCRT2(pScrn);
-	       if(pSiS->VBFlags2 & VB2_SISTAP4SCALER) {
-	          for(i=0; i<64; i++) {
-	             outSISIDXREG(SISPART2,(0xc0 + i),p2scaling[i]);
-	          }
-	       }
-	       for(i=0; i<9; i++) {
-	          outSISIDXREG(SISPART1,SiSScalingP1Regs[i],p1scaling[i]);
-	       }
-	       for(i=0; i<9; i++) {
-	          outSISIDXREG(SISPART4,SiSScalingP4Regs[i],p4scaling[i]);
-	       }
+	    }
 
-	       setSISIDXREG(SISPART2,0x0a,0x7f,(p2_0a & 0x80));
-	       outSISIDXREG(SISPART2,0x2f,p2_2f);
-	       setSISIDXREG(SISPART2,0x30,0x3f,(p2_30 & 0xc0));
-	       if(!(pSiS->VBFlags2 & VB2_301)) {
-	          setSISIDXREG(SISPART2,0x46,0x9f,(p2_46 & 0x60));
-		  outSISIDXREG(SISPART2,0x47,p2_47);
-	       }
+	    if(!(pSiS->VBFlags2 & VB2_301)) {
+	       temp = (newvde / vdediv) - 3;
+	       setSISIDXREG(SISPART2,0x46,0x9f,((temp & 0x0300) >> 3));
+	       outSISIDXREG(SISPART2,0x47,(temp & 0xff));
+	    }
 
+	    inSISIDXREG(SISPART1,0x0a,temp1);
+	    inSISIDXREG(SISPART1,0x0c,temp2);
+	    vgahde = ((temp2 & 0xf0) << 4) | temp1;
+	    if(pSiS->VGAEngine == SIS_300_VGA) {
+	       vgahde -= 12;
 	    } else {
-
-	       int so = (pSiS->VGAEngine == SIS_300_VGA) ? 12 : 0;
-	       int realvde, j, srindex301c, myypos, watchdog = 32;
-	       ULong calctemp;
-
-	       srindex += i;
-	       srindex301c = srindex * 64;
-	       newvde = SiSTVVScale[srindex].ScaleVDE;
-	       realvde = SiSTVVScale[srindex].RealVDE;
-
-	       do {
-		  inSISIDXREG(SISPART2,0x01,temp);
-		  temp = vlimit - (temp & 0x7f);
-		  if((temp - (((newvde / vdediv) - 2) + 9)) > 0) break;
-		  myypos = pSiS->tvypos - 1;
-#ifdef SISDUALHEAD
-		  if(pSiSEnt && pSiS->DualHeadMode) myypos = pSiSEnt->tvypos - 1;
-#endif
-		  SiS_SetTVyposoffset(pScrn, myypos);
-	       } while(watchdog--);
-
-	       SISWaitRetraceCRT2(pScrn);
-
-	       if(pSiS->VBFlags2 & VB2_SISTAP4SCALER) {
-		  for(j=0; j<64; j++) {
-		     outSISIDXREG(SISPART2,(0xc0 + j), SiS301CScaling[srindex301c + j]);
-		  }
-	       }
-
-	       if(!(pSiS->VBFlags2 & VB2_301)) {
-		  temp = (newvde / vdediv) - 3;
-		  setSISIDXREG(SISPART2,0x46,0x9f,((temp & 0x0300) >> 3));
-		  outSISIDXREG(SISPART2,0x47,(temp & 0xff));
-	       }
-	       outSISIDXREG(SISPART1,0x08,(SiSTVVScale[srindex].reg[so+0] & 0xff));
-	       setSISIDXREG(SISPART1,0x09,0x0f,((SiSTVVScale[srindex].reg[so+0] >> 4) & 0xf0));
-	       outSISIDXREG(SISPART1,0x0b,(SiSTVVScale[srindex].reg[so+1] & 0xff));
-	       setSISIDXREG(SISPART1,0x0c,0xf0,((SiSTVVScale[srindex].reg[so+1] >> 8) & 0x0f));
-	       outSISIDXREG(SISPART1,0x0d,(SiSTVVScale[srindex].reg[so+2] & 0xff));
-	       outSISIDXREG(SISPART1,0x0e,(SiSTVVScale[srindex].reg[so+3] & 0xff));
-	       setSISIDXREG(SISPART1,0x12,0xf8,((SiSTVVScale[srindex].reg[so+3] >> 8 ) & 0x07));
-	       outSISIDXREG(SISPART1,0x10,(SiSTVVScale[srindex].reg[so+4] & 0xff));
-	       setSISIDXREG(SISPART1,0x11,0x8f,((SiSTVVScale[srindex].reg[so+4] >> 4) & 0x70));
-	       setSISIDXREG(SISPART1,0x11,0xf0,(SiSTVVScale[srindex].reg[so+5] & 0x0f));
-
-	       setSISIDXREG(SISPART2,0x0a,0x7f,((SiSTVVScale[srindex].reg[so+6] << 7) & 0x80));
-	       outSISIDXREG(SISPART2,0x2f,((newvde / vdediv) - 2));
-	       setSISIDXREG(SISPART2,0x30,0x3f,((((newvde / vdediv) - 2) >> 2) & 0xc0));
-
-	       outSISIDXREG(SISPART4,0x13,(SiSTVVScale[srindex].reg[so+7] & 0xff));
-	       outSISIDXREG(SISPART4,0x14,(SiSTVVScale[srindex].reg[so+8] & 0xff));
-	       setSISIDXREG(SISPART4,0x15,0x7f,((SiSTVVScale[srindex].reg[so+8] >> 1) & 0x80));
-
-	       outSISIDXREG(SISPART4,0x16,(SiSTVVScale[srindex].reg[so+9] & 0xff));
-	       setSISIDXREG(SISPART4,0x15,0x87,((SiSTVVScale[srindex].reg[so+9] >> 5) & 0x78));
-
-	       outSISIDXREG(SISPART4,0x17,(SiSTVVScale[srindex].reg[so+10] & 0xff));
-	       setSISIDXREG(SISPART4,0x15,0xf8,((SiSTVVScale[srindex].reg[so+10] >> 8) & 0x07));
-
-	       outSISIDXREG(SISPART4,0x18,(SiSTVVScale[srindex].reg[so+11] & 0xff));
-	       setSISIDXREG(SISPART4,0x19,0xf0,((SiSTVVScale[srindex].reg[so+11] >> 8) & 0x0f));
-
-	       temp = 0x40;
-	       if(realvde <= newvde) temp = 0;
-	       else realvde -= newvde;
-
-	       calctemp = (realvde * 256 * 1024) / newvde;
-	       if((realvde * 256 * 1024) % newvde) calctemp++;
-	       outSISIDXREG(SISPART4,0x1b,(calctemp & 0xff));
-	       outSISIDXREG(SISPART4,0x1a,((calctemp >> 8) & 0xff));
-	       setSISIDXREG(SISPART4,0x19,0x8f,(((calctemp >> 12) & 0x30) | temp));
+	       vgahde -= 16;
+	       if(hdclk) vgahde <<= 1;
 	    }
+
+	    vgaht = SiSTVVScale[srindex].reg[0];
+	    temp1 = vgaht;
+	    if((pSiS->VGAEngine == SIS_315_VGA) && hdclk) temp1 >>= 1;
+	    temp1--;
+	    outSISIDXREG(SISPART1,0x08,(temp1 & 0xff));
+	    setSISIDXREG(SISPART1,0x09,0x0f,((temp1 >> 4) & 0xf0));
+
+	    temp2 = (vgaht - vgahde) >> 2;
+	    if(pSiS->VGAEngine == SIS_300_VGA) {
+	       temp1 = vgahde + 12 + temp2;
+	       temp2 = temp1 + (temp2 << 1);
+	    } else {
+	       temp1 = vgahde;
+	       if(hdclk) {
+		  temp1 >>= 1;
+		  temp2 >>= 1;
+	       }
+	       temp2 >>= 1;
+	       temp1 = temp1 + 16 + temp2;
+	       temp2 = temp1 + temp2;
+	    }
+	    outSISIDXREG(SISPART1,0x0b,(temp1 & 0xff));
+	    setSISIDXREG(SISPART1,0x0c,0xf0,((temp1 >> 8) & 0x0f));
+	    outSISIDXREG(SISPART1,0x0d,(temp2 & 0xff));
+
+	    vgavt = SiSTVVScale[srindex].reg[1];
+	    temp1 = vgavt - 1;
+	    if(pSiS->VGAEngine == SIS_315_VGA) temp1--;
+	    outSISIDXREG(SISPART1,0x0e,(temp1 & 0xff));
+	    setSISIDXREG(SISPART1,0x12,0xf8,((temp1 >> 8 ) & 0x07));
+	    if((pSiS->VGAEngine == SIS_300_VGA) || (pSiS->ChipType >= SIS_661)) {
+	       temp1 = (vgavt + SiSTVVScale[srindex].RealVDE) >> 1;
+	       temp2 = ((vgavt - SiSTVVScale[srindex].RealVDE) >> 4) + temp1 + 1;
+	    } else {
+	       temp1 = (vgavt - SiSTVVScale[srindex].RealVDE) >> 2;
+	       temp2 = (temp1 < 4) ? 4 : temp1;
+	       temp1 += SiSTVVScale[srindex].RealVDE;
+	       temp2 = (temp2 >> 2) + temp1 + 1;
+	    }
+	    outSISIDXREG(SISPART1,0x10,(temp1 & 0xff));
+	    setSISIDXREG(SISPART1,0x11,0x8f,((temp1 >> 4) & 0x70));
+	    setSISIDXREG(SISPART1,0x11,0xf0,(temp2 & 0x0f));
+
+	    setSISIDXREG(SISPART2,0x0a,0x7f,((SiSTVVScale[srindex].reg[2] >> 8) & 0x80));
+	    outSISIDXREG(SISPART2,0x2f,((newvde / vdediv) - 2));
+	    setSISIDXREG(SISPART2,0x30,0x3f,((((newvde / vdediv) - 2) >> 2) & 0xc0));
+
+	    outSISIDXREG(SISPART4,0x13,(SiSTVVScale[srindex].reg[2] & 0xff));
+	    outSISIDXREG(SISPART4,0x14,(SiSTVVScale[srindex].reg[3] & 0xff));
+	    setSISIDXREG(SISPART4,0x15,0x7f,((SiSTVVScale[srindex].reg[3] >> 1) & 0x80));
+
+	    temp1 = vgaht - 1;
+	    outSISIDXREG(SISPART4,0x16,(temp1 & 0xff));
+	    setSISIDXREG(SISPART4,0x15,0x87,((temp1 >> 5) & 0x78));
+
+	    temp1 = vgavt - 1;
+	    outSISIDXREG(SISPART4,0x17,(temp1 & 0xff));
+	    setSISIDXREG(SISPART4,0x15,0xf8,((temp1 >> 8) & 0x07));
+
+	    outSISIDXREG(SISPART4,0x18,0x00);
+	    setSISIDXREG(SISPART4,0x19,0xf0,0x00);
+
+	    inSISIDXREG(SISPART4,0x0e,temp1);
+	    if(is1080i) {
+	       if(!(temp1 & 0xe0)) newvde >>= 1;
+	    }
+
+	    temp = 0x40;
+	    if(realvde <= newvde) temp = 0;
+	    else realvde -= newvde;
+
+	    calctemp = (realvde * 256 * 1024) / newvde;
+	    if((realvde * 256 * 1024) % newvde) calctemp++;
+	    outSISIDXREG(SISPART4,0x1b,(calctemp & 0xff));
+	    outSISIDXREG(SISPART4,0x1a,((calctemp >> 8) & 0xff));
+	    setSISIDXREG(SISPART4,0x19,0x8f,(((calctemp >> 12) & 0x70) | temp));
 	 }
 
       }
