@@ -5053,6 +5053,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
     pSiS->SiS_SD_Flags |= SiS_SD_ADDLSUPFLAG;
     pSiS->SiS_SD2_Flags |= SiS_SD2_MERGEDUCLOCK;
     pSiS->SiS_SD2_Flags |= SiS_SD2_USEVBFLAGS2;
+    pSiS->SiS_SD2_Flags |= SiS_SD2_VBINVB2ONLY;
 
     if(pSiS->VBFlags2 & VB2_VIDEOBRIDGE) {
        pSiS->SiS_SD2_Flags |= SiS_SD2_VIDEOBRIDGE;
@@ -5094,6 +5095,8 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
     if((pSiS->VGAEngine == SIS_315_VGA) &&
        (pSiS->VBFlags2 & VB2_SISYPBPRBRIDGE)) {
        pSiS->SiS_SD_Flags |= SiS_SD_SUPPORTYPBPR;
+       pSiS->SiS_SD2_Flags |= SiS_SD2_SUPPORT625I;
+       pSiS->SiS_SD2_Flags |= SiS_SD2_SUPPORT625P;
        if(pSiS->VBFlags2 & VB2_SISYPBPRARBRIDGE) {
           pSiS->SiS_SD_Flags |= SiS_SD_SUPPORTYPBPRAR;
        }
@@ -10273,11 +10276,17 @@ void SiSPreSetMode(ScrnInfoPtr pScrn, DisplayModePtr mode, int viewmode)
 	  } else if(vbflag & TV_YPBPR) {					/* SiS bridge */
 	     if(pSiS->NewCRLayout) {
 		CR38 |= 0x04;
-		if(vbflag & TV_YPBPR525P)       CR35 |= 0x20;
-		else if(vbflag & TV_YPBPR750P)  CR35 |= 0x40;
-		else if(vbflag & TV_YPBPR1080I) CR35 |= 0x60;
 		CR31 &= ~0x01;
 		CR35 &= ~0x01;
+		if(vbflag & (TV_YPBPR525P | TV_YPBPR625P)) CR35 |= 0x20;
+		else if(vbflag & TV_YPBPR750P)             CR35 |= 0x40;
+		else if(vbflag & TV_YPBPR1080I)            CR35 |= 0x60;
+
+		if(vbflag & (TV_YPBPR625I | TV_YPBPR625P)) {
+		   CR31 |= 0x01;
+		   CR35 |= 0x01;
+		}
+
 		CR39 &= ~0x03;
 		if((vbflag & TV_YPBPRAR) == TV_YPBPR43LB)     CR39 |= 0x00;
 		else if((vbflag & TV_YPBPRAR) == TV_YPBPR43)  CR39 |= 0x01;
@@ -10286,10 +10295,13 @@ void SiSPreSetMode(ScrnInfoPtr pScrn, DisplayModePtr mode, int viewmode)
 	     } else if(pSiS->SiS_SD_Flags & SiS_SD_SUPPORTYPBPR) {
 		CR30 |= 0x80;
 		CR38 |= 0x08;
-		if(vbflag & TV_YPBPR525P)       CR38 |= 0x10;
-		else if(vbflag & TV_YPBPR750P)  CR38 |= 0x20;
-		else if(vbflag & TV_YPBPR1080I) CR38 |= 0x30;
 		CR31 &= ~0x01;
+		if(vbflag & (TV_YPBPR525P|TV_YPBPR625P)) CR38 |= 0x10;
+		else if(vbflag & TV_YPBPR750P)  	 CR38 |= 0x20;
+		else if(vbflag & TV_YPBPR1080I)		 CR38 |= 0x30;
+
+		if(vbflag & (TV_YPBPR625I | TV_YPBPR625P)) CR31 |= 0x01;
+
 		if(pSiS->SiS_SD_Flags & SiS_SD_SUPPORTYPBPRAR) {
 		   CR3B &= ~0x03;
 		   if((vbflag & TV_YPBPRAR) == TV_YPBPR43LB)     CR3B |= 0x00;
@@ -11095,7 +11107,7 @@ void SiS_SetSISTVantiflicker(ScrnInfoPtr pScrn, int val)
    if(!(pSiS->VBFlags2 & VB2_SISBRIDGE)) return;
    if(pSiS->VBFlags & TV_HIVISION)     return;
    if((pSiS->VBFlags & TV_YPBPR) &&
-      (pSiS->VBFlags & (TV_YPBPR525P | TV_YPBPR750P | TV_YPBPR1080I))) return;
+      (pSiS->VBFlags & (TV_YPBPR525P | TV_YPBPR625P | TV_YPBPR750P | TV_YPBPR1080I))) return;
 
 #ifdef UNLOCK_ALWAYS
    sisSaveUnlockExtRegisterLock(pSiS, NULL, NULL);
@@ -11122,7 +11134,7 @@ int SiS_GetSISTVantiflicker(ScrnInfoPtr pScrn)
    if(!(pSiS->VBFlags & CRT2_TV))        return result;
    if(pSiS->VBFlags & TV_HIVISION)       return result;
    if((pSiS->VBFlags & TV_YPBPR) &&
-      (pSiS->VBFlags & (TV_YPBPR525P | TV_YPBPR750P | TV_YPBPR1080I))) return result;
+      (pSiS->VBFlags & (TV_YPBPR525P | TV_YPBPR625P | TV_YPBPR750P | TV_YPBPR1080I))) return result;
 
 #ifdef UNLOCK_ALWAYS
    sisSaveUnlockExtRegisterLock(pSiS, NULL, NULL);
@@ -12001,6 +12013,7 @@ void SiS_SetTVyscale(ScrnInfoPtr pScrn, int val)
 	 Bool usentsc = FALSE;
 	 Bool is750p = FALSE;
 	 Bool is1080i = FALSE;
+	 Bool usedef301c = FALSE;
 
 	 SiS_UnLockCRT2(pSiS->SiS_Pr);
 
@@ -12008,6 +12021,9 @@ void SiS_SetTVyscale(ScrnInfoPtr pScrn, int val)
 	    vlimit = 525 - 7;
 	    vdediv = 1;
 	    usentsc = TRUE;
+	 } else if((pSiS->VBFlags & TV_YPBPR) && (pSiS->VBFlags & TV_YPBPR625P)) {
+	    vlimit = 625 - 7;
+	    vdediv = 1;
 	 } else if((pSiS->VBFlags & TV_YPBPR) && (pSiS->VBFlags & TV_YPBPR750P)) {
 	    vlimit = 750 - 7;
 	    vdediv = 1;
@@ -12018,8 +12034,10 @@ void SiS_SetTVyscale(ScrnInfoPtr pScrn, int val)
 	    vdediv = 2;
 	    is1080i = TRUE;
 	 } else {
-	    if(pSiS->VBFlags & TV_YPBPR)                 usentsc = TRUE;
-            else if(pSiS->VBFlags & (TV_NTSC | TV_PALM)) usentsc = TRUE;
+	    if( ((pSiS->VBFlags & TV_YPBPR) && (pSiS->VBFlags & TV_YPBPR525I)) ||
+	        ((!(pSiS->VBFlags & TV_YPBPR)) && (pSiS->VBFlags & (TV_NTSC | TV_PALM))) ) {
+	       usentsc = TRUE;
+	    }
 	    vlimit = usentsc ? 259 : 309;
 	    vdediv = 2;
 	 }
@@ -12048,15 +12066,12 @@ void SiS_SetTVyscale(ScrnInfoPtr pScrn, int val)
 	 case 0x35:
 	    if(is1080i) {
 	       /* n/a */
-	       break;
 	    } else if(is750p) {
 	       srindex = 49;
-	       break;
-	    } else if(!usentsc) {
-	       srindex = 21;
-	       break;
+	    } else {
+	       srindex = usentsc ? 7 : 21;
 	    }
-	    /* fall through */
+	    break;
 	 case 0x32:   /* 720x576 */
 	 case 0x34:
 	 case 0x36:
@@ -12065,11 +12080,11 @@ void SiS_SetTVyscale(ScrnInfoPtr pScrn, int val)
 	 case 0x61:
 	    if(is1080i) {
 	       /* n/a */
-	       break;
 	    } else if(is750p) {
 	       srindex = 56;
 	    } else {
-	       srindex  = usentsc ? 7 : 28;
+	       srindex  = usentsc ? 147 : 28;
+	       if(usentsc) usedef301c = TRUE;
 	    }
 	    break;
 	 case 0x70:   /* 800x480 */
@@ -12117,6 +12132,7 @@ void SiS_SetTVyscale(ScrnInfoPtr pScrn, int val)
 	    } else {
 	       break;
 	    }
+	    /* fall through */
 	 case 0x38:	/* 1024x768 */
 	 case 0x4a:
 	 case 0x64:
@@ -12242,7 +12258,8 @@ void SiS_SetTVyscale(ScrnInfoPtr pScrn, int val)
 	    SISWaitRetraceCRT2(pScrn);
 
 	    if(pSiS->VBFlags2 & VB2_SISTAP4SCALER) {
-	       if(is1080i || is750p) {
+	       if(is1080i || is750p || usedef301c) {
+	          /* Have no data yet */
 	          srindex301c = 42 * 64;
 	       }
 	       for(j=0; j<64; j++) {

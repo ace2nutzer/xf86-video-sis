@@ -1283,13 +1283,31 @@ SiS_SetTVMode(struct SiS_Private *SiS_Pr, unsigned short ModeNo, unsigned short 
 	 }
 	 /* Translate HiVision/YPbPr to our new flags */
 	 if(SiS_Pr->SiS_VBInfo & SetCRT2ToHiVision) {
-	    if(SiS_Pr->SiS_YPbPr == YPbPr750p)          SiS_Pr->SiS_TVMode |= TVSetYPbPr750p;
-	    else if(SiS_Pr->SiS_YPbPr == YPbPr525p)     SiS_Pr->SiS_TVMode |= TVSetYPbPr525p;
-	    else if(SiS_Pr->SiS_YPbPr == YPbPrHiVision) SiS_Pr->SiS_TVMode |= TVSetHiVision;
-	    else				        SiS_Pr->SiS_TVMode |= TVSetYPbPr525i;
-	    if(SiS_Pr->SiS_TVMode & (TVSetYPbPr750p | TVSetYPbPr525p | TVSetYPbPr525i)) {
+	    if(SiS_Pr->SiS_YPbPr == YPbPr750p) {
+	       SiS_Pr->SiS_TVMode |= TVSetYPbPr750p;
+	    } else if(SiS_Pr->SiS_YPbPr == YPbPr525p) {
+	       if(SiS_Pr->SiS_TVMode & TVSetPAL) {
+	          SiS_Pr->SiS_TVMode |= TVSetYPbPr625p;
+	       } else {
+	          SiS_Pr->SiS_TVMode |= TVSetYPbPr525p;
+	       }
+	    } else if(SiS_Pr->SiS_YPbPr == YPbPrHiVision) {
+	       SiS_Pr->SiS_TVMode |= TVSetHiVision;
+	    } else {
+	       if(SiS_Pr->SiS_TVMode & TVSetPAL) {
+	          SiS_Pr->SiS_TVMode |= TVSetYPbPr625i;
+	       } else {
+	          SiS_Pr->SiS_TVMode |= TVSetYPbPr525i;
+	       }
+	    }
+	    if(SiS_Pr->SiS_TVMode & (TVSetYPbPr750p |
+				     TVSetYPbPr525p |
+				     TVSetYPbPr625p |
+				     TVSetYPbPr525i |
+				     TVSetYPbPr625i)) {
 	       SiS_Pr->SiS_VBInfo &= ~SetCRT2ToHiVision;
 	       SiS_Pr->SiS_VBInfo |= SetCRT2ToYPbPr525750;
+	       SiS_Pr->SiS_TVMode &= ~TVSetPAL;
 	    } else if(SiS_Pr->SiS_TVMode & TVSetHiVision) {
 	       SiS_Pr->SiS_TVMode |= TVSetPAL;
 	    }
@@ -1352,9 +1370,22 @@ SiS_SetTVMode(struct SiS_Private *SiS_Pr, unsigned short ModeNo, unsigned short 
       if(SiS_Pr->SiS_VBType & VB_SISVB) {
 	 if(SiS_Pr->SiS_VBInfo & SetCRT2ToYPbPr525750) {
 	    temp1 &= 0xe0;
-	    if(temp1 == 0x00)      SiS_Pr->SiS_TVMode |= TVSetYPbPr525i;
-	    else if(temp1 == 0x20) SiS_Pr->SiS_TVMode |= TVSetYPbPr525p;
-	    else if(temp1 == 0x40) SiS_Pr->SiS_TVMode |= TVSetYPbPr750p;
+	    if(temp1 == 0x00) {
+	       if(SiS_Pr->SiS_TVMode & TVSetPAL) {
+	          SiS_Pr->SiS_TVMode |= TVSetYPbPr625i;
+	       } else {
+	          SiS_Pr->SiS_TVMode |= TVSetYPbPr525i;
+	       }
+	    } else if(temp1 == 0x20) {
+	       if(SiS_Pr->SiS_TVMode & TVSetPAL) {
+	          SiS_Pr->SiS_TVMode |= TVSetYPbPr625p;
+	       } else {
+	          SiS_Pr->SiS_TVMode |= TVSetYPbPr525p;
+	       }
+	    } else if(temp1 == 0x40) {
+	       SiS_Pr->SiS_TVMode |= TVSetYPbPr750p;
+	    }
+	    SiS_Pr->SiS_TVMode &= ~TVSetPAL;
 	 } else if(SiS_Pr->SiS_VBInfo & SetCRT2ToHiVision) {
 	    SiS_Pr->SiS_TVMode |= (TVSetHiVision | TVSetPAL);
 	 }
@@ -1385,7 +1416,11 @@ SiS_SetTVMode(struct SiS_Private *SiS_Pr, unsigned short ModeNo, unsigned short 
 	 SiS_Pr->SiS_TVMode |= TVSetPAL;
 	 SiS_Pr->SiS_TVMode &= ~(TVSetPALM | TVSetPALN | TVSetNTSCJ);
       } else if(SiS_Pr->SiS_VBInfo & SetCRT2ToYPbPr525750) {
-	 if(SiS_Pr->SiS_TVMode & (TVSetYPbPr525i | TVSetYPbPr525p | TVSetYPbPr750p)) {
+	 if(SiS_Pr->SiS_TVMode & (TVSetYPbPr525i |
+	 			  TVSetYPbPr625i |
+				  TVSetYPbPr525p |
+				  TVSetYPbPr625p |
+				  TVSetYPbPr750p)) {
 	    SiS_Pr->SiS_TVMode &= ~(TVSetPAL | TVSetNTSCJ | TVSetPALM | TVSetPALN);
 	 }
       }
@@ -1400,7 +1435,10 @@ SiS_SetTVMode(struct SiS_Private *SiS_Pr, unsigned short ModeNo, unsigned short 
 	 if(resinfo == SIS_RI_1024x768) {
 	    if(SiS_Pr->SiS_TVMode & TVSetYPbPr525p) {
 	       SiS_Pr->SiS_TVMode |= TVSet525p1024;
-	    } else if(!(SiS_Pr->SiS_TVMode & (TVSetHiVision | TVSetYPbPr750p))) {
+	    } else if(!(SiS_Pr->SiS_TVMode & (TVSetHiVision  |
+	    				      TVSetYPbPr750p |
+					      TVSetYPbPr625p |
+					      TVSetYPbPr625i))) {
 	       SiS_Pr->SiS_TVMode |= TVSetNTSC1024;
 	    }
 	 }
@@ -1410,7 +1448,7 @@ SiS_SetTVMode(struct SiS_Private *SiS_Pr, unsigned short ModeNo, unsigned short 
       if((SiS_Pr->SiS_VBInfo & SetCRT2ToHiVision) &&
 	 (SiS_Pr->SiS_VBInfo & SetInSlaveMode)) {
 	 SiS_Pr->SiS_TVMode &= ~TVRPLLDIV2XO;
-      } else if(SiS_Pr->SiS_TVMode & (TVSetYPbPr525p | TVSetYPbPr750p)) {
+      } else if(SiS_Pr->SiS_TVMode & TVSetYPbPrProg) {
 	 SiS_Pr->SiS_TVMode &= ~TVRPLLDIV2XO;
       } else if(!(SiS_Pr->SiS_VBType & VB_SIS30xBLV)) {
 	 if(SiS_Pr->SiS_TVMode & TVSetTVSimuMode) {
@@ -2283,10 +2321,12 @@ SiS_GetVCLK2Ptr(struct SiS_Private *SiS_Pr, unsigned short ModeNo, unsigned shor
 	      if(SiS_Pr->SiS_TVMode & TVRPLLDIV2XO) 	   VCLKIndex = HiTVVCLKDIV2;
 	      else                                  	   VCLKIndex = HiTVVCLK;
 	      if(SiS_Pr->SiS_TVMode & TVSetTVSimuMode)     VCLKIndex = HiTVSimuVCLK;
-	   } else if(SiS_Pr->SiS_TVMode & TVSetYPbPr750p)  VCLKIndex = YPbPr750pVCLK;
-	   else if(SiS_Pr->SiS_TVMode & TVSetYPbPr525p)    VCLKIndex = TVVCLKDIV2;
-	   else if(SiS_Pr->SiS_TVMode & TVRPLLDIV2XO)      VCLKIndex = TVVCLKDIV2;
-	   else						   VCLKIndex = TVVCLK;
+	   } else if(SiS_Pr->SiS_TVMode & TVSetYPbPr750p)
+	      VCLKIndex = YPbPr750pVCLK;
+	   else if(SiS_Pr->SiS_TVMode & (TVSetYPbPr525p | TVSetYPbPr625p | TVRPLLDIV2XO))
+	      VCLKIndex = TVVCLKDIV2;
+	   else
+	      VCLKIndex = TVVCLK;
 
 	   if(SiS_Pr->ChipType < SIS_315H) VCLKIndex += TVCLKBASE_300;
 	   else				   VCLKIndex += TVCLKBASE_315;
@@ -2562,7 +2602,7 @@ SiS_SetCRT2ModeRegs(struct SiS_Private *SiS_Pr, unsigned short ModeNo, unsigned 
 	}
 
 	if(SiS_Pr->SiS_VBInfo & SetCRT2ToTV) {
-	   if(!(SiS_Pr->SiS_TVMode & (TVSetYPbPr750p | TVSetYPbPr525p))) {
+	   if(!(SiS_Pr->SiS_TVMode & TVSetYPbPrProg)) {
 	      if(SiS_Pr->SiS_VBInfo & SetInSlaveMode) {
 		 tempah |= 0x20;
 	      }
@@ -2960,6 +3000,8 @@ SiS_GetCRT2Ptr(struct SiS_Private *SiS_Pr, unsigned short ModeNo, unsigned short
 	} else if(SiS_Pr->SiS_VBInfo & SetCRT2ToYPbPr525750) {
 	   if(SiS_Pr->SiS_TVMode & TVSetYPbPr750p)	tempbx = 7;
 	   else if(SiS_Pr->SiS_TVMode & TVSetYPbPr525p)	tempbx = 6;
+	   else if(SiS_Pr->SiS_TVMode & TVSetYPbPr625i)	tempbx = 15;
+	   else if(SiS_Pr->SiS_TVMode & TVSetYPbPr625p)	tempbx = 16;
 	   else						tempbx = 5;
 	   if(SiS_Pr->SiS_TVMode & TVSetTVSimuMode)	tempbx += 5;
 	} else {
@@ -2976,8 +3018,8 @@ SiS_GetCRT2Ptr(struct SiS_Private *SiS_Pr, unsigned short ModeNo, unsigned short
         if(SiS_Pr->SiS_VBInfo & SetCRT2ToTVNoHiVision) {
 	   switch(resinfo) {
 	   case SIS_RI_720x480:
-	      tempal = 6;
-	      if(SiS_Pr->SiS_TVMode & (TVSetPAL | TVSetPALN)) tempal = 9;
+	      tempal = 9;
+	      if(SiS_Pr->SiS_TVMode & TVSetYPbPr750p) tempal = 6;
 	      break;
 	   case SIS_RI_720x576:
 	   case SIS_RI_768x576:
@@ -2995,7 +3037,9 @@ SiS_GetCRT2Ptr(struct SiS_Private *SiS_Pr, unsigned short ModeNo, unsigned short
 	   case SIS_RI_512x384:
 	   case SIS_RI_1024x768:
 	      tempal = 7;
-	      if(SiS_Pr->SiS_TVMode & TVSetYPbPr525p) tempal = 8;
+	      if(SiS_Pr->SiS_TVMode & (TVSetYPbPr525p | TVSetYPbPr625p)) {
+	         tempal = 8;
+	      }
 	      break;
 	   case SIS_RI_1280x720:
 	      if(SiS_Pr->SiS_TVMode & TVSetYPbPr750p) tempal = 11;
@@ -3352,6 +3396,10 @@ SiS_GetCRT2Data301(struct SiS_Private *SiS_Pr, unsigned short ModeNo, unsigned s
 	case 12: TVPtr = SiS_Pr->SiS_St750pData;    break;
 	case 13: TVPtr = SiS_Pr->SiS_St1HiTVData;   break;
 	case 14: TVPtr = SiS_Pr->SiS_St2HiTVData;   break;
+	case 15: TVPtr = SiS_Pr->SiS_Ext625iData;   break;
+	case 16: TVPtr = SiS_Pr->SiS_Ext625pData;   break;
+	case 20: TVPtr = SiS_Pr->SiS_St625iData;    break;
+	case 21: TVPtr = SiS_Pr->SiS_St625pData;    break;
 	default: TVPtr = SiS_Pr->SiS_StPALData;     break;
      }
 
@@ -3404,10 +3452,13 @@ SiS_GetCRT2Data301(struct SiS_Private *SiS_Pr, unsigned short ModeNo, unsigned s
 	   SiS_Pr->SiS_HT = NTSCHT;
 	   if(SiS_Pr->SiS_TVMode & TVSet525p1024) SiS_Pr->SiS_HT = NTSC2HT;
 	   SiS_Pr->SiS_VT = NTSCVT;
-	} else {
+	} else if(SiS_Pr->SiS_TVMode & TVSetYPbPr525i) {
 	   SiS_Pr->SiS_HT = NTSCHT;
 	   if(SiS_Pr->SiS_TVMode & TVSetNTSC1024) SiS_Pr->SiS_HT = NTSC2HT;
 	   SiS_Pr->SiS_VT = NTSCVT;
+	} else {
+	   SiS_Pr->SiS_HT = PALHT;
+	   SiS_Pr->SiS_VT = PALVT;
 	}
 
      } else {
@@ -6416,7 +6467,7 @@ SiS_GetGroup2CLVXPtr(struct SiS_Private *SiS_Pr, int tabletype)
       } else if(SiS_Pr->SiS_TVMode & TVSetYPbPr750p) {
 	 tableptr = SiS_Part2CLVX_750p;
 	 e = 2;
-      } else if(SiS_Pr->SiS_TVMode & TVSetPAL) {
+      } else if(SiS_Pr->SiS_TVMode & TVSetPALTiming) {
 	 tableptr = SiS_Part2CLVX_PAL;
 	 e = 3;
       } else {
@@ -6596,6 +6647,7 @@ SiS_SetTVSpecial(struct SiS_Private *SiS_Pr, unsigned short ModeNo)
 {
   if(!(SiS_Pr->SiS_VBType & VB_SIS30xBLV)) return;
   if(!(SiS_Pr->SiS_VBInfo & SetCRT2ToTVNoHiVision)) return;
+  if(SiS_Pr->SiS_TVMode & (TVSetYPbPr625i | TVSetYPbPr625p)) return;
 
   if(SiS_Pr->SiS_TVMode & TVSetYPbPr750p) {
 #ifndef OLD1280720P
@@ -6733,7 +6785,7 @@ SiS_SetGroup2(struct SiS_Private *SiS_Pr, unsigned short ModeNo, unsigned short 
   if(SiS_Pr->SiS_VBInfo & SetCRT2ToSCART)     temp |= 0x02;
   if(SiS_Pr->SiS_VBInfo & SetCRT2ToHiVision)  temp |= 0x01;
 
-  if(!(SiS_Pr->SiS_TVMode & TVSetPAL)) 	      temp |= 0x10;
+  if(!(SiS_Pr->SiS_TVMode & TVSetPALTiming))  temp |= 0x10;
 
   SiS_SetReg(SiS_Pr->SiS_Part2Port,0x00,temp);
 
@@ -6762,6 +6814,8 @@ SiS_SetGroup2(struct SiS_Private *SiS_Pr, unsigned short ModeNo, unsigned short 
      i = 0;
      if(SiS_Pr->SiS_TVMode & TVSetYPbPr750p)      i = 2;
      else if(SiS_Pr->SiS_TVMode & TVSetYPbPr525p) i = 1;
+     else if(SiS_Pr->SiS_TVMode & TVSetYPbPr625i) i = 3;
+     else if(SiS_Pr->SiS_TVMode & TVSetYPbPr625p) i = 4;
 
      TimingPoint = &SiS_YPbPrTable[i][0];
 
@@ -6820,14 +6874,14 @@ SiS_SetGroup2(struct SiS_Private *SiS_Pr, unsigned short ModeNo, unsigned short 
 
   if(SiS_Pr->SiS_VBInfo & SetCRT2ToHiVision)	tempax = 950;
   else if(SiS_Pr->SiS_TVMode & TVSetYPbPr750p)	tempax = 680;
-  else if(SiS_Pr->SiS_TVMode & TVSetPAL)	tempax = 520;
+  else if(SiS_Pr->SiS_TVMode & TVSetPALTiming)	tempax = 520;
   else						tempax = 440; /* NTSC, YPbPr 525 */
 
   if((SiS_Pr->SiS_VBInfo & SetCRT2ToTV) && (SiS_Pr->SiS_VDE <= tempax)) {
 
      tempax -= SiS_Pr->SiS_VDE;
      tempax >>= 1;
-     if(!(SiS_Pr->SiS_TVMode & (TVSetYPbPr525p | TVSetYPbPr750p))) {
+     if(!(SiS_Pr->SiS_TVMode & TVSetYPbPrProg)) {
         tempax >>= 1;
      }
      tempax &= 0x00ff;
@@ -6901,7 +6955,7 @@ SiS_SetGroup2(struct SiS_Private *SiS_Pr, unsigned short ModeNo, unsigned short 
      if(SiS_Pr->SiS_VGAVDE == 375) tempbx = 746;
      if(SiS_Pr->SiS_VGAVDE == 405) tempbx = 853;
   } else if( (SiS_Pr->SiS_VBInfo & SetCRT2ToTV) &&
-             (!(SiS_Pr->SiS_TVMode & (TVSetYPbPr525p|TVSetYPbPr750p))) ) {
+             (!(SiS_Pr->SiS_TVMode & TVSetYPbPrProg)) ) {
      tempbx >>= 1;
      if(SiS_Pr->ChipType >= SIS_315H) {
         if(SiS_Pr->SiS_TVMode & TVSetTVSimuMode) {
@@ -6916,7 +6970,7 @@ SiS_SetGroup2(struct SiS_Private *SiS_Pr, unsigned short ModeNo, unsigned short 
         if(SiS_Pr->SiS_VBInfo & SetCRT2ToHiVision) {
 	   if((ModeNo == 0x2f) || (ModeNo == 0x5d) || (ModeNo == 0x5e)) tempbx++;
 	}
-	if(!(SiS_Pr->SiS_TVMode & TVSetPAL)) {
+	if(!(SiS_Pr->SiS_TVMode & TVSetPALTiming)) {
 	   if(ModeNo == 0x03) tempbx++; /* From 1.10.7w - doesn't make sense */
         }
      }
@@ -6939,7 +6993,7 @@ SiS_SetGroup2(struct SiS_Private *SiS_Pr, unsigned short ModeNo, unsigned short 
   if(SiS_Pr->SiS_VBType & VB_SIS30xBLV) {
      tempbx = SiS_Pr->SiS_VDE;
      if( (SiS_Pr->SiS_VBInfo & SetCRT2ToTV) &&
-         (!(SiS_Pr->SiS_TVMode & (TVSetYPbPr525p | TVSetYPbPr750p))) ) {
+         (!(SiS_Pr->SiS_TVMode & TVSetYPbPrProg)) ) {
         tempbx >>= 1;
      }
      tempbx -= 3;
@@ -6993,7 +7047,7 @@ SiS_SetGroup2(struct SiS_Private *SiS_Pr, unsigned short ModeNo, unsigned short 
 
      SiS_SetRegANDOR(SiS_Pr->SiS_Part2Port,0x46,0xF8,(tempcx & 0x07));
 
-     if(SiS_Pr->SiS_TVMode & TVSetPAL) {
+     if(SiS_Pr->SiS_TVMode & TVSetPALTiming) {
         tempbx = 0x0382;
         tempcx = 0x007e;
      } else {
@@ -7006,8 +7060,8 @@ SiS_SetGroup2(struct SiS_Private *SiS_Pr, unsigned short ModeNo, unsigned short 
      temp |= ((tempbx >> 8) & 0x03);
      if(SiS_Pr->SiS_VBInfo & SetCRT2ToYPbPr525750) {
         temp |= 0x10;
-	if(SiS_Pr->SiS_TVMode & TVSetYPbPr525p)      temp |= 0x20;
-	else if(SiS_Pr->SiS_TVMode & TVSetYPbPr750p) temp |= 0x40;
+	if(SiS_Pr->SiS_TVMode & (TVSetYPbPr525p|TVSetYPbPr625p)) temp |= 0x20;
+	else if(SiS_Pr->SiS_TVMode & TVSetYPbPr750p)		 temp |= 0x40;
      }
      SiS_SetReg(SiS_Pr->SiS_Part2Port,0x4D,temp);
 
@@ -7349,7 +7403,7 @@ SiS_SetGroup3(struct SiS_Private *SiS_Pr, unsigned short ModeNo, unsigned short 
   SIS_CP_INIT301_CP
 #endif
 
-  if(SiS_Pr->SiS_TVMode & TVSetPAL) {
+  if(SiS_Pr->SiS_TVMode & TVSetPALTiming) {
      SiS_SetReg(SiS_Pr->SiS_Part3Port,0x13,0xFA);
      SiS_SetReg(SiS_Pr->SiS_Part3Port,0x14,0xC8);
   } else {
@@ -7370,9 +7424,11 @@ SiS_SetGroup3(struct SiS_Private *SiS_Pr, unsigned short ModeNo, unsigned short 
         tempdi = SiS_Pr->SiS_HiTVGroup3Simu;
      }
   } else if(SiS_Pr->SiS_VBInfo & SetCRT2ToYPbPr525750) {
-     if(!(SiS_Pr->SiS_TVMode & TVSetYPbPr525i)) {
-        tempdi = SiS_HiTVGroup3_1;
-        if(SiS_Pr->SiS_TVMode & TVSetYPbPr750p) tempdi = SiS_HiTVGroup3_2;
+     if(!(SiS_Pr->SiS_TVMode & (TVSetYPbPr525i | TVSetYPbPr625i))) {
+        if(SiS_Pr->SiS_TVMode & TVSetYPbPr750p)
+	   tempdi = SiS_HiTVGroup3_2;
+        else if(SiS_Pr->SiS_TVMode & TVSetYPbPr525p)
+	   tempdi = SiS_HiTVGroup3_1;
      }
   }
   if(tempdi) {
@@ -7446,10 +7502,10 @@ SiS_SetGroup4_C_ELV(struct SiS_Private *SiS_Pr, unsigned short ModeNo, unsigned 
          SiS_SetRegAND(SiS_Pr->SiS_Part4Port,0x25,0xf8);
       }
       SiS_SetRegAND(SiS_Pr->SiS_Part4Port,0x0f,0xfb);
-      if(SiS_Pr->SiS_TVMode & TVSetYPbPr750p)      temp = 0x0000;
-      else if(SiS_Pr->SiS_TVMode & TVSetYPbPr525p) temp = 0x0002;
-      else if(SiS_Pr->SiS_TVMode & TVSetHiVision)  temp = 0x0400;
-      else					   temp = 0x0402;
+      if(SiS_Pr->SiS_TVMode & TVSetYPbPr750p)			    temp = 0x0000;
+      else if(SiS_Pr->SiS_TVMode & (TVSetYPbPr525p|TVSetYPbPr625p)) temp = 0x0002;
+      else if(SiS_Pr->SiS_TVMode & TVSetHiVision)		    temp = 0x0400;
+      else							    temp = 0x0402;
       if((SiS_Pr->ChipType >= SIS_661) || (SiS_Pr->SiS_ROMNew)) {
          temp1 = 0;
 	 if(SiS_Pr->SiS_TVMode & TVAspect43) temp1 = 4;
@@ -7620,7 +7676,7 @@ SiS_SetGroup4(struct SiS_Private *SiS_Pr, unsigned short ModeNo, unsigned short 
      temp = 0;
      if(tempbx > 1024)       temp = 0xC0;
      else if(tempbx >= 960)  temp = 0xA0;
-  } else if(SiS_Pr->SiS_TVMode & (TVSetYPbPr525p | TVSetYPbPr750p)) {
+  } else if(SiS_Pr->SiS_TVMode & TVSetYPbPrProg) {
      temp = 0;
      if(tempbx >= 1280)      temp = 0x40;
      else if(tempbx >= 1024) temp = 0x20;
@@ -7713,7 +7769,9 @@ SiS_SetGroup4(struct SiS_Private *SiS_Pr, unsigned short ModeNo, unsigned short 
 	temp = 0x0026; tempbx = 0xC0; /* See En/DisableBridge() */
      }
      if(SiS_Pr->SiS_VBInfo & SetCRT2ToTV) {
-        if(!(SiS_Pr->SiS_TVMode & (TVSetNTSC1024 | TVSetHiVision | TVSetYPbPr750p | TVSetYPbPr525p))) {
+        if(!(SiS_Pr->SiS_TVMode & (TVSetNTSC1024 |
+				   TVSetHiVision |
+				   TVSetYPbPrProg))) {
 	   temp |= 0x01;
 	   if(SiS_Pr->SiS_VBInfo & SetInSlaveMode) {
 	      if(!(SiS_Pr->SiS_TVMode & TVSetTVSimuMode)) {
@@ -9768,10 +9826,8 @@ GetTVPtrIndex(struct SiS_Private *SiS_Pr)
   unsigned short index;
 
   index = 0;
-  if(SiS_Pr->SiS_TVMode & TVSetPAL) index = 1;
+  if(SiS_Pr->SiS_TVMode & TVSetPALTiming)    index = 1;
   if(SiS_Pr->SiS_VBInfo & SetCRT2ToHiVision) index = 2;
-
-  if(SiS_Pr->SiS_VBInfo & SetCRT2ToYPbPr525750) index = 0;
 
   index <<= 1;
 
@@ -9827,6 +9883,9 @@ static int
 GetOEMTVPtr661(struct SiS_Private *SiS_Pr)
 {
    int index = 0;
+
+   if(SiS_Pr->SiS_TVMode & (TVSetYPbPr625i | TVSetYPbPr625p))
+      return 0xffff;
 
    if(SiS_Pr->SiS_TVMode & TVSetPAL)          index = 2;
    if(SiS_Pr->SiS_ROMNew) {
@@ -10159,7 +10218,7 @@ SetAntiFlicker(struct SiS_Private *SiS_Pr, unsigned short ModeNo, unsigned short
   unsigned char  *ROMAddr = SiS_Pr->VirtualRomBase;
   unsigned short index,temp,temp1,romptr=0;
 
-  if(SiS_Pr->SiS_TVMode & (TVSetYPbPr750p|TVSetYPbPr525p)) return;
+  if(SiS_Pr->SiS_TVMode & TVSetYPbPrProg) return;
 
   if(ModeNo<=0x13)
      index = SiS_Pr->SiS_SModeIDTable[ModeIdIndex].VB_StTVFlickerIndex;
@@ -10167,16 +10226,18 @@ SetAntiFlicker(struct SiS_Private *SiS_Pr, unsigned short ModeNo, unsigned short
      index = SiS_Pr->SiS_EModeIDTable[ModeIdIndex].VB_ExtTVFlickerIndex;
 
   temp = GetTVPtrIndex(SiS_Pr);
-  temp >>= 1;  	  /* 0: NTSC/YPbPr, 1: PAL, 2: HiTV */
+  temp >>= 1;  	  /* 0: NTSC/YPbPr525, 1: PAL/YPbPr625, 2: HiTV */
   temp1 = temp;
 
   if(SiS_Pr->SiS_UseROM && (!(SiS_Pr->SiS_ROMNew))) {
      if(SiS_Pr->ChipType >= SIS_661) {
         temp1 = GetOEMTVPtr661(SiS_Pr);
-        temp1 >>= 1;
-        romptr = SISGETROMW(0x260);
-        if(SiS_Pr->ChipType >= SIS_760) {
-	   romptr = SISGETROMW(0x360);
+	if(temp1 != 0xffff) {
+           temp1 >>= 1;
+           romptr = SISGETROMW(0x260);
+           if(SiS_Pr->ChipType >= SIS_760) {
+	      romptr = SISGETROMW(0x360);
+	   }
 	}
      } else if(SiS_Pr->ChipType >= SIS_330) {
         romptr = SISGETROMW(0x192);
@@ -10202,7 +10263,7 @@ SetEdgeEnhance(struct SiS_Private *SiS_Pr, unsigned short ModeNo,unsigned short 
   unsigned char  *ROMAddr = SiS_Pr->VirtualRomBase;
   unsigned short index,temp,temp1,romptr=0;
 
-  temp = temp1 = GetTVPtrIndex(SiS_Pr) >> 1; 	/* 0: NTSC/YPbPr, 1: PAL, 2: HiTV */
+  temp = temp1 = GetTVPtrIndex(SiS_Pr) >> 1; 	/* 0: NTSC/YPbPr525, 1: PAL/YPbPr625, 2: HiTV */
 
   if(ModeNo <= 0x13)
      index = SiS_Pr->SiS_SModeIDTable[ModeIdIndex].VB_StTVEdgeIndex;
@@ -10211,12 +10272,14 @@ SetEdgeEnhance(struct SiS_Private *SiS_Pr, unsigned short ModeNo,unsigned short 
 
   if(SiS_Pr->SiS_UseROM && (!(SiS_Pr->SiS_ROMNew))) {
      if(SiS_Pr->ChipType >= SIS_661) {
-        romptr = SISGETROMW(0x26c);
-        if(SiS_Pr->ChipType >= SIS_760) {
-	   romptr = SISGETROMW(0x36c);
-	}
 	temp1 = GetOEMTVPtr661(SiS_Pr);
-        temp1 >>= 1;
+	if(temp1 != 0xffff) {
+           temp1 >>= 1;
+	   romptr = SISGETROMW(0x26c);
+           if(SiS_Pr->ChipType >= SIS_760) {
+	      romptr = SISGETROMW(0x36c);
+	   }
+	}
      } else if(SiS_Pr->ChipType >= SIS_330) {
         romptr = SISGETROMW(0x1a4);
      } else {
@@ -10337,7 +10400,7 @@ SetPhaseIncr(struct SiS_Private *SiS_Pr, unsigned short ModeNo, unsigned short M
   }
 
   if((SiS_Pr->SiS_VBType & VB_SIS30xBLV) && (!(SiS_Pr->SiS_VBInfo & SetCRT2ToHiVision))) {
-     if((!(SiS_Pr->SiS_TVMode & (TVSetPAL | TVSetYPbPr525p | TVSetYPbPr750p))) && (ModeNo > 0x13)) {
+     if((!(SiS_Pr->SiS_TVMode & (TVSetPAL | TVSetYPbPrProg))) && (ModeNo > 0x13)) {
         if((resinfo == SIS_RI_640x480) ||
 	   (resinfo == SIS_RI_800x600)) {
 	   SiS_SetReg(SiS_Pr->SiS_Part2Port,0x31,0x21);
@@ -10406,8 +10469,8 @@ SetDelayComp661(struct SiS_Private *SiS_Pr, unsigned short ModeNo,
    if(SiS_Pr->ChipType >= XGI_20) {
 
       delay = 0x0606;
-      if(SiS_Pr->SiS_VBInfo & SetCRT2ToTV) {
 
+      if(SiS_Pr->SiS_VBInfo & SetCRT2ToTV) {
 	 delay = 0x0404;
          if(SiS_Pr->SiS_XGIROM) {
 	     index = GetTVPtrIndex(SiS_Pr);
@@ -10437,13 +10500,13 @@ SetDelayComp661(struct SiS_Private *SiS_Pr, unsigned short ModeNo,
       /* 3. TV */
 
       index = GetOEMTVPtr661(SiS_Pr);
-      if(SiS_Pr->SiS_ROMNew) {
+      if((SiS_Pr->SiS_ROMNew) && (index != 0xffff)) {
          romptr = SISGETROMW(0x106);
 	 if(SiS_Pr->SiS_VBType & VB_UMC) romptr += 12;
          delay = ROMAddr[romptr + index];
       } else {
          delay = 0x04;
-	 if(index > 3) delay = 0;
+	 if(index > 3 || index == 0xffff) delay = 0;
       }
 
    } else if(SiS_Pr->SiS_VBInfo & (SetCRT2ToLCD | SetCRT2ToLCDA)) {

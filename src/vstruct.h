@@ -318,7 +318,7 @@ struct SiS_Private
 	unsigned char			SiS_DataBusWidth;
 	unsigned short			SiS_ModeType;
 	unsigned short			SiS_VBInfo;
-	unsigned short			SiS_TVMode;
+	unsigned int			SiS_TVMode;
 	unsigned short			SiS_LCDResInfo;
 	unsigned short			SiS_LCDTypeInfo;
 	unsigned short			SiS_LCDInfo;
@@ -412,9 +412,13 @@ struct SiS_Private
 	const struct SiS_TVData		*SiS_ExtHiTVData;
 	const struct SiS_TVData		*SiS_St525iData;
 	const struct SiS_TVData		*SiS_St525pData;
+	const struct SiS_TVData		*SiS_St625iData;
+	const struct SiS_TVData		*SiS_St625pData;
 	const struct SiS_TVData		*SiS_St750pData;
 	const struct SiS_TVData		*SiS_Ext525iData;
 	const struct SiS_TVData		*SiS_Ext525pData;
+	const struct SiS_TVData		*SiS_Ext625iData;
+	const struct SiS_TVData		*SiS_Ext625pData;
 	const struct SiS_TVData		*SiS_Ext750pData;
 	const unsigned char		*SiS_NTSCTiming;
 	const unsigned char		*SiS_PALTiming;

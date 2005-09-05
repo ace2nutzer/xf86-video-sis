@@ -1238,6 +1238,16 @@ SiSOptions(ScrnInfoPtr pScrn)
 		pSiS->ForceCRT2Type = CRT2_TV;
 		pSiS->ForceTVType = TV_YPBPR;
 		pSiS->ForceYPbPrType = TV_YPBPR525P;
+	     } else if(((!xf86NameCmp(strptr,"YPBPR625I")) || (!xf86NameCmp(strptr,"YPBPR576I"))) &&
+		       (pSiS->VGAEngine == SIS_315_VGA)) {
+		pSiS->ForceCRT2Type = CRT2_TV;
+		pSiS->ForceTVType = TV_YPBPR;
+		pSiS->ForceYPbPrType = TV_YPBPR625I;
+	     } else if(((!xf86NameCmp(strptr,"YPBPR625P")) || (!xf86NameCmp(strptr,"YPBPR576P"))) &&
+		       (pSiS->VGAEngine == SIS_315_VGA)) {
+		pSiS->ForceCRT2Type = CRT2_TV;
+		pSiS->ForceTVType = TV_YPBPR;
+		pSiS->ForceYPbPrType = TV_YPBPR625P;
 	     } else if(((!xf86NameCmp(strptr,"YPBPR750P")) || (!xf86NameCmp(strptr,"YPBPR720P"))) &&
 	               (pSiS->VGAEngine == SIS_315_VGA)) {
 		pSiS->ForceCRT2Type = CRT2_TV;
@@ -1252,8 +1262,8 @@ SiSOptions(ScrnInfoPtr pScrn)
 		    "\talso \"DSTN\" and \"FSTN\""
 #ifdef ENABLE_YPBPR
 		    				"; on SiS 301/301B bridges also \"HIVISION\", and on\n"
-		    "\tSiS315/330 series with 301C/30xLV bridge also \"YPBPR480I\", \"YPBPR480P\",\n"
-		    "\t\"YPBPR720P\" and \"YPBPR1080I\""
+		    "\tSiS315/330/340 series with 301C/30xLV bridge also \"YPBPR480I\", \"YPBPR480P\",\n"
+		    "\t\"YPBPR576I\", \"YPBPR576P\", \"YPBPR720P\" and \"YPBPR1080I\""
 #endif
 		    "\n", validparm);
 	     }
@@ -1326,6 +1336,11 @@ SiSOptions(ScrnInfoPtr pScrn)
           }
 	  xf86DrvMsg(pScrn->scrnIndex, from, "SiSCtrl utility interface is %s\n",
 		pSiS->enablesisctrl ? enabledstr : disabledstr);
+
+	  if((from == X_DEFAULT) && (!pSiS->enablesisctrl)) {
+	     xf86DrvMsg(pScrn->scrnIndex, X_INFO,
+		"For information on SiSCtrl, see\n\t\thttp://www.winischhofer.at/linuxsispart1.shtml#sisctrl\n");
+	  }
 
 
 	  /* ForceCRT1Aspect, ForceCRT2Aspect */

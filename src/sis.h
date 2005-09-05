@@ -37,7 +37,7 @@
 
 #define SISDRIVERVERSIONYEAR    5
 #define SISDRIVERVERSIONMONTH   9
-#define SISDRIVERVERSIONDAY     2
+#define SISDRIVERVERSIONDAY     5
 #define SISDRIVERREVISION       1
 
 #define SISDRIVERIVERSION ((SISDRIVERVERSIONYEAR << 16) |  \
@@ -209,7 +209,7 @@
 
 #ifdef SISVRAMQ
 #ifdef XORG_VERSION_CURRENT
-#ifdef SIS_HAVE_EXA
+#if defined(SIS_HAVE_EXA) || (defined(XF86EXA) && (XF86EXA != 0))
 #if 1
 #define SIS_USE_EXA		/* Include code for EXA */
 #endif
@@ -358,8 +358,8 @@
 #define CRT1_LCDA		0x00020000
 #define VGA2_CONNECTED		0x00040000
 #define DISPTYPE_CRT1		0x00080000  	/* CRT1 connected and used */
-#define OLDVB_301		0x00100000	/* Definition deprecated (now VBFlags2) */
-#define OLDVB_301B		0x00200000	/* Definition deprecated (now VBFlags2) */
+#define TV_YPBPR625I		0x00100000
+#define TV_YPBPR625P		0x00200000
 #define OLDVB_302B		0x00400000	/* Definition deprecated (now VBFlags2) */
 #define OLDVB_30xBDH		0x00800000      /* Definition deprecated (now VBFlags2) */
 #define OLDVB_LVDS		0x01000000	/* Definition deprecated (now VBFlags2) */
@@ -381,7 +381,9 @@
 #define TV_YPBPR525P		TV_PAL
 #define TV_YPBPR750P		TV_PALM
 #define TV_YPBPR1080I		TV_PALN
-#define TV_YPBPRALL 		(TV_YPBPR525I | TV_YPBPR525P | TV_YPBPR750P | TV_YPBPR1080I)
+#define TV_YPBPRALL 		(TV_YPBPR525I | TV_YPBPR525P | \
+				 TV_YPBPR625I | TV_YPBPR625P | \
+				 TV_YPBPR750P | TV_YPBPR1080I)
 
 #define TV_YPBPR43LB		TV_CHSCART
 #define TV_YPBPR43		TV_CHYPBPR525I
@@ -638,6 +640,9 @@ typedef unsigned char  UChar;
 #define SiS_SD2_ISLAPTOP       0x00800000   /* This machine is (very probably) a laptop */
 #define SiS_SD2_MACHINETYPE2   0x01000000   /* Machine type 2 (for future use) */
 #define SiS_SD2_MACHINETYPE3   0x02000000   /* Machine type 3 (for future use) */
+#define SiS_SD2_SUPPORT625I    0x04000000   /* Support YPbPr 625i */
+#define SiS_SD2_SUPPORT625P    0x08000000   /* Support YPbPr 625p */
+#define SiS_SD2_VBINVB2ONLY    0x10000000   /* VB_* bits in vbflags no longer used for vb type */
 /* ... */
 #define SiS_SD2_HAVESD34       0x40000000   /* Support SD3 and SD4 flags (for future use) */
 #define SiS_SD2_NOOVERLAY      0x80000000   /* No video overlay */
@@ -659,6 +664,8 @@ typedef unsigned char  UChar;
 #define SiS_CF2_TVHIVISION   SiS_CF2_TVPAL
 #define SiS_CF2_TVYPBPR525I  SiS_CF2_TVNTSC
 #define SiS_CF2_TVYPBPR525P  (SiS_CF2_TVPAL | SiS_CF2_TVNTSC)
+#define SiS_CF2_TVYPBPR625I  SiS_CF2_TVPALN
+#define SiS_CF2_TVYPBPR625P  (SiS_CF2_TVPALN | SiS_CF2_TVPAL)
 #define SiS_CF2_TVYPBPR750P  SiS_CF2_TVPALM
 #define SiS_CF2_TVYPBPR1080I (SiS_CF2_TVPALM | SiS_CF2_TVPAL)
 

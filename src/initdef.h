@@ -191,22 +191,27 @@
 #define SetDOSMode              0x0080
 
 /* TVMode flag */
-#define TVSetPAL		0x0001
-#define TVSetNTSCJ		0x0002
-#define TVSetPALM		0x0004
-#define TVSetPALN		0x0008
-#define TVSetCHOverScan		0x0010
-#define TVSetYPbPr525i		0x0020 /* new 0x10 */
-#define TVSetYPbPr525p		0x0040 /* new 0x20 */
-#define TVSetYPbPr750p		0x0080 /* new 0x40 */
-#define TVSetHiVision		0x0100 /* new 0x80; = 1080i, software-wise identical */
-#define TVSetTVSimuMode		0x0200 /* new 0x200, prev. 0x800 */
-#define TVRPLLDIV2XO		0x0400 /* prev 0x1000 */
-#define TVSetNTSC1024		0x0800 /* new 0x100, prev. 0x2000 */
-#define TVSet525p1024		0x1000 /* TW */
-#define TVAspect43		0x2000
-#define TVAspect169		0x4000
-#define TVAspect43LB		0x8000
+#define TVSetPAL		0x00001
+#define TVSetNTSCJ		0x00002
+#define TVSetPALM		0x00004
+#define TVSetPALN		0x00008
+#define TVSetCHOverScan		0x00010
+#define TVSetYPbPr525i		0x00020 /* new 0x10 */
+#define TVSetYPbPr525p		0x00040 /* new 0x20 */
+#define TVSetYPbPr750p		0x00080 /* new 0x40 */
+#define TVSetHiVision		0x00100 /* new 0x80; = 1080i, software-wise identical */
+#define TVSetTVSimuMode		0x00200 /* new 0x200, prev. 0x800 */
+#define TVRPLLDIV2XO		0x00400 /* prev 0x1000 */
+#define TVSetNTSC1024		0x00800 /* new 0x100, prev. 0x2000 */
+#define TVSet525p1024		0x01000 /* TW */
+#define TVAspect43		0x02000
+#define TVAspect169		0x04000
+#define TVAspect43LB		0x08000
+#define TVSetYPbPr625i		0x10000 /* TW YPbPr 625i */
+#define TVSetYPbPr625p		0x20000 /* TW YPbPr 625p */
+
+#define TVSetYPbPrProg		(TVSetYPbPr525p | TVSetYPbPr625p | TVSetYPbPr750p)
+#define TVSetPALTiming		(TVSetPAL | TVSetYPbPr625i | TVSetYPbPr625p)
 
 /* YPbPr flag (>=315, <661; converted to TVMode) */
 #define YPbPr525p               0x0001
@@ -251,7 +256,7 @@
    [3]    1 = PALN (if D0 = 1)
    [4]    1 = Overscan (Chrontel only)
    [7:5]  (only if D2 in CR38 is set)
-	  000  525i
+	  000  525i/625i
 	  001  525p
 	  010  750p
 	  011  1080i (or HiVision on 301, 301B)

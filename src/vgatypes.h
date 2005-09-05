@@ -121,6 +121,7 @@ typedef enum _SIS_CHIP_TYPE {
 } SIS_CHIP_TYPE;
 
 #undef OLD1280720P
+#undef OLD720I
 
 #endif
 

@@ -566,6 +566,10 @@ SiSCondToVBFlags(UShort cond, ULong GivenVBFlags)
 		vbflags |= (TV_YPBPR | TV_YPBPR525I);
 	  else if((cond & SiS_CF2_TVSPECMASK) == SiS_CF2_TVYPBPR525P)
 		vbflags |= (TV_YPBPR | TV_YPBPR525P);
+	  else if((cond & SiS_CF2_TVSPECMASK) == SiS_CF2_TVYPBPR625I)
+		vbflags |= (TV_YPBPR | TV_YPBPR625I);
+	  else if((cond & SiS_CF2_TVSPECMASK) == SiS_CF2_TVYPBPR625P)
+		vbflags |= (TV_YPBPR | TV_YPBPR625P);
 	  else if((cond & SiS_CF2_TVSPECMASK) == SiS_CF2_TVYPBPR750P)
 		vbflags |= (TV_YPBPR | TV_YPBPR750P);
 	  else if((cond & SiS_CF2_TVSPECMASK) == SiS_CF2_TVYPBPR1080I)

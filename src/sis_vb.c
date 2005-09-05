@@ -863,11 +863,11 @@ SISSense30x(ScrnInfoPtr pScrn, Bool quiet)
        } else {
           /* These boards have a s-video connector, but its
 	   * pins are routed both the bridge's composite and
-	   * svideo pins. What for, is beyond me. Anyway,
-	   * since a svideo connected TV now is also being
-	   * detected as a composite connected one, we don't
-	   * check for composite if svideo is detected - unless
-	   * the BIOS flags tell us otherwise.
+	   * svideo pins. This is for using the S-video plug
+	   * for YPbPr output. Anyway, since a svideo connected
+	   * TV would also been detected as a composite connected
+	   * one, we don't check for composite if svideo is
+	   * detected.
 	   */
 	   biosflag &= ~0x02;
        }
