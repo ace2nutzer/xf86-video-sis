@@ -1444,6 +1444,12 @@ SiS_SetTVMode(struct SiS_Private *SiS_Pr, unsigned short ModeNo, unsigned short 
 	 }
       }
 
+      if(SiS_Pr->SiS_VBInfo & SetCRT2ToHiVision) {
+         if(resinfo == SIS_RI_960x540) {
+	    SiS_Pr->SiS_TVMode |= TVSetHiVi960540;
+	 }
+      }
+
       SiS_Pr->SiS_TVMode |= TVRPLLDIV2XO;
       if((SiS_Pr->SiS_VBInfo & SetCRT2ToHiVision) &&
 	 (SiS_Pr->SiS_VBInfo & SetInSlaveMode)) {
@@ -3023,7 +3029,7 @@ SiS_GetCRT2Ptr(struct SiS_Private *SiS_Pr, unsigned short ModeNo, unsigned short
 	      break;
 	   case SIS_RI_720x576:
 	   case SIS_RI_768x576:
-	   case SIS_RI_1024x576: /* Not in NTSC or YPBPR/525 mode! */
+	   case SIS_RI_1024x576:
 	      tempal = 6;
 	      if(SiS_Pr->SiS_TVMode & TVSetYPbPr750p) {
 		 tempal = 8;
@@ -3425,7 +3431,8 @@ SiS_GetCRT2Data301(struct SiS_Private *SiS_Pr, unsigned short ModeNo, unsigned s
 
      if(SiS_Pr->SiS_VBInfo & SetCRT2ToHiVision) {
 
-	if((resinfo == SIS_RI_960x600)   ||
+	if((resinfo == SIS_RI_960x540)   ||
+	   (resinfo == SIS_RI_960x600)   ||
 	   (resinfo == SIS_RI_1024x768)  ||
 	   (resinfo == SIS_RI_1280x1024) ||
 	   (resinfo == SIS_RI_1280x720)) {
@@ -6646,10 +6653,23 @@ static void
 SiS_SetTVSpecial(struct SiS_Private *SiS_Pr, unsigned short ModeNo)
 {
   if(!(SiS_Pr->SiS_VBType & VB_SIS30xBLV)) return;
-  if(!(SiS_Pr->SiS_VBInfo & SetCRT2ToTVNoHiVision)) return;
+  if(!(SiS_Pr->SiS_VBInfo & SetCRT2ToTV)) return;
   if(SiS_Pr->SiS_TVMode & (TVSetYPbPr625i | TVSetYPbPr625p)) return;
 
-  if(SiS_Pr->SiS_TVMode & TVSetYPbPr750p) {
+  if(SiS_Pr->SiS_VBInfo & SetCRT2ToHiVision) {
+     if(SiS_Pr->SiS_TVMode & TVSetHiVi960540) {
+        SiS_SetReg(SiS_Pr->SiS_Part2Port,0x01,0x14);
+	SiS_SetReg(SiS_Pr->SiS_Part2Port,0x02,0x47);
+        SiS_SetReg(SiS_Pr->SiS_Part2Port,0x1f,0xea);
+        SiS_SetRegANDOR(SiS_Pr->SiS_Part2Port,0x20,0x0f,0x00);
+        SiS_SetRegANDOR(SiS_Pr->SiS_Part2Port,0x2b,0xf0,0x0e);
+        SiS_SetRegANDOR(SiS_Pr->SiS_Part2Port,0x42,0x0f,0x00);
+        SiS_SetReg(SiS_Pr->SiS_Part2Port,0x43,0xe6);
+	SiS_SetReg(SiS_Pr->SiS_Part2Port,0x44,0x90);
+	SiS_SetRegANDOR(SiS_Pr->SiS_Part2Port,0x45,0xc0,0x09);
+	SiS_SetRegANDOR(SiS_Pr->SiS_Part2Port,0x46,0xf8,0x03);
+     }
+  } else if(SiS_Pr->SiS_TVMode & TVSetYPbPr750p) {
 #ifndef OLD1280720P
      if(ModeNo == 0x79 || ModeNo == 0x75 || ModeNo == 0x78) {
         SiS_SetReg(SiS_Pr->SiS_Part2Port,0x01,0x19);
@@ -7755,6 +7775,8 @@ SiS_SetGroup4(struct SiS_Private *SiS_Pr, unsigned short ModeNo, unsigned short 
 		 resinfo == SIS_RI_1280x720) {
 	         /* Otherwise white line or garbage at right edge */
 	         tempax = (tempax & 0xff00) | 0x20;
+	      } else if(resinfo == SIS_RI_960x540) {
+	         tempax = (tempax & 0xff00) | 0xed;
 	      }
 	   }
 	}

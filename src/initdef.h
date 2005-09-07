@@ -209,6 +209,7 @@
 #define TVAspect43LB		0x08000
 #define TVSetYPbPr625i		0x10000 /* TW YPbPr 625i */
 #define TVSetYPbPr625p		0x20000 /* TW YPbPr 625p */
+#define TVSetHiVi960540		0x40000 /* TW */
 
 #define TVSetYPbPrProg		(TVSetYPbPr525p | TVSetYPbPr625p | TVSetYPbPr750p)
 #define TVSetPALTiming		(TVSetPAL | TVSetYPbPr625i | TVSetYPbPr625p)

@@ -11963,6 +11963,7 @@ void SiS_SetTVxscale(ScrnInfoPtr pScrn, int val)
 	    if(!(pSiS->VBFlags2 & VB2_301)) {
 	       setSISIDXREG(SISPART2,0x46,0xF8,p2_46);
 	    }
+
 	 }
 
       }
@@ -12014,6 +12015,7 @@ void SiS_SetTVyscale(ScrnInfoPtr pScrn, int val)
 	 Bool is750p = FALSE;
 	 Bool is1080i = FALSE;
 	 Bool usedef301c = FALSE;
+	 Bool skipmoveup = FALSE;
 
 	 SiS_UnLockCRT2(pSiS->SiS_Pr);
 
@@ -12045,7 +12047,7 @@ void SiS_SetTVyscale(ScrnInfoPtr pScrn, int val)
 	 inSISIDXREG(SISCR,0x34,p3d4_34);
 
 	 switch((p3d4_34 & 0x7f)) {
-	 case 0x50:   /* 320x240 - hdclk mode */
+	 case 0x50:   /* 320x240 */
 	 case 0x56:
 	 case 0x53:
 	    hdclk = 1;
@@ -12094,9 +12096,9 @@ void SiS_SetTVyscale(ScrnInfoPtr pScrn, int val)
 	       srindex = 105;
 	    } else if(is750p) {
 	       srindex = 63;
-	    } else if(!usentsc) {
-	       /* can scale PAL only */
-	       srindex = 21;
+	    } else {
+	       srindex = usentsc ? 175 : 21;
+	       if(usentsc) usedef301c = TRUE;
 	    }
 	    break;
 	 case 0x51:   /* 400x300 - hdclk mode */
@@ -12112,7 +12114,22 @@ void SiS_SetTVyscale(ScrnInfoPtr pScrn, int val)
 	    } else if(is750p) {
 	       srindex = 70;
 	    } else {
-	       srindex  = usentsc ? 14 : 35;
+	       srindex = usentsc ? 14 : 35;
+	    }
+	    break;
+	 case 0x1d:	/* 960x540 */
+	 case 0x1e:
+	 case 0x1f:
+	    if(is1080i) {
+	       srindex = 196;
+	       skipmoveup = TRUE;
+	    }
+	    break;
+	 case 0x20:	/* 960x600 */
+	 case 0x21:
+	 case 0x22:
+	    if(pSiS->VGAEngine == SIS_315_VGA && is1080i) {
+	       srindex = 203;
 	    }
 	    break;
 	 case 0x71:	/* 1024x576 */
@@ -12122,16 +12139,15 @@ void SiS_SetTVyscale(ScrnInfoPtr pScrn, int val)
 	       srindex = 119;
 	    } else if(is750p) {
 	       srindex = 77;
+	    } else {
+	       srindex  = usentsc ? 182 : 189;
+	       usedef301c = TRUE;
 	    }
 	    break;
 	 case 0x52:	/* 512x384 */
 	 case 0x58:
 	 case 0x5c:
-	    if(is1080i || is750p) {
-	       hdclk = 1;
-	    } else {
-	       break;
-	    }
+	    hdclk = 1;
 	    /* fall through */
 	 case 0x38:	/* 1024x768 */
 	 case 0x4a:
@@ -12140,6 +12156,15 @@ void SiS_SetTVyscale(ScrnInfoPtr pScrn, int val)
 	       srindex = 126;
 	    } else if(is750p) {
 	       srindex = 84;
+	    } else if(!usentsc) {
+	       srindex = 154;
+	       usedef301c = TRUE;
+	    } else if(vdediv == 1) {
+	       if(!hdclk) srindex = 168;
+	       usedef301c = TRUE;
+	    } else {
+	       if(!hdclk) srindex = 161;
+	       usedef301c = TRUE;
 	    }
 	    break;
 	 case 0x79:	/* 1280x720 */
@@ -12244,16 +12269,18 @@ void SiS_SetTVyscale(ScrnInfoPtr pScrn, int val)
 
 	    if(vdediv == 1) p1div = 2;
 
-	    do {
-	       inSISIDXREG(SISPART2,0x01,temp);
-	       temp = vlimit - ((temp & 0x7f) / p1div);
-	       if((temp - (((newvde / vdediv) - 2) + 9)) > 0) break;
-	       myypos = pSiS->tvypos - 1;
+	    if(!skipmoveup) {
+	       do {
+	          inSISIDXREG(SISPART2,0x01,temp);
+	          temp = vlimit - ((temp & 0x7f) / p1div);
+	          if((temp - (((newvde / vdediv) - 2) + 9)) > 0) break;
+	          myypos = pSiS->tvypos - 1;
 #ifdef SISDUALHEAD
-	       if(pSiSEnt && pSiS->DualHeadMode) myypos = pSiSEnt->tvypos - 1;
+	          if(pSiSEnt && pSiS->DualHeadMode) myypos = pSiSEnt->tvypos - 1;
 #endif
-	       SiS_SetTVyposoffset(pScrn, myypos);
-	    } while(watchdog--);
+	          SiS_SetTVyposoffset(pScrn, myypos);
+	       } while(watchdog--);
+	    }
 
 	    SISWaitRetraceCRT2(pScrn);
 

@@ -810,9 +810,11 @@ SiS_GetModeID_TV(int VGAEngine, unsigned int VBFlags, int HDisplay, int VDisplay
 	     break;
 	case 960:
 	     if(VGAEngine == SIS_315_VGA) {
-		if(VDisplay == 600) {
-		   if((VBFlags & TV_HIVISION) || ((VBFlags & TV_YPBPR) && (VBFlags & TV_YPBPR1080I))) {
+	        if((VBFlags & TV_HIVISION) || ((VBFlags & TV_YPBPR) && (VBFlags & TV_YPBPR1080I))) {
+		   if(VDisplay == 600) {
 		      ModeIndex = ModeIndex_960x600[Depth];
+		   } else if(VDisplay == 540) {
+		      ModeIndex = ModeIndex_960x540[Depth];
 		   }
 		}
 	     }
