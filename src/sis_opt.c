@@ -145,6 +145,10 @@ typedef enum {
     OPTION_ENABLESISCTRL,
     OPTION_STOREDBRI,
     OPTION_STOREDBRI2,
+    OPTION_NEWSTOREDBRI,
+    OPTION_NEWSTOREDBRI2,
+    OPTION_NEWSTOREDCON,
+    OPTION_NEWSTOREDCON2,
     OPTION_OVERRULERANGES,
     OPTION_FORCE1ASPECT,
     OPTION_FORCE2ASPECT,
@@ -238,6 +242,10 @@ static const OptionInfoRec SISOptions[] = {
     { OPTION_STOREDBRI,			"StoredGammaBrightness",	OPTV_STRING,	{0}, FALSE },
     { OPTION_STOREDBRI2,		"GammaBrightnessCRT2",		OPTV_STRING,	{0}, FALSE },
     { OPTION_STOREDBRI2,		"CRT2GammaBrightness",		OPTV_STRING,	{0}, FALSE },
+    { OPTION_NEWSTOREDBRI,		"NewGammaBrightness",		OPTV_STRING,	{0}, FALSE },
+    { OPTION_NEWSTOREDBRI2,		"CRT2NewGammaBrightness",	OPTV_STRING,	{0}, FALSE },
+    { OPTION_NEWSTOREDCON,		"NewGammaContrast",		OPTV_STRING,	{0}, FALSE },
+    { OPTION_NEWSTOREDCON2,		"CRT2NewGammaContrast",		OPTV_STRING,	{0}, FALSE },
     { OPTION_XVGAMMA,			"XvGamma", 	  		OPTV_ANYSTR,	{0}, FALSE },
     { OPTION_XVDEFCONTRAST,		"XvDefaultContrast", 		OPTV_INTEGER,	{0}, FALSE },
     { OPTION_XVDEFBRIGHTNESS,		"XvDefaultBrightness",		OPTV_INTEGER,	{0}, FALSE },
@@ -386,6 +394,36 @@ SiS_EvalOneOrThreeFloats(ScrnInfoPtr pScrn, int token, const char *myerror,
     return (valid);
 }
 
+static Bool
+SiS_EvalOneOrThreeFloats2(ScrnInfoPtr pScrn, int token, const char *myerror,
+                         char *strptr, float *v1, float *v2, float *v3)
+{
+    SISPtr pSiS = SISPTR(pScrn);
+    float val1 = 0.0, val2 = 0.0, val3 = 0.0;
+    Bool valid = FALSE;
+    int result = sscanf(strptr, "%f %f %f", &val1, &val2, &val3);
+    if(result == 1) {
+       if((val1 >= -1.0) && (val1 <= 1.0)) {
+	  valid = TRUE;
+	  *v1 = *v2 = *v3 = val1;
+       }
+    } else if(result == 3) {
+       if((val1 >= -1.0) && (val1 <= 1.0) &&
+	  (val2 >= -1.0) && (val2 <= 1.0) &&
+	  (val3 >= -1.0) && (val3 <= 1.0)) {
+	  valid = TRUE;
+	  *v1 = val1;
+	  *v2 = val2;
+	  *v3 = val3;
+       }
+    }
+    if(!valid) {
+       xf86DrvMsg(pScrn->scrnIndex, X_WARNING, myerror,
+                  pSiS->Options[SiS_FIFT(pSiS->Options, token)].name);
+    }
+    return (valid);
+}
+
 void
 SiSOptions(ScrnInfoPtr pScrn)
 {
@@ -399,6 +437,7 @@ SiSOptions(ScrnInfoPtr pScrn)
     static const char *enabledstr = "enabled";
     static const char *gammaopt   = "%s expects either a boolean, or 1 or 3 real numbers (0.1 - 10.0)\n";
     static const char *briopt     = "%s expects 1 or 3 real numbers (0.1 - 10.0)\n";
+    static const char *newbriopt     = "%s expects 1 or 3 real numbers (-1.0 - 1.0)\n";
     Bool        val, IsDHM = FALSE;
     Bool	IsSecondHead = FALSE;
 
@@ -526,6 +565,10 @@ SiSOptions(ScrnInfoPtr pScrn)
     pSiS->CRT2SepGamma = FALSE;
     pSiS->GammaR2 = pSiS->GammaG2 = pSiS->GammaB2 = 1.0;
     pSiS->GammaBriR2 = pSiS->GammaBriG2 = pSiS->GammaBriB2 = 1000;
+    pSiS->NewGammaBriR = pSiS->NewGammaBriG = pSiS->NewGammaBriB = 0.0;
+    pSiS->NewGammaConR = pSiS->NewGammaConG = pSiS->NewGammaConB = 0.0;
+    pSiS->NewGammaBriR2 = pSiS->NewGammaBriG2 = pSiS->NewGammaBriB2 = 0.0;
+    pSiS->NewGammaConR2 = pSiS->NewGammaConG2 = pSiS->NewGammaConB2 = 0.0;
     pSiS->HideHWCursor = FALSE;
     pSiS->HWCursorIsVisible = FALSE;
     pSiS->OverruleRanges = TRUE;
@@ -2140,24 +2183,63 @@ SiSOptions(ScrnInfoPtr pScrn)
     }
 
     if((pSiS->VGAEngine == SIS_300_VGA) || (pSiS->VGAEngine == SIS_315_VGA)) {
-       Bool GotBri = FALSE;
-       if((strptr = (char *)xf86GetOptValString(pSiS->Options, OPTION_STOREDBRI))) {
-	  SiS_EvalOneOrThreeFloats(pScrn, OPTION_STOREDBRI, briopt, strptr,
-		&pSiS->GammaBriR, &pSiS->GammaBriG, &pSiS->GammaBriB);
-	  GotBri = TRUE;
+       Bool GotNewBri = FALSE, GotOldBri = FALSE, GotCon = FALSE;
+       if((strptr = (char *)xf86GetOptValString(pSiS->Options, OPTION_NEWSTOREDCON))) {
+	  SiS_EvalOneOrThreeFloats2(pScrn, OPTION_NEWSTOREDCON, newbriopt, strptr,
+		&pSiS->NewGammaConR, &pSiS->NewGammaConG, &pSiS->NewGammaConB);
+	  GotCon = TRUE;
        }
+       if((strptr = (char *)xf86GetOptValString(pSiS->Options, OPTION_NEWSTOREDBRI))) {
+	  SiS_EvalOneOrThreeFloats2(pScrn, OPTION_NEWSTOREDBRI, newbriopt, strptr,
+		&pSiS->NewGammaBriR, &pSiS->NewGammaBriG, &pSiS->NewGammaBriB);
+	  GotNewBri = TRUE;
+       }
+       if(!GotCon && !GotNewBri) {
+          if((strptr = (char *)xf86GetOptValString(pSiS->Options, OPTION_STOREDBRI))) {
+	     SiS_EvalOneOrThreeFloats(pScrn, OPTION_STOREDBRI, briopt, strptr,
+		   &pSiS->GammaBriR, &pSiS->GammaBriG, &pSiS->GammaBriB);
+	     GotOldBri = TRUE;
+	     pSiS->SiS_SD3_Flags |= SiS_SD3_OLDGAMMAINUSE;
+	  }
+       }
+
        if((!IsDHM) || (IsDHM && !IsSecondHead)) {
-	  if((strptr = (char *)xf86GetOptValString(pSiS->Options, OPTION_STOREDBRI2))) {
-	     if(SiS_EvalOneOrThreeFloats(pScrn, OPTION_STOREDBRI2, briopt, strptr,
-		    &pSiS->GammaBriR2, &pSiS->GammaBriG2, &pSiS->GammaBriB2)) {
-		if(IsDHM) {
+          Bool GotCon2 = FALSE, GotNewBri2 = FALSE;
+          if(!GotOldBri) {
+             if((strptr = (char *)xf86GetOptValString(pSiS->Options, OPTION_NEWSTOREDCON2))) {
+	        SiS_EvalOneOrThreeFloats2(pScrn, OPTION_NEWSTOREDCON2, newbriopt, strptr,
+		      &pSiS->NewGammaConR2, &pSiS->NewGammaConG2, &pSiS->NewGammaConB2);
+	        GotCon2 = TRUE;
+             }
+             if((strptr = (char *)xf86GetOptValString(pSiS->Options, OPTION_NEWSTOREDBRI2))) {
+	        if(SiS_EvalOneOrThreeFloats2(pScrn, OPTION_NEWSTOREDBRI2, newbriopt, strptr,
+				&pSiS->NewGammaBriR2, &pSiS->NewGammaBriG2, &pSiS->NewGammaBriB2)) {
+		   if(IsDHM) {
 #ifdef SISDUALHEAD
-		   if(GotBri) SiS_PrintOverruleDHM(pScrn, OPTION_STOREDBRI2, OPTION_STOREDBRI);
-		   pSiS->GammaBriR = pSiS->GammaBriR2;
-		   pSiS->GammaBriG = pSiS->GammaBriG2;
-		   pSiS->GammaBriB = pSiS->GammaBriB2;
+		      if(GotNewBri) SiS_PrintOverruleDHM(pScrn, OPTION_NEWSTOREDBRI2, OPTION_NEWSTOREDBRI);
+		      pSiS->NewGammaBriR = pSiS->NewGammaBriR2;
+		      pSiS->NewGammaBriG = pSiS->NewGammaBriG2;
+		      pSiS->NewGammaBriB = pSiS->NewGammaBriB2;
 #endif
-		} else pSiS->CRT2SepGamma = TRUE;
+	           } else pSiS->CRT2SepGamma = TRUE;
+	        }
+	        GotNewBri2 = TRUE;
+	     }
+          }
+          if(!GotCon2 && !GotNewBri2 && !GotNewBri && !GotCon) {
+	     if((strptr = (char *)xf86GetOptValString(pSiS->Options, OPTION_STOREDBRI2))) {
+	        pSiS->SiS_SD3_Flags |= SiS_SD3_OLDGAMMAINUSE;
+	        if(SiS_EvalOneOrThreeFloats(pScrn, OPTION_STOREDBRI2, briopt, strptr,
+		    &pSiS->GammaBriR2, &pSiS->GammaBriG2, &pSiS->GammaBriB2)) {
+	           if(IsDHM) {
+#ifdef SISDUALHEAD
+		      if(GotOldBri) SiS_PrintOverruleDHM(pScrn, OPTION_STOREDBRI2, OPTION_STOREDBRI);
+		      pSiS->GammaBriR = pSiS->GammaBriR2;
+		      pSiS->GammaBriG = pSiS->GammaBriG2;
+		      pSiS->GammaBriB = pSiS->GammaBriB2;
+#endif
+	           } else pSiS->CRT2SepGamma = TRUE;
+	        }
 	     }
 	  }
        }

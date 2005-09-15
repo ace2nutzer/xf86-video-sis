@@ -921,11 +921,16 @@ SiSPrepareSolid(PixmapPtr pPixmap, int alu, Pixel planemask, Pixel fg)
 	   }
 	}
 
+	/* Check that the pitch matches the hardware's requirements. Should
+	 * never be a problem due to pixmapPitchAlign and fbScreenInit.
+	 */
+	if(exaGetPixmapPitch(pPixmap) & 3)
+	   return FALSE;
+
 	dstbase = (CARD32)exaGetPixmapOffset(pPixmap) + HEADOFFSET;
-	pSiS->fillXoffs = 0;
 
 	SiSSetupPATFG(fg)
-	SiSSetupDSTRect((exaGetPixmapPitch(pPixmap) + 3) & ~3, -1)
+	SiSSetupDSTRect(exaGetPixmapPitch(pPixmap), -1)
 	SiSSetupDSTColorDepth(dstcol[pPixmap->drawable.bitsPerPixel >> 4]);
 	SiSSetupROP(SiSGetPatternROP(alu))
 	SiSSetupDSTBase(dstbase)
@@ -939,9 +944,6 @@ SiSSolid(PixmapPtr pPixmap, int x1, int y1, int x2, int y2)
 {
 	ScrnInfoPtr pScrn = xf86Screens[pPixmap->drawable.pScreen->myNum];
 	SISPtr pSiS = SISPTR(pScrn);
-
-	x1 += pSiS->fillXoffs;
-	x2 += pSiS->fillXoffs;
 
 	SiSSetupDSTXY(x1, y1)
 	SiSSetupRect(x2-x1, y2-y1)
@@ -981,9 +983,17 @@ SiSPrepareCopy(PixmapPtr pSrcPixmap, PixmapPtr pDstPixmap, int xdir, int ydir,
 		  (pDstPixmap->drawable.bitsPerPixel != 32))
 	   return FALSE;
 
+	/* Check that the pitch matches the hardware's requirements. Should
+	 * never be a problem due to pixmapPitchAlign and fbScreenInit.
+	 */
+	if(exaGetPixmapPitch(pSrcPixmap) & 3)
+	   return FALSE;
+	if(exaGetPixmapPitch(pDstPixmap) & 3)
+	   return FALSE;
+
 	SiSSetupDSTColorDepth(dstcol[pDstPixmap->drawable.bitsPerPixel >> 4]);
-	SiSSetupSRCPitch((exaGetPixmapPitch(pSrcPixmap) + 3) & ~3)
-	SiSSetupDSTRect((exaGetPixmapPitch(pDstPixmap) + 3) & ~3, -1)
+	SiSSetupSRCPitch(exaGetPixmapPitch(pSrcPixmap))
+	SiSSetupDSTRect(exaGetPixmapPitch(pDstPixmap), -1)
 
 	SiSSetupROP(SiSGetCopyROP(alu))
 
@@ -995,10 +1005,8 @@ SiSPrepareCopy(PixmapPtr pSrcPixmap, PixmapPtr pDstPixmap, int xdir, int ydir,
 	}
 
 	srcbase = (CARD32)exaGetPixmapOffset(pSrcPixmap) + HEADOFFSET;
-	pSiS->copySXoffs = 0;
 
 	dstbase = (CARD32)exaGetPixmapOffset(pDstPixmap) + HEADOFFSET;
-	pSiS->copyDXoffs = 0;
 
 	SiSSetupSRCBase(srcbase);
 	SiSSetupDSTBase(dstbase);
@@ -1011,9 +1019,6 @@ SiSCopy(PixmapPtr pDstPixmap, int srcX, int srcY, int dstX, int dstY, int width,
 {
 	ScrnInfoPtr pScrn = xf86Screens[pDstPixmap->drawable.pScreen->myNum];
 	SISPtr pSiS = SISPTR(pScrn);
-
-	srcX += pSiS->copySXoffs;
-	dstX += pSiS->copyDXoffs;
 
 	if(!(pSiS->CommandReg & X_INC))  {
 	   srcX += width-1;

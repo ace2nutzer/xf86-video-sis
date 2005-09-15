@@ -7916,7 +7916,7 @@ SiS_ModCRT1CRTC(struct SiS_Private *SiS_Pr, unsigned short ModeNo, unsigned shor
                 unsigned short RefreshRateTableIndex)
 {
   unsigned short tempah, i, modeflag, j, ResIndex, DisplayType;
-  const struct SiS_LVDSCRT1Data *LVDSCRT1Ptr=NULL;
+  const struct SiS_LVDSCRT1Data *LVDSCRT1Ptr = NULL;
   static const unsigned short CRIdx[] = {
 	0x00, 0x02, 0x03, 0x04, 0x05, 0x06,
 	0x07, 0x10, 0x11, 0x15, 0x16

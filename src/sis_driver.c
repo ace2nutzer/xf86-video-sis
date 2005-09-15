@@ -719,6 +719,42 @@ SISProbe(DriverPtr drv, int flags)
 
 /* Various helpers */
 
+static unsigned short
+calcgammaval(int j, int nramp, float invgamma, float bri, float c)
+{
+    float k = (float)j;
+    float nrm1 = (float)(nramp - 1);
+    float con = c * nrm1 / 3.0;
+    float l, v;
+
+    if(con != 0.0) {
+       l = nrm1 / 2.0;
+       if(con <= 0.0) {
+          k -= l;
+          k *= (l + con) / l;
+       } else {
+          l -= 1.0;
+          k -= l;
+          k *= l / (l - con);
+       }
+       k += l;
+       if(k < 0.0) k = 0.0;
+    }
+
+    if(invgamma == 1.0) {
+       v = k / nrm1 * 65535.0;
+    } else {
+       v = pow(k / nrm1, invgamma) * 65535.0 + 0.5;
+    }
+
+    v += (bri * (65535.0 / 3.0)) ;
+
+    if(v < 0.0) v = 0.0;
+    else if(v > 65535.0) v = 65535.0;
+
+    return (unsigned short)v;
+}
+
 #ifdef SISGAMMARAMP
 void
 SISCalculateGammaRamp(ScreenPtr pScreen, ScrnInfoPtr pScrn)
@@ -727,10 +763,15 @@ SISCalculateGammaRamp(ScreenPtr pScreen, ScrnInfoPtr pScrn)
    int    i, j, nramp;
    UShort *ramp[3];
    float  gamma_max[3], framp;
+   Bool   newmethod = FALSE;
 
-   gamma_max[0] = (float)pSiS->GammaBriR / 1000;
-   gamma_max[1] = (float)pSiS->GammaBriG / 1000;
-   gamma_max[2] = (float)pSiS->GammaBriB / 1000;
+   if(!(pSiS->SiS_SD3_Flags & SiS_SD3_OLDGAMMAINUSE)) {
+      newmethod = TRUE;
+   } else {
+      gamma_max[0] = (float)pSiS->GammaBriR / 1000;
+      gamma_max[1] = (float)pSiS->GammaBriG / 1000;
+      gamma_max[2] = (float)pSiS->GammaBriB / 1000;
+   }
 
    if(!(nramp = xf86GetGammaRampSize(pScreen))) return;
 
@@ -743,26 +784,57 @@ SISCalculateGammaRamp(ScreenPtr pScreen, ScrnInfoPtr pScrn)
       }
    }
 
-   for(i = 0; i < 3; i++) {
-      int fullscale = 65535 * gamma_max[i];
-      float dramp = 1. / (nramp - 1);
-      float invgamma = 0.0, v;
+   if(newmethod) {
 
-      switch(i) {
-      case 0: invgamma = 1. / pScrn->gamma.red; break;
-      case 1: invgamma = 1. / pScrn->gamma.green; break;
-      case 2: invgamma = 1. / pScrn->gamma.blue; break;
+      for(i = 0; i < 3; i++) {
+
+         float invgamma = 0.0, bri = 0.0, con = 0.0;
+
+         switch(i) {
+         case 0: invgamma = 1. / pScrn->gamma.red;
+		 bri = pSiS->NewGammaBriR;
+		 con = pSiS->NewGammaConR;
+		 break;
+         case 1: invgamma = 1. / pScrn->gamma.green;
+		 bri = pSiS->NewGammaBriG;
+		 con = pSiS->NewGammaConG;
+		 break;
+         case 2: invgamma = 1. / pScrn->gamma.blue;
+		 bri = pSiS->NewGammaBriB;
+                 con = pSiS->NewGammaConB;
+		 break;
+         }
+
+	 for(j = 0; j < nramp; j++) {
+	    ramp[i][j] = calcgammaval(j, nramp, invgamma, bri, con);
+	 }
+
       }
 
-      for(j = 0; j < nramp; j++) {
-	 framp = pow(j * dramp, invgamma);
+   } else {
 
-	 v = (fullscale < 0) ? (65535 + fullscale * framp) :
+      for(i = 0; i < 3; i++) {
+         int fullscale = 65535 * gamma_max[i];
+         float dramp = 1. / (nramp - 1);
+         float invgamma = 0.0, v;
+
+         switch(i) {
+         case 0: invgamma = 1. / pScrn->gamma.red; break;
+         case 1: invgamma = 1. / pScrn->gamma.green; break;
+         case 2: invgamma = 1. / pScrn->gamma.blue; break;
+         }
+
+         for(j = 0; j < nramp; j++) {
+	    framp = pow(j * dramp, invgamma);
+
+	    v = (fullscale < 0) ? (65535 + fullscale * framp) :
 			       fullscale * framp;
-	 if(v < 0) v = 0;
-	 else if(v > 65535) v = 65535;
-	 ramp[i][j] = (UShort)v;
+	    if(v < 0) v = 0;
+	    else if(v > 65535) v = 65535;
+	    ramp[i][j] = (UShort)v;
+         }
       }
+
    }
 
    xf86ChangeGammaRamp(pScreen, nramp, ramp[0], ramp[1], ramp[2]);
@@ -778,47 +850,55 @@ void
 SISCalculateGammaRampCRT2(ScrnInfoPtr pScrn)
 {
    SISPtr pSiS = SISPTR(pScrn);
-   int    i, fullscale;
+   int    i;
    int    myshift = 16 - pScrn->rgbBits;
    int    maxvalue = (1 << pScrn->rgbBits) - 1;
    int    reds = pScrn->mask.red >> pScrn->offset.red;
    int    greens = pScrn->mask.green >> pScrn->offset.green;
    int    blues = pScrn->mask.blue >> pScrn->offset.blue;
-   float  framp, dramp, invgamma=0.0, v;
+   float  framp, invgamma1, invgamma2, invgamma3, v;
 
-   dramp = 1. / (pSiS->CRT2ColNum - 1);
+   invgamma1  = 1. / pSiS->GammaR2;
+   invgamma2  = 1. / pSiS->GammaG2;
+   invgamma3  = 1. / pSiS->GammaB2;
 
-   fullscale = 65536 * (float)pSiS->GammaBriR2 / 1000;
-   invgamma  = 1. / pSiS->GammaR2;
+   if(!(pSiS->SiS_SD3_Flags & SiS_SD3_OLDGAMMAINUSE)) {
 
-   for(i = 0; i < pSiS->CRT2ColNum; i++) {
-      framp = pow(1.0 * i * dramp, invgamma);
-      v = (fullscale < 0) ? (65535 + fullscale * framp) : fullscale * framp;
-      if(v < 0) v = 0;
-      else if(v > 65535) v = 65535;
-      pSiS->crt2gcolortable[i].red = ((UShort)v) >> myshift;
-   }
+      for(i = 0; i < pSiS->CRT2ColNum; i++) {
+         pSiS->crt2gcolortable[i].red = calcgammaval(i, pSiS->CRT2ColNum, invgamma1,
+			pSiS->NewGammaBriR2, pSiS->NewGammaConR2) >> myshift;
+         pSiS->crt2gcolortable[i].green = calcgammaval(i, pSiS->CRT2ColNum, invgamma2,
+			pSiS->NewGammaBriG2, pSiS->NewGammaConG2) >> myshift;
+         pSiS->crt2gcolortable[i].blue = calcgammaval(i, pSiS->CRT2ColNum, invgamma3,
+			pSiS->NewGammaBriB2, pSiS->NewGammaConB2) >> myshift;
+      }
 
-   fullscale = 65536 * (float)pSiS->GammaBriG2 / 1000;
-   invgamma  = 1. / pSiS->GammaG2;
+   } else {
 
-   for(i = 0; i < pSiS->CRT2ColNum; i++) {
-      framp = pow(1.0 * i * dramp, invgamma);
-      v = (fullscale < 0) ? (65535 + fullscale * framp) : fullscale * framp;
-      if(v < 0) v = 0;
-      else if(v > 65535) v = 65535;
-      pSiS->crt2gcolortable[i].green = ((UShort)v) >> myshift;
-   }
+      int fullscale1 = 65536 * (float)pSiS->GammaBriR2 / 1000;
+      int fullscale2 = 65536 * (float)pSiS->GammaBriG2 / 1000;
+      int fullscale3 = 65536 * (float)pSiS->GammaBriB2 / 1000;
 
-   fullscale = 65536 * (float)pSiS->GammaBriB2 / 1000;
-   invgamma  = 1. / pSiS->GammaB2;
+      float dramp = 1. / (pSiS->CRT2ColNum - 1);
 
-   for(i = 0; i < pSiS->CRT2ColNum; i++) {
-      framp = pow(1.0 * i * dramp, invgamma);
-      v = (fullscale < 0) ? (65535 + fullscale * framp) : fullscale * framp;
-      if(v < 0) v = 0;
-      else if(v > 65535) v = 65535;
-      pSiS->crt2gcolortable[i].blue = ((UShort)v) >> myshift;
+      for(i = 0; i < pSiS->CRT2ColNum; i++) {
+         framp = pow(i * dramp, invgamma1);
+         v = (fullscale1 < 0) ? (65535 + fullscale1 * framp) : fullscale1 * framp;
+         if(v < 0) v = 0;
+         else if(v > 65535) v = 65535;
+         pSiS->crt2gcolortable[i].red = ((UShort)v) >> myshift;
+         framp = pow(i * dramp, invgamma2);
+         v = (fullscale2 < 0) ? (65535 + fullscale2 * framp) : fullscale2 * framp;
+         if(v < 0) v = 0;
+         else if(v > 65535) v = 65535;
+         pSiS->crt2gcolortable[i].green = ((UShort)v) >> myshift;
+         framp = pow(i * dramp, invgamma3);
+         v = (fullscale3 < 0) ? (65535 + fullscale3 * framp) : fullscale3 * framp;
+         if(v < 0) v = 0;
+         else if(v > 65535) v = 65535;
+         pSiS->crt2gcolortable[i].blue = ((UShort)v) >> myshift;
+      }
+
    }
 
    for(i = 0; i < pSiS->CRT2ColNum; i++) {
@@ -4378,6 +4458,12 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	  pSiSEnt->GammaBriR = pSiS->GammaBriR;
 	  pSiSEnt->GammaBriG = pSiS->GammaBriG;
 	  pSiSEnt->GammaBriB = pSiS->GammaBriB;
+	  pSiSEnt->NewGammaBriR = pSiS->NewGammaBriR;
+	  pSiSEnt->NewGammaBriG = pSiS->NewGammaBriG;
+	  pSiSEnt->NewGammaBriB = pSiS->NewGammaBriB;
+	  pSiSEnt->NewGammaConR = pSiS->NewGammaConR;
+	  pSiSEnt->NewGammaConG = pSiS->NewGammaConG;
+	  pSiSEnt->NewGammaConB = pSiS->NewGammaConB;
 #ifdef SIS_CP
 	  SIS_CP_DRIVER_COPYOPTIONS
 #endif
@@ -5054,6 +5140,8 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
     pSiS->SiS_SD2_Flags |= SiS_SD2_MERGEDUCLOCK;
     pSiS->SiS_SD2_Flags |= SiS_SD2_USEVBFLAGS2;
     pSiS->SiS_SD2_Flags |= SiS_SD2_VBINVB2ONLY;
+    pSiS->SiS_SD2_Flags |= SiS_SD2_HAVESD34;
+    pSiS->SiS_SD2_Flags |= SiS_SD2_NEWGAMMABRICON;
 
     if(pSiS->VBFlags2 & VB2_VIDEOBRIDGE) {
        pSiS->SiS_SD2_Flags |= SiS_SD2_VIDEOBRIDGE;
@@ -8773,7 +8861,13 @@ SISScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
 #ifdef SISGAMMARAMP
     if((pSiS->GammaBriR != 1000) ||
        (pSiS->GammaBriB != 1000) ||
-       (pSiS->GammaBriG != 1000)) {
+       (pSiS->GammaBriG != 1000) ||
+       (pSiS->NewGammaBriR != 0.0) ||
+       (pSiS->NewGammaBriG != 0.0) ||
+       (pSiS->NewGammaBriB != 0.0) ||
+       (pSiS->NewGammaConR != 0.0) ||
+       (pSiS->NewGammaConG != 0.0) ||
+       (pSiS->NewGammaConB != 0.0)) {
        SISCalculateGammaRamp(pScreen, pScrn);
     }
 #endif

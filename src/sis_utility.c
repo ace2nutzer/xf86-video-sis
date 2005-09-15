@@ -160,8 +160,14 @@
 #define SDC_CMD_GETMONGAMMACRT1		0x98980059
 #define SDC_CMD_GETMONGAMMACRT2		0x9898005a
 #define SDC_CMD_LOGQUIET		0x9898005b
+#define SDC_CMD_GETNEWGAMMABRICON	0x9898005c
+#define SDC_CMD_SETNEWGAMMABRICON	0x9898005d
+#define SDC_CMD_GETNEWGAMMABRICON2	0x9898005e
+#define SDC_CMD_SETNEWGAMMABRICON2	0x9898005f
+#define SDC_CMD_GETGETNEWGAMMACRT2	0x98980060
+#define SDC_CMD_SETGETNEWGAMMACRT2	0x98980061
 /* more to come, adapt MAXCOMMAND! */
-#define SDC_MAXCOMMAND			SDC_CMD_LOGQUIET
+#define SDC_MAXCOMMAND			SDC_CMD_SETGETNEWGAMMACRT2
 
 /* in result_header */
 #define SDC_RESULT_OK  			0x66670000
@@ -1266,6 +1272,15 @@ SiSHandleSiSDirectCommand(xSiSCtrlCommandReply *sdcbuf)
       sdcbuf->sdc_result[2] = pSiS->GammaBriB;
       break;
 
+   case SDC_CMD_GETNEWGAMMABRICON:  /* no xv pendant */
+      sdcbuf->sdc_result[0] = (CARD32)(((int)(pSiS->NewGammaBriR * 1000.0)) + 1000);
+      sdcbuf->sdc_result[1] = (CARD32)(((int)(pSiS->NewGammaBriG * 1000.0)) + 1000);
+      sdcbuf->sdc_result[2] = (CARD32)(((int)(pSiS->NewGammaBriB * 1000.0)) + 1000);
+      sdcbuf->sdc_result[3] = (CARD32)(((int)(pSiS->NewGammaConR * 1000.0)) + 1000);
+      sdcbuf->sdc_result[4] = (CARD32)(((int)(pSiS->NewGammaConG * 1000.0)) + 1000);
+      sdcbuf->sdc_result[5] = (CARD32)(((int)(pSiS->NewGammaConB * 1000.0)) + 1000);
+      break;
+
    case SDC_CMD_SETGAMMABRIGHTNESS:  /* xv_BRx, xv_PBx */
       if(sdcbuf->sdc_parm[0] < 100 || sdcbuf->sdc_parm[0] > 10000 ||
 	 sdcbuf->sdc_parm[1] < 100 || sdcbuf->sdc_parm[1] > 10000 ||
@@ -1275,6 +1290,26 @@ SiSHandleSiSDirectCommand(xSiSCtrlCommandReply *sdcbuf)
 	 pSiS->GammaBriR = sdcbuf->sdc_parm[0];
 	 pSiS->GammaBriG = sdcbuf->sdc_parm[1];
 	 pSiS->GammaBriB = sdcbuf->sdc_parm[2];
+	 pSiS->NewGammaBriR = pSiS->NewGammaBriG = pSiS->NewGammaBriB = 0.0;
+	 pSiS->NewGammaConR = pSiS->NewGammaConG = pSiS->NewGammaConB = 0.0;
+	 pSiS->SiS_SD3_Flags |= SiS_SD3_OLDGAMMAINUSE;
+      } else sdcbuf->sdc_result_header = SDC_RESULT_NOPERM;
+      break;
+
+   case SDC_CMD_SETNEWGAMMABRICON:  /* no xv pendant */
+      if(sdcbuf->sdc_parm[0] > 2000 || sdcbuf->sdc_parm[1] > 2000 ||
+	 sdcbuf->sdc_parm[2] > 2000 || sdcbuf->sdc_parm[3] > 2000 ||
+	 sdcbuf->sdc_parm[4] > 2000 || sdcbuf->sdc_parm[5] > 2000) {
+	 sdcbuf->sdc_result_header = SDC_RESULT_INVAL;
+      } else if(pSiS->xv_sisdirectunlocked) {
+	 pSiS->NewGammaBriR = ((float)((int)sdcbuf->sdc_parm[0] - 1000)) / 1000.0;
+	 pSiS->NewGammaBriG = ((float)((int)sdcbuf->sdc_parm[1] - 1000)) / 1000.0;
+	 pSiS->NewGammaBriB = ((float)((int)sdcbuf->sdc_parm[2] - 1000)) / 1000.0;
+	 pSiS->NewGammaConR = ((float)((int)sdcbuf->sdc_parm[3] - 1000)) / 1000.0;
+	 pSiS->NewGammaConG = ((float)((int)sdcbuf->sdc_parm[4] - 1000)) / 1000.0;
+	 pSiS->NewGammaConB = ((float)((int)sdcbuf->sdc_parm[5] - 1000)) / 1000.0;
+	 pSiS->GammaBriR = pSiS->GammaBriG = pSiS->GammaBriB = 1000;
+	 pSiS->SiS_SD3_Flags &= ~SiS_SD3_OLDGAMMAINUSE;
       } else sdcbuf->sdc_result_header = SDC_RESULT_NOPERM;
       break;
 
@@ -1292,17 +1327,61 @@ SiSHandleSiSDirectCommand(xSiSCtrlCommandReply *sdcbuf)
       sdcbuf->sdc_result[2] = pSiS->GammaBriB;
       break;
 
+   case SDC_CMD_GETNEWGAMMABRICON2: /* no xv pendant */
+#ifdef SISDUALHEAD
+      if(pSiS->DualHeadMode) {
+         sdcbuf->sdc_result[0] = (CARD32)(((int)(pSiSEnt->NewGammaBriR * 1000.0)) + 1000);
+	 sdcbuf->sdc_result[1] = (CARD32)(((int)(pSiSEnt->NewGammaBriG * 1000.0)) + 1000);
+	 sdcbuf->sdc_result[2] = (CARD32)(((int)(pSiSEnt->NewGammaBriB * 1000.0)) + 1000);
+	 sdcbuf->sdc_result[3] = (CARD32)(((int)(pSiSEnt->NewGammaConR * 1000.0)) + 1000);
+	 sdcbuf->sdc_result[4] = (CARD32)(((int)(pSiSEnt->NewGammaConG * 1000.0)) + 1000);
+	 sdcbuf->sdc_result[5] = (CARD32)(((int)(pSiSEnt->NewGammaConB * 1000.0)) + 1000);
+	 break;
+      }
+#endif
+      sdcbuf->sdc_result[0] = (CARD32)(((int)(pSiS->NewGammaBriR * 1000.0)) + 1000);
+      sdcbuf->sdc_result[1] = (CARD32)(((int)(pSiS->NewGammaBriG * 1000.0)) + 1000);
+      sdcbuf->sdc_result[2] = (CARD32)(((int)(pSiS->NewGammaBriB * 1000.0)) + 1000);
+      sdcbuf->sdc_result[3] = (CARD32)(((int)(pSiS->NewGammaConR * 1000.0)) + 1000);
+      sdcbuf->sdc_result[4] = (CARD32)(((int)(pSiS->NewGammaConG * 1000.0)) + 1000);
+      sdcbuf->sdc_result[5] = (CARD32)(((int)(pSiS->NewGammaConB * 1000.0)) + 1000);
+      break;
+
    case SDC_CMD_SETGAMMABRIGHTNESS2: /* xv_BRx2, xv_PBx2 */
       if(sdcbuf->sdc_parm[0] < 100 || sdcbuf->sdc_parm[0] > 10000 ||
 	 sdcbuf->sdc_parm[1] < 100 || sdcbuf->sdc_parm[1] > 10000 ||
 	 sdcbuf->sdc_parm[2] < 100 || sdcbuf->sdc_parm[2] > 10000) {
 	 sdcbuf->sdc_result_header = SDC_RESULT_INVAL;
       } else if(pSiS->xv_sisdirectunlocked) {
+         pSiS->SiS_SD3_Flags |= SiS_SD3_OLDGAMMAINUSE;
 #ifdef SISDUALHEAD
 	 if(pSiS->DualHeadMode) {
 	    pSiSEnt->GammaBriR = sdcbuf->sdc_parm[0];
 	    pSiSEnt->GammaBriG = sdcbuf->sdc_parm[1];
 	    pSiSEnt->GammaBriB = sdcbuf->sdc_parm[2];
+	    pSiSEnt->NewGammaBriR = pSiSEnt->NewGammaBriG = pSiSEnt->NewGammaBriB = 0.0;
+	    pSiSEnt->NewGammaConR = pSiSEnt->NewGammaConG = pSiSEnt->NewGammaConB = 0.0;
+	 }
+#endif
+      } else sdcbuf->sdc_result_header = SDC_RESULT_NOPERM;
+      break;
+
+   case SDC_CMD_SETNEWGAMMABRICON2: /* no xv pendant */
+      if(sdcbuf->sdc_parm[0] > 2000 || sdcbuf->sdc_parm[1] > 2000 ||
+	 sdcbuf->sdc_parm[2] > 2000 || sdcbuf->sdc_parm[3] > 2000 ||
+	 sdcbuf->sdc_parm[4] > 2000 || sdcbuf->sdc_parm[5] > 2000) {
+	 sdcbuf->sdc_result_header = SDC_RESULT_INVAL;
+      } else if(pSiS->xv_sisdirectunlocked) {
+         pSiS->SiS_SD3_Flags &= ~SiS_SD3_OLDGAMMAINUSE;
+#ifdef SISDUALHEAD
+	 if(pSiS->DualHeadMode) {
+	    pSiSEnt->NewGammaBriR = ((float)((int)sdcbuf->sdc_parm[0] - 1000)) / 1000.0;
+	    pSiSEnt->NewGammaBriG = ((float)((int)sdcbuf->sdc_parm[1] - 1000)) / 1000.0;
+	    pSiSEnt->NewGammaBriB = ((float)((int)sdcbuf->sdc_parm[2] - 1000)) / 1000.0;
+	    pSiSEnt->NewGammaConR = ((float)((int)sdcbuf->sdc_parm[3] - 1000)) / 1000.0;
+	    pSiSEnt->NewGammaConG = ((float)((int)sdcbuf->sdc_parm[4] - 1000)) / 1000.0;
+	    pSiSEnt->NewGammaConB = ((float)((int)sdcbuf->sdc_parm[5] - 1000)) / 1000.0;
+	    pSiSEnt->GammaBriR = pSiSEnt->GammaBriG = pSiSEnt->GammaBriB = 1000;
 	 }
 #endif
       } else sdcbuf->sdc_result_header = SDC_RESULT_NOPERM;
@@ -1315,6 +1394,18 @@ SiSHandleSiSDirectCommand(xSiSCtrlCommandReply *sdcbuf)
       sdcbuf->sdc_result[3] = pSiS->GammaBriR2;
       sdcbuf->sdc_result[4] = pSiS->GammaBriG2;
       sdcbuf->sdc_result[5] = pSiS->GammaBriB2;
+      break;
+
+   case SDC_CMD_GETGETNEWGAMMACRT2:
+      sdcbuf->sdc_result[0] = (ULong)(pSiS->GammaR2 * 1000);
+      sdcbuf->sdc_result[1] = (ULong)(pSiS->GammaG2 * 1000);
+      sdcbuf->sdc_result[2] = (ULong)(pSiS->GammaB2 * 1000);
+      sdcbuf->sdc_result[3] = (CARD32)(((int)(pSiS->NewGammaBriR2 * 1000.0)) + 1000);
+      sdcbuf->sdc_result[4] = (CARD32)(((int)(pSiS->NewGammaBriG2 * 1000.0)) + 1000);
+      sdcbuf->sdc_result[5] = (CARD32)(((int)(pSiS->NewGammaBriB2 * 1000.0)) + 1000);
+      sdcbuf->sdc_result[6] = (CARD32)(((int)(pSiS->NewGammaConR2 * 1000.0)) + 1000);
+      sdcbuf->sdc_result[7] = (CARD32)(((int)(pSiS->NewGammaConG2 * 1000.0)) + 1000);
+      sdcbuf->sdc_result[8] = (CARD32)(((int)(pSiS->NewGammaConB2 * 1000.0)) + 1000);
       break;
 
    case SDC_CMD_SETGETGAMMACRT2:
@@ -1332,6 +1423,33 @@ SiSHandleSiSDirectCommand(xSiSCtrlCommandReply *sdcbuf)
 	 pSiS->GammaBriR2 = sdcbuf->sdc_parm[3];
 	 pSiS->GammaBriG2 = sdcbuf->sdc_parm[4];
 	 pSiS->GammaBriB2 = sdcbuf->sdc_parm[5];
+	 pSiS->NewGammaBriR2 = pSiS->NewGammaBriG2 = pSiS->NewGammaBriB2 = 0.0;
+	 pSiS->NewGammaConR2 = pSiS->NewGammaConG2 = pSiS->NewGammaConB2 = 0.0;
+	 pSiS->SiS_SD3_Flags |= SiS_SD3_OLDGAMMAINUSE;
+	 SiS_UpdateGammaCRT2(pScrn);
+      } else sdcbuf->sdc_result_header = SDC_RESULT_NOPERM;
+      break;
+
+   case SDC_CMD_SETGETNEWGAMMACRT2:
+      if(sdcbuf->sdc_parm[0] < 100 || sdcbuf->sdc_parm[0] > 10000 ||
+	 sdcbuf->sdc_parm[1] < 100 || sdcbuf->sdc_parm[1] > 10000 ||
+	 sdcbuf->sdc_parm[2] < 100 || sdcbuf->sdc_parm[2] > 10000 ||
+	 sdcbuf->sdc_parm[3] > 2000 || sdcbuf->sdc_parm[4] > 2000 ||
+	 sdcbuf->sdc_parm[5] > 2000 || sdcbuf->sdc_parm[6] > 2000 ||
+	 sdcbuf->sdc_parm[7] > 2000 || sdcbuf->sdc_parm[8] > 2000) {
+	 sdcbuf->sdc_result_header = SDC_RESULT_INVAL;
+      } else if(pSiS->xv_sisdirectunlocked) {
+         pSiS->GammaR2 = (float)sdcbuf->sdc_parm[0] / (float)1000;
+	 pSiS->GammaG2 = (float)sdcbuf->sdc_parm[1] / (float)1000;
+	 pSiS->GammaB2 = (float)sdcbuf->sdc_parm[2] / (float)1000;
+	 pSiS->NewGammaBriR2 = ((float)((int)sdcbuf->sdc_parm[3] - 1000)) / 1000.0;
+	 pSiS->NewGammaBriG2 = ((float)((int)sdcbuf->sdc_parm[4] - 1000)) / 1000.0;
+	 pSiS->NewGammaBriB2 = ((float)((int)sdcbuf->sdc_parm[5] - 1000)) / 1000.0;
+	 pSiS->NewGammaConR2 = ((float)((int)sdcbuf->sdc_parm[6] - 1000)) / 1000.0;
+	 pSiS->NewGammaConG2 = ((float)((int)sdcbuf->sdc_parm[7] - 1000)) / 1000.0;
+	 pSiS->NewGammaConB2 = ((float)((int)sdcbuf->sdc_parm[8] - 1000)) / 1000.0;
+	 pSiS->GammaBriR2 = pSiS->GammaBriG2 = pSiS->GammaBriB2 = 1000;
+	 pSiS->SiS_SD3_Flags &= ~SiS_SD3_OLDGAMMAINUSE;
 	 SiS_UpdateGammaCRT2(pScrn);
       } else sdcbuf->sdc_result_header = SDC_RESULT_NOPERM;
       break;

@@ -490,8 +490,14 @@ SiSPrepareSolid(PixmapPtr pPixmap, int alu, Pixel planemask, Pixel fg)
 	if(pPixmap->drawable.bitsPerPixel != pSiS->CurrentLayout.bitsPerPixel)
 	   return FALSE;
 
-	pSiS->fillPitch = (exaGetPixmapPitch(pPixmap) + 7) & ~7;
-	pSiS->fillBpp = (pPixmap->drawable.bitsPerPixel + 7) >> 3;
+	/* Check that the pitch matches the hardware's requirements. Should
+	 * never be a problem due to pixmapPitchAlign and fbScreenInit.
+	 */
+	if(exaGetPixmapPitch(pPixmap) & 7)
+	   return FALSE;
+
+	pSiS->fillPitch = exaGetPixmapPitch(pPixmap);
+	pSiS->fillBpp = pPixmap->drawable.bitsPerPixel >> 3;
 	pSiS->fillDstBase = (CARD32)exaGetPixmapOffset(pPixmap);
 
 	sisBLTSync;
@@ -537,11 +543,19 @@ SiSPrepareCopy(PixmapPtr pSrcPixmap, PixmapPtr pDstPixmap, int xdir, int ydir,
 	if(pDstPixmap->drawable.bitsPerPixel != pSiS->CurrentLayout.bitsPerPixel)
 	   return FALSE;
 
+	/* Check that the pitch matches the hardware's requirements. Should
+	 * never be a problem due to pixmapPitchAlign and fbScreenInit.
+	 */
+	if(exaGetPixmapPitch(pSrcPixmap) & 3)
+	   return FALSE;
+	if(exaGetPixmapPitch(pDstPixmap) & 7)
+	   return FALSE;
+
 	pSiS->copyXdir = xdir;
 	pSiS->copyYdir = ydir;
-	pSiS->copyBpp = (pSrcPixmap->drawable.bitsPerPixel + 7) >> 3;
-	pSiS->copySPitch = (exaGetPixmapPitch(pSrcPixmap) + 3) & ~3;
-	pSiS->copyDPitch = (exaGetPixmapPitch(pDstPixmap) + 7) & ~7;
+	pSiS->copyBpp = pSrcPixmap->drawable.bitsPerPixel >> 3;
+	pSiS->copySPitch = exaGetPixmapPitch(pSrcPixmap);
+	pSiS->copyDPitch = exaGetPixmapPitch(pDstPixmap);
 	pSiS->copySrcBase = (CARD32)exaGetPixmapOffset(pSrcPixmap);
 	pSiS->copyDstBase = (CARD32)exaGetPixmapOffset(pDstPixmap);
 
@@ -776,7 +790,7 @@ SiSAccelInit(ScreenPtr pScreen)
 	  pSiS->EXADriverPtr->card.memoryBase = pSiS->FbBase;
 	  pSiS->EXADriverPtr->card.memorySize = pSiS->maxxfbmem;
 	  pSiS->EXADriverPtr->card.offScreenBase = pScrn->virtualX * pScrn->virtualY
-						* ((pScrn->bitsPerPixel + 7) >> 3);
+						* (pScrn->bitsPerPixel >> 3);
 	  if(pSiS->EXADriverPtr->card.memorySize > pSiS->EXADriverPtr->card.offScreenBase) {
 	     pSiS->EXADriverPtr->card.flags = EXA_OFFSCREEN_PIXMAPS;
 	  } else {
@@ -785,7 +799,7 @@ SiSAccelInit(ScreenPtr pScreen)
 		"Not enough video RAM for offscreen memory manager. Xv disabled\n");
 	  }
 	  pSiS->EXADriverPtr->card.pixmapOffsetAlign = 8;	/* src/dst: double quad word boundary */
-	  pSiS->EXADriverPtr->card.pixmapPitchAlign = 1;
+	  pSiS->EXADriverPtr->card.pixmapPitchAlign = 8;	/* could possibly be 1, but who knows for sure */
 	  pSiS->EXADriverPtr->card.maxX = 2047;
 	  pSiS->EXADriverPtr->card.maxY = 2047;
 

@@ -1719,16 +1719,20 @@ SiSPrepareSolid(PixmapPtr pPixmap, int alu, Pixel planemask, Pixel fg)
 	   }
 	}
 
+	/* Check that the pitch matches the hardware's requirements. Should
+	 * never be a problem due to pixmapPitchAlign and fbScreenInit.
+	 */
+	if(exaGetPixmapPitch(pPixmap) & 3)
+	   return FALSE;
+
 	SiSSetupDSTColorDepth((pPixmap->drawable.bitsPerPixel >> 4) << 16);
 	SiSCheckQueue(16 * 1);
-	SiSSetupPATFGDSTRect(fg, (exaGetPixmapPitch(pPixmap) + 3) & ~3, DEV_HEIGHT)
+	SiSSetupPATFGDSTRect(fg, exaGetPixmapPitch(pPixmap), DEV_HEIGHT)
 	SiSSetupROP(SiSGetPatternROP(alu))
 	SiSSetupCMDFlag(PATFG)
 	SiSSyncWP
 
 	pSiS->fillDstBase = (CARD32)exaGetPixmapOffset(pPixmap) + FBOFFSET;
-
-	pSiS->fillXoffs = 0;
 
 	return TRUE;
 }
@@ -1738,9 +1742,6 @@ SiSSolid(PixmapPtr pPixmap, int x1, int y1, int x2, int y2)
 {
 	ScrnInfoPtr pScrn = xf86Screens[pPixmap->drawable.pScreen->myNum];
 	SISPtr pSiS = SISPTR(pScrn);
-
-	x1 += pSiS->fillXoffs;
-	x2 += pSiS->fillXoffs;
 
 	/* SiSSetupCMDFlag(BITBLT)  - BITBLT = 0 */
 
@@ -1773,11 +1774,17 @@ SiSPrepareCopy(PixmapPtr pSrcPixmap, PixmapPtr pDstPixmap, int xdir, int ydir,
 	   (pDstPixmap->drawable.bitsPerPixel != 32))
 	   return FALSE;
 
+	/* Check that the pitch matches the hardware's requirements. Should
+	 * never be a problem due to pixmapPitchAlign and fbScreenInit.
+	 */
+	if(exaGetPixmapPitch(pSrcPixmap) & 3)
+	   return FALSE;
+	if(exaGetPixmapPitch(pDstPixmap) & 3)
+	   return FALSE;
+
 	srcbase = (CARD32)exaGetPixmapOffset(pSrcPixmap) + FBOFFSET;
-	pSiS->copySXoffs = 0;
 
 	dstbase = (CARD32)exaGetPixmapOffset(pDstPixmap) + FBOFFSET;
-	pSiS->copyDXoffs = 0;
 
 	/* TODO: Will there eventually be overlapping blits?
 	 * If so, good night. Then we must calculate new base addresses
@@ -1788,8 +1795,8 @@ SiSPrepareCopy(PixmapPtr pSrcPixmap, PixmapPtr pDstPixmap, int xdir, int ydir,
 
 	SiSSetupDSTColorDepth((pDstPixmap->drawable.bitsPerPixel >> 4) << 16);
 	SiSCheckQueue(16 * 3);
-	SiSSetupSRCPitchDSTRect((exaGetPixmapPitch(pSrcPixmap) + 3) & ~3,
-					(exaGetPixmapPitch(pDstPixmap) + 3) & ~3, DEV_HEIGHT)
+	SiSSetupSRCPitchDSTRect(exaGetPixmapPitch(pSrcPixmap),
+					exaGetPixmapPitch(pDstPixmap), DEV_HEIGHT)
 	SiSSetupROP(SiSGetCopyROP(alu))
 	SiSSetupSRCDSTBase(srcbase, dstbase)
 	SiSSyncWP
@@ -1802,9 +1809,6 @@ SiSCopy(PixmapPtr pDstPixmap, int srcX, int srcY, int dstX, int dstY, int width,
 {
 	ScrnInfoPtr pScrn = xf86Screens[pDstPixmap->drawable.pScreen->myNum];
 	SISPtr pSiS = SISPTR(pScrn);
-
-	srcX += pSiS->copySXoffs;
-	dstX += pSiS->copyDXoffs;
 
 	SiSCheckQueue(16 * 2);
 	SiSSetupSRCDSTXY(srcX, srcY, dstX, dstY)

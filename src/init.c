@@ -790,18 +790,13 @@ SiS_GetModeID_TV(int VGAEngine, unsigned int VBFlags, int HDisplay, int VDisplay
 		if(VDisplay == 480) {
 		   ModeIndex = ModeIndex_720x480[Depth];
 		} else if(VDisplay == 576) {
-		   /*if( ((VBFlags & TV_YPBPR) && (VBFlags & (TV_YPBPR750P | TV_YPBPR625P | TV_YPBPR625I))) ||
-		       ((!(VBFlags & (TV_YPBPR | TV_PALM))) && (VBFlags & TV_PAL)) ) */
-		      ModeIndex = ModeIndex_720x576[Depth];
+		   ModeIndex = ModeIndex_720x576[Depth];
 		}
 	     }
              break;
 	case 768:
 	     if((!(VBFlags & TV_HIVISION)) && (!((VBFlags & TV_YPBPR) && (VBFlags & TV_YPBPR1080I)))) {
-		/*if( ((VBFlags & TV_YPBPR) && (VBFlags & (TV_YPBPR750P | TV_YPBPR625P | TV_YPBPR625I))) ||
-		    ((!(VBFlags & (TV_YPBPR | TV_PALM))) && (VBFlags & TV_PAL)) ) { */
-		   if(VDisplay == 576) ModeIndex = ModeIndex_768x576[Depth];
-		/* } */
+		if(VDisplay == 576) ModeIndex = ModeIndex_768x576[Depth];
              }
 	     break;
 	case 800:
@@ -820,15 +815,10 @@ SiS_GetModeID_TV(int VGAEngine, unsigned int VBFlags, int HDisplay, int VDisplay
 	     }
 	     break;
 	case 1024:
-	     if(VDisplay == 768) {
-		if(VBFlags2 & VB2_30xBLV) {
+	     if(VBFlags2 & VB2_30xBLV) {
+	        if(VDisplay == 768) {
 		   ModeIndex = ModeIndex_1024x768[Depth];
-		}
-	     } else if(VDisplay == 576) {
-		if( (VBFlags & TV_HIVISION) ||
-		    /*((VBFlags & TV_YPBPR) && (VBFlags & (TV_YPBPR1080I | TV_YPBPR750P | TV_YPBPR625P | TV_YPBPR625I))) || */
-		    ((VBFlags2 & VB2_30xBLV) /*&&
-		     ((!(VBFlags & (TV_YPBPR | TV_PALM))) && (VBFlags & TV_PAL))*/) ) {
+		} else if(VDisplay == 576) {
 		   ModeIndex = ModeIndex_1024x576[Depth];
 		}
 	     }

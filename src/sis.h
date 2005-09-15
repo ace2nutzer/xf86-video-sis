@@ -37,7 +37,7 @@
 
 #define SISDRIVERVERSIONYEAR    5
 #define SISDRIVERVERSIONMONTH   9
-#define SISDRIVERVERSIONDAY     6
+#define SISDRIVERVERSIONDAY     15
 #define SISDRIVERREVISION       1
 
 #define SISDRIVERIVERSION ((SISDRIVERVERSIONYEAR << 16) |  \
@@ -643,9 +643,12 @@ typedef unsigned char  UChar;
 #define SiS_SD2_SUPPORT625I    0x04000000   /* Support YPbPr 625i */
 #define SiS_SD2_SUPPORT625P    0x08000000   /* Support YPbPr 625p */
 #define SiS_SD2_VBINVB2ONLY    0x10000000   /* VB_* bits in vbflags no longer used for vb type */
+#define SiS_SD2_NEWGAMMABRICON 0x20000000   /* Support new gamma brightness/contrast */
 /* ... */
 #define SiS_SD2_HAVESD34       0x40000000   /* Support SD3 and SD4 flags (for future use) */
 #define SiS_SD2_NOOVERLAY      0x80000000   /* No video overlay */
+
+#define SiS_SD3_OLDGAMMAINUSE  0x00000001   /* Old gamma brightness is currently in use */
 
 #define SIS_DIRECTKEY          0x03145792
 
@@ -860,7 +863,9 @@ typedef struct {
     Bool		restorebyset;
     Bool		CRT1gamma, CRT1gammaGiven, CRT2gamma, XvGamma, XvGammaGiven, XvDefAdaptorBlit;
     int			XvGammaRed, XvGammaGreen, XvGammaBlue;
-    int			GammaBriR, GammaBriG, GammaBriB;	/* strictly for Xinerama */
+    int			GammaBriR, GammaBriG, GammaBriB;		/* strictly for Xinerama */
+    float		NewGammaBriR, NewGammaBriG, NewGammaBriB;	/* strictly for Xinerama */
+    float		NewGammaConR, NewGammaConG, NewGammaConB;	/* strictly for Xinerama */
     unsigned int	CRT1MonGamma, CRT2MonGamma;
     unsigned int	CRT1VGAMonitorGamma, CRT2LCDMonitorGamma, CRT2VGAMonitorGamma;
     int			curxvcrtnum;
@@ -1009,9 +1014,9 @@ typedef struct {
 #endif
 #ifdef SIS_USE_EXA
     ExaDriverPtr	EXADriverPtr;
-    int			fillPitch, fillBpp, fillXoffs;
+    int			fillPitch, fillBpp;
     CARD32		fillDstBase;
-    int			copySXoffs, copyDXoffs, copyBpp;
+    int			copyBpp;
     int			copySPitch, copyDPitch;
     CARD32		copySrcBase, copyDstBase;
     int			copyXdir, copyYdir;
@@ -1324,6 +1329,10 @@ typedef struct {
     float		GammaR2, GammaG2, GammaB2;
     int			GammaR2i, GammaG2i, GammaB2i;
     int			GammaBriR2, GammaBriG2, GammaBriB2;
+    float		NewGammaBriR, NewGammaBriG, NewGammaBriB;
+    float		NewGammaConR, NewGammaConG, NewGammaConB;
+    float		NewGammaBriR2, NewGammaBriG2, NewGammaBriB2;
+    float		NewGammaConR2, NewGammaConG2, NewGammaConB2;
     ExtensionEntry	*SiSCtrlExtEntry;
     char		devsectname[32];
     Bool		SCLogQuiet;
