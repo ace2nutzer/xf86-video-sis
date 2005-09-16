@@ -86,6 +86,20 @@ SiSXConvertMono2ARGB(SISPtr pSiS)
    }
 }
 
+#ifdef SISDUALHEAD
+static void
+UpdateHWCursorStatus(SISPtr pSiS)
+{
+    int i, offs = 0;
+
+    if(pSiS->SecondHead) offs = 8;
+
+    for(i = 0; i < 8; i++) {
+       pSiS->HWCursorBackup[offs + i] = SIS_MMIO_IN32(pSiS->IOBase, 0x8500 + ((offs + i) << 2));
+    }
+}
+#endif
+
 static void
 SiSHideCursor(ScrnInfoPtr pScrn)
 {
@@ -719,6 +733,12 @@ SiS300LoadCursorImage(ScrnInfoPtr pScrn, UChar *src)
        SiSMemCopyToVideoRam(pSiS, (UChar *)dest + (cursor_addr * 1024), src, 1024);
     }
 
+#ifdef SISDUALHEAD
+    if(pSiS->DualHeadMode) {
+       UpdateHWCursorStatus(pSiS);
+    }
+#endif
+
     if(pSiS->UseHWARGBCursor) {
        if(pSiS->VBFlags & DISPTYPE_CRT1) {
 	  status1 = sis300GetCursorStatus;
@@ -812,6 +832,12 @@ SiS310LoadCursorImage(ScrnInfoPtr pScrn, UChar *src)
     } else {
        SiSMemCopyToVideoRam(pSiS, (UChar *)dest + (cursor_addr * 1024), src, 1024);
     }
+
+#ifdef SISDUALHEAD
+    if(pSiS->DualHeadMode) {
+       UpdateHWCursorStatus(pSiS);
+    }
+#endif
 
     if(pSiS->ChipFlags & SiSCF_CRT2HWCKaputt) {
 
@@ -1138,6 +1164,12 @@ SiS300LoadCursorImageARGB(ScrnInfoPtr pScrn, CursorPtr pCurs)
 	}
     }
 
+#ifdef SISDUALHEAD
+    if(pSiS->DualHeadMode) {
+       UpdateHWCursorStatus(pSiS);
+    }
+#endif
+
     if(!pSiS->UseHWARGBCursor) {
        if(pSiS->VBFlags & DISPTYPE_CRT1) {
 	  status1 = sis300GetCursorStatus;
@@ -1256,6 +1288,12 @@ static void SiS310LoadCursorImageARGB(ScrnInfoPtr pScrn, CursorPtr pCurs)
 	  }
        }
     }
+
+#ifdef SISDUALHEAD
+    if(pSiS->DualHeadMode) {
+       UpdateHWCursorStatus(pSiS);
+    }
+#endif
 
     if(pSiS->ChipFlags & SiSCF_CRT2HWCKaputt) {
        if(!pSiS->UseHWARGBCursor) {

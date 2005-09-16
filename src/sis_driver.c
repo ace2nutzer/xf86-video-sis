@@ -3197,6 +3197,10 @@ SiS_CheckKernelFB(ScrnInfoPtr pScrn)
           xf86DrvMsg(pScrn->scrnIndex, X_PROBED, "sisfb not found\n");
        }
     }
+
+    if(!pSiS->sisfbfound) {
+       pSiS->sisfbcardposted = FALSE;
+    }
 }
 
 static void
@@ -12108,7 +12112,6 @@ void SiS_SetTVyscale(ScrnInfoPtr pScrn, int val)
 	 Bool usentsc = FALSE;
 	 Bool is750p = FALSE;
 	 Bool is1080i = FALSE;
-	 Bool usedef301c = FALSE;
 	 Bool skipmoveup = FALSE;
 
 	 SiS_UnLockCRT2(pSiS->SiS_Pr);
@@ -12180,7 +12183,6 @@ void SiS_SetTVyscale(ScrnInfoPtr pScrn, int val)
 	       srindex = 56;
 	    } else {
 	       srindex  = usentsc ? 147 : 28;
-	       if(usentsc) usedef301c = TRUE;
 	    }
 	    break;
 	 case 0x70:   /* 800x480 */
@@ -12192,7 +12194,6 @@ void SiS_SetTVyscale(ScrnInfoPtr pScrn, int val)
 	       srindex = 63;
 	    } else {
 	       srindex = usentsc ? 175 : 21;
-	       if(usentsc) usedef301c = TRUE;
 	    }
 	    break;
 	 case 0x51:   /* 400x300 - hdclk mode */
@@ -12235,7 +12236,6 @@ void SiS_SetTVyscale(ScrnInfoPtr pScrn, int val)
 	       srindex = 77;
 	    } else {
 	       srindex  = usentsc ? 182 : 189;
-	       usedef301c = TRUE;
 	    }
 	    break;
 	 case 0x52:	/* 512x384 */
@@ -12252,13 +12252,10 @@ void SiS_SetTVyscale(ScrnInfoPtr pScrn, int val)
 	       srindex = 84;
 	    } else if(!usentsc) {
 	       srindex = 154;
-	       usedef301c = TRUE;
 	    } else if(vdediv == 1) {
 	       if(!hdclk) srindex = 168;
-	       usedef301c = TRUE;
 	    } else {
 	       if(!hdclk) srindex = 161;
-	       usedef301c = TRUE;
 	    }
 	    break;
 	 case 0x79:	/* 1280x720 */
@@ -12351,13 +12348,12 @@ void SiS_SetTVyscale(ScrnInfoPtr pScrn, int val)
 
 	 } else {
 
-	    int realvde, j, srindex301c, myypos, watchdog = 32;
+	    int realvde, myypos, watchdog = 32;
 	    unsigned short temp1, temp2, vgahde, vgaht, vgavt;
 	    int p1div = 1;
 	    ULong calctemp;
 
 	    srindex += i;
-	    srindex301c = srindex * 64;
 	    newvde = SiSTVVScale[srindex].ScaleVDE;
 	    realvde = SiSTVVScale[srindex].RealVDE;
 
@@ -12379,13 +12375,7 @@ void SiS_SetTVyscale(ScrnInfoPtr pScrn, int val)
 	    SISWaitRetraceCRT2(pScrn);
 
 	    if(pSiS->VBFlags2 & VB2_SISTAP4SCALER) {
-	       if(is1080i || is750p || usedef301c) {
-	          /* Have no data yet */
-	          srindex301c = 42 * 64;
-	       }
-	       for(j=0; j<64; j++) {
-		  outSISIDXREG(SISPART2,(0xc0 + j), SiS301CScaling[srindex301c + j]);
-	       }
+	       SiS_CalcXTapScaler(pSiS, realvde, newvde, 4, FALSE);
 	    }
 
 	    if(!(pSiS->VBFlags2 & VB2_301)) {
@@ -12973,21 +12963,6 @@ SiSPostSetMode(ScrnInfoPtr pScrn, SISRegPtr sisReg)
        for(i = 0; i < 16; i++) {
           pSiS->HWCursorBackup[i] = SIS_MMIO_IN32(pSiS->IOBase, 0x8500 + (i << 2));
        }
-#ifdef SISDUALHEAD
-       if(pSiS->DualHeadMode) {
-          SISPtr pSiS2 = NULL;
-          if(pSiS->SecondHead) {
-             if(pSiSEnt->pScrn_1) pSiS2 = SISPTR(pSiSEnt->pScrn_1);
-          } else {
-             if(pSiSEnt->pScrn_2) pSiS2 = SISPTR(pSiSEnt->pScrn_2);
-          }
-          if(pSiS2) {
-             for(i = 0; i < 16; i++) {
-	        pSiS2->HWCursorBackup[i] = pSiS->HWCursorBackup[i];
-	     }
-	  }
-       }
-#endif
        if(pSiS->ChipType >= SIS_330) {
           /* Enable HWCursor protection (Y pos as trigger) */
           andSISIDXREG(SISCR, 0x5b, ~0x30);

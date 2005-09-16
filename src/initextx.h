@@ -467,6 +467,8 @@ BOOLEAN		SiS_GetPanelID(struct SiS_Private *SiS_Pr);
 unsigned short	SiS_SenseLCDDDC(struct SiS_Private *SiS_Pr, SISPtr pSiS);
 unsigned short	SiS_SenseVGA2DDC(struct SiS_Private *SiS_Pr, SISPtr pSiS);
 
+void		SiS_CalcXTapScaler(SISPtr pSiS, int srcsize, int destsize, int taps, Bool ishoriz);
+
 extern unsigned char	SiS_GetReg(SISIOADDRESS port, unsigned short index);
 extern void		SiS_SetReg(SISIOADDRESS port, unsigned short index, unsigned short data);
 extern void		SiS_SetRegOR(SISIOADDRESS, unsigned short, unsigned short);

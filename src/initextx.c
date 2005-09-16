@@ -1501,3 +1501,111 @@ SiS_SenseVGA2DDC(struct SiS_Private *SiS_Pr, SISPtr pSiS)
    return(0);
 }
 
+/* 4-tap scaler for 301C and later */
+
+static float
+rcos(float x)
+{
+   double pi = 3.14159265358979;
+   float  r = 0.5, y;
+
+    if(x == 0.0) {
+       y = 1.0;
+    } else if(x == -1.0 || x == 1.0) {
+       y = 0.0;
+    } else {
+       y = sin(pi * x) / (pi * x) * cos(r * pi * x) / (1 - x * x);
+    }
+
+    return y;
+}
+
+static int
+roundandconv(float in)
+{
+    int a = ((int)(in)) * 10;
+    int b = (int)(in * 10.0);
+
+    if (in >= 0) {
+      if((b - a) < 5)  return (a / 10);
+      else             return (a / 10) + 1;
+    } else {
+      if((b - a) > -5) return (a / 10);
+      else             return (a / 10) -1;
+    }
+}
+
+void
+SiS_CalcXTapScaler(SISPtr pSiS, int srcsize, int destsize, int taps, Bool ishoriz)
+{
+   float scale = (float)srcsize / (float)destsize;
+   int   coe_bit_number = 6;
+   float fixnumber = (float)(1 << (coe_bit_number - 1));
+   float ops, WW, W[8];
+   int   WeightMat[16][8];
+   int   i, j, index;
+
+   /* For now: */
+   if(taps != 4) taps = 4;
+
+   if(scale < 1.0)      scale = 1.0;
+   else if(scale > 1.0) scale *= 1.1;
+
+   for(i = 0; i < 16; i++) {
+
+      ops = (float)i / (16.0 * scale);
+
+      switch(taps) {
+      case 4:
+	 W[0] = rcos( 1.0 / scale + ops);
+	 W[1] = rcos( 0.0 / scale + ops);
+	 W[2] = rcos(-1.0 / scale + ops);
+	 W[3] = rcos(-2.0 / scale + ops);
+
+	 WW = W[0] + W[1] + W[2] + W[3];
+
+	 WeightMat[i][0] = roundandconv(W[0] / WW * fixnumber);
+	 WeightMat[i][1] = roundandconv(W[1] / WW * fixnumber);
+	 WeightMat[i][2] = roundandconv(W[2] / WW * fixnumber);
+	 WeightMat[i][3] = (int)fixnumber - WeightMat[i][0] - WeightMat[i][1] - WeightMat[i][2];
+	 break;
+#if 0 /* For future use */
+     case 8:
+	 W[0] = rcos( 3.0/scale + ops);
+	 W[1] = rcos( 2.0/scale + ops);
+	 W[2] = rcos( 1.0/scale + ops);
+	 W[3] = rcos( 0.0/scale + ops);
+	 W[4] = rcos(-1.0/scale + ops);
+	 W[5] = rcos(-2.0/scale + ops);
+	 W[6] = rcos(-3.0/scale + ops);
+	 W[7] = rcos(-4.0/scale + ops);
+
+	 WW = W[0] + W[1] + W[2] + W[3] + W[4] + W[5] + W[6] + W[7];
+
+	 WeightMat[i][0] = roundandconv(W[0]/WW * fixnumber);
+	 WeightMat[i][1] = roundandconv(W[1]/WW * fixnumber);
+	 WeightMat[i][2] = roundandconv(W[2]/WW * fixnumber);
+	 WeightMat[i][3] = roundandconv(W[3]/WW * fixnumber);
+	 WeightMat[i][4] = roundandconv(W[4]/WW * fixnumber);
+	 WeightMat[i][5] = roundandconv(W[5]/WW * fixnumber);
+	 WeightMat[i][6] = roundandconv(W[6]/WW * fixnumber);
+	 WeightMat[i][7] = (int)fixnumber - WeightMat[i][0] - WeightMat[i][1] -
+					    WeightMat[i][2] - WeightMat[i][3] -
+					    WeightMat[i][4] - WeightMat[i][5] - WeightMat[i][6];
+	 break;
+#endif
+      }
+   }
+
+   index = ishoriz ? 0x80 : 0xc0;
+   for(i = 0; i < 16; i++) {
+      for(j = 0; j < 4 /* taps! */; j++) {
+         if(WeightMat[i][j] < 0) {
+	    WeightMat[i][j] = ((~(-WeightMat[i][j])) + 1) & 0x7f;
+         }
+         SiS_SetReg(pSiS->SiS_Pr->SiS_Part2Port, index++, WeightMat[i][j]);
+      }
+   }
+
+}
+

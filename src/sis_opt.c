@@ -619,6 +619,11 @@ SiSOptions(ScrnInfoPtr pScrn)
        pSiS->doRender = FALSE;
     }
 
+    if(pSiS->Chipset == PCI_CHIP_XGIXG20) {
+       /* No video overlay, no video blitter */
+       pSiS->NoXvideo = TRUE;
+    }
+
     /* DRI only supported on 300 series,
      * so don't load DRI by default on
      * others.
@@ -1151,7 +1156,7 @@ SiSOptions(ScrnInfoPtr pScrn)
 	        pSiS->forcecrt2redetection = FALSE;
 	  }
 
-	  /* SenseYPbPr (315/330 series only)
+	  /* SenseYPbPr (315/330 series and later only)
 	   * If set to true, the driver will sense for YPbPr TV. This is
 	   * inconvenient for folks connecting SVideo and CVBS at the same
 	   * time, because this condition will be detected as YPbPr (since
@@ -1163,7 +1168,7 @@ SiSOptions(ScrnInfoPtr pScrn)
 	     else    pSiS->SenseYPbPr = FALSE;
 	  }
 
-	  /* ForceCRT1Type (315/330 series only)
+	  /* ForceCRT1Type (315/330 series and later only)
 	   * Used for forcing the driver to initialize CRT1 as
 	   * VGA (analog) or LCDA (for simultanious LCD and TV
 	   * display) - on M650/651 and 661 or later with 301C/30xLV only!
@@ -1193,7 +1198,7 @@ SiSOptions(ScrnInfoPtr pScrn)
 	     }
 	  }
 
-	  /* ForceCRT1 (300/315/330 series only)
+	  /* ForceCRT1 (300/315/330 series and later only)
 	   * This option can be used to force CRT1 (VGA) to be switched on/off. Its
 	   * intention is mainly for old monitors that can't be detected
 	   * automatically. This is only useful on machines with a video bridge.
@@ -1208,7 +1213,7 @@ SiSOptions(ScrnInfoPtr pScrn)
 	     }
 	  }
 
-	  /* ForceCRT2Type (300/315/330 series only)
+	  /* ForceCRT2Type (300/315/330 series and later only)
 	   * Used for forcing the driver to use a given CRT2 device type.
 	   * (SVIDEO, COMPOSITE and SCART for overriding detection)
 	   */
@@ -1407,7 +1412,7 @@ SiSOptions(ScrnInfoPtr pScrn)
 	     }
 	  }
 
-	 /* ScaleLCD (300/315/330 series only)
+	 /* ScaleLCD (300/315/330 series and later only)
 	  * Can be used to force the bridge/panel link to [do|not do] the
 	  * scaling of modes lower than the panel's native resolution.
 	  * Setting this to TRUE will force the bridge/panel link
@@ -1420,7 +1425,7 @@ SiSOptions(ScrnInfoPtr pScrn)
 	         pSiS->UsePanelScaler ? disabledstr : enabledstr);
 	  }
 
-	 /* CenterLCD (300/315/330 + SiS video bridge only)
+	 /* CenterLCD (300/315/330/later + SiS video bridge only)
 	  * If LCD shall not be scaled, this selects whether 1:1 data
 	  * will be sent to the output, or the image shall be centered
 	  * on the LCD. For LVDS panels, screen will always be centered,
@@ -1435,7 +1440,7 @@ SiSOptions(ScrnInfoPtr pScrn)
 	         pSiS->CenterLCD ? "not " : "");
 	  }
 
-	 /* PanelDelayCompensation (300/315/330 series only)
+	 /* PanelDelayCompensation (300/315/330 series and later only)
 	  * This might be required if the LCD panel shows "small waves"
 	  * or wrong colors.
 	  * The parameter is an integer, (on 300 series usually either
@@ -1464,7 +1469,7 @@ SiSOptions(ScrnInfoPtr pScrn)
 	     }
           }
 
-	 /* PanelDelayCompensation1 (315/330 series only)
+	 /* PanelDelayCompensation1 (315/330 series and later only)
 	  * Same as above, but for LCD-via-CRT1 ("LCDA")
 	  */
 	  if(pSiS->VGAEngine == SIS_315_VGA) {
@@ -1483,7 +1488,7 @@ SiSOptions(ScrnInfoPtr pScrn)
 	     }
 	  }
 
-	 /* LVDSHL (300/315/330 series + 30xLV bridge only)
+	 /* LVDSHL (300/315/330/later series + 30xLV bridge only)
 	  * This might be required if the LCD panel is too dark.
 	  * The parameter is an integer from 0 to 3.
 	  */
@@ -1498,7 +1503,7 @@ SiSOptions(ScrnInfoPtr pScrn)
 	     }
           }
 
-	 /* EMI (315/330 series + 302LV/302ELV bridge only)
+	 /* EMI (315/330/later series + 302LV/302ELV bridge only)
 	  * This might be required if the LCD panel loses sync on
 	  * mode switches. So far, this problem should not show up
 	  * due to the auto-detection (from reading the values set
@@ -1519,7 +1524,7 @@ SiSOptions(ScrnInfoPtr pScrn)
 	     }
 	  }
 
-	 /* TVBlueWorkAround (315 series only)
+	 /* TVBlueWorkAround (315/later series only)
 	  * TRUE and FALSE are two ways to work around a "blue shade" on
 	  * TV output. This work-around is disabled by not setting the
 	  * option. 315 series + 301B-DH only.
@@ -1530,7 +1535,7 @@ SiSOptions(ScrnInfoPtr pScrn)
 	     }
 	  }
 
-	 /* ForcePanelRGB (300/315/330 series only)
+	 /* ForcePanelRGB (300/315/330 series and later only)
 	  * Can be used to force the bridge/panel link to assume a
 	  * specified LCD color capability of 18 or 24 bit in cases
 	  * where the BIOS carries incorrect information (such as in
@@ -1550,7 +1555,7 @@ SiSOptions(ScrnInfoPtr pScrn)
        }
 
 
-       /* TVStandard (300/315/330 series and 6326 w/ TV only)
+       /* TVStandard (300/315/330/later series and 6326 w/ TV only)
 	* This option is for overriding the autodetection of
 	* the BIOS/Jumper option for PAL / NTSC
 	*/
@@ -1599,7 +1604,7 @@ SiSOptions(ScrnInfoPtr pScrn)
 	  }
        }
 
-       /* CHTVType  (315/330 series + Chrontel only)
+       /* CHTVType  (315/330/later series + Chrontel only)
 	* Used for telling the driver if the TV output shall
 	* be 525i YPbPr or SCART.
 	*/
@@ -1621,8 +1626,8 @@ SiSOptions(ScrnInfoPtr pScrn)
 	  }
        }
 
-       /* CHTVOverscan (300/315/330 series only)
-	* CHTVSuperOverscan (300/315/330 series only)
+       /* CHTVOverscan (300/315/330 series and later only)
+	* CHTVSuperOverscan (300/315/330 series and later only)
 	* These options are for overriding the BIOS option for
 	* TV Overscan. Some BIOSes don't even have such an option.
 	* SuperOverscan is only supported with PAL.
