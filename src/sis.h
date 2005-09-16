@@ -644,7 +644,6 @@ typedef unsigned char  UChar;
 #define SiS_SD2_SUPPORT625P    0x08000000   /* Support YPbPr 625p */
 #define SiS_SD2_VBINVB2ONLY    0x10000000   /* VB_* bits in vbflags no longer used for vb type */
 #define SiS_SD2_NEWGAMMABRICON 0x20000000   /* Support new gamma brightness/contrast */
-/* ... */
 #define SiS_SD2_HAVESD34       0x40000000   /* Support SD3 and SD4 flags (for future use) */
 #define SiS_SD2_NOOVERLAY      0x80000000   /* No video overlay */
 

@@ -12973,6 +12973,21 @@ SiSPostSetMode(ScrnInfoPtr pScrn, SISRegPtr sisReg)
        for(i = 0; i < 16; i++) {
           pSiS->HWCursorBackup[i] = SIS_MMIO_IN32(pSiS->IOBase, 0x8500 + (i << 2));
        }
+#ifdef SISDUALHEAD
+       if(pSiS->DualHeadMode) {
+          SISPtr pSiS2 = NULL;
+          if(pSiS->SecondHead) {
+             if(pSiSEnt->pScrn_1) pSiS2 = SISPTR(pSiSEnt->pScrn_1);
+          } else {
+             if(pSiSEnt->pScrn_2) pSiS2 = SISPTR(pSiSEnt->pScrn_2);
+          }
+          if(pSiS2) {
+             for(i = 0; i < 16; i++) {
+	        pSiS2->HWCursorBackup[i] = pSiS->HWCursorBackup[i];
+	     }
+	  }
+       }
+#endif
        if(pSiS->ChipType >= SIS_330) {
           /* Enable HWCursor protection (Y pos as trigger) */
           andSISIDXREG(SISCR, 0x5b, ~0x30);
