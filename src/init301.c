@@ -6454,67 +6454,6 @@ SiS_SetGroup1(struct SiS_Private *SiS_Pr, unsigned short ModeNo, unsigned short 
 /*********************************************/
 
 #ifdef SIS315H
-static unsigned char *
-SiS_GetGroup2CLVXPtr(struct SiS_Private *SiS_Pr, int tabletype)
-{
-   const struct SiS_Tap4scalerP2 *tableptr;
-   unsigned short a, b, e = 1, p;
-
-   if(tabletype) {
-      a = SiS_Pr->SiS_VGAVDE;
-      b = SiS_Pr->SiS_VDE;
-   } else {
-      a = SiS_Pr->SiS_VGAHDE;
-      b = SiS_Pr->SiS_HDE;
-   }
-
-   if(a > b) {
-      if(SiS_Pr->SiS_VBInfo & SetCRT2ToHiVision) {
-	 tableptr = SiS_Part2CLVX_1080i;
-      } else if(SiS_Pr->SiS_TVMode & TVSetYPbPr750p) {
-	 tableptr = SiS_Part2CLVX_750p;
-	 e = 2;
-      } else if(SiS_Pr->SiS_TVMode & TVSetPALTiming) {
-	 tableptr = SiS_Part2CLVX_PAL;
-	 e = 3;
-      } else {
-	 tableptr = SiS_Part2CLVX_NTSC;
-	 e = 3;
-      }
-
-      for(p = 0; p < e; p++) {
-	 if(tableptr[p].de == a)
-	    return ((unsigned char *)&tableptr[p].reg[0]);
-      }
-   }
-   return ((unsigned char *)&SiS_Part2CLVX_1[0].reg[0]);
-}
-
-static void
-SiS_SetGroup2_C_ELV(struct SiS_Private *SiS_Pr, unsigned short ModeNo, unsigned short ModeIdIndex,
-	      	    unsigned short RefreshRateTableIndex)
-{
-   unsigned char *tableptr;
-   unsigned char temp;
-   int i, j;
-
-   if(!(SiS_Pr->SiS_VBType & VB_SISTAP4SCALER)) return;
-
-   tableptr = SiS_GetGroup2CLVXPtr(SiS_Pr, 0);
-   for(i = 0x80, j = 0; i <= 0xbf; i++, j++) {
-      SiS_SetReg(SiS_Pr->SiS_Part2Port, i, tableptr[j]);
-   }
-   if(SiS_Pr->SiS_VBInfo & SetCRT2ToTV) {
-      tableptr = SiS_GetGroup2CLVXPtr(SiS_Pr, 1);
-      for(i = 0xc0, j = 0; i <= 0xff; i++, j++) {
-         SiS_SetReg(SiS_Pr->SiS_Part2Port, i, tableptr[j]);
-      }
-   }
-   temp = 0x10;
-   if(SiS_Pr->SiS_VBInfo & SetCRT2ToTV) temp |= 0x04;
-   SiS_SetRegANDOR(SiS_Pr->SiS_Part2Port,0x4e,0xeb,temp);
-}
-
 static BOOLEAN
 SiS_GetCRT2Part2Ptr(struct SiS_Private *SiS_Pr,unsigned short ModeNo,unsigned short ModeIdIndex,
 		    unsigned short RefreshRateTableIndex,unsigned short *CRT2Index,
@@ -6971,9 +6910,9 @@ SiS_SetGroup2(struct SiS_Private *SiS_Pr, unsigned short ModeNo, unsigned short 
 
   tempbx = SiS_Pr->SiS_VDE;
   if(SiS_Pr->SiS_VBInfo & SetCRT2ToLCD) {
-     if(SiS_Pr->SiS_VGAVDE == 360) tempbx = 746;
-     if(SiS_Pr->SiS_VGAVDE == 375) tempbx = 746;
-     if(SiS_Pr->SiS_VGAVDE == 405) tempbx = 853;
+     if(SiS_Pr->SiS_VGAVDE == 360)      tempbx = 746;
+     else if(SiS_Pr->SiS_VGAVDE == 375) tempbx = 746;
+     else if(SiS_Pr->SiS_VGAVDE == 405) tempbx = 853;
   } else if( (SiS_Pr->SiS_VBInfo & SetCRT2ToTV) &&
              (!(SiS_Pr->SiS_TVMode & TVSetYPbPrProg)) ) {
      tempbx >>= 1;

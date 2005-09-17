@@ -1696,7 +1696,7 @@ extern void		SiS_Chrontel701xBLOn(struct SiS_Private *SiS_Pr);
 extern void		SiS_Chrontel701xBLOff(struct SiS_Private *SiS_Pr);
 extern void		SiS_SiS30xBLOn(struct SiS_Private *SiS_Pr);
 extern void		SiS_SiS30xBLOff(struct SiS_Private *SiS_Pr);
-extern void		SiS_CalcXTapScaler(SISPtr pSiS, int srcsize, int destsize, int taps, Bool ishoriz);
+extern void		SiS_CalcXTapScaler(struct SiS_Private *SiS_Pr, int srcsize, int destsize, int taps, Bool ishoriz);
 /* End of init.c, init301.c ----- */
 
 

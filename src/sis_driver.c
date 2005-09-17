@@ -12375,7 +12375,7 @@ void SiS_SetTVyscale(ScrnInfoPtr pScrn, int val)
 	    SISWaitRetraceCRT2(pScrn);
 
 	    if(pSiS->VBFlags2 & VB2_SISTAP4SCALER) {
-	       SiS_CalcXTapScaler(pSiS, realvde, newvde, 4, FALSE);
+	       SiS_CalcXTapScaler(pSiS->SiS_Pr, realvde, newvde, 4, FALSE);
 	    }
 
 	    if(!(pSiS->VBFlags2 & VB2_301)) {

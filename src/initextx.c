@@ -1536,7 +1536,7 @@ roundandconv(float in)
 }
 
 void
-SiS_CalcXTapScaler(SISPtr pSiS, int srcsize, int destsize, int taps, Bool ishoriz)
+SiS_CalcXTapScaler(struct SiS_Private *SiS_Pr, int srcsize, int destsize, int taps, Bool ishoriz)
 {
    float scale = (float)srcsize / (float)destsize;
    int   coe_bit_number = 6;
@@ -1603,9 +1603,28 @@ SiS_CalcXTapScaler(SISPtr pSiS, int srcsize, int destsize, int taps, Bool ishori
          if(WeightMat[i][j] < 0) {
 	    WeightMat[i][j] = ((~(-WeightMat[i][j])) + 1) & 0x7f;
          }
-         SiS_SetReg(pSiS->SiS_Pr->SiS_Part2Port, index++, WeightMat[i][j]);
+         SiS_SetReg(SiS_Pr->SiS_Part2Port, index++, WeightMat[i][j]);
       }
    }
 
 }
+
+void
+SiS_SetGroup2_C_ELV(struct SiS_Private *SiS_Pr, unsigned short ModeNo, unsigned short ModeIdIndex,
+	      	    unsigned short RefreshRateTableIndex)
+{
+   unsigned char temp;
+
+   if(!(SiS_Pr->SiS_VBType & VB_SISTAP4SCALER)) return;
+
+   SiS_CalcXTapScaler(SiS_Pr, SiS_Pr->SiS_VGAHDE, SiS_Pr->SiS_HDE, 4, TRUE);
+   if(SiS_Pr->SiS_VBInfo & SetCRT2ToTV) {
+      SiS_CalcXTapScaler(SiS_Pr, SiS_Pr->SiS_VGAVDE, SiS_Pr->SiS_VDE, 4, FALSE);
+   }
+
+   temp = 0x10;
+   if(SiS_Pr->SiS_VBInfo & SetCRT2ToTV) temp |= 0x04;
+   SiS_SetRegANDOR(SiS_Pr->SiS_Part2Port,0x4e,0xeb,temp);
+}
+
 
