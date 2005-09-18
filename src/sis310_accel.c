@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg$ */
+/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/sis310_accel.c,v 1.27 2005/08/24 23:15:23 twini Exp $ */
 /*
  * 2D Acceleration for SiS 315, 330 and 340 series
  *
@@ -131,7 +131,7 @@ static CARD32 SiSDstTextureFormats32[3] = { PICT_x8r8g8b8, PICT_a8r8g8b8, 0 };
 
 #ifdef SIS_USE_EXA		/* EXA */
 void SiSScratchSave(ScreenPtr pScreen, ExaOffscreenArea *area);
-Bool SiSUploadToScreen(PixmapPtr pDst, char *src, int src_pitch);
+Bool SiSUploadToScreen(PixmapPtr pDst, int x, int y, int w, int h, char *src, int src_pitch);
 Bool SiSUploadToScratch(PixmapPtr pSrc, PixmapPtr pDst);
 Bool SiSDownloadFromScreen(PixmapPtr pSrc, int x, int y, int w, int h, char *dst, int dst_pitch);
 #endif /* EXA */
@@ -1872,19 +1872,22 @@ SiSDoneComposite(PixmapPtr pDst)
 #endif
 
 Bool
-SiSUploadToScreen(PixmapPtr pDst, char *src, int src_pitch)
+SiSUploadToScreen(PixmapPtr pDst, int x, int y, int w, int h, char *src, int src_pitch)
 {
 	ScrnInfoPtr pScrn = xf86Screens[pDst->drawable.pScreen->myNum];
 	SISPtr pSiS = SISPTR(pScrn);
 	unsigned char *dst = pDst->devPrivate.ptr;
 	int dst_pitch = exaGetPixmapPitch(pDst);
-	int size = src_pitch < dst_pitch ? src_pitch : dst_pitch;
-	int h = pDst->drawable.height;
 
 	(pSiS->SyncAccel)(pScrn);
 
+	if (pDst->drawable.bitsPerPixel < 8)
+	    return FALSE;
+
+	dst += (x * pDst->drawable.bitsPerPixel / 8) + (y * src_pitch);
 	while(h--) {
-	   SiSMemCopyToVideoRam(pSiS, dst, (unsigned char *)src, size);
+	   SiSMemCopyToVideoRam(pSiS, dst, (unsigned char *)src,
+				(w * pDst->drawable.bitsPerPixel / 8));
 	   src += src_pitch;
 	   dst += dst_pitch;
 	}
@@ -1958,6 +1961,10 @@ SiSDownloadFromScreen(PixmapPtr pSrc, int x, int y, int w, int h, char *dst, int
 
 	(pSiS->SyncAccel)(pScrn);
 
+	if (pSrc->drawable.bitsPerPixel < 8)
+	    return FALSE;
+
+	src += (x * pSrc->drawable.bitsPerPixel / 8) + (y * src_pitch);
 	while(h--) {
 	   SiSMemCopyFromVideoRam(pSiS, (unsigned char *)dst, src, size);
 	   src += src_pitch;
