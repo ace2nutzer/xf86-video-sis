@@ -752,8 +752,6 @@ calcgammaval(int j, int nramp, float invgamma, float bri, float c)
     if(v < 0.0) v = 0.0;
     else if(v > 65535.0) v = 65535.0;
 
-    xf86DrvMsg(0, 0, "j %d v %f = %d\n", j, v, ((unsigned short)v >> 8));
-
     return (unsigned short)v;
 }
 
