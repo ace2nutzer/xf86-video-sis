@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg: xc/programs/Xserver/hw/xfree86/drivers/sis/sis310_accel.c,v 1.27 2005/08/24 23:15:23 twini Exp $ */
+/* $XdotOrg$ */
 /*
  * 2D Acceleration for SiS 315, 330 and 340 series
  *
@@ -1881,8 +1881,8 @@ SiSUploadToScreen(PixmapPtr pDst, int x, int y, int w, int h, char *src, int src
 
 	(pSiS->SyncAccel)(pScrn);
 
-	if (pDst->drawable.bitsPerPixel < 8)
-	    return FALSE;
+	if(pDst->drawable.bitsPerPixel < 8)
+	   return FALSE;
 
 	dst += (x * pDst->drawable.bitsPerPixel / 8) + (y * src_pitch);
 	while(h--) {
@@ -1961,8 +1961,8 @@ SiSDownloadFromScreen(PixmapPtr pSrc, int x, int y, int w, int h, char *dst, int
 
 	(pSiS->SyncAccel)(pScrn);
 
-	if (pSrc->drawable.bitsPerPixel < 8)
-	    return FALSE;
+	if(pSrc->drawable.bitsPerPixel < 8)
+	   return FALSE;
 
 	src += (x * pSrc->drawable.bitsPerPixel / 8) + (y * src_pitch);
 	while(h--) {

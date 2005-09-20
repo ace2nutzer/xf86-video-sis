@@ -166,8 +166,13 @@
 #define SDC_CMD_SETNEWGAMMABRICON2	0x9898005f
 #define SDC_CMD_GETGETNEWGAMMACRT2	0x98980060
 #define SDC_CMD_SETGETNEWGAMMACRT2	0x98980061
+#define SDC_CMD_NEWSETVBFLAGS		0x98980062
+#define SDC_CMD_GETCRT1SATGAIN		0x98980063
+#define SDC_CMD_SETCRT1SATGAIN		0x98980064
+#define SDC_CMD_GETCRT2SATGAIN		0x98980065
+#define SDC_CMD_SETCRT2SATGAIN		0x98980066
 /* more to come, adapt MAXCOMMAND! */
-#define SDC_MAXCOMMAND			SDC_CMD_SETGETNEWGAMMACRT2
+#define SDC_MAXCOMMAND			SDC_CMD_SETCRT2SATGAIN
 
 /* in result_header */
 #define SDC_RESULT_OK  			0x66670000
@@ -291,11 +296,14 @@ SISSwitchCRT1Status(ScrnInfoPtr pScrn, int onoff, Bool quiet)
     SISPtr pSiS = SISPTR(pScrn);
     DisplayModePtr mode = pScrn->currentMode;
     ULong vbflags = pSiS->VBFlags;
+    ULong vbflags3 = pSiS->VBFlags3;
     int crt1off;
 
     /* onoff: 0=OFF, 1=ON(VGA), 2=ON(LCDA) */
 
-    /* Switching to LCDA will disable CRT2 if previously LCD or VGA */
+    /* Switching to LCDA will disable CRT2 if previously LCD or VGA,
+     * unless on a dual-vb setup
+     */
 
     /* For usability reasons, the user should not simply "lose" one
      * of his output devices in MergedFB mode. Therefore, a switch
@@ -306,6 +314,9 @@ SISSwitchCRT1Status(ScrnInfoPtr pScrn, int onoff, Bool quiet)
      * supported together with TV, not any other CRT2 type.)
      * In Non-MergedFB mode, losing one output device is not
      * considered that harmful.
+     * Update: We let the user switch off a device if currently
+     * a "clone" mode is active. Same for switching CRT1 to LCD
+     * while CRT2 is LCD or VGA.
      */
 
     /* Do NOT use this to switch from CRT1_LCDA to CRT2_LCD */
@@ -334,20 +345,24 @@ SISSwitchCRT1Status(ScrnInfoPtr pScrn, int onoff, Bool quiet)
 
 #ifdef SISMERGED
     if(pSiS->MergedFB) {
-       if(!onoff) {
-          if(!quiet) {
-             xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
-	        "CRT1 can't be switched off in MergedFB mode\n");
-	  }
-          return FALSE;
-       } else if(onoff == 2) {
-          if(vbflags & (CRT2_LCD|CRT2_VGA)) {
-	     if(!quiet) {
-	        xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
-	   	   "CRT1 type can only be VGA while CRT2 is LCD or VGA\n");
+       if(((SiSMergedDisplayModePtr)mode->Private)->CRT2Position != sisClone) {
+          if(!onoff) {
+             if(!quiet) {
+                xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
+	           "CRT1 can't be switched off in MergedFB mode unless a clone mode is active\n");
 	     }
              return FALSE;
-	  }
+          } else if(onoff == 2) {
+             if(!(pSiS->SiS_SD3_Flags & SiS_SD3_SUPPORTDUALDVI)) {
+                if(vbflags & (CRT2_LCD|CRT2_VGA)) {
+	           if(!quiet) {
+	              xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
+	   	         "CRT1 type can only be VGA while CRT2 is LCD or VGA\n");
+	           }
+                   return FALSE;
+                }
+	     }
+          }
        }
        if(mode->Private) {
 	  mode = ((SiSMergedDisplayModePtr)mode->Private)->CRT1;
@@ -356,13 +371,19 @@ SISSwitchCRT1Status(ScrnInfoPtr pScrn, int onoff, Bool quiet)
 #endif
 
     vbflags &= ~(DISPTYPE_CRT1 | SINGLE_MODE | MIRROR_MODE | CRT1_LCDA);
+    vbflags3 &= ~(VB3_CRT1_TV | VB3_CRT1_LCD | VB3_CRT1_VGA);
     crt1off = 1;
     if(onoff > 0) {
        vbflags |= DISPTYPE_CRT1;
        crt1off = 0;
        if(onoff == 2) {
 	  vbflags |= CRT1_LCDA;
-	  vbflags &= ~(CRT2_LCD|CRT2_VGA);
+	  vbflags3 |= VB3_CRT1_LCD;
+	  if(!(pSiS->SiS_SD3_Flags & SiS_SD3_SUPPORTDUALDVI)) {
+	     vbflags &= ~(CRT2_LCD|CRT2_VGA);
+	  }
+       } else {
+          vbflags3 |= VB3_CRT1_VGA;
        }
        /* Remember: Dualhead not supported */
        if(vbflags & CRT2_ENABLE) vbflags |= MIRROR_MODE;
@@ -383,6 +404,7 @@ SISSwitchCRT1Status(ScrnInfoPtr pScrn, int onoff, Bool quiet)
 
     pSiS->CRT1off = crt1off;
     pSiS->VBFlags = pSiS->VBFlags_backup = vbflags;
+    pSiS->VBFlags3 = pSiS->VBFlags_backup3 = vbflags3;
 
     /* Sync the accelerators */
     (*pSiS->SyncAccel)(pScrn);
@@ -450,6 +472,8 @@ SISSwitchCRT2Type(ScrnInfoPtr pScrn, ULong newvbflags, Bool quiet)
      * supported together with TV, not any other CRT2 type.)
      * In Non-MergedFB mode, losing one output device is not
      * considered that harmful.
+     * Update: We allow this if currently a "clone" display mode
+     * is active.
      */
 
     /* Only on 300 and 315/330/340 series */
@@ -482,19 +506,24 @@ SISSwitchCRT2Type(ScrnInfoPtr pScrn, ULong newvbflags, Bool quiet)
 
 #ifdef SISMERGED
     if(pSiS->MergedFB) {
-       if(!(newvbflags & CRT2_ENABLE)) {
-          if(!quiet) {
-	     xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
-	        "CRT2 can't be switched off in MergedFB mode\n");
-	  }
-	  return FALSE;
-       }
-       if((newvbflags & (CRT2_LCD|CRT2_VGA)) && (newvbflags & CRT1_LCDA)) {
-          if(!quiet) {
-	     xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
-	        "CRT2 type can only be TV while in LCD-via-CRT1 mode\n");
-	  }
-	  return FALSE;
+       if((mode->Private) &&
+          ((SiSMergedDisplayModePtr)mode->Private)->CRT2Position != sisClone) {
+          if(!(newvbflags & CRT2_ENABLE)) {
+             if(!quiet) {
+	        xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
+	           "CRT2 can't be switched off in MergedFB mode unless a clone mode is active\n");
+	     }
+	     return FALSE;
+          }
+          if(!(pSiS->SiS_SD3_Flags & SiS_SD3_SUPPORTDUALDVI)) {
+             if((newvbflags & (CRT2_LCD|CRT2_VGA)) && (newvbflags & CRT1_LCDA)) {
+                if(!quiet) {
+	           xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
+	              "CRT2 type can only be TV while in LCD-via-CRT1 mode\n");
+	        }
+	        return FALSE;
+	     }
+          }
        }
        hcm = pSiS->HaveCustomModes2;
        if(mode->Private) {
@@ -512,8 +541,10 @@ SISSwitchCRT2Type(ScrnInfoPtr pScrn, ULong newvbflags, Bool quiet)
     }
 
     /* CRT2_LCD and CRT2_VGA overrule LCDA (in non-MergedFB mode) */
-    if(newvbflags & (CRT2_LCD|CRT2_VGA)) {
-       newvbflags &= ~CRT1_LCDA;
+    if(!(pSiS->SiS_SD3_Flags & SiS_SD3_SUPPORTDUALDVI)) {
+       if(newvbflags & (CRT2_LCD|CRT2_VGA)) {
+          newvbflags &= ~CRT1_LCDA;
+       }
     }
 
     /* Check if the current mode is suitable for desired output device (if any) */
@@ -546,6 +577,15 @@ SISSwitchCRT2Type(ScrnInfoPtr pScrn, ULong newvbflags, Bool quiet)
     pSiS->skipswitchcheck = FALSE;
     SISAdjustFrame(pScrn->scrnIndex, pScrn->frameX0, pScrn->frameY0, 0);
     return TRUE;
+}
+
+static Bool
+SISSwitchOutputType(ScrnInfoPtr pScrn, ULong newvbflags, ULong newvbflags3,
+		ULong newvbflags4, Bool quiet)
+{
+    /* For future use */
+
+    return FALSE;
 }
 
 static ULong
@@ -923,6 +963,8 @@ SiSHandleSiSDirectCommand(xSiSCtrlCommandReply *sdcbuf)
       sdcbuf->sdc_result[5] = pSiS->VBFlags2;
       sdcbuf->sdc_result[6] = pSiS->SiS_SD3_Flags;
       sdcbuf->sdc_result[7] = pSiS->SiS_SD4_Flags;
+      sdcbuf->sdc_result[8] = pSiS->VBFlags3;
+      sdcbuf->sdc_result[9] = pSiS->VBFlags4;
       break;
 
    case SDC_CMD_GETVBFLAGSVERSION:
@@ -932,6 +974,8 @@ SiSHandleSiSDirectCommand(xSiSCtrlCommandReply *sdcbuf)
    case SDC_CMD_GETVBFLAGS:
       sdcbuf->sdc_result[0] = pSiS->VBFlags;
       sdcbuf->sdc_result[1] = pSiS->VBFlags2;
+      sdcbuf->sdc_result[2] = pSiS->VBFlags3;
+      sdcbuf->sdc_result[3] = pSiS->VBFlags4;
       break;
 
    case SDC_CMD_CHECKMODEFORCRT2:
@@ -962,6 +1006,20 @@ SiSHandleSiSDirectCommand(xSiSCtrlCommandReply *sdcbuf)
 #endif
 	 if(pSiS->xv_sisdirectunlocked) {
 	    SISSwitchCRT2Type(pScrn, (ULong)sdcbuf->sdc_parm[0], pSiS->SCLogQuiet);
+	    if(pPriv) SISUpdateVideoParms(pSiS, pPriv);
+	 } else sdcbuf->sdc_result_header = SDC_RESULT_NOPERM;
+#ifdef SISDUALHEAD
+      } else sdcbuf->sdc_result_header = SDC_RESULT_NOPERM;
+#endif
+      break;
+
+   case SDC_CMD_NEWSETVBFLAGS:
+#ifdef SISDUALHEAD
+      if(!pSiS->DualHeadMode) {
+#endif
+	 if(pSiS->xv_sisdirectunlocked) {
+	    SISSwitchOutputType(pScrn, (ULong)sdcbuf->sdc_parm[0], (ULong)sdcbuf->sdc_parm[1],
+	    		(ULong)sdcbuf->sdc_parm[2], pSiS->SCLogQuiet);
 	    if(pPriv) SISUpdateVideoParms(pSiS, pPriv);
 	 } else sdcbuf->sdc_result_header = SDC_RESULT_NOPERM;
 #ifdef SISDUALHEAD
@@ -1810,6 +1868,16 @@ SiSHandleSiSDirectCommand(xSiSCtrlCommandReply *sdcbuf)
 
    case SDC_CMD_LOGQUIET:
       pSiS->SCLogQuiet = sdcbuf->sdc_parm[0] ? TRUE : FALSE;
+      break;
+
+   case SDC_CMD_GETCRT1SATGAIN:
+      sdcbuf->sdc_result[0] = SiS_GetSISCRT1SaturationGain(pScrn);
+      break;
+
+   case SDC_CMD_SETCRT1SATGAIN:
+      if(pSiS->xv_sisdirectunlocked) {
+	 SiS_SetSISCRT1SaturationGain(pScrn, (int)sdcbuf->sdc_parm[0]);
+      } else sdcbuf->sdc_result_header = SDC_RESULT_NOPERM;
       break;
 
    default:

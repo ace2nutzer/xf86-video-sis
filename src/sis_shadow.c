@@ -76,7 +76,7 @@ SISPointerMovedReflect(int index, int x, int y)
     }
 }
 
-/* Refresh area (unreflected, unrotated */
+/* Refresh area (unreflected, unrotated) */
 
 void
 SISRefreshArea(ScrnInfoPtr pScrn, int num, BoxPtr pbox)

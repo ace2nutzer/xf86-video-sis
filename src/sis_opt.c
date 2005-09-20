@@ -149,6 +149,7 @@ typedef enum {
     OPTION_NEWSTOREDBRI2,
     OPTION_NEWSTOREDCON,
     OPTION_NEWSTOREDCON2,
+    OPTION_CRT1SATGAIN,
     OPTION_OVERRULERANGES,
     OPTION_FORCE1ASPECT,
     OPTION_FORCE2ASPECT,
@@ -239,13 +240,17 @@ static const OptionInfoRec SISOptions[] = {
     { OPTION_CRT1GAMMA,			"CRT1Gamma",			OPTV_BOOLEAN,	{0}, FALSE },
     { OPTION_CRT2GAMMA,			"CRT2Gamma",			OPTV_ANYSTR,	{0}, FALSE },
     { OPTION_STOREDBRI,			"GammaBrightness",		OPTV_STRING,	{0}, FALSE },
-    { OPTION_STOREDBRI,			"StoredGammaBrightness",	OPTV_STRING,	{0}, FALSE },
     { OPTION_STOREDBRI2,		"GammaBrightnessCRT2",		OPTV_STRING,	{0}, FALSE },
     { OPTION_STOREDBRI2,		"CRT2GammaBrightness",		OPTV_STRING,	{0}, FALSE },
+    { OPTION_NEWSTOREDBRI,		"Brightness",			OPTV_STRING,	{0}, FALSE },
     { OPTION_NEWSTOREDBRI,		"NewGammaBrightness",		OPTV_STRING,	{0}, FALSE },
+    { OPTION_NEWSTOREDBRI2,		"CRT2Brightness",		OPTV_STRING,	{0}, FALSE },
     { OPTION_NEWSTOREDBRI2,		"CRT2NewGammaBrightness",	OPTV_STRING,	{0}, FALSE },
+    { OPTION_NEWSTOREDCON,		"Contrast",			OPTV_STRING,	{0}, FALSE },
     { OPTION_NEWSTOREDCON,		"NewGammaContrast",		OPTV_STRING,	{0}, FALSE },
+    { OPTION_NEWSTOREDCON2,		"CRT2Contrast",			OPTV_STRING,	{0}, FALSE },
     { OPTION_NEWSTOREDCON2,		"CRT2NewGammaContrast",		OPTV_STRING,	{0}, FALSE },
+    { OPTION_CRT1SATGAIN,		"CRT1Saturation", 		OPTV_INTEGER,	{0}, FALSE },
     { OPTION_XVGAMMA,			"XvGamma", 	  		OPTV_ANYSTR,	{0}, FALSE },
     { OPTION_XVDEFCONTRAST,		"XvDefaultContrast", 		OPTV_INTEGER,	{0}, FALSE },
     { OPTION_XVDEFBRIGHTNESS,		"XvDefaultBrightness",		OPTV_INTEGER,	{0}, FALSE },
@@ -521,6 +526,8 @@ SiSOptions(ScrnInfoPtr pScrn)
     pSiS->tvypos = 0;
     pSiS->tvxscale = 0;
     pSiS->tvyscale = 0;
+    pSiS->siscrt1satgain = 0;
+    pSiS->crt1satgaingiven = FALSE;
     pSiS->NonDefaultPAL = pSiS->NonDefaultNTSC = -1;
     pSiS->chtvtype = -1;
     pSiS->restorebyset = TRUE;
@@ -1066,7 +1073,7 @@ SiSOptions(ScrnInfoPtr pScrn)
 	     pSiS->restorebyset = val ? TRUE : FALSE;
 	  }
 
-	  /* EnableHotkey (300/315/330 series only)
+	  /* EnableHotkey (300/315/330 series and later only)
 	   * Enables or disables the BIOS hotkey switch for
 	   * switching the output device on laptops.
 	   * This key causes a total machine hang on many 300 series
@@ -1101,7 +1108,7 @@ SiSOptions(ScrnInfoPtr pScrn)
 		 "         whether enabled or disabled. This is no driver bug.\n");
 	  }
 
-	  /* UseROMData (300/315/330 series only)
+	  /* UseROMData (300/315/330 series and later only)
 	   * This option is enabling/disabling usage of some machine
 	   * specific data from the BIOS ROM. This option can - and
 	   * should - be used in case the driver makes problems
@@ -1114,7 +1121,7 @@ SiSOptions(ScrnInfoPtr pScrn)
 		  val ? enabledstr : disabledstr);
 	  }
 
-	  /* UseOEMData (300/315/330 series only)
+	  /* UseOEMData (300/315/330 series and later only)
 	   * The driver contains quite a lot data for OEM LCD panels
 	   * and TV connector specifics which override the defaults.
 	   * If this data is incorrect, the TV may lose color and
@@ -1128,7 +1135,7 @@ SiSOptions(ScrnInfoPtr pScrn)
 		 val ? enabledstr : disabledstr);
 	  }
 
-	  /* CRT2DDCDetection (315/330 series only)
+	  /* CRT2DDCDetection (315/330 series and later only)
 	   * If set to true, this disables CRT2 detection using DDC. This is
 	   * to avoid problems with not entirely DDC compiant LCD panels or
 	   * VGA monitors connected to the secondary VGA plug. Since LCD and
@@ -1139,7 +1146,7 @@ SiSOptions(ScrnInfoPtr pScrn)
 	     pSiS->nocrt2ddcdetection = val ? FALSE : TRUE;
 	  }
 
-	  /* ForceCRT2ReDetection (315/330 series only)
+	  /* ForceCRT2ReDetection (315/330 series and later only)
 	   * If set to true, it forces re-detection of the LCD panel and
 	   * a secondary VGA connection even if the BIOS already had found
 	   * about it. This is meant for custom panels (ie such with
@@ -2150,8 +2157,10 @@ SiSOptions(ScrnInfoPtr pScrn)
 		   if(val) pSiS->XvYUVChromaKey = TRUE;
 		}
              } else {
-		xf86DrvMsgVerb(pScrn->scrnIndex, X_INFO, 4,
-		   "Xv: Chroma key is of same format as video source\n");
+                if(xf86GetOptValBool(pSiS->Options, OPTION_XVYUVCHROMAKEY, &val)) {
+		   xf86DrvMsgVerb(pScrn->scrnIndex, X_INFO, 4,
+		      "Xv: Chroma key is of same format as video source\n");
+		}
 	     }
 	     if(xf86GetOptValInteger(pSiS->Options, OPTION_XVCHROMAMIN, &ival)) {
 		if((ival >= 0) && (ival <= 0xffffff)) pSiS->XvChromaMin = ival;
@@ -2247,6 +2256,15 @@ SiSOptions(ScrnInfoPtr pScrn)
 	        }
 	     }
 	  }
+       }
+    }
+
+    if(pSiS->SiS_SD3_Flags & SiS_SD3_CRT1SATGAIN) {
+       if(xf86GetOptValInteger(pSiS->Options, OPTION_CRT1SATGAIN, &ival)) {
+          if((ival >= 0) && (ival <= 7)) {
+             pSiS->siscrt1satgain = ival;
+             pSiS->crt1satgaingiven = TRUE;
+          } else SiS_PrintIlRange(pScrn, OPTION_CRT1SATGAIN, 0, 7, 0);
        }
     }
 

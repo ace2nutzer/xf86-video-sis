@@ -37,7 +37,7 @@
 
 #define SISDRIVERVERSIONYEAR    5
 #define SISDRIVERVERSIONMONTH   9
-#define SISDRIVERVERSIONDAY     18
+#define SISDRIVERVERSIONDAY     20
 #define SISDRIVERREVISION       1
 
 #define SISDRIVERIVERSION ((SISDRIVERVERSIONYEAR << 16) |  \
@@ -444,6 +444,26 @@
 /* VGA2 up to 202MHz (1600x1200@75) */
 #define VB2_RAMDAC202MHZBRIDGE	(VB2_301C  | VB2_307T)
 
+/* pSiS->VBFlags3 (for future use) */
+#define VB3_CRT1_TV		0x00000001
+#define VB3_CRT1_LCD		0x00000002
+#define VB3_CRT1_VGA		0x00000004
+#define TV1_AVIDEO		0x00000100
+#define TV1_SVIDEO		0x00000200
+#define TV1_SCART		0x00000400
+#define TV1_NTSC		0x00000800
+#define TV1_PAL			0x00001000
+#define TV1_YPBPR		0x00002000
+#define TV1_PALM		0x00004000
+#define TV1_PALN		0x00008000
+#define TV1_NTSCJ		0x00010000
+#define TV1_YPBPR525I		0x00020000
+#define TV1_YPBPR525P		0x00040000
+#define TV1_YPBPR625I		0x00080000
+#define TV1_YPBPR625P		0x00100000
+#define TV1_YPBPR750P		0x00200000
+#define TV1_YPBPR1080I		0x00400000
+
 /* pSiS->VBLCDFlags */
 #define VB_LCD_320x480		0x00000001	/* DSTN/FSTN for 550 */
 #define VB_LCD_640x480		0x00000002
@@ -644,10 +664,17 @@ typedef unsigned char  UChar;
 #define SiS_SD2_SUPPORT625P    0x08000000   /* Support YPbPr 625p */
 #define SiS_SD2_VBINVB2ONLY    0x10000000   /* VB_* bits in vbflags no longer used for vb type */
 #define SiS_SD2_NEWGAMMABRICON 0x20000000   /* Support new gamma brightness/contrast */
-#define SiS_SD2_HAVESD34       0x40000000   /* Support SD3 and SD4 flags (for future use) */
+#define SiS_SD2_HAVESD34       0x40000000   /* Support SD3 and SD4 flags */
 #define SiS_SD2_NOOVERLAY      0x80000000   /* No video overlay */
 
 #define SiS_SD3_OLDGAMMAINUSE  0x00000001   /* Old gamma brightness is currently in use */
+#define SiS_SD3_MFBALLOWOFFCL  0x00000002   /* Supports off'ing CRTx in MFB if a clone mode is active */
+#define SiS_SD3_SUPPORTVBF34   0x00000004   /* Supports VBFlags3 and VBFlags4 */
+#define SiS_SD3_SUPPORTDUALDVI 0x00000008   /* Supports dual dvi-d (for future use) */
+#define SiS_SD3_SUPPORTDUALTV  0x00000010   /* Supports dual tv (for future use) */
+#define SiS_SD3_NEWOUTPUTSW    0x00000020   /* Supports NEWSETVBFLAGS (for future use) */
+#define SiS_SD3_CRT1SATGAIN    0x00000040   /* Supports CRT1 saturation gain */
+#define SiS_SD3_CRT2SATGAIN    0x00000080   /* Supports CRT2 saturation gain (apart from TV, see SiS_SD2_SUPPTVSAT) */
 
 #define SIS_DIRECTKEY          0x03145792
 
@@ -847,6 +874,8 @@ typedef struct {
     int			sistvyfilter;
     int			tvxpos, tvypos;
     int			tvxscale, tvyscale;
+    int			siscrt1satgain;
+    Bool		crt1satgaingiven;
     int			ForceTVType, SenseYPbPr;
     unsigned int	ForceYPbPrType, ForceYPbPrAR;
     int			chtvtype;
@@ -976,10 +1005,13 @@ typedef struct {
     UChar		oldCR32, oldCR36, oldCR37;
     UChar		myCR32, myCR36, myCR37, myCR63;
     UChar		newCR32;
-    unsigned int	VBFlags;		/* Video bridge configuration */
+    unsigned int	VBFlags;		/* Video bridge configuration (dynamic) */
     unsigned int	VBFlags2;		/* Video bridge configuration 2 (static flags only) */
+    unsigned int	VBFlags3, VBFlags4;	/* Video bridge configuration 3, 4 (dynamic) */
     unsigned int	VBFlags_backup;		/* Backup for SlaveMode-modes */
-    unsigned int	VBLCDFlags;		/* Moved LCD panel size bits here */
+    unsigned int	VBFlags_backup3;	/* Backup for SlaveMode-modes */
+    unsigned int	VBFlags_backup4;	/* Backup for SlaveMode-modes */
+    unsigned int	VBLCDFlags, VBLCDFlags2;
     int			ChrontelType;		/* CHRONTEL_700x or CHRONTEL_701x */
     unsigned int	PDC, PDCA;		/* PanelDelayCompensation */
     short		scrnOffset;		/* Screen pitch (data) */
@@ -1196,6 +1228,8 @@ typedef struct {
     Bool		sisfb_haveemi, sisfb_haveemilcd, sisfb_tvposvalid, sisfb_havelock;
     UChar		sisfb_emi30,sisfb_emi31,sisfb_emi32,sisfb_emi33;
     int			sisfb_tvxpos, sisfb_tvypos;
+    int			siscrt1satgain;
+    Bool		crt1satgaingiven;
     Bool		sisfbHaveNewHeapDef;
     unsigned int	sisfbHeapSize, sisfbVideoOffset;
     Bool		sisfbxSTN;
@@ -1528,6 +1562,8 @@ extern int   SiS_GetTVxposoffset(ScrnInfoPtr pScrn);
 extern int   SiS_GetTVyposoffset(ScrnInfoPtr pScrn);
 extern int   SiS_GetTVxscale(ScrnInfoPtr pScrn);
 extern int   SiS_GetTVyscale(ScrnInfoPtr pScrn);
+extern int   SiS_GetSISCRT1SaturationGain(ScrnInfoPtr pScrn);
+extern void  SiS_SetSISCRT1SaturationGain(ScrnInfoPtr pScrn, int val);
 
 #endif  /* _SIS_H_ */
 

@@ -752,6 +752,8 @@ calcgammaval(int j, int nramp, float invgamma, float bri, float c)
     if(v < 0.0) v = 0.0;
     else if(v > 65535.0) v = 65535.0;
 
+    xf86DrvMsg(0, 0, "j %d v %f = %d\n", j, v, ((unsigned short)v >> 8));
+
     return (unsigned short)v;
 }
 
@@ -3813,6 +3815,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	  pSiS->ChipFlags |= (SiSCF_XabreCore | SiSCF_MMIOPalette);
 	  pSiS->SiS_SD_Flags |= SiS_SD_IS330SERIES;
 	  pSiS->SiS_SD2_Flags |= SiS_SD2_SUPPORTXVHUESAT;
+	  pSiS->SiS_SD3_Flags |= SiS_SD3_CRT1SATGAIN; /* FIXME ? */
 	  pSiS->myCR63 = 0x53; /* sic! */
 	  break;
        case PCI_CHIP_SIS660: /* 660, 661, 741, 760, 761, 670(?) */
@@ -3861,6 +3864,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	     pSiS->ChipFlags |= (SiSCF_Integrated | SiSCF_MMIOPalette);
 	     pSiS->SiS_SD_Flags |= SiS_SD_IS330SERIES;
 	     pSiS->SiS_SD2_Flags |= SiS_SD2_SUPPORTXVHUESAT;
+	     pSiS->SiS_SD3_Flags |= SiS_SD3_CRT1SATGAIN;
 	     pSiS->myCR63 = 0x53; /* sic! */
 	     pSiS->NewCRLayout = TRUE;
 	  }
@@ -3870,6 +3874,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	  pSiS->ChipFlags |= (SiSCF_XabreCore | SiSCF_MMIOPalette);
 	  pSiS->SiS_SD_Flags |= SiS_SD_IS340SERIES;
 	  pSiS->SiS_SD2_Flags |= SiS_SD2_SUPPORTXVHUESAT;
+	  pSiS->SiS_SD3_Flags |= SiS_SD3_CRT1SATGAIN;
 	  pSiS->myCR63 = 0x53;
 	  pSiS->NewCRLayout = TRUE;
 	  break;
@@ -3884,6 +3889,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	  pSiS->ChipType = XGI_40;
 	  pSiS->ChipFlags |= (SiSCF_XabreCore | SiSCF_MMIOPalette | SiSCF_IsXGI);
 	  pSiS->SiS_SD2_Flags |= (SiS_SD2_SUPPORTXVHUESAT | SiS_SD2_ISXGI);
+	  pSiS->SiS_SD3_Flags |= SiS_SD3_CRT1SATGAIN;
 	  pSiS->myCR63 = 0x53;
 	  pSiS->NewCRLayout = TRUE;
 	  if(pSiS->ChipRev == 2) pSiS->ChipFlags |= SiSCF_IsXGIV3;
@@ -4374,6 +4380,8 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	  pSiSEnt->tvypos = pSiS->tvypos;
 	  pSiSEnt->tvxscale = pSiS->tvxscale;
 	  pSiSEnt->tvyscale = pSiS->tvyscale;
+	  pSiSEnt->siscrt1satgain = pSiS->siscrt1satgain;
+	  pSiSEnt->crt1satgaingiven = pSiS->crt1satgaingiven;
 	  pSiSEnt->CRT1gamma = pSiS->CRT1gamma;
 	  pSiSEnt->CRT1gammaGiven = pSiS->CRT1gammaGiven;
 	  pSiSEnt->XvGammaRed = pSiS->XvGammaRed;
@@ -4453,6 +4461,10 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 		pSiS->XvGammaGreen = pSiS->XvGammaGreenDef = pSiSEnt->XvGammaGreen;
 		pSiS->XvGammaBlue = pSiS->XvGammaBlueDef = pSiSEnt->XvGammaBlue;
 	     }
+	  }
+	  if(!pSiS->crt1satgaingiven) {
+	     if(pSiSEnt->crt1satgaingiven)
+	        pSiS->siscrt1satgain = pSiSEnt->siscrt1satgain;
 	  }
 	  pSiS->XvOnCRT2 = pSiSEnt->XvOnCRT2;
 	  pSiS->enablesisctrl = pSiSEnt->enablesisctrl;
@@ -5141,11 +5153,14 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 
     /* Setup SD flags */
     pSiS->SiS_SD_Flags |= SiS_SD_ADDLSUPFLAG;
+
     pSiS->SiS_SD2_Flags |= SiS_SD2_MERGEDUCLOCK;
     pSiS->SiS_SD2_Flags |= SiS_SD2_USEVBFLAGS2;
     pSiS->SiS_SD2_Flags |= SiS_SD2_VBINVB2ONLY;
     pSiS->SiS_SD2_Flags |= SiS_SD2_HAVESD34;
     pSiS->SiS_SD2_Flags |= SiS_SD2_NEWGAMMABRICON;
+
+    pSiS->SiS_SD3_Flags |= SiS_SD3_MFBALLOWOFFCL;
 
     if(pSiS->VBFlags2 & VB2_VIDEOBRIDGE) {
        pSiS->SiS_SD2_Flags |= SiS_SD2_VIDEOBRIDGE;
@@ -12490,6 +12505,49 @@ int SiS_GetTVyscale(ScrnInfoPtr pScrn)
         return (int)pSiS->tvyscale;
 }
 
+void SiS_SetSISCRT1SaturationGain(ScrnInfoPtr pScrn, int val)
+{
+   SISPtr pSiS = SISPTR(pScrn);
+#ifdef SISDUALHEAD
+   SISEntPtr pSiSEnt = pSiS->entityPrivate;
+#endif
+
+   pSiS->siscrt1satgain = val;
+#ifdef SISDUALHEAD
+   if(pSiSEnt) pSiSEnt->siscrt1satgain = val;
+#endif
+
+   if(!(pSiS->SiS_SD3_Flags & SiS_SD3_CRT1SATGAIN)) return;
+
+#ifdef UNLOCK_ALWAYS
+   sisSaveUnlockExtRegisterLock(pSiS, NULL, NULL);
+#endif
+
+   if((val >= 0) && (val <= 7)) {
+      setSISIDXREG(SISCR,0x53,0xE3, (val << 2));
+   }
+}
+
+int SiS_GetSISCRT1SaturationGain(ScrnInfoPtr pScrn)
+{
+   SISPtr pSiS = SISPTR(pScrn);
+   int result = pSiS->siscrt1satgain;
+   UChar temp;
+#ifdef SISDUALHEAD
+   SISEntPtr pSiSEnt = pSiS->entityPrivate;
+
+   if(pSiSEnt && pSiS->DualHeadMode)  result = pSiSEnt->siscrt1satgain;
+#endif
+
+   if(!(pSiS->SiS_SD3_Flags & SiS_SD3_CRT1SATGAIN)) return result;
+
+#ifdef UNLOCK_ALWAYS
+   sisSaveUnlockExtRegisterLock(pSiS, NULL, NULL);
+#endif
+   inSISIDXREG(SISCR, 0x53, temp);
+   return (int)((temp >> 2) & 0x07);
+}
+
 /* Calc dotclock from registers */
 static int
 SiSGetClockFromRegs(UChar sr2b, UChar sr2c)
@@ -13029,6 +13087,15 @@ SiSPostSetMode(ScrnInfoPtr pScrn, SISRegPtr sisReg)
     /* Reset XV gamma correction */
     if(pSiS->ResetXvGamma) {
        (pSiS->ResetXvGamma)(pScrn);
+    }
+
+    /* Reset various display parameters */
+    {
+       int val = pSiS->siscrt1satgain;
+#ifdef SISDUALHEAD
+       if(pSiS->DualHeadMode && pSiSEnt) val = pSiSEnt->siscrt1satgain;
+#endif
+       SiS_SetSISCRT1SaturationGain(pScrn, val);
     }
 
     /*  Apply TV settings given by options
