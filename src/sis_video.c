@@ -3349,6 +3349,15 @@ MIRROR:
  *        Memory management      *
  *********************************/
 
+#ifdef SIS_USE_EXA
+static void
+SiSDestroyArea(ScreenPtr pScreen, ExaOffscreenArea *area)
+{
+   void **handle = (void *)area->privData;
+   *handle = NULL;
+}
+#endif
+
 unsigned int
 SISAllocateFBMemory(
   ScrnInfoPtr pScrn,
@@ -3412,7 +3421,7 @@ SISAllocateFBMemory(
 	 *handle = NULL;
       }
 
-      if(!(area = exaOffscreenAlloc(pScreen, bytesize, 8, TRUE, NULL, NULL))) {
+      if(!(area = exaOffscreenAlloc(pScreen, bytesize, 8, TRUE, SiSDestroyArea, (pointer)handle))) {
 	 xf86DrvMsg(pScrn->scrnIndex, X_INFO,
 	           "Xv: Failed to allocate %d bytes of video memory\n", bytesize);
 	 return 0;
