@@ -2936,6 +2936,9 @@ SISDisplayVideo(ScrnInfoPtr pScrn, SISPortPrivPtr pPriv)
           overlay.PSY2 = pPriv->bufAddr[pPriv->currentBuf] + sx2 + sy2*srcPitch;
           overlay.PSV2 = pPriv->bufAddr[pPriv->currentBuf] + height*srcPitch + ((sx2 + sy2*srcPitch/2) >> 1);
           overlay.PSU2 = pPriv->bufAddr[pPriv->currentBuf] + height*srcPitch*5/4 + ((sx2 + sy2*srcPitch/2) >> 1);
+          overlay.PSY2 += FBOFFSET;
+          overlay.PSV2 += FBOFFSET;
+          overlay.PSU2 += FBOFFSET;
           overlay.PSY2 >>= pPriv->shiftValue;
           overlay.PSV2 >>= pPriv->shiftValue;
           overlay.PSU2 >>= pPriv->shiftValue;
@@ -2968,6 +2971,9 @@ SISDisplayVideo(ScrnInfoPtr pScrn, SISPortPrivPtr pPriv)
           overlay.PSY2 = pPriv->bufAddr[pPriv->currentBuf] + sx2 + sy2*srcPitch;
           overlay.PSV2 = pPriv->bufAddr[pPriv->currentBuf] + height*srcPitch*5/4 + ((sx2 + sy2*srcPitch/2) >> 1);
           overlay.PSU2 = pPriv->bufAddr[pPriv->currentBuf] + height*srcPitch + ((sx2 + sy2*srcPitch/2) >> 1);
+          overlay.PSY2 += FBOFFSET;
+          overlay.PSV2 += FBOFFSET;
+          overlay.PSU2 += FBOFFSET;
           overlay.PSY2 >>= pPriv->shiftValue;
           overlay.PSV2 >>= pPriv->shiftValue;
           overlay.PSU2 >>= pPriv->shiftValue;
@@ -2998,6 +3004,8 @@ SISDisplayVideo(ScrnInfoPtr pScrn, SISPortPrivPtr pPriv)
           sy2 = (pPriv->src_y + srcOffsetY2) & ~1;
           overlay.PSY2 = pPriv->bufAddr[pPriv->currentBuf] + sx2 + sy2*srcPitch;
           overlay.PSV2 = pPriv->bufAddr[pPriv->currentBuf] + height*srcPitch + ((sx2 + sy2*srcPitch/2) >> 1);
+          overlay.PSY2 += FBOFFSET;
+          overlay.PSV2 += FBOFFSET;
           overlay.PSY2 >>= pPriv->shiftValue;
           overlay.PSV2 >>= pPriv->shiftValue;
           overlay.PSU2 = overlay.PSV2;
@@ -3026,6 +3034,7 @@ SISDisplayVideo(ScrnInfoPtr pScrn, SISPortPrivPtr pPriv)
           sx2 = (pPriv->src_x + srcOffsetX2) & ~1;
           sy2 = (pPriv->src_y + srcOffsetY2);
           overlay.PSY2 = (pPriv->bufAddr[pPriv->currentBuf] + sx2*2 + sy2*srcPitch);
+          overlay.PSY2 += FBOFFSET;
           overlay.PSY2 >>= pPriv->shiftValue;
        }
 #endif
