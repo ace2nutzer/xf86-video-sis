@@ -9,9 +9,6 @@
 <author>Thomas Winischhofer (<email>thomas@winischhofer.net</email>)
 <date>6 July 2005
 
-<ident>
-</ident>
-
 <!-- Table of contents -->
 <toc>
 
@@ -25,8 +22,8 @@ It currently supports the following chipsets:
 <itemize>
    <item>old series: SiS 5597/5598, 6236/AGP/DVD, 530/620
    <item>300 series: SiS 300/305, 540, 630/730
-   <item>315 series: SiS 315/E/PRO, 55x, 650, 651, M650, 740, [M]661[F/M/G]X, [M]741[GX]
-   <item>330 series: SiS 330 ("Xabre"), [M]760[GX], [M]761[GX]
+   <item>315 series: SiS 315/E/PRO, 55x, 650, 651, M650, 740, &lsqb;M]661&amp;&lsqb;F/M/G]X, &lsqb;M]741&lsqb;GX]
+   <item>330 series: SiS 330 ("Xabre"), &lsqb;M]760&lsqb;GX], &lsqb;M]761&lsqb;GX]
    <item>340 series: SiS 34x, XGI Volari Z7, V3XT, V5, V8
 </itemize>
 
@@ -59,6 +56,7 @@ have the same meaning.
 
 <descrip>
 <tag>Option "SWCursor" [boolean]</tag>
+	<p/>
 <tag>Option "HWCursor" [boolean]</tag>
 	These options select whether the software (SW) or hardware (HW) cursor should
 	be used. The default is using the hardware cursor.
@@ -162,6 +160,7 @@ have the same meaning.
 	Selects the TV output standard. May be PAL or NTSC, on some machines
 	(depending on the hardware) also PALM and PALN. Default: BIOS setting.
 <tag>Option "TVXPosOffset" [integer]</tag>
+	<p/>
 <tag>Option "TVYPosOffset" [integer]</tag>
 	These options allow relocating the image on your TV. Both options take
 	an integer within the range of -16 to 16. Default: 0. Not supported for
@@ -174,6 +173,7 @@ have the same meaning.
 	should be super-overscan (slightly larger than the viewable area) or
 	not.
 <tag>Option "SISTVXScale" [integer]</tag>
+	<p/>
 <tag>Option "SISTVYScale" [integer]</tag>
 	(For SiS video bridges only) These options allow zooming the image on
 	your TV. SISTVXScale takes an integer within the range of -16 to 16.
