@@ -843,6 +843,11 @@ static char *SiS_GetCPUFreq(ScrnInfoPtr pScrn, char *buf, double *cpuFreq)
 #ifdef SiS_checkosforsse   /* Common i386, AMD64  */
 
 #ifdef SISCHECKOSSSE
+
+#ifndef XFree86LOADER
+#include <setjmp.h>
+#endif
+
 static jmp_buf sigill_return;
 
 static void sigill_handler(void)
