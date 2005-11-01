@@ -979,11 +979,11 @@ SiSSetSyncRangeFromEdid(ScrnInfoPtr pScrn, int flag)
 	    if((i == 0) || (myhlow > myhtiming[i].rate))
 	       myhlow = myhtiming[i].rate;
 	 }
-	 if(myhtiming[10-i].whichone == 1) temp = ddc->timings1.t1;
+	 if(myhtiming[11-i].whichone == 1) temp = ddc->timings1.t1;
 	 else                              temp = ddc->timings1.t2;
-	 if(temp & myhtiming[10-i].mask) {
-	    if((i == 0) || (myhhigh < myhtiming[10-i].rate))
-	       myhhigh = myhtiming[10-i].rate;
+	 if(temp & myhtiming[11-i].mask) {
+	    if((i == 0) || (myhhigh < myhtiming[11-i].rate))
+	       myhhigh = myhtiming[11-i].rate;
 	 }
       }
 
@@ -1027,11 +1027,11 @@ SiSSetSyncRangeFromEdid(ScrnInfoPtr pScrn, int flag)
 	    if((i == 0) || (myvlow > myvtiming[i].rate))
 	       myvlow = myvtiming[i].rate;
 	 }
-	 if(myvtiming[9-i].whichone == 1) temp = ddc->timings1.t1;
-	 else                             temp = ddc->timings1.t2;
-	 if(temp & myvtiming[9-i].mask) {
-	    if((i == 0) || (myvhigh < myvtiming[9-i].rate))
-	       myvhigh = myvtiming[9-i].rate;
+	 if(myvtiming[10-i].whichone == 1) temp = ddc->timings1.t1;
+	 else                              temp = ddc->timings1.t2;
+	 if(temp & myvtiming[10-i].mask) {
+	    if((i == 0) || (myvhigh < myvtiming[10-i].rate))
+	       myvhigh = myvtiming[10-i].rate;
 	 }
       }
 
