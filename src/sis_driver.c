@@ -1562,8 +1562,8 @@ SiSGenerateModeListFromLargestModes(ScrnInfoPtr pScrn,
     return result;
 }
 
-/* Generate the merged-fb mode modelist from metamodes
- * (Code base taken from mga driver)
+/* Generate the merged-fb mode modelist
+ * (Taken from mga driver)
  */
 static DisplayModePtr
 SiSGenerateModeListFromMetaModes(ScrnInfoPtr pScrn, char* str,
@@ -1575,7 +1575,8 @@ SiSGenerateModeListFromMetaModes(ScrnInfoPtr pScrn, char* str,
 #endif
     char* strmode = str;
     char modename[256];
-    Bool gotdash = FALSE, gotplus = FALSE;
+    Bool gotdash = FALSE;
+    char gotsep = 0;
     SiSScrn2Rel sr;
     DisplayModePtr mode1 = NULL;
     DisplayModePtr mode2 = NULL;
@@ -1587,91 +1588,98 @@ SiSGenerateModeListFromMetaModes(ScrnInfoPtr pScrn, char* str,
 #endif
 
     do {
-	switch(*str) {
-	case 0:
-	case '-':
+        switch(*str) {
+        case 0:
+        case '-':
 	case '+':
-	case ' ':
-	   if(strmode != str) {
+        case ' ':
+	case ',':
+	case ';':
+           if(strmode != str) {
 
-	      myslen = str - strmode;
-	      if(myslen > 255) myslen = 255;
-	      strncpy(modename, strmode, myslen);
-	      modename[myslen] = 0;
+              myslen = str - strmode;
+              if(myslen > 255) myslen = 255;
+  	      strncpy(modename, strmode, myslen);
+  	      modename[myslen] = 0;
 
-	      if(gotdash) {
-		 if(mode1 == NULL) {
-		    xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
-		        "Error parsing MetaModes parameter\n");
-		    return NULL;
-		 }
-		 mode2 = SiSGetModeFromName(modename, j);
-		 if(!mode2) {
-		    xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
-			"Mode \"%s\" is not a supported mode for CRT2\n", modename);
-		    xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
-			"\t(Skipping metamode \"%s%s%s\")\n", mode1->name, gotplus ? "+" : "-", modename);
-		    mode1 = NULL;
-		    gotplus = FALSE;
-		 }
-	      } else {
-		 mode1 = SiSGetModeFromName(modename, i);
-		 if(!mode1) {
-		    char* tmps = str;
-		    xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
-			"Mode \"%s\" is not a supported mode for CRT1\n", modename);
-		    while(*tmps == ' ') tmps++;
-		    /* skip the next mode */
-		    if((*tmps == '-') || (*tmps == '+')) {
-		       tmps++;
+              if(gotdash) {
+                 if(mode1 == NULL) {
+  	             xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
+  	                        "Error parsing MetaModes parameter\n");
+  	             return NULL;
+  	         }
+                 mode2 = SiSGetModeFromName(modename, j);
+                 if(!mode2) {
+                    xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
+                        "Mode \"%s\" is not a supported mode for CRT2\n", modename);
+                    xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
+                        "\t(Skipping metamode \"%s%c%s\")\n", mode1->name, gotsep, modename);
+                    mode1 = NULL;
+		    gotsep = 0;
+                 }
+              } else {
+                 mode1 = SiSGetModeFromName(modename, i);
+                 if(!mode1) {
+                    char* tmps = str;
+                    xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
+                        "Mode \"%s\" is not a supported mode for CRT1\n", modename);
+                    while(*tmps == ' ' || *tmps == ';') tmps++;
+                    /* skip the next mode */
+  	            if(*tmps == '-' || *tmps == '+' || *tmps == ',') {
+                       tmps++;
 		       /* skip spaces */
-		       while(*tmps == ' ') tmps++;
+		       while(*tmps == ' ' || *tmps == ';') tmps++;
 		       /* skip modename */
-		       while((*tmps != ' ') && (*tmps != '-') && (*tmps != '+') && (*tmps != 0)) tmps++;
-		       myslen = tmps - strmode;
-		       if(myslen > 255) myslen = 255;
-		       strncpy(modename,strmode,myslen);
-		       modename[myslen] = 0;
-		       str = tmps - 1;
-		    }
-		    mode1 = NULL;
-		    gotplus = FALSE;
-		 }
-	      }
-	      gotdash = FALSE;
-	   }
-	   strmode = str + 1;
-	   gotdash |= ((*str == '-') || (*str == '+'));
-	   gotplus |= (*str == '+');
+		       while(*tmps && *tmps != ' ' && *tmps != ';' && *tmps != '-' && *tmps != '+' && *tmps != ',') tmps++;
+  	               myslen = tmps - strmode;
+  	               if(myslen > 255) myslen = 255;
+  	               strncpy(modename,strmode,myslen);
+  	               modename[myslen] = 0;
+                       str = tmps - 1;
+                    }
+                    xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
+                        "\t(Skipping metamode \"%s\")\n", modename);
+                    mode1 = NULL;
+		    gotsep = 0;
+                 }
+              }
+              gotdash = FALSE;
+           }
+           strmode = str + 1;
+           gotdash |= (*str == '-' || *str == '+' || *str == ',');
+	   if (*str == '-' || *str == '+' || *str == ',')
+  	      gotsep = *str;
 
-	   if(*str != 0) break;
+           if(*str != 0) break;
 	   /* Fall through otherwise */
 
         default:
-	   if(!gotdash && mode1) {
-	      sr = srel;
-	      if(gotplus) sr = sisClone;
-	      if(!mode2) {
-	         mode2 = SiSGetModeFromName(mode1->name, j);
-	         sr = sisClone;
-	      }
-	      if(!mode2) {
-		 xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
-		     "Mode \"%s\" is not a supported mode for CRT2\n", mode1->name);
-		 mode1 = NULL;
-	      } else {
-		 result = SiSCopyModeNLink(pScrn, result, mode1, mode2, sr);
-		 mode1 = NULL;
-		 mode2 = NULL;
-	      }
-	      gotplus = FALSE;
-	   }
-	   break;
+           if(!gotdash && mode1) {
+              sr = srel;
+	      if(gotsep == '+') sr = sisClone;
+              if(!mode2) {
+                 mode2 = SiSGetModeFromName(mode1->name, j);
+                 sr = sisClone;
+              }
+              if(!mode2) {
+                 xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
+                     "Mode \"%s\" is not a supported mode for CRT2\n", mode1->name);
+                 xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
+                     "\t(Skipping metamode \"%s\")\n", modename);
+                 mode1 = NULL;
+              } else {
+                 result = SiSCopyModeNLink(pScrn, result, mode1, mode2, sr);
+                 mode1 = NULL;
+                 mode2 = NULL;
+              }
+	      gotsep = 0;
+           }
+           break;
 
-	}
+        }
 
     } while(*(str++) != 0);
-
+     
     return result;
 }
 
