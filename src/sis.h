@@ -111,7 +111,7 @@
 #else
 #define SIS_MINOR_VERSION       7
 #endif
-#define SIS_PATCHLEVEL          0
+#define SIS_PATCHLEVEL          1
 #define SIS_CURRENT_VERSION     ((SIS_MAJOR_VERSION << 16) | \
                                  (SIS_MINOR_VERSION << 8) | SIS_PATCHLEVEL )
 
