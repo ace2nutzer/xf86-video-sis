@@ -1,3 +1,8 @@
+2005-12-01  Adam Jackson  <ajax@freedesktop.org>
+
+	* configure.ac:
+	Bug #5207: Enable EXA. (Thomas Winischofer)
+
 2005-11-20  Adam Jackson  <ajax@freedesktop.org>
 
 	* configure.ac:

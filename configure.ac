@@ -99,6 +99,9 @@ if test "$DRI" = yes; then
         AC_DEFINE(XF86DRI_DEVEL,1,[Enable developmental DRI driver support])
 fi
 
+# technically this should be a configure flag.  meh.
+AC_DEFINE(XF86EXA, 1, [Build support for Exa])
+
 AC_SUBST([DRI_CFLAGS])
 AC_SUBST([XORG_CFLAGS])
 AC_SUBST([moduledir])
