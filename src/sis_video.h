@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg$ */
+/* $XdotOrg: driver/xf86-video-sis/src/sis_video.h,v 1.4 2005/07/04 10:57:08 twini Exp $ */
 /*
  * Xv driver for SiS 300, 315 and 330 series.
  *
@@ -107,7 +107,8 @@ static void 	SISQueryBestSize(ScrnInfoPtr, Bool, short, short, short,
 			short, unsigned int *,unsigned int *, pointer);
 static int 	SISPutImage( ScrnInfoPtr,
 			short, short, short, short, short, short, short, short,
-			int, UChar *, short, short, Bool, RegionPtr, pointer);
+			int, UChar *, short, short, Bool, RegionPtr, pointer,
+			DrawablePtr);
 static int 	SISQueryImageAttributes(ScrnInfoPtr,
 			int, UShort *, UShort *, int *, int *);
 static void 	SISVideoTimerCallback(ScrnInfoPtr pScrn, Time now);
@@ -129,7 +130,8 @@ static void 	SISQueryBestSizeBlit(ScrnInfoPtr, Bool, short, short, short,
 			short, unsigned int *,unsigned int *, ULong);
 static int 	SISPutImageBlit( ScrnInfoPtr,
 			short, short, short, short, short, short, short, short,
-			int, UChar *, short, short, Bool, RegionPtr, ULong);
+			int, UChar *, short, short, Bool, RegionPtr, ULong,
+			DrawablePtr);
 static int 	SISQueryImageAttributesBlit(ScrnInfoPtr,
 			int, UShort *, UShort *, int *, int *);
 extern void     SISWriteBlitPacket(SISPtr pSiS, CARD32 *packet);

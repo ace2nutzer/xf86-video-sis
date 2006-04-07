@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg$ */
+/* $XdotOrg: driver/xf86-video-sis/src/sis_video.c,v 1.32 2005/09/23 16:34:04 twini Exp $ */
 /*
  * Xv driver for SiS 300, 315 and 330 series.
  *
@@ -3514,7 +3514,8 @@ SISPutImage(
   int id, UChar *buf,
   short width, short height,
   Bool sync,
-  RegionPtr clipBoxes, pointer data
+  RegionPtr clipBoxes, pointer data,
+  DrawablePtr pDraw
 ){
    SISPtr pSiS = SISPTR(pScrn);
    SISPortPrivPtr pPriv = (SISPortPrivPtr)data;
@@ -4196,7 +4197,8 @@ SISPutImageBlit(
   int id, UChar *buf,
   short width, short height,
   Bool sync,
-  RegionPtr clipBoxes, ULong index
+  RegionPtr clipBoxes, ULong index,
+  DrawablePtr pDraw
 ){
    SISPtr pSiS = SISPTR(pScrn);
    SISBPortPrivPtr pPriv = (SISBPortPrivPtr)(pSiS->blitPriv);

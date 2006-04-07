@@ -1,3 +1,11 @@
+2006-04-07  Aaron Plattner  <aplattner@nvidia.com>
+
+	* src/sis6326_video.c:
+	* src/sis_video.c: (SISPutImage):
+	* src/sis_video.h:
+	Add a DrawablePtr argument to the XV functions to pave the way for
+	redirected video.
+
 2006-04-07  Adam Jackson  <ajax@freedesktop.org>
 
 	* configure.ac:
