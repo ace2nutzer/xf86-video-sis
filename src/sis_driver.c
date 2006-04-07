@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg: driver/xf86-video-sis/src/sis_driver.c,v 1.71 2005/11/09 17:42:58 mhopf Exp $ */
+/* $XdotOrg: driver/xf86-video-sis/src/sis_driver.c,v 1.72 2006/03/09 06:06:25 anholt Exp $ */
 /*
  * SiS driver main code
  *
@@ -6971,6 +6971,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	  XF86ModReqInfo req;
 	  int errmaj, errmin;
 
+	  memset(&req, 0, sizeof(req));
 	  req.majorversion = 2;
 	  req.minorversion = 0;
 	  if (!LoadSubModule(pScrn->module, "exa", NULL, NULL, NULL, &req,
