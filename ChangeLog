@@ -1,3 +1,9 @@
+2006-04-07  Adam Jackson  <ajax@freedesktop.org>
+
+	* configure.ac:
+	* src/sis.h:
+	Unlibcwrap.  Bump server version requirement.  Bump to 0.9.0.
+
 2006-04-06  Eric Anholt  <anholt@FreeBSD.org>
 
 	* src/sis_driver.c:
