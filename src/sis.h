@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg: driver/xf86-video-sis/src/sis.h,v 1.66 2005/11/09 21:31:21 kem Exp $ */
+/* $XdotOrg: driver/xf86-video-sis/src/sis.h,v 1.67 2006/04/07 21:05:21 ajax Exp $ */
 /*
  * Main global data and definitions
  *
@@ -112,7 +112,7 @@
 #define SIS_MAJOR_VERSION       0
 #ifdef SISISXORG6899900
 #define SIS_MINOR_VERSION       9	/* DRI changes */
-#define SIS_PATCHLEVEL		0
+#define SIS_PATCHLEVEL		1
 #else
 #define SIS_MINOR_VERSION       7
 #define SIS_PATCHLEVEL          1
