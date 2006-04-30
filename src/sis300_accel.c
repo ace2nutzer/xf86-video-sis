@@ -1,5 +1,5 @@
 /* $XFree86$ */
-/* $XdotOrg: driver/xf86-video-sis/src/sis300_accel.c,v 1.22 2005/09/20 16:34:32 twini Exp $ */
+/* $XdotOrg: driver/xf86-video-sis/src/sis300_accel.c,v 1.23 2006-03-09 06:06:25 anholt Exp $ */
 /*
  * 2D Acceleration for SiS 530, 620, 300, 540, 630, 730.
  *
