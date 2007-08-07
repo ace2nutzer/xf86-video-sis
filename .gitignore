@@ -64,3 +64,4 @@ texinfo.tex
 ylwrap
 patch.sh
 rejects
+*.orig
