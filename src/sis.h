@@ -35,6 +35,8 @@
 #ifndef _SIS_H_
 #define _SIS_H_
 
+#include <sispcirename.h>
+
 #define SISDRIVERVERSIONYEAR    6
 #define SISDRIVERVERSIONMONTH   10
 #define SISDRIVERVERSIONDAY     17
