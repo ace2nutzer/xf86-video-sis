@@ -1657,6 +1657,10 @@ extern int   SiS_GetSISCRT1SaturationGain(ScrnInfoPtr pScrn);
 extern void  SiS_SetSISCRT1SaturationGain(ScrnInfoPtr pScrn, int val);
 
 
+extern unsigned int sis_pci_read_host_bridge_u32(int offset);
+extern unsigned char sis_pci_read_host_bridge_u8(int offset);
+extern void sis_pci_write_host_bridge_u8(int offset, unsigned char value);
+extern void sis_pci_write_host_bridge_u32(int offset, unsigned int value);
 #endif  /* _SIS_H_ */
 
 
