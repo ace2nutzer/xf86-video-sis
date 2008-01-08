@@ -35,6 +35,10 @@
 #ifndef _SIS_H_
 #define _SIS_H_
 
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/ioctl.h>
+
 #include <sispcirename.h>
 
 #define SISDRIVERVERSIONYEAR    6
