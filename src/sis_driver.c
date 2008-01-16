@@ -1277,7 +1277,6 @@ SiSReadROM(ScrnInfoPtr pScrn)
 	     xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
 		"Could not allocate memory for video BIOS image\n");
 	  } else {
-	     ULong  segstart;
 	     UShort mypciid = pSiS->Chipset;
 	     UShort mypcivendor = (pSiS->ChipFlags & SiSCF_IsXGI) ? PCI_VENDOR_XGI : PCI_VENDOR_SIS;
 	     Bool   found = FALSE, readpci = FALSE;
@@ -1302,7 +1301,15 @@ SiSReadROM(ScrnInfoPtr pScrn)
 			      biossize = 0x8000;
 			      break;
 	     }
-
+#if XSERVER_LIBPCIACCESS
+	     if(readpci) {
+		pSiS->PciInfo->rom_size = biossize;
+		pci_device_read_rom(pSiS->PciInfo, pSiS->BIOS);
+		if(SISCheckBIOS(pSiS, mypciid, mypcivendor, biossize)) {
+		   found = TRUE;
+		}
+	     }
+#else
 	     if(readpci) {
 		xf86ReadPciBIOS(0, pSiS->PciTag, 0, pSiS->BIOS, biossize);
 		if(SISCheckBIOS(pSiS, mypciid, mypcivendor, biossize)) {
@@ -1311,6 +1318,7 @@ SiSReadROM(ScrnInfoPtr pScrn)
 	     }
 
 	     if(!found) {
+	        ULong  segstart;
 		for(segstart = BIOS_BASE; segstart < 0x000f0000; segstart += 0x00001000) {
 
 #if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,2,99,0,0)
@@ -1325,7 +1333,7 @@ SiSReadROM(ScrnInfoPtr pScrn)
 		   break;
 		}
              }
-
+#endif
 	     if(found) {
 		UShort romptr = pSiS->BIOS[0x16] | (pSiS->BIOS[0x17] << 8);
 		pSiS->SiS_Pr->VirtualRomBase = pSiS->BIOS;
