@@ -6088,7 +6088,7 @@ SISMapMem(ScrnInfoPtr pScrn)
                         pSiS->PciTag, pSiS->IOAddress, (pSiS->mmioSize * 1024));
 #else
        {
-	     void **result = (void **)&pSiSEnt->IOBase;
+	     void **result = (void **)&pSiS->IOBase;
 	     int err = pci_device_map_range(pSiS->PciInfo,
  	                                    pSiS->IOAddress,
 	                                    (pSiS->mmioSize * 1024),
@@ -6142,7 +6142,7 @@ SISMapMem(ScrnInfoPtr pScrn)
 	     pSiS->IOBaseDense = xf86MapPciMem(pScrn->scrnIndex, VIDMEM_MMIO,
                     pSiS->PciTag, pSiS->IOAddress, (pSiS->mmioSize * 1024));
 #else
-	     void **result = (void **)&pSiSEnt->IOBaseDense;
+	     void **result = (void **)&pSiS->IOBaseDense;
 	     int err = pci_device_map_range(pSiS->PciInfo,
  	                                    pSiS->IOAddress,
 	                                    (pSiS->mmioSize * 1024),
@@ -6194,7 +6194,7 @@ SISMapMem(ScrnInfoPtr pScrn)
 #endif
 
 #ifndef XSERVER_LIBPCIACCESS
-      pSiSEnt->FbBase = pSiSEnt->RealFbBase =
+      pSiS->FbBase = pSiS->RealFbBase =
 			xf86MapPciMem(pScrn->scrnIndex, VIDMEM_FRAMEBUFFER,
 			 pSiS->PciTag, (ULong)pSiS->realFbAddress,
 			 pSiS->FbMapSize);
@@ -6204,14 +6204,14 @@ SISMapMem(ScrnInfoPtr pScrn)
                                    pSiS->FbMapSize,
                                    PCI_DEV_MAP_FLAG_WRITABLE |
                                    PCI_DEV_MAP_FLAG_WRITE_COMBINE,
-                                   (void *)&pSiSEnt->FbBase);
+                                   (void *)&pSiS->FbBase);
 	if (err) {
             xf86DrvMsg (pScrn->scrnIndex, X_ERROR,
                         "Unable to map FB aperture. %s (%d)\n",
                         strerror (err), err);
             return FALSE;
         }
-	pSiSEnt->RealFbBase = pSiSEnt->FbBase;
+	pSiS->RealFbBase = pSiS->FbBase;
 #endif
 	pSiS->FbBase += pSiS->dhmOffset;
 
