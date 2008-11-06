@@ -6125,11 +6125,12 @@ SISMapMem(ScrnInfoPtr pScrn)
                  xf86DrvMsg (pScrn->scrnIndex, X_ERROR,
                              "Unable to map IO dense aperture. %s (%d)\n",
                              strerror (err), err);
-#endif
+	     }
+#endif /* XSERVER_LIBPCIACCESS */
 	}
 	pSiS->IOBaseDense = pSiSEnt->IOBaseDense;
-    } else
-#endif
+    } else {
+#endif /* SISDUALHEAD */
 #ifndef XSERVER_LIBPCIACCESS
 	     pSiS->IOBaseDense = xf86MapPciMem(pScrn->scrnIndex, VIDMEM_MMIO,
                     pSiS->PciTag, pSiS->IOAddress, (pSiS->mmioSize * 1024));
@@ -6145,8 +6146,11 @@ SISMapMem(ScrnInfoPtr pScrn)
                  xf86DrvMsg (pScrn->scrnIndex, X_ERROR,
                              "Unable to map IO dense aperture. %s (%d)\n",
                              strerror (err), err);
+	     }
+#endif /* XSERVER_LIBPCIACCESS */
+#ifdef SISDUALHEAD
+    }
 #endif
-
     if(pSiS->IOBaseDense == NULL) {
        SISErrorLog(pScrn, "Could not map MMIO dense area\n");
        return FALSE;
