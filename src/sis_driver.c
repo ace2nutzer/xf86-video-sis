@@ -205,126 +205,6 @@ static PciChipsets XGIPciChipsets[] = {
     { -1,                   -1,                 RES_UNDEFINED }
 };
 
-#ifdef SIS_USE_XAA
-static const char *xaaSymbols[] = {
-    "XAACreateInfoRec",
-    "XAADestroyInfoRec",
-    "XAAHelpPatternROP",
-    "XAAInit",
-    NULL
-};
-#endif
-
-#ifdef SIS_USE_EXA
-static const char *exaSymbols[] = {
-    "exaGetVersion",
-    "exaDriverInit",
-    "exaDriverFini",
-    "exaOffscreenAlloc",
-    "exaOffscreenFree",
-    NULL
-};
-#endif
-
-static const char *fbSymbols[] = {
-    "fbPictureInit",
-    "fbScreenInit",
-    NULL
-};
-
-static const char *shadowSymbols[] = {
-    "ShadowFBInit",
-    NULL
-};
-
-static const char *ramdacSymbols[] = {
-    "xf86CreateCursorInfoRec",
-    "xf86DestroyCursorInfoRec",
-    "xf86InitCursor",
-    NULL
-};
-
-static const char *ddcSymbols[] = {
-    "xf86PrintEDID",
-    "xf86InterpretEDID",
-    NULL
-};
-
-static const char *int10Symbols[] = {
-    "xf86FreeInt10",
-    "xf86InitInt10",
-    NULL
-};
-
-static const char *vbeSymbols[] = {
-#if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,2,99,0,0)
-    "VBEInit",
-#else
-    "VBEExtendedInit",
-#endif
-    "vbeDoEDID",
-    "vbeFree",
-    "VBEGetVBEInfo",
-    "VBEFreeVBEInfo",
-    "VBEGetModeInfo",
-    "VBEFreeModeInfo",
-    "VBESaveRestore",
-    "VBESetVBEMode",
-    "VBEGetVBEMode",
-    "VBESetDisplayStart",
-    "VBESetGetLogicalScanlineLength",
-    NULL
-};
-
-#ifdef XF86DRI
-static const char *drmSymbols[] = {
-    "drmAddMap",
-    "drmAgpAcquire",
-    "drmAgpRelease",
-    "drmAgpAlloc",
-    "drmAgpFree",
-    "drmAgpBase",
-    "drmAgpBind",
-    "drmAgpUnbind",
-    "drmAgpEnable",
-    "drmAgpGetMode",
-    "drmCtlInstHandler",
-    "drmCtlUninstHandler",
-    "drmGetInterruptFromBusID",
-#ifndef SISHAVEDRMWRITE
-    "drmSiSAgpInit",
-#else
-    "drmCommandWrite",
-#endif
-#if XF86_VERSION_CURRENT >= XF86_VERSION_NUMERIC(4,3,0,0,0)
-    "drmGetVersion",
-    "drmFreeVersion",
-#endif
-    NULL
-};
-
-static const char *driSymbols[] = {
-    "DRICreateInfoRec",
-    "DRIScreenInit",
-    "DRIFinishScreenInit",
-    "DRIDestroyInfoRec",
-    "DRICloseScreen",
-    "DRIGetSAREAPrivate",
-    "DRILock",
-    "DRIUnlock",
-    "DRIQueryVersion",
-    "GlxSetVisualConfigs",
-    NULL
-};
-
-#ifdef XFree86LOADER
-static const char *driRefSymbols[] = {
-    "DRICreatePCIBusID",  /* not REQUIRED, but eventually referenced */
-    NULL
-};
-#endif
-#endif  /* XF86DRI */
-
 #ifdef XFree86LOADER
 
 static MODULESETUPPROTO(sisSetup);
@@ -361,17 +241,6 @@ sisSetup(pointer module, pointer opts, int *errmaj, int *errmin)
        setupDone = TRUE;
        xf86AddDriver(&SIS, module, SIS_HaveDriverFuncs);
        LoaderRefSymLists(fbSymbols,
-#ifdef SIS_USE_XAA
-			 xaaSymbols,
-#endif
-#ifdef SIS_USE_EXA
-			 exaSymbols,
-#endif
-			 shadowSymbols, ramdacSymbols,
-			 vbeSymbols, int10Symbols,
-#ifdef XF86DRI
-			 drmSymbols, driSymbols, driRefSymbols,
-#endif
 			 NULL);
        return (pointer)TRUE;
     }
@@ -954,7 +823,6 @@ SiS_LoadInitVBE(ScrnInfoPtr pScrn)
        return;
 
     if(xf86LoadSubModule(pScrn, "vbe")) {
-       xf86LoaderReqSymLists(vbeSymbols, NULL);
 #if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,2,99,0,0)
        pSiS->pVbe = VBEInit(pSiS->pInt, pSiS->pEnt->index);
 #else
@@ -978,7 +846,6 @@ SiSLoadInitDDCModule(ScrnInfoPtr pScrn)
        return TRUE;
 
     if(xf86LoadSubModule(pScrn, "ddc")) {
-       xf86LoaderReqSymLists(ddcSymbols, NULL);
        pSiS->haveDDC = TRUE;
        return TRUE;
     }
@@ -3473,7 +3340,6 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	  xf86DrvMsg(pScrn->scrnIndex, X_INFO,
 		"Initializing adapter through int10\n");
 	  if(xf86LoadSubModule(pScrn, "int10")) {
-	     xf86LoaderReqSymLists(int10Symbols, NULL);
 	     pSiS->pInt = xf86InitInt10(pSiS->pEnt->index);
 	  } else {
 	     SISErrorLog(pScrn, "Failed to load int10 module\n");
@@ -3562,7 +3428,6 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
        SISErrorLog(pScrn, "Could not load ramdac module\n");
        goto my_error_1;
     }
-    xf86LoaderReqSymLists(ramdacSymbols, NULL);
 
     /* Set pScrn->monitor */
     pScrn->monitor = pScrn->confScreen->monitor;
@@ -5742,22 +5607,18 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	SISErrorLog(pScrn, "Unsupported framebuffer bpp (%d)\n", pScrn->bitsPerPixel);
 	goto my_error_1;
     }
-    xf86LoaderReqSymLists(fbSymbols, NULL);
 
     /* Load XAA/EXA (if needed) */
     if(!pSiS->NoAccel) {
        char *modName = NULL;
-       const char **symNames = NULL;
 #ifdef SIS_USE_XAA
        if(!pSiS->useEXA) {
 	  modName = "xaa";
-	  symNames = xaaSymbols;
        }
 #endif
 #ifdef SIS_USE_EXA
        if(pSiS->useEXA) {
 	  modName = "exa";
-	  symNames = exaSymbols;
        }
 #endif
        if(modName && (!xf86LoadSubModule(pScrn, modName))) {
@@ -5768,10 +5629,8 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	     pSiS->NoXvideo = TRUE;
 	  }
 #endif
-       } else if(symNames) {
-	  xf86LoaderReqSymLists(symNames, NULL);
+       } else
 	  xf86DrvMsg(pScrn->scrnIndex, X_INFO, "2D acceleration enabled, modename %s\n",modName);
-       }
     }
 
     /* Load shadowfb (if needed) */
@@ -5783,8 +5642,6 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	     pSiS->ShadowFB = FALSE;
 	     pSiS->Rotate = pSiS->Reflect = 0;
 	  }
-       } else {
-          xf86LoaderReqSymLists(shadowSymbols, NULL);
        }
     }
 
@@ -5794,9 +5651,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
        if(!xf86LoaderCheckSymbol("DRIScreenInit")) {
 	  if(xf86LoadSubModule(pScrn, "dri")) {
 	     if(!xf86LoaderCheckSymbol("GlxSetVisualConfigs")) {
-	        if(xf86LoadSubModule(pScrn, "glx")) {
-		   xf86LoaderReqSymLists(driSymbols, drmSymbols, NULL);
-		} else {
+	        if(!xf86LoadSubModule(pScrn, "glx")) {
 		   SISErrorLog(pScrn, "Failed to load glx module\n");
 		}
 	     }
