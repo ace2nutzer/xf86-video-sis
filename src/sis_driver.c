@@ -1161,6 +1161,8 @@ SiSReadROM(ScrnInfoPtr pScrn)
 	     case SIS_340:
 	     case SIS_341:
 	     case SIS_342:
+	     case SIS_650:
+	     case SIS_760:
 	     case XGI_40:     readpci = TRUE;
 			      break;
 	     case XGI_20:     readpci = TRUE;
