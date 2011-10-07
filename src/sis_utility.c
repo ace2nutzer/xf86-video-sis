@@ -2077,7 +2077,7 @@ SiSCtrlResetProc(ExtensionEntry* extEntry)
      * in SiSCtrlExtUnregister())
      */
     if(extEntry->extPrivate) {
-       xfree(extEntry->extPrivate);
+       free(extEntry->extPrivate);
        extEntry->extPrivate = NULL;
     }
 }
@@ -2098,7 +2098,7 @@ SiSCtrlExtInit(ScrnInfoPtr pScrn)
 
    if(!(myext = CheckExtension(SISCTRL_PROTOCOL_NAME))) {
 
-      if(!(myctrl = xcalloc(sizeof(xSiSCtrlScreenTable), 1)))
+      if(!(myctrl = calloc(sizeof(xSiSCtrlScreenTable), 1)))
          return;
 
       if(!(myext = AddExtension(SISCTRL_PROTOCOL_NAME, 0, 0,
@@ -2108,7 +2108,7 @@ SiSCtrlExtInit(ScrnInfoPtr pScrn)
 				StandardMinorOpcode))) {
          xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
 	 		"Failed to add SISCTRL extension\n");
-	 xfree(myctrl);
+	 free(myctrl);
 	 return;
       }
 
