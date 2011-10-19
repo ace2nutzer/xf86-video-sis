@@ -1018,7 +1018,7 @@ typedef struct {
     void 		*RealFbBase;	/* Real VRAM virtual linear address (for DHM and SiS76x UMA skipping) */
     CARD32		IOAddress;	/* MMIO physical address */
     void		*IOBase;	/* MMIO linear address */
-    IOADDRESS		IODBase;	/* Base of PIO memory area */
+    unsigned long	IODBase;	/* Base of PIO memory area */
 #ifdef __alpha__
     void		*IOBaseDense;	/* MMIO for Alpha platform */
 #endif
@@ -1418,7 +1418,7 @@ typedef struct {
     short		Video_MaxWidth, Video_MaxHeight;
 
     Bool		skipswitchcheck;
-    IOADDRESS		MyPIOOffset;
+    unsigned long	MyPIOOffset;
     Bool		OverruleRanges;
     Bool		BenchMemCpy;
     Bool		NeedCopyFastVidCpy;
