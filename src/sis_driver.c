@@ -117,6 +117,26 @@
 #include "dri.h"
 #endif
 
+/*
+ * LookupWindow was removed with video abi 11.
+ */
+#if (GET_ABI_MAJOR(ABI_VIDEODRV_VERSION) < 4)
+#ifndef DixGetAttrAccess
+#define DixGetAttrAccess   (1<<4)
+#endif
+#endif
+
+#if (GET_ABI_MAJOR(ABI_VIDEODRV_VERSION) < 2)
+static inline int
+dixLookupWindow(WindowPtr *pWin, XID id, ClientPtr client, Mask access)
+{
+    *pWin = LookupWindow(id, client);
+    if (!*pWin)
+	return BadWindow;
+    return Success;
+}
+#endif
+
 /* Globals (yes, these ARE really required to be global) */
 
 #ifdef SISUSEDEVPORT
