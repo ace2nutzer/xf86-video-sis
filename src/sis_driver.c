@@ -112,6 +112,10 @@
 #include <X11/extensions/dpms.h>
 #endif
 
+#if GET_ABI_MAJOR(ABI_XINPUT_VERSION) >= 15
+#include <inputstr.h> /* for inputInfo */
+#endif
+
 
 #ifdef XF86DRI
 #include "dri.h"

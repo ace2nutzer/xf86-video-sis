@@ -1497,14 +1497,27 @@ SISMFBPointerMoved(int scrnIndex, int x, int y)
 	     }
 	  }
        }
-       if(doit) {
-	  UpdateCurrentTime();
-	  sigstate = xf86BlockSIGIO();
-	  miPointerAbsoluteCursor(x, y, currentTime.milliseconds);
-	  xf86UnblockSIGIO(sigstate);
-	  return;
-       }
-    }
+      if(doit) {
+ 	sigstate = xf86BlockSIGIO();
+#if GET_ABI_MAJOR(ABI_XINPUT_VERSION) >= 15
+        {
+            double dx = x, dy = y;
+            miPointerSetPosition(inputInfo.pointer, Absolute, &dx, &dy);
+            x = (int)dx;
+            y = (int)dy;
+        }
+#elif GET_ABI_MAJOR(ABI_XINPUT_VERSION) >= 11
+	miPointerSetPosition(inputInfo.pointer, Absolute, x, y);
+#elif GET_ABI_MAJOR(ABI_XINPUT_VERSION) >= 5
+	miPointerSetPosition(inputInfo.pointer, x, y);
+#else
+	UpdateCurrentTime();
+	miPointerAbsoluteCursor(x, y, currentTime.milliseconds);
+#endif
+	xf86UnblockSIGIO(sigstate);
+	return;
+      }
+   }
 #endif
 
     f1.x0 = old1x0 = pSiS->CRT1frameX0;
