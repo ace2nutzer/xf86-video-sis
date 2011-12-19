@@ -5655,7 +5655,10 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 #endif
        if(modName && (!xf86LoadSubModule(pScrn, modName))) {
 	  SISErrorLog(pScrn, "Could not load %s module\n", modName);
+	  xf86DrvMsg(pScrn->scrnIndex, X_INFO,
+			 "Falling back to shadowfb\n");
 	  pSiS->NoAccel = TRUE;
+	  pSiS->ShadowFB = TRUE;
 #ifdef SIS_USE_EXA
 	  if(pSiS->useEXA) {
 	     pSiS->NoXvideo = TRUE;
