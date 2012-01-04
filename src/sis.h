@@ -190,7 +190,13 @@
 
 #undef SISHAVEDRMWRITE
 #undef SISNEWDRI
-#ifdef XF86DRI
+
+/* if the server was built without DRI support, force-disable DRI */
+#ifndef XF86DRI
+#undef SISDRI
+#endif
+
+#ifdef SISDRI
 #if XF86_VERSION_CURRENT >= XF86_VERSION_NUMERIC(4,2,99,3,0)
 #define SISHAVEDRMWRITE
 #endif
@@ -204,7 +210,7 @@
 #include "dri.h"
 #include "GL/glxint.h"
 #include "sis_dri.h"
-#endif /* XF86DRI */
+#endif /* SISDRI */
 
 #include "sis_config.h"
 
@@ -836,7 +842,7 @@ typedef struct {
     ScrnInfoPtr		pScrn_2;
     UChar		*BIOS;
     struct SiS_Private	*SiS_Pr;
-#ifdef XF86DRI
+#ifdef SISDRI
     SISAGPHTYPE		agpHandle;
     ULong		agpAddr;
     UChar		*agpBase;
@@ -1236,7 +1242,7 @@ typedef struct {
     unsigned int	cmdQueueSize_div2;
     unsigned int	cmdQueueSize_div4;
     unsigned int	cmdQueueSize_4_3;
-#ifdef XF86DRI
+#ifdef SISDRI
     SISAGPHTYPE		agpHandle;
     ULong		agpAddr;
     UChar 		*agpBase;
@@ -1296,7 +1302,7 @@ typedef struct {
     /* DRI */
     Bool		loadDRI;
     Bool		DRIEnabled;
-#ifdef XF86DRI
+#ifdef SISDRI
     Bool		directRenderingEnabled;
     DRIInfoPtr 		pDRIInfo;
     int			drmSubFD;
