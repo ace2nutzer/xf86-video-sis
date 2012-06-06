@@ -52,7 +52,7 @@ void		SiSMFBHandleModesCRT2(ScrnInfoPtr pScrn, ClockRangePtr clockRanges);
 void		SiSMFBMakeModeList(ScrnInfoPtr pScrn);
 void		SiSMFBCorrectVirtualAndLayout(ScrnInfoPtr pScrn);
 void		SiSMFBSetDpi(ScrnInfoPtr pScrn1, ScrnInfoPtr pScrn2, SiSScrn2Rel srel);
-void		SISMFBPointerMoved(int scrnIndex, int x, int y);
+void		SISMFBPointerMoved(SCRN_ARG_TYPE arg, int x, int y);
 void		SISMFBAdjustFrame(int scrnIndex, int x, int y, int flags);
 
 Bool		SiSMFBRebuildModelist(ScrnInfoPtr pScrn, ClockRangePtr clockRanges);
@@ -1410,9 +1410,10 @@ InRegion(int x, int y, region r)
 
 
 void
-SISMFBPointerMoved(int scrnIndex, int x, int y)
+SISMFBPointerMoved(SCRN_ARG_TYPE arg, int x, int y)
 {
-    ScrnInfoPtr	pScrn1 = xf86Screens[scrnIndex];
+    SCRN_INFO_PTR(arg);
+    ScrnInfoPtr	pScrn1 = pScrn;
     SISPtr	pSiS = SISPTR(pScrn1);
     ScrnInfoPtr	pScrn2 = pSiS->CRT2pScrn;
     region	out, in1, in2, f2, f1;
@@ -1724,9 +1725,10 @@ SISMFBPointerMoved(int scrnIndex, int x, int y)
 }
 
 void
-SISMFBAdjustFrame(int scrnIndex, int x, int y, int flags)
+SISMFBAdjustFrame(ADJUST_FRAME_ARGS_DECL)
 {
-    ScrnInfoPtr pScrn1 = xf86Screens[scrnIndex];
+    SCRN_INFO_PTR(arg);
+    ScrnInfoPtr pScrn1 = pScrn;
     SISPtr pSiS = SISPTR(pScrn1);
     ScrnInfoPtr pScrn2 = pSiS->CRT2pScrn;
     int HTotal = pSiS->CurrentLayout.mode->HDisplay;

@@ -303,7 +303,7 @@ SISResetXvGamma(ScrnInfoPtr pScrn)
 void
 SISInitVideo(ScreenPtr pScreen)
 {
-    ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum];
+    ScrnInfoPtr pScrn = xf86ScreenToScrn(pScreen);
     SISPtr pSiS = SISPTR(pScrn);
     XF86VideoAdaptorPtr *adaptors, *newAdaptors = NULL;
     XF86VideoAdaptorPtr newAdaptor = NULL, newBlitAdaptor = NULL;
@@ -979,7 +979,7 @@ SISResetXvDisplay(ScrnInfoPtr pScrn)
 static XF86VideoAdaptorPtr
 SISSetupImageVideo(ScreenPtr pScreen)
 {
-    ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum];
+    ScrnInfoPtr pScrn = xf86ScreenToScrn(pScreen);
     SISPtr pSiS = SISPTR(pScrn);
     XF86VideoAdaptorPtr adapt;
     SISPortPrivPtr pPriv;
@@ -3645,7 +3645,7 @@ SISAllocateFBMemory(
   int bytesize
 ){
    SISPtr pSiS = SISPTR(pScrn);
-   ScreenPtr pScreen = screenInfo.screens[pScrn->scrnIndex];
+   ScreenPtr pScreen = xf86ScrnToScreen(pScrn);
 
 #ifdef SIS_USE_XAA
    if(!pSiS->useEXA) {
@@ -3724,7 +3724,7 @@ SISFreeFBMemory(ScrnInfoPtr pScrn, void **handle)
 {
     SISPtr pSiS = SISPTR(pScrn);
 #ifdef SIS_USE_EXA
-    ScreenPtr pScreen = screenInfo.screens[pScrn->scrnIndex];
+    ScreenPtr pScreen = xf86ScrnToScreen(pScrn);
 #endif
 
 #ifdef SIS_USE_XAA
@@ -4383,7 +4383,7 @@ static XF86OffscreenImageRec SISOffscreenImages[NUMOFFSCRIMAGES_315] =
 static void
 SISInitOffscreenImages(ScreenPtr pScreen)
 {
-    ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum];
+    ScrnInfoPtr pScrn = xf86ScreenToScrn(pScreen);
     SISPtr pSiS = SISPTR(pScrn);
     int i, num;
 
@@ -4427,7 +4427,7 @@ SISResetVideoBlit(ScrnInfoPtr pScrn)
 static XF86VideoAdaptorPtr
 SISSetupBlitVideo(ScreenPtr pScreen)
 {
-   ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum];
+   ScrnInfoPtr pScrn = xf86ScreenToScrn(pScreen);
    SISPtr pSiS = SISPTR(pScrn);
    XF86VideoAdaptorPtr adapt;
    SISBPortPrivPtr pPriv;

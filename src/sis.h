@@ -249,6 +249,8 @@
 #define M_T_EDID  0x040
 #endif
 
+#include "compat-api.h"
+
 #undef SISCHECKOSSSE
 #ifdef XORG_VERSION_CURRENT
 #if XORG_VERSION_CURRENT >= XORG_VERSION_NUMERIC(6,8,99,13,0)
@@ -1292,7 +1294,7 @@ typedef struct {
     int			SiSDPIVX, SiSDPIVY;
     int			virtualX, virtualY;
     int			Rotate, Reflect;
-    void		(*PointerMoved)(int index, int x, int y);
+    void		(*PointerMoved)(SCRN_ARG_TYPE arg, int x, int y);
 
     /* ShadowFB support */
     Bool		ShadowFB;

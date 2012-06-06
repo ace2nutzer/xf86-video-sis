@@ -266,7 +266,7 @@ extern UShort	SiS_CheckModeCRT1(ScrnInfoPtr pScrn, DisplayModePtr mode,
 				 unsigned int VBFlags, unsigned int VBFlags3, Bool hcm);
 extern UShort	SiS_CheckModeCRT2(ScrnInfoPtr pScrn, DisplayModePtr mode,
 				 unsigned int VBFlags, unsigned int VBFlags3, Bool hcm);
-extern void	SISAdjustFrame(int scrnIndex, int x, int y, int flags);
+extern void	SISAdjustFrame(ADJUST_FRAME_ARGS_DECL);
 extern float	SiSCalcVRate(DisplayModePtr mode);
 extern void	SiS_UpdateGammaCRT2(ScrnInfoPtr pScrn);
 #ifdef SISGAMMARAMP
@@ -418,7 +418,7 @@ SISSwitchCRT1Status(ScrnInfoPtr pScrn, int onoff, Bool quiet)
     (*pSiS->SyncAccel)(pScrn);
 
     pSiS->skipswitchcheck = TRUE;
-    if(!((*pScrn->SwitchMode)(pScrn->scrnIndex, pScrn->currentMode, 0))) {
+    if(!((*pScrn->SwitchMode)(SWITCH_MODE_ARGS(pScrn, pScrn->currentMode)))) {
        pSiS->skipswitchcheck = FALSE;
        return FALSE;
     }
@@ -427,7 +427,7 @@ SISSwitchCRT1Status(ScrnInfoPtr pScrn, int onoff, Bool quiet)
     /* No need to go through pScrn->AdjustFrame; the coords
      * didn't change
      */
-    SISAdjustFrame(pScrn->scrnIndex, pScrn->frameX0, pScrn->frameY0, 0);
+    SISAdjustFrame(ADJUST_FRAME_ARGS(pScrn, pScrn->frameX0, pScrn->frameY0));
 
     return TRUE;
 }
@@ -471,7 +471,7 @@ SISRedetectCRT2Devices(ScrnInfoPtr pScrn)
        /* Sync the accelerators */
        (*pSiS->SyncAccel)(pScrn);
        pSiS->skipswitchcheck = TRUE;
-       if(!((*pScrn->SwitchMode)(pScrn->scrnIndex, pScrn->currentMode, 0))) {
+       if(!((*pScrn->SwitchMode)(SWITCH_MODE_ARGS(pScrn, pScrn->currentMode)))) {
           pSiS->skipswitchcheck = FALSE;
           return FALSE;
        }
@@ -480,7 +480,7 @@ SISRedetectCRT2Devices(ScrnInfoPtr pScrn)
        /* No need to go through pScrn->AdjustFrame; the coords
 	* didn't change
 	*/
-       SISAdjustFrame(pScrn->scrnIndex, pScrn->frameX0, pScrn->frameY0, 0);
+       SISAdjustFrame(ADJUST_FRAME_ARGS(pScrn, pScrn->frameX0, pScrn->frameY0));
     }
 
     return TRUE;
@@ -615,7 +615,7 @@ SISSwitchCRT2Type(ScrnInfoPtr pScrn, ULong newvbflags, ULong newvbflags3, Bool q
     pSiS->VBFlags3 = pSiS->VBFlags_backup3 = newvbflags3;
 
     pSiS->skipswitchcheck = TRUE;
-    if(!(pScrn->SwitchMode(pScrn->scrnIndex, pScrn->currentMode, 0))) {
+    if(!(pScrn->SwitchMode(SWITCH_MODE_ARGS(pScrn, pScrn->currentMode)))) {
        pSiS->skipswitchcheck = FALSE;
        return FALSE;
     }
@@ -624,7 +624,7 @@ SISSwitchCRT2Type(ScrnInfoPtr pScrn, ULong newvbflags, ULong newvbflags3, Bool q
     /* No need to go through pScrn->AdjustFrame; the coords
      * didn't change
      */
-    SISAdjustFrame(pScrn->scrnIndex, pScrn->frameX0, pScrn->frameY0, 0);
+    SISAdjustFrame(ADJUST_FRAME_ARGS(pScrn, pScrn->frameX0, pScrn->frameY0));
 
     return TRUE;
 }
@@ -903,7 +903,7 @@ sisutil_prepare_string(xSiSCtrlCommandReply *sdcbuf, char *mystring)
 static int
 SiSHandleSiSDirectCommand(xSiSCtrlCommandReply *sdcbuf)
 {
-   ScrnInfoPtr pScrn = xf86Screens[sdcbuf->screen];
+   ScrnInfoPtr pScrn = xf86ScreenToScrn(screenInfo.screens[sdcbuf->screen]);
    SISPtr pSiS = SISPTR(pScrn);
 #ifdef SISDUALHEAD
    SISEntPtr pSiSEnt = pSiS->entityPrivate;

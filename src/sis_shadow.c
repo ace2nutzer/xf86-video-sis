@@ -32,7 +32,7 @@
 #include "sis.h"
 #include "servermd.h"
 
-void SISPointerMoved(int index, int x, int y);
+void SISPointerMoved(SCRN_ARG_TYPE arg, int x, int y);
 void SISRefreshArea(ScrnInfoPtr pScrn, int num, BoxPtr pbox);
 void SISRefreshAreaReflect(ScrnInfoPtr pScrn, int num, BoxPtr pbox);
 void SISRefreshArea8(ScrnInfoPtr pScrn, int num, BoxPtr pbox);
@@ -42,9 +42,9 @@ void SISRefreshArea32(ScrnInfoPtr pScrn, int num, BoxPtr pbox);
 
 
 void
-SISPointerMoved(int index, int x, int y)
+SISPointerMoved(SCRN_ARG_TYPE arg, int x, int y)
 {
-    ScrnInfoPtr pScrn = xf86Screens[index];
+    SCRN_INFO_PTR(arg);
     SISPtr pSiS = SISPTR(pScrn);
     Bool framechanged = FALSE;
 
@@ -83,7 +83,7 @@ SISPointerMoved(int index, int x, int y)
 
     } else {
 
-       (*pSiS->PointerMoved)(index, x, y);
+       (*pSiS->PointerMoved)(arg, x, y);
 
     }
 }
