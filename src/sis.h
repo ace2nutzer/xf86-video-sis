@@ -1025,7 +1025,9 @@ typedef struct {
     struct SiS_Private	*SiS_Pr;	/* For mode switching code */
     pciVideoPtr		PciInfo;
     int			PciBus, PciDevice, PciFunc;
+#ifndef XSERVER_LIBPCIACCESS
     PCITAG		PciTag;
+#endif
     EntityInfoPtr	pEnt;
     int			Chipset;
     unsigned char	ChipType;
