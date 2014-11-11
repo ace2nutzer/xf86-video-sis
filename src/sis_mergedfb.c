@@ -1499,6 +1499,7 @@ SISMFBPointerMoved(SCRN_ARG_TYPE arg, int x, int y)
 	  }
        }
       if(doit) {
+#if GET_ABI_MAJOR(ABI_XINPUT_VERSION) < 20 /* screw it */
  	sigstate = xf86BlockSIGIO();
 #if GET_ABI_MAJOR(ABI_XINPUT_VERSION) >= 15
         {
@@ -1516,6 +1517,7 @@ SISMFBPointerMoved(SCRN_ARG_TYPE arg, int x, int y)
 	miPointerAbsoluteCursor(x, y, currentTime.milliseconds);
 #endif
 	xf86UnblockSIGIO(sigstate);
+#endif
 	return;
       }
    }
