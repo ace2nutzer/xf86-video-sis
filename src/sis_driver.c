@@ -3122,9 +3122,11 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
     pSiS->PciDevice = PCI_CFG_DEV(pSiS->PciInfo); /*SIS_PCI_DEVICE(pSiS->PciInfo);*/
     pSiS->PciFunc = PCI_CFG_FUNC(pSiS->PciInfo);  /*SIS_PCI_FUNC(pSiS->PciInfo);*/
 
+#ifndef XSERVER_LIBPCIACCESS
     pSiS->PciTag = pciTag(PCI_DEV_BUS(pSiS->PciInfo),
 			  PCI_DEV_DEV(pSiS->PciInfo),
 			  PCI_DEV_FUNC(pSiS->PciInfo));
+#endif
 
 #ifdef SIS_NEED_MAP_IOP
     /********************************************/
@@ -3956,7 +3958,9 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
        if(pSiSEnt) pSiSEnt->SiS_Pr = pSiS->SiS_Pr;
 #endif
        memset(pSiS->SiS_Pr, 0, sizeof(struct SiS_Private));
+#ifndef XSERVER_LIBPCIACCESS
        pSiS->SiS_Pr->PciTag = pSiS->PciTag;
+#endif
        pSiS->SiS_Pr->ChipType = pSiS->ChipType;
        pSiS->SiS_Pr->ChipRevision = pSiS->ChipRev;
        pSiS->SiS_Pr->SiS_Backup70xx = 0xff;
@@ -5932,7 +5936,9 @@ static Bool
 SISMapMem(ScrnInfoPtr pScrn)
 {
     SISPtr pSiS = SISPTR(pScrn);
+#ifndef XSERVER_LIBPCIACCESS
     int mmioFlags = VIDMEM_MMIO;
+#endif
 #ifdef SISDUALHEAD
     SISEntPtr pSiSEnt = pSiS->entityPrivate;
 #endif
@@ -5942,8 +5948,10 @@ SISMapMem(ScrnInfoPtr pScrn)
      * (For Alpha, we need to map SPARSE memory, since we need
      * byte/short access.)
      */
+#ifndef XSERVER_LIBPCIACCESS
 #if defined(__alpha__)
     mmioFlags |= VIDMEM_SPARSE;
+#endif
 #endif
 
 #ifdef SISDUALHEAD
@@ -10832,6 +10840,7 @@ SiS_GetSetBIOSScratch(ScrnInfoPtr pScrn, UShort offset, UChar value)
        break;
     }
 
+#ifndef XSERVER_LIBPCIACCESS
 #ifdef SIS_USE_BIOS_SCRATCH
     if(SISPTR(pScrn)->Primary) {
        base = xf86MapVidMem(pScrn->scrnIndex, VIDMEM_MMIO, 0, 0x2000);
@@ -10849,6 +10858,7 @@ SiS_GetSetBIOSScratch(ScrnInfoPtr pScrn, UShort offset, UChar value)
 
        xf86UnMapVidMem(pScrn->scrnIndex, base, 0x2000);
     }
+#endif
 #endif
     return ret;
 }
