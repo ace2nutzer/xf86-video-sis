@@ -54,8 +54,6 @@
 #ifdef SIS_USE_EXA		/* EXA */
 extern void SiSScratchSave(ScreenPtr pScreen, ExaOffscreenArea *area);
 extern Bool SiSUploadToScratch(PixmapPtr pSrc, PixmapPtr pDst);
-extern Bool SiSUploadToScreen(PixmapPtr pDst, int x, int y, int w, int h, char *src, int src_pitch);
-extern Bool SiSDownloadFromScreen(PixmapPtr pSrc, int x, int y, int w, int h, char *dst, int dst_pitch);
 #endif /* EXA */
 
 extern UChar SiSGetCopyROP(int rop);
@@ -805,10 +803,6 @@ SiSAccelInit(ScreenPtr pScreen)
 
 	  /* Composite not supported */
 
-	  /* Upload, download to/from Screen */
-	  pSiS->EXADriverPtr->accel.UploadToScreen = SiSUploadToScreen;
-	  pSiS->EXADriverPtr->accel.DownloadFromScreen = SiSDownloadFromScreen;
-
 #else /*xorg>=7.0*/
 
 	  pSiS->EXADriverPtr->exa_major = 2;
@@ -845,11 +839,6 @@ SiSAccelInit(ScreenPtr pScreen)
 	  pSiS->EXADriverPtr->DoneCopy = SiSDoneCopy;
 
 	  /* Composite not supported */
-
-	  /* Upload, download to/from Screen */
-	  pSiS->EXADriverPtr->UploadToScreen = SiSUploadToScreen;
-	  pSiS->EXADriverPtr->DownloadFromScreen = SiSDownloadFromScreen;
-
 
 #endif  /*end of Xorg>=7.0 EXA Setting*/       
        }

@@ -127,8 +127,6 @@ static CARD32 SiSDstTextureFormats32[3] = { PICT_x8r8g8b8, PICT_a8r8g8b8, 0 };
 #ifdef SIS_USE_EXA		/* EXA */
 void SiSScratchSave(ScreenPtr pScreen, ExaOffscreenArea *area);
 Bool SiSUploadToScratch(PixmapPtr pSrc, PixmapPtr pDst);
-Bool SiSUploadToScreen(PixmapPtr pDst, int x, int y, int w, int h, char *src, int src_pitch);
-Bool SiSDownloadFromScreen(PixmapPtr pSrc, int x, int y, int w, int h, char *dst, int dst_pitch);
 #endif /* EXA */
 
 void SISWriteBlitPacket(SISPtr pSiS, CARD32 *packet);
@@ -1283,31 +1281,6 @@ SiSDoneComposite(PixmapPtr pDst)
 #endif
 
 Bool
-SiSUploadToScreen(PixmapPtr pDst, int x, int y, int w, int h, char *src, int src_pitch)
-{
-	ScrnInfoPtr pScrn = xf86ScreenToScrn(pDst->drawable.pScreen);
-	SISPtr pSiS = SISPTR(pScrn);
-	unsigned char *dst = ((unsigned char *) pSiS->FbBase) + exaGetPixmapOffset(pDst);
-	int dst_pitch = exaGetPixmapPitch(pDst);
-	int size = 0;
-
-	(pSiS->SyncAccel)(pScrn);
-
-	if(pDst->drawable.bitsPerPixel < 8)
-	   return FALSE;
-
-	dst += (x * pDst->drawable.bitsPerPixel / 8) + (y * dst_pitch);
-	size = (w * pDst->drawable.bitsPerPixel / 8);
-	while(h--) {
-	   SiSMemCopyToVideoRam(pSiS, dst, (unsigned char *)src, size);
-	   src += src_pitch;
-	   dst += dst_pitch;
-	}
-
-	return TRUE;
-}
-
-Bool
 SiSUploadToScratch(PixmapPtr pSrc, PixmapPtr pDst)
 {
 #if EXA_HAVE_UPLOAD_TO_SCRATCH
@@ -1362,31 +1335,6 @@ SiSUploadToScratch(PixmapPtr pSrc, PixmapPtr pDst)
 #else
 	return FALSE;
 #endif
-}
-
-Bool
-SiSDownloadFromScreen(PixmapPtr pSrc, int x, int y, int w, int h, char *dst, int dst_pitch)
-{
-	ScrnInfoPtr pScrn = xf86ScreenToScrn(pSrc->drawable.pScreen);
-	SISPtr pSiS = SISPTR(pScrn);
-	unsigned char *src = ((unsigned char *) pSiS->FbBase) + exaGetPixmapOffset(pSrc);
-	int src_pitch = exaGetPixmapPitch(pSrc);
-	int size = 0;
-
-	(pSiS->SyncAccel)(pScrn);
-
-	if(pSrc->drawable.bitsPerPixel < 8)
-	   return FALSE;
-
-	src += (x * pSrc->drawable.bitsPerPixel / 8) + (y * src_pitch);
-	size = (w * pSrc->drawable.bitsPerPixel / 8);
-	while(h--) {
-	   SiSMemCopyFromVideoRam(pSiS, (unsigned char *)dst, src, size);
-	   src += src_pitch;
-	   dst += dst_pitch;
-	}
-
-	return TRUE;
 }
 #endif /* EXA */
 
@@ -1629,9 +1577,6 @@ SiS315AccelInit(ScreenPtr pScreen)
 	      }
 #endif
 
-	      /* Upload, download to/from Screen */
-	      pSiS->EXADriverPtr->accel.UploadToScreen = SiSUploadToScreen;
-	      pSiS->EXADriverPtr->accel.DownloadFromScreen = SiSDownloadFromScreen;
 
 #else /*Xorg>= 7.0*/
 
@@ -1678,10 +1623,6 @@ SiS315AccelInit(ScreenPtr pScreen)
 		 pSiS->EXADriverPtr->DoneComposite = SiSDoneComposite;
 	      }
 #endif
-
-	      /* Upload, download to/from Screen */
-	      pSiS->EXADriverPtr->UploadToScreen = SiSUploadToScreen;
-	      pSiS->EXADriverPtr->DownloadFromScreen = SiSDownloadFromScreen;
 
 #endif /*end of Xorg>=7.0*/ 
 	   
