@@ -10811,8 +10811,10 @@ UChar
 SiS_GetSetBIOSScratch(ScrnInfoPtr pScrn, UShort offset, UChar value)
 {
     UChar ret = 0;
+#ifndef XSERVER_LIBPCIACCESS
 #ifdef SIS_USE_BIOS_SCRATCH
     UChar *base;
+#endif
 #endif
 
     /* For some reasons (like detecting the current display mode),

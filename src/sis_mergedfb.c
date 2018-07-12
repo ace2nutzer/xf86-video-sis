@@ -1425,7 +1425,9 @@ SISMFBPointerMoved(SCRN_ARG_TYPE arg, int x, int y)
     int		CRT1HDisplay, CRT1VDisplay, CRT2HDisplay, CRT2VDisplay;
     int		HVirt = pScrn1->virtualX;
     int		VVirt = pScrn1->virtualY;
+#if GET_ABI_MAJOR(ABI_XINPUT_VERSION) < 20
     int		sigstate;
+#endif
     Bool	doit = FALSE, HaveNonRect = FALSE, HaveOffsRegions = FALSE;
     SiSScrn2Rel	srel = ((SiSMergedDisplayModePtr)pSiS->CurrentLayout.mode->Private)->CRT2Position;
 
