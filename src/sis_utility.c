@@ -1943,7 +1943,9 @@ static int
 SiSProcSiSCtrlQueryVersion(ClientPtr client)
 {
     xSiSCtrlQueryVersionReply	  rep;
+#if GET_ABI_MAJOR(ABI_VIDEODRV_VERSION) < 12
     register int		  n;
+#endif
 
     REQUEST_SIZE_MATCH(xSiSCtrlQueryVersionReq);
     rep.type = X_Reply;
@@ -1968,7 +1970,9 @@ SiSProcSiSCtrlCommand(ClientPtr client)
     xSiSCtrlCommandReply rep;
     ExtensionEntry 	 *myext;
     xSiSCtrlScreenTable  *myctrl;
+#if GET_ABI_MAJOR(ABI_VIDEODRV_VERSION) < 12
     register int	 n;
+#endif
     int 		 i, ret;
 
     REQUEST_SIZE_MATCH(xSiSCtrlCommandReq);
@@ -2030,7 +2034,9 @@ static int
 SiSSProcSiSCtrlQueryVersion(ClientPtr client)
 {
     REQUEST(xSiSCtrlQueryVersionReq);
+#if GET_ABI_MAJOR(ABI_VIDEODRV_VERSION) < 12
     register int n;
+#endif
     _swaps(&stuff->length, n);
     REQUEST_SIZE_MATCH(xSiSCtrlQueryVersionReq);
     return SiSProcSiSCtrlQueryVersion(client);
@@ -2040,7 +2046,9 @@ static int
 SiSSProcSiSCtrlCommand(ClientPtr client)
 {
     REQUEST(xSiSCtrlCommandReq);
+#if GET_ABI_MAJOR(ABI_VIDEODRV_VERSION) < 12
     register int n;
+#endif
     int i;
     _swaps(&stuff->length, n);
     _swapl(&stuff->screen, n);
