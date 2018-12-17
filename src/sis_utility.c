@@ -578,7 +578,7 @@ SISSwitchCRT2Type(ScrnInfoPtr pScrn, ULong newvbflags, ULong newvbflags3, Bool q
     }
 #endif
 
-    if((!(newvbflags & CRT2_ENABLE)) && (!newvbflags & DISPTYPE_CRT1)) {
+    if((!(newvbflags & CRT2_ENABLE)) && (!(newvbflags & DISPTYPE_CRT1))) {
        if(!quiet) {
           xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
              "CRT2 can't be switched off while CRT1 is off\n");
