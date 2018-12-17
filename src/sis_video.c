@@ -4592,7 +4592,11 @@ SISPutImageBlit(
    XAAInfoRecPtr pXAA = pSiS->AccelInfoPtr;
 #endif
    int	  xoffset = 0, yoffset = 0;
-   Bool   first;
+#if 0
+#ifdef SISMERGED
+   Bool first;
+#endif
+#endif
 
    if(index >= NUM_BLIT_PORTS)
       return BadMatch;
@@ -4749,7 +4753,11 @@ SISPutImageBlit(
 			   DSTVIDEO;
 
 
+#if 0
+#ifdef SISMERGED
    first = TRUE;
+#endif
+#endif
    while(nbox--) {
       left = pbox->x1;
       if(left >= drw_x + xoffset + width) goto mycont;
@@ -4810,7 +4818,11 @@ SISPutImageBlit(
       MyPacket.P12_UVSrcAddr = pPriv->bufAddr[index][pPriv->currentBuf[index]] + bytesize + offsetuv + FBOFFSET;
       SISWriteBlitPacket(pSiS, (CARD32*)&MyPacket);
 
+#if 0
+#ifdef SISMERGED
       first = FALSE;
+#endif
+#endif
 mycont:
 	 pbox++;
    }
