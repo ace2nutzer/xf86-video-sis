@@ -321,16 +321,18 @@
 #define PCI_CHIP_SIS670			0x6350	/* 670_VGA, 770_VGA */
 #define PCI_CHIP_SIS671			0x6351	/* 671_VGA, 771_VGA */
 
-#ifndef PCI_VENDOR_XGI
-#define PCI_VENDOR_XGI		0x18ca
-#endif
 
-#ifndef PCI_CHIP_XGIXG20
+/*
+ * XGI Technology PCI Vendor ID
+ */
+#define PCI_VENDOR_XGI		0x18CA
+
+/*
+ * XGI Technology PCI Device ID
+ */
 #define PCI_CHIP_XGIXG20	0x0020
-#endif
-#ifndef PCI_CHIP_XGIXG40
 #define PCI_CHIP_XGIXG40	0x0040
-#endif
+
 
 /* pSiS->Flags (old series only) */
 #define SYNCDRAM		0x00000001
