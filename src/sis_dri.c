@@ -216,7 +216,7 @@ SISDRIScreenInit(ScreenPtr pScreen)
 #endif
   pDRIInfo->frameBufferSize = pSIS->FbMapSize;
 
-  /* scrnOffset is being calulated in sis_vga.c. It
+  /* scrnOffset is being calculated in sis_vga.c It
    * is constant throughout server livetime (apart
    * from when DGA is active)
    */

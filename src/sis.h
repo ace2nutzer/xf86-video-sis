@@ -455,7 +455,7 @@
 #define VB2_LCD162MHZBRIDGE	(VB2_301C  | VB2_307T)
 /* CRT2/LCD over 1280 (overflow bits in Part4) */
 #define VB2_LCDOVER1280BRIDGE	(VB2_301C  | VB2_307T   | VB2_302LV | VB2_302ELV | VB2_307LV)
-/* CRT2/LCD over 1600? Is this really gonna happen, or will there be LCDA only for large panels? */
+/* CRT2/LCD over 1600? Is this really going to happen, or will there be LCDA only for large panels? */
 #define VB2_LCDOVER1600BRIDGE	(VB2_307T  | VB2_307LV)
 /* VGA2 up to 202MHz (1600x1200@75) */
 #define VB2_RAMDAC202MHZBRIDGE	(VB2_301C  | VB2_307T)
@@ -1377,7 +1377,7 @@ typedef struct {
     CARD8		*state, *pstate;
     void		*base, *VGAbase;
     Bool		Primary;		/* Display adapter is primary */
-    Bool		VGADecodingEnabled;	/* a0000 memory adress decoding is enabled */
+    Bool		VGADecodingEnabled;	/* a0000 memory address decoding is enabled */
     xf86Int10InfoPtr	pInt;			/* Our int10 */
 
     /* sisfb */
