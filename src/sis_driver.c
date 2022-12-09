@@ -721,7 +721,7 @@ SISFreeRec(ScrnInfoPtr pScrn)
 
 /* Log error */
 
-void
+static void _X_ATTRIBUTE_PRINTF(2, 3)
 SISErrorLog(ScrnInfoPtr pScrn, const char *format, ...)
 {
     va_list ap;
