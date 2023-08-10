@@ -70,9 +70,6 @@
 #ifdef SIS_LINUX_KERNEL
 #include "vgatypes.h"
 #include "vstruct.h"
-#ifdef SIS_CP
-#undef SIS_CP
-#endif
 #include <linux/config.h>
 #include <linux/version.h>
 #include <linux/types.h>
@@ -121,6 +118,7 @@ static const unsigned short ModeIndex_1280x854[]     = {0x1a, 0x1b, 0x00, 0x1c};
 static const unsigned short ModeIndex_1360x768[]     = {0x48, 0x4b, 0x00, 0x4e};
 static const unsigned short ModeIndex_300_1360x1024[]= {0x67, 0x6f, 0x00, 0x72};  /* 300 series, BARCO only */
 static const unsigned short ModeIndex_1400x1050[]    = {0x26, 0x27, 0x00, 0x28};  /* 315 series only */
+static const unsigned short ModeIndex_1440x900[]     = {0x55, 0x67, 0x00, 0x6f};  /* 315 series only */
 static const unsigned short ModeIndex_1680x1050[]    = {0x17, 0x18, 0x00, 0x19};  /* 315 series only */
 static const unsigned short ModeIndex_1600x1200[]    = {0x3c, 0x3d, 0x00, 0x66};
 static const unsigned short ModeIndex_1920x1080[]    = {0x2c, 0x2d, 0x00, 0x73};  /* 315 series only */
@@ -292,7 +290,9 @@ static const struct SiS_ModeResInfo_S SiS_ModeResInfo[] =
 	{ 1920,1080, 8,16},   /* 0x1f */
 	{  960, 540, 8,16},   /* 0x20 */
 	{  960, 600, 8,16},   /* 0x21 */
-	{ 1280, 854, 8,16}    /* 0x22 */
+	{ 1280, 854, 8,16},   /* 0x22 */
+	{ 1440, 900, 8,16},   /* 0x23 */
+	{ 1920,1200, 8,16}    /* 0x24 */
 };
 
 #if defined(SIS300) || defined(SIS315H)
@@ -767,7 +767,7 @@ static const unsigned char SiS_PALTiming[] = {
 };
 
 static const unsigned char SiS_HiTVExtTiming[] = {
-	0x32,0x65,0x2c,0x5f,0x08,0x31,0x3a,0x64,
+	0x2a,0x5d,0x2c,0x5f,0x08,0x31,0x3a,0x64,
 	0x28,0x02,0x01,0x3d,0x06,0x3e,0x35,0x6d,
 	0x06,0x14,0x3e,0x35,0x6d,0x00,0xc5,0x3f,
 	0x64,0x90,0x33,0x8c,0x18,0x36,0x3e,0x13,
@@ -868,7 +868,8 @@ static const struct SiS_TVData SiS_ExtPALData[] =
  {    3,   2,1080, 619,1270, 540, 438, 0, 438,    0,0xf3,0x00,0x1d,0x20},  /* 720x576 */
  {    1,   1,1170, 821,1270, 520, 686, 0, 686,    0,0xF3,0x00,0x1D,0x20},  /* 1024x768 625i */
  {    1,   1,1170, 821,1270, 520, 686, 0, 686,    0,0xF3,0x00,0x1D,0x20},  /* 1024x768 625p */
- {    9,   4, 848, 528,1270, 530,   0, 0,  50,    0,0xf5,0xfb,0x1b,0x2a}   /* 720x480 */
+ {    9,   4, 848, 528,1270, 530,   0, 0,  50,    0,0xf5,0xfb,0x1b,0x2a},  /* 720x480 */
+ {    3,   2,1272, 566,1270, 530,   0, 0,  50,    0,0xf5,0xfb,0x1b,0x2a}   /* 848x480, 856x480 */
 };
 
 static const struct SiS_TVData SiS_StNTSCData[] =
@@ -892,6 +893,8 @@ static const struct SiS_TVData SiS_ExtNTSCData[] =
  {    1,   1,1100, 811,1412, 440,   0, 1,   0,    0,0xee,0x0c,0x22,0x08},  /* 1024x768 (525i) */
  {    1,   1,1100, 846,1270, 440, 455, 0,   0,    0,0x00,0x00,0x00,0x00},  /* 1024x768 (525p) */
  {  143,  76, 836, 523,1270, 440,   0, 1,   0,    0,0xee,0x0c,0x22,0x08},  /* 720x480 */
+ {  143, 120,1320, 560,1270, 440,   0, 0,   0,    0,0xf1,0x05,0x1f,0x16},  /* 848x480, 856x480 */
+ {    1,   1,1093, 811,1412, 440,   0, 1,   0,    0,0xee,0x0c,0x22,0x08}   /*1024x768 (karma spec.)*/
 };
 
 static const struct SiS_TVData SiS_StHiTVData[] =  /* Slave + TVSimu */
@@ -929,6 +932,9 @@ static const struct SiS_TVData SiS_ExtHiTVData[] =
  {    8,   5, 0x6d6,0x323,0x670,0x3c0,0x128, 0, 0, 0, 0, 0, 0, 0},  /* 1280x720  */
  {    8,   3,  1260,  851, 1648,  960,   50, 0, 0, 0, 0, 0, 0, 0},  /* 960x600  */
  {    4,   1,  1050,  600, 1920, 1080,   50, 0, 0, 0, 0, 0, 0, 0},  /* 960x540  */
+ {    0,   0,     0,    0,    0,    0,    0, 0, 0, 0, 0, 0, 0, 0},
+ {    4,   1, 0x41a,0x233,0x60c,0x3c0,0x143, 1, 0, 0, 0, 0, 0, 0},  /* 848x480   */
+ {    4,   1, 0x41a,0x233,0x60c,0x3c0,0x143, 1, 0, 0, 0, 0, 0, 0},  /* 856x480   */
 };
 
 static const struct SiS_TVData SiS_St525pData[] =
@@ -960,7 +966,7 @@ static const struct SiS_TVData SiS_Ext750pData[] =
  {    2,  1, 1100, 562, 1130, 640,   0, 1, 0, 0, 0, 0, 0, 0},  /* 720x480 */
  {    1,  1, 1375, 878, 1130, 640, 638, 0, 0, 0, 0, 0, 0, 0},  /* 1024x768 */
  {    5,  3, 1100, 675, 1130, 640,   0, 1, 0, 0, 0, 0, 0, 0},  /* 720/768x576 */
- {    2,  1, 1100, 590, 1130, 640,  50, 0, 0, 0, 0, 0, 0, 0},  /* 800x480 */
+ {    2,  1, 1100, 590, 1130, 640,  50, 0, 0, 0, 0, 0, 0, 0},  /* 800/848/856x480 */
  {    5,  3, 1100, 675, 1130, 640,   0, 1, 0, 0, 0, 0, 0, 0},  /* 1024x576 */
 #ifdef OLD1280720P
  {   25, 24, 1496, 755, 1120, 680,  50, 0, 0, 0, 0, 0, 0, 0}   /* 1280x720 */
@@ -1136,6 +1142,7 @@ static const struct SiS_LCDData SiS_StLCD1400x1050Data[] =
 	{   0,    0,    0,    0,    0,    0 },
 	{   0,    0,    0,    0,    0,    0 },
 	{   0,    0,    0,    0,    0,    0 },
+	{   0,    0,    0,    0,    0,    0 },
 	{   0,    0,    0,    0,    0,    0 }
 };
 
@@ -1157,6 +1164,7 @@ static const struct SiS_LCDData SiS_ExtLCD1400x1050Data[] =
 	{ 211,  120, 1400,  730, 1688, 1066 }, /* 1280x720 */
 	{   0,    0,    0,    0,    0,    0 },
 	{   0,    0,    0,    0,    0,    0 },
+	{   0,    0,    0,    0,    0,    0 },
 	{   0,    0,    0,    0,    0,    0 }
 };
 
@@ -1175,7 +1183,8 @@ static const struct SiS_LCDData SiS_LCD1680x1050Data[] =
 	{  13,    9, 1900,  739, 1900, 1066 }, /* 10 1280x720 */
 	{  95,   94, 1880, 1066, 1900, 1066 }, /* 11 1400x1050 patch index */
 	{   1,    1, 1900, 1066, 1900, 1066 }, /* 12 1680x1050 */
-	{   0,    0,    0,    0,    0,    0 }
+	{   0,    0,    0,    0,    0,    0 }, /* 13 1280x854 */
+	{   0,    0,    0,    0,    0,    0 }, /* 14 1440x900 */
 };
 
 static const struct SiS_LCDData SiS_StLCD1600x1200Data[] =
@@ -1190,6 +1199,7 @@ static const struct SiS_LCDData SiS_StLCD1600x1200Data[] =
 	{135,88,1600,1100, 2160, 1250 },
 	{72, 49,1680,1092, 2160, 1250 },
 	{ 1,  1,2160,1250, 2160, 1250 },
+	{ 0,  0,   0,   0,    0,    0 },
 	{ 0,  0,   0,   0,    0,    0 },
 	{ 0,  0,   0,   0,    0,    0 },
 	{ 0,  0,   0,   0,    0,    0 },
@@ -1210,6 +1220,7 @@ static const struct SiS_LCDData SiS_ExtLCD1600x1200Data[] =
 	{27,16,1500,1064, 2160, 1250 }, /* 1280x1024 */
 	{72,49,1680,1092, 2160, 1250 }, /* 1400x1050 (6330, was not supported on 6325) */
 	{ 1, 1,2160,1250, 2160, 1250 },
+	{ 0, 0,   0,   0,    0,    0 },
 	{ 0, 0,   0,   0,    0,    0 },
 	{ 0, 0,   0,   0,    0,    0 },
 	{ 0, 0,   0,   0,    0,    0 },
@@ -1251,7 +1262,8 @@ static const struct SiS_LCDData SiS_NoScaleData[] =
 	{ 1, 1,1408, 816,1408, 816 },  /* 0x1f: 1280x800 (TMDS special) */
 	{ 1, 1,1760,1235,1760,1235 },  /* 0x20: 1600x1200 for LCDA */
 	{ 1, 1,2048,1320,2048,1320 },  /* 0x21: 1600x1200 for non-SiS LVDS */
-	{ 1, 1,1664, 861,1664, 861 }   /* 0x22: 1280x854 */
+	{ 1, 1,1664, 861,1664, 861 },  /* 0x22: 1280x854 */
+	{ 1, 1,1760, 912,1760, 912 }   /* 0x23: 1400x900 */
 };
 
 /**************************************************************/
@@ -1585,6 +1597,8 @@ BOOLEAN		SiSBIOSSetModeCRT2(struct SiS_Private *SiS_Pr, ScrnInfoPtr pScrn,
 				DisplayModePtr mode, BOOLEAN IsCustom);
 BOOLEAN		SiSBIOSSetModeCRT1(struct SiS_Private *SiS_Pr, ScrnInfoPtr pScrn,
 				DisplayModePtr mode, BOOLEAN IsCustom);
+void		SiS_SetPitchCRT1(struct SiS_Private *SiS_Pr, ScrnInfoPtr pScrn);
+void		SiS_SetPitchCRT2(struct SiS_Private *SiS_Pr, ScrnInfoPtr pScrn);
 #endif
 #ifdef SIS_LINUX_KERNEL
 BOOLEAN		SiSSetMode(struct SiS_Private *SiS_Pr, unsigned short ModeNo);

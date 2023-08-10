@@ -43,12 +43,6 @@ SiS_MakeClockRegs(ScrnInfoPtr pScrn, int clock, unsigned char *p2b, unsigned cha
    int          out_n, out_dn, out_div, out_sbit, out_scale;
    unsigned int vclk[5];
 
-#define Midx         0
-#define Nidx         1
-#define VLDidx       2
-#define Pidx         3
-#define PSNidx       4
-
    if(SiS_compute_vclk(clock, &out_n, &out_dn, &out_div, &out_sbit, &out_scale)) {
       (*p2b) = (out_div == 2) ? 0x80 : 0x00;
       (*p2b) |= ((out_n - 1) & 0x7f);
@@ -61,20 +55,21 @@ SiS_MakeClockRegs(ScrnInfoPtr pScrn, int clock, unsigned char *p2b, unsigned cha
 #endif
    } else {
       SiSCalcClock(pScrn, clock, 2, vclk);
-      (*p2b) = (vclk[VLDidx] == 2) ? 0x80 : 0x00;
-      (*p2b) |= (vclk[Midx] - 1) & 0x7f;
-      (*p2c) = (vclk[Nidx] - 1) & 0x1f;
-      if(vclk[Pidx] <= 4) {
+      (*p2b) = (vclk[SIS_VCLK_VLDidx] == 2) ? 0x80 : 0x00;
+      (*p2b) |= (vclk[SIS_VCLK_Midx] - 1) & 0x7f;
+      (*p2c) = (vclk[SIS_VCLK_Nidx] - 1) & 0x1f;
+      if(vclk[SIS_VCLK_Pidx] <= 4) {
 	 /* postscale 1,2,3,4 */
-	 (*p2c) |= ((vclk[Pidx] - 1) & 3) << 5;
+	 (*p2c) |= ((vclk[SIS_VCLK_Pidx] - 1) & 3) << 5;
       } else {
 	 /* postscale 6,8 */
-	 (*p2c) |= (((vclk[Pidx] / 2) - 1) & 3) << 5;
+	 (*p2c) |= (((vclk[SIS_VCLK_Pidx] / 2) - 1) & 3) << 5;
 	 (*p2c) |= 0x80;
       }
 #ifdef TWDEBUG
       xf86DrvMsg(pScrn->scrnIndex, X_INFO, "Clock %d: n %d dn %d div %d sc %d\n",
-		clock, vclk[Midx], vclk[Nidx], vclk[VLDidx], vclk[Pidx]);
+		clock, vclk[SIS_VCLK_Midx], vclk[SIS_VCLK_Nidx],
+		vclk[SIS_VCLK_VLDidx], vclk[SIS_VCLK_Pidx]);
 #endif
    }
 }
@@ -183,8 +178,8 @@ SiS_CheckBuildCustomMode(ScrnInfoPtr pScrn, DisplayModePtr mode, unsigned int VB
 }
 
 /* Build a list of supported modes:
- * Built-in modes for which we have all data are M_T_DEFAULT,
- * modes derived from DDC or database data are M_T_BUILTIN
+ * - Built-in modes for which we have all data are M_T_DEFAULT,
+ * - modes derived from DDC or database data are M_T_BUILTIN
  */
 DisplayModePtr
 SiSBuildBuiltInModeList(ScrnInfoPtr pScrn, BOOLEAN includelcdmodes, BOOLEAN isfordvi,
@@ -200,13 +195,25 @@ SiSBuildBuiltInModeList(ScrnInfoPtr pScrn, BOOLEAN includelcdmodes, BOOLEAN isfo
    DisplayModePtr backup = NULL;
 #endif
 
-   pSiS->backupmodelist = NULL;
+   /*chaoyu modified: some important modes that most scalers support*/
+    unsigned char RefIndex_ModeIDMask[] = {0x6a,/*800x600*/\
+           					    0x2e,/*640*480*/\
+						    0x37,/*1024*768*/\
+						    0x3a,/*1280*1024*/\
+						    0x3c,/*1600*1200*/\
+						    0x68,/*1920*1440*/\
+						    0x6c,/*2048*1536*/\
+						    0x14,/*1280*800*/\
+						    0x3a,/*1280*1024*/\
+						    0xff};
+
    pSiS->AddedPlasmaModes = FALSE;
 
    UseWide = pSiS->SiS_Pr->SiS_UseWide;
    if(IsForCRT2) UseWide = pSiS->SiS_Pr->SiS_UseWideCRT2;
 
-   if(!SiSInitPtr(pSiS->SiS_Pr)) return NULL;
+   if(!SiSInitPtr(pSiS->SiS_Pr))
+      return NULL;
 
    i = 0;
    while(pSiS->SiS_Pr->SiS_RefIndex[i].Ext_InfoFlag != 0xFFFF) {
@@ -240,6 +247,32 @@ SiSBuildBuiltInModeList(ScrnInfoPtr pScrn, BOOLEAN includelcdmodes, BOOLEAN isfo
 	 continue;
       }
 
+     
+     /* chaoyu modified: If the display is CRT2_LCD (such as laptops), we prune some unsuitable modes.
+
+        This is because the LCD scaler may not support these modes.*/
+   
+    if (pSiS->VBFlags & CRT2_LCD) {
+        j=0;
+        k=0;	
+        while(RefIndex_ModeIDMask[j] != 0xff){
+            if (pSiS->SiS_Pr->SiS_RefIndex[i].ModeID == RefIndex_ModeIDMask[j]) {
+                k=1;
+                break;
+            }
+            j++;
+	}
+     
+        if(k == 0) {
+	  i++;
+	  continue;
+	} 	
+      }
+
+
+
+
+
       if(!(new = xalloc(sizeof(DisplayModeRec)))) return first;
       memset(new, 0, sizeof(DisplayModeRec));
       if(!(new->name = xalloc(10))) {
@@ -253,7 +286,6 @@ SiSBuildBuiltInModeList(ScrnInfoPtr pScrn, BOOLEAN includelcdmodes, BOOLEAN isfo
       }
 
       current = new;
-
       sprintf(current->name, "%dx%d", pSiS->SiS_Pr->SiS_RefIndex[i].XRes,
 				      pSiS->SiS_Pr->SiS_RefIndex[i].YRes);
 
@@ -363,7 +395,7 @@ SiSBuildBuiltInModeList(ScrnInfoPtr pScrn, BOOLEAN includelcdmodes, BOOLEAN isfo
 
      if(SiS_PlasmaTable[i].vendor == pSiS->SiS_Pr->CP_Vendor) {
 
-	for(j=0; j<SiS_PlasmaTable[i].productnum; j++) {
+	for(j = 0; j < SiS_PlasmaTable[i].productnum; j++) {
 
 	    if(SiS_PlasmaTable[i].product[j] == pSiS->SiS_Pr->CP_Product) {
 
@@ -371,7 +403,7 @@ SiSBuildBuiltInModeList(ScrnInfoPtr pScrn, BOOLEAN includelcdmodes, BOOLEAN isfo
 		  "Identified %s panel, adding specific modes\n",
 		  SiS_PlasmaTable[i].plasmaname);
 
-	       for(k=0; k<SiS_PlasmaTable[i].modenum; k++) {
+	       for(k = 0; k < SiS_PlasmaTable[i].modenum; k++) {
 
 		  if(isfordvi) {
 		     if(!(SiS_PlasmaTable[i].plasmamodes[k] & 0x80)) continue;
@@ -597,6 +629,20 @@ SiSTranslateToOldMode(int modenumber)
    return modenumber;
 }
 
+unsigned short
+SiS_GetModeNumber(ScrnInfoPtr pScrn, DisplayModePtr mode, unsigned int VBFlags)
+{
+   SISPtr  pSiS = SISPTR(pScrn);
+   UShort  i = pSiS->CurrentLayout.bytesPerPixel - 1;
+   BOOLEAN FSTN = pSiS->FSTN ? TRUE : FALSE;
+
+#ifdef SISDUALHEAD
+   if(pSiS->DualHeadMode && pSiS->SecondHead) FSTN = FALSE;
+#endif
+   return(SiS_GetModeID(pSiS->VGAEngine, VBFlags, mode->HDisplay, mode->VDisplay,
+			i, FSTN, pSiS->LCDwidth, pSiS->LCDheight));
+}
+
 BOOLEAN
 SiS_GetPanelID(struct SiS_Private *SiS_Pr)
 {
@@ -750,14 +796,18 @@ SiS_SenseLCDDDC(struct SiS_Private *SiS_Pr, SISPtr pSiS)
    int retry, i;
    int panel1280x960 = (pSiS->VGAEngine == SIS_315_VGA) ? Panel310_1280x960 : Panel300_1280x960;
    unsigned char buffer[256];
+   xf86MonPtr pMonitor;
 
-   for(i=0; i<7; i++) SiS_Pr->CP_DataValid[i] = FALSE;
+   for(i = 0; i < 7; i++) {
+      SiS_Pr->CP_DataValid[i] = FALSE;
+   }
    SiS_Pr->CP_HaveCustomData = FALSE;
    SiS_Pr->CP_MaxX = SiS_Pr->CP_MaxY = SiS_Pr->CP_MaxClock = 0;
    SiS_Pr->CP_PreferredX = SiS_Pr->CP_PreferredY = 0;
    SiS_Pr->CP_PreferredIndex = -1;
    SiS_Pr->CP_PrefClock = 0;
    SiS_Pr->PanelSelfDetected = FALSE;
+   SiSFreeEDID(pSiS->pScrn, &pSiS->currcrt2digitaledid);
 
    if(!(pSiS->VBFlags2 & VB2_SISTMDSBRIDGE)) return 0;
    if(pSiS->VBFlags2 & VB2_30xBDH) return 0;
@@ -772,7 +822,8 @@ SiS_SenseLCDDDC(struct SiS_Private *SiS_Pr, SISPtr pSiS)
    adapternum = 1;
    if(SiS_Pr->DDCPortMixup) adapternum = 0;
 
-   if(SiS_InitDDCRegs(SiS_Pr, pSiS->VBFlags, pSiS->VGAEngine, adapternum, 0, FALSE, pSiS->VBFlags2) == 0xFFFF)
+   if(SiS_InitDDCRegs(SiS_Pr, pSiS->VBFlags, pSiS->VGAEngine,
+			adapternum, 0, FALSE, pSiS->VBFlags2) == 0xFFFF)
       return 0;
 
    SiS_Pr->SiS_DDC_SecAddr = 0x00;
@@ -833,6 +884,14 @@ SiS_SenseLCDDDC(struct SiS_Private *SiS_Pr, SISPtr pSiS)
 		"LCD sense: Attached display expects analog input (0x%02x)\n",
 		buffer[0x14]);
 	 return 0;
+      }
+
+      /* save current CRT2 (digital) EDID */
+      if(pSiS->haveDDC) {
+         if((pMonitor = xf86InterpretEDID(pSiS->pScrn->scrnIndex, buffer))) {
+            pMonitor->rawData = NULL;
+            pMonitor = SiSSetEDIDPtr(&pSiS->currcrt2digitaledid, pMonitor);
+         }
       }
 
       /* Save given gamma */
@@ -1148,7 +1207,9 @@ SiS_SenseLCDDDC(struct SiS_Private *SiS_Pr, SISPtr pSiS)
 	 return 0;
       }
 
-      /* Save given gamma */
+      /* No function for EDID V2, no point in saving */
+
+      /* save given gamma */
       pSiS->CRT2LCDMonitorGamma = (buffer[0x56] + 100) * 10;
 
       SiS_Pr->CP_Vendor = panelvendor = buffer[2] | (buffer[1] << 8);
@@ -1395,6 +1456,9 @@ SiS_SenseVGA2DDC(struct SiS_Private *SiS_Pr, SISPtr pSiS)
    BOOLEAN foundcrt = FALSE;
    int retry;
    unsigned char buffer[256];
+   xf86MonPtr pMonitor;
+
+   SiSFreeEDID(pSiS->pScrn, &pSiS->currcrt2analogedid);
 
    if(!(pSiS->VBFlags2 & VB2_SISVGA2BRIDGE)) return 0;
 
@@ -1408,7 +1472,8 @@ SiS_SenseVGA2DDC(struct SiS_Private *SiS_Pr, SISPtr pSiS)
     * Hence, no reliable CRT detection here... we need to fall back to
     * the sensing stuff in sis_vb.c.
     */
-   if(SiS_Pr->DDCPortMixup) return 0;
+   if(SiS_Pr->DDCPortMixup)
+      return 0;
 
    if(SiS_InitDDCRegs(SiS_Pr, pSiS->VBFlags, pSiS->VGAEngine, 2, 0, FALSE, pSiS->VBFlags2) == 0xFFFF)
       return 0;
@@ -1464,7 +1529,15 @@ SiS_SenseVGA2DDC(struct SiS_Private *SiS_Pr, SISPtr pSiS)
       SiS_Pr->CP_Product = buffer[10] | (buffer[11] << 8);
       foundcrt = TRUE;
 
-      /* Save given gamma */
+      /* save current CRT2 (analog) EDID */
+      if(pSiS->haveDDC) {
+         if((pMonitor = xf86InterpretEDID(pSiS->pScrn->scrnIndex, buffer))) {
+            pMonitor->rawData = NULL;
+            pMonitor = SiSSetEDIDPtr(&pSiS->currcrt2analogedid, pMonitor);
+         }
+      }
+
+      /* save given gamma */
       pSiS->CRT2VGAMonitorGamma = (buffer[0x17] + 100) * 10;
 
       break;
@@ -1489,7 +1562,9 @@ SiS_SenseVGA2DDC(struct SiS_Private *SiS_Pr, SISPtr pSiS)
       SiS_Pr->CP_Product = buffer[3] | (buffer[4] << 8);
       foundcrt = TRUE;
 
-      /* Save given gamma */
+      /* No interpret function for EDID V2, no point in saving it */
+
+      /* save given gamma */
       pSiS->CRT2VGAMonitorGamma = (buffer[0x56] + 100) * 10;
 
       break;
@@ -1498,7 +1573,8 @@ SiS_SenseVGA2DDC(struct SiS_Private *SiS_Pr, SISPtr pSiS)
    if(foundcrt) {
       SiS_SetRegOR(SiS_Pr->SiS_P3d4,0x32,0x10);
    }
-   return(0);
+
+   return 0;
 }
 
 /* 4-tap scaler for 301C and later */
@@ -1621,8 +1697,10 @@ SiS_SetGroup2_C_ELV(struct SiS_Private *SiS_Pr, unsigned short ModeNo, unsigned 
    if(SiS_Pr->SiS_VBInfo & SetCRT2ToTV) {
       SiS_CalcXTapScaler(SiS_Pr, SiS_Pr->SiS_VGAVDE, SiS_Pr->SiS_VDE, 4, FALSE);
    }
-
    temp = 0x10;
+   if(SiS_Pr->ChipType>=SIS_761){
+       temp = 0; 
+   }
    if(SiS_Pr->SiS_VBInfo & SetCRT2ToTV) temp |= 0x04;
    SiS_SetRegANDOR(SiS_Pr->SiS_Part2Port,0x4e,0xeb,temp);
 }

@@ -68,6 +68,7 @@
 
 #define sisfbwriteb(dest, data)        	*(dest)     = (data)
 #define sisfbwritebinc(dest, data)     	*((dest)++) = (data)
+#define sisfbwritebdec(dest, data)     	*((dest)--) = (data)
 #define sisfbwritebp(dest, dataptr)    	*(dest)     = *(dataptr)
 #define sisfbwritebpinc(dest, dataptr) 	*((dest)++) = *((dataptr)++)
 
@@ -317,7 +318,7 @@ static void setSISIDXREGmask(ULong base, UChar idx,
 
 /* Video RAM and MMIO access macros ----- */
 
-#define sisclearvram(where, howmuch) 	bzero(where, howmuch)
+#define sisclearvram(where, howmuch) 	memset(where, 0, howmuch)
 
 /* MMIO */
 #define SIS_MMIO_OUT8   MMIO_OUT8
@@ -448,7 +449,7 @@ static void setSISIDXREGmask(ULong base, UChar idx,
 #define  Index_VI_Overlay_ChromaKey_Blue_V_Max  0x2B
 
 /* Contrast enhancement and brightness control */
-#define  Index_VI_Contrast_Factor               0x2C	/* obviously unused/undefined */
+#define  Index_VI_Contrast_Factor               0x2C
 #define  Index_VI_Brightness                    0x2D
 #define  Index_VI_Contrast_Enh_Ctrl             0x2E
 
@@ -526,9 +527,24 @@ static void setSISIDXREGmask(ULong base, UChar idx,
 
 /* 340 and later: */
 /* DDA registers 0x75 - 0xb4 */
-/* threshold high 0xb5, 0xb6 */
-#define  Index_VI_Line_Buffer_Size_High		0xb7
+#define  Horizontal_6Tap_DDA_WeightingMatrix_Index     0x75
+#define  Horizontal_6Tap_DDA_WeightingMatrix_Value      0x76
+#define  Vertical_4Tap_DDA_WeightingMatrix_Index          0x77
+#define  Vertical_4Tap_DDA_WeightingMatrix_Value          0x78
+#define  Index_VI_Control_Misc4                 0x79
 
+/*MCE misc regist*/
+#define  Index_VI_MCE_Control_Misc1                 0x8d
+
+/* threshold high 0xb5, 0xb6 */
+#define  Index_VI_Threshold_Ext_Low			0xb5
+#define  Index_VI_Threshold_Ext_High			0xb6
+
+#define  Index_VI_Line_Buffer_Size_High		0xb7
+#define Index_VI_SubPict_Threshold_Ext		0xb8
+
+#define Source_VertLine_Number_Low			0xb9
+#define Source_VertLine_Number_High			0xba
 
 /* Bits in Scale control (0x1c) */
 #define  VI_Scale_Ctrl_Horiz_DDA                0x20

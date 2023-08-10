@@ -97,6 +97,7 @@ static const struct _sis_vrate {
 	{4, 1280, 1024,  85,  TRUE},
 	{1, 1360,  768,  60,  TRUE},
 	{1, 1400, 1050,  60,  TRUE}, {2, 1400, 1050,  75,  TRUE},
+	{1, 1440,  900,  60,  TRUE}, {2, 1440,  900,  75,  TRUE}, {3, 1440,  900,  85,  TRUE},
 	{1, 1600, 1200,  60,  TRUE}, {2, 1600, 1200,  65,  TRUE}, {3, 1600, 1200,  70,  TRUE},
 	{4, 1600, 1200,  75,  TRUE}, {5, 1600, 1200,  85,  TRUE}, {6, 1600, 1200, 100,  TRUE},
 	{7, 1600, 1200, 120,  TRUE},
@@ -254,6 +255,20 @@ const customttable SiS_customttable[] = {
 	  "AAEON", "AOP-8060", CUT_AOP8060, "AAEON_AOP_8060"
 	},
 #endif
+	{ SIS_550, "1.02.00", "08/14/2002-10:02:21",
+	  0x312201,
+	  { 0x9560, 0x9600, 0x9768, 0x9c1a, 0 },
+	  { 0x76,   0x84,   0xa7,   0x14,   0 },
+	  0, 0,
+	  "ICOP", "Vortex86-607x", CUT_ICOP550, "ICOP550"
+	},
+	{ SIS_550, "1.03.00", "06/25/2003-17:17:42",
+	  0x2c0600,
+	  { 0x7850, 0x78dc, 0x79e0, 0x7c9c, 0 },
+	  { 0x84,   0x84,   0xa7,   0x90,   0 },
+	  0, 0,
+	  "ICOP", "Vortex86-607x (2)", CUT_ICOP550_2, "ICOP550_2"
+	},
 	{ 4321, "", "",			/* never autodetected */
 	  0,
 	  { 0, 0, 0, 0, 0 },
@@ -672,818 +687,6 @@ static DisplayModeRec SiS6326SIS1600x1200_60Mode = {
 	0.0		/* VRefresh */
 };
 
-/*     TV scaling data for SiS video bridges
- */
-typedef struct _SiSTVVScale {
-        UShort ScaleVDE;
-	int sindex;
-	UShort RealVDE;
-	UShort reg[4];
-} MySiSTVVScale, *MySiSTVVScalePtr;
-
-static const MySiSTVVScale SiSTVVScale[] = {
-	{ 470, 3, 480,			/* NTSC 640x480 */
-	  { 893, 508, 0x004c, 0x008f }
-	},
-	{ 460, 2, 480,
-	  { 874, 513, 0x004c, 0x008f }
-	},
-	{ 450, 1, 480,
-	  { 855, 518, 0x004c, 0x008f }
-	},
-	{ 440, 0, 480,	/* default */
-	  { 836, 523, 0x004c, 0x008f }
-	},
-	{ 430, -1, 480,
-	  { 860, 528, 0x0050, 0x008f }
-	},
-	{ 420, -2, 480,
-	  { 840, 533, 0x0050, 0x008f }
-	},
-	{ 410, -3, 480,
-	  { 820, 538, 0x0050, 0x008f }
-	},
-	{ 470, 3, 480,			/* NTSC 720x480 */
-	  { 893, 509, 0x004c, 0x008f }
-	},
-	{ 460, 2, 480,
-	  { 874, 514, 0x004c, 0x008f }
-	},
-	{ 450, 1, 480,
-	  { 855, 519, 0x004c, 0x008f }
-	},
-	{ 440, 0, 480,	/* default */
-	  { 836, 524, 0x004c, 0x008f }
-	},
-	{ 430, -1, 480,
-	  { 860, 529, 0x0050, 0x008f }
-	},
-	{ 420, -2, 480,
-	  { 840, 534, 0x0050, 0x008f }
-	},
-	{ 410, -3, 480,
-	  { 820, 539, 0x0050, 0x008f }
-	},
-	{ 470, 3, 600,			/* NTSC 800x600 */
-	  { 1081, 628, 0x0073, 0x008f }
-	},
-	{ 460, 2, 600,
-	  { 1058, 633, 0x0073, 0x008f }
-	},
-	{ 450, 1, 600,
-	  { 1044, 638, 0x0074, 0x008f }
-	},
-	{ 440, 0, 600,	/* default */
-	  { 1056, 643, 0x0078, 0x008f }
-	},
-	{ 430, -1, 600,
-	  { 1032, 648, 0x0078, 0x008f }
-	},
-	{ 420, -2, 600,
-	  { 1008, 653, 0x0078, 0x008f }
-	},
-	{ 410, -3, 600,
-	  { 1066, 658, 0x0082, 0x008f }
-	},
-	{ 560, 3, 480,			/* PAL 640x480 */
-	  { 882, 513, 0x0007, 0x0010 }
-	},
-	{ 550, 2, 480,
-	  { 900, 518, 0x0005, 0x000b }
-	},
-	{ 540, 1, 480,
-	  { 864, 523, 0x0004, 0x0009 }
-	},
-	{ 530, 0, 480,	/* default */
-	  { 848, 528, 0x0004, 0x0009 }
-	},
-	{ 520, -1, 480,
-	  { 832, 533, 0x0004, 0x0009 }
-	},
-	{ 510, -2, 480,
-	  { 918, 538, 0x0001, 0x0002 }
-	},
-	{ 500, -3, 480,
-	  { 900, 543, 0x0001, 0x0002 }
-	},
-	{ 560, 2, 576,			/* PAL 720x576 */
-	  { 960, 610, 0x0004, 0x0007 }
-	},
-	{ 550, 1, 576,
-	  { 990, 614, 0x0003, 0x0005 }
-	},
-	{ 540, 0, 576,	/* default */
-	  { 1080, 620, 0x0002, 0x0003 }
-	},
-	{ 530, -1, 576,
-	  { 1060, 625, 0x8002, 0x0003 }
-	},
-	{ 520, -2, 576,
-	  { 1040, 630, 0x0002, 0x0003 }
-	},
-	{ 510, -3, 576,
-	  { 1020, 635, 0x0002, 0x0003 }
-	},
-	{ 500, -4, 576,
-	  { 1000, 640, 0x0002, 0x0003 }
-	},
-	{ 560, 3, 600,			/* PAL 800x600 */
-	  { 1152, 633, 0x0005, 0x0007 }
-	},
-	{ 550, 2, 600,
-	  { 1100, 638, 0x0019, 0x0024 }
-	},
-	{ 540, 1, 600,
-	  { 1080, 643, 0x0019, 0x0024 }
-	},
-	{ 530, 0, 600,	/* default */
-	  { 1060, 648, 0x0019, 0x0024 }
-	},
-	{ 520, -1, 600,
-	  { 1040, 653, 0x0019, 0x0024 }
-	},
-	{ 510, -2, 600,
-	  { 1020, 658, 0x0019, 0x0024 }
-	},
-	{ 500, -3, 600,
-	  { 1080, 663, 0x0003, 0x0004 }
-	},
-	{ 720, 3, 480,			/* 750p 640x480 (42) */
-          { 1238, 500, 0x0001, 0x0002 }
-        },
-        { 693, 2, 480,
-          { 1191, 519, 0x0001, 0x0002 }
-        },
-        { 667, 1, 480,
-          { 1146, 540, 0x0001, 0x0002 }
-        },
-        { 640, 0, 480,
-          { 1100, 563, 0x0001, 0x0002 }
-        },
-        { 613, -1, 480,
-          { 1054, 587, 0x0001, 0x0002 }
-        },
-        { 587, -2, 480,
-          { 1009, 613, 0x0001, 0x0002 }
-        },
-        { 560, -3, 480,
-          { 963, 643, 0x0001, 0x0002 }
-        },
-	{ 720, 3, 480,			/* 750p 720x480 (49) */
-          { 1238, 500, 0x0001, 0x0002 }
-        },
-        { 693, 2, 480,
-          { 1191, 519, 0x0001, 0x0002 }
-        },
-        { 667, 1, 480,
-          { 1146, 540, 0x0001, 0x0002 }
-        },
-        { 640, 0, 480,
-          { 1100, 563, 0x0001, 0x0002 }
-        },
-        { 613, -1, 480,
-          { 1054, 587, 0x0001, 0x0002 }
-        },
-        { 587, -2, 480,
-          { 1009, 613, 0x0001, 0x0002 }
-        },
-        { 560, -3, 480,
-          { 963, 643, 0x0001, 0x0002 }
-        },
-	{ 720, 3, 576,			/* 750p 720/768x576 (56) */
-          { 1238, 600, 0x0003, 0x0005 }
-        },
-        { 693, 2, 576,
-          { 1191, 623, 0x0003, 0x0005 }
-        },
-        { 667, 1, 576,
-          { 1146, 648, 0x0003, 0x0005 }
-        },
-        { 640, 0, 576,
-          { 1100, 675, 0x0003, 0x0005 }
-        },
-        { 613, -1, 576,
-          { 1054, 705, 0x0003, 0x0005 }
-        },
-        { 587, -2, 576,
-          { 1009, 736, 0x0003, 0x0005 }
-        },
-        { 560, -3, 576,
-          { 963, 771, 0x0003, 0x0005 }
-        },
-	{ 720, 3, 480,			/* 750p 800x480 (63) */
-          { 1238, 500, 0x0001, 0x0002 }
-        },
-        { 693, 2, 480,
-          { 1191, 519, 0x0001, 0x0002 }
-        },
-        { 667, 1, 480,
-          { 1146, 540, 0x0001, 0x0002 }
-        },
-        { 640, 0, 480,
-          { 1100, 563, 0x0001, 0x0002 }
-        },
-        { 613, -1, 480,
-          { 1054, 587, 0x0001, 0x0002 }
-        },
-        { 587, -2, 480,
-          { 1009, 613, 0x0001, 0x0002 }
-        },
-        { 560, -3, 480,
-          { 963, 643, 0x0001, 0x0002 }
-        },
-	{ 720, 3, 600,			/* 750p 800x600 (70) */
-          { 1320, 625, 0x0002, 0x0003 }
-        },
-        { 700, 2, 600,
-          { 1283, 643, 0x0002, 0x0003 }
-        },
-        { 680, 1, 600,
-          { 1247, 662, 0x0002, 0x0003 }
-        },
-        { 660, 0, 600,
-          { 1210, 682, 0x0002, 0x0003 }
-        },
-        { 640, -1, 600,
-          { 1173, 703, 0x0002, 0x0003 }
-        },
-        { 620, -2, 600,
-          { 1137, 726, 0x0002, 0x0003 }
-        },
-        { 600, -3, 600,
-          { 1100, 750, 0x0002, 0x0003 }
-        },
-	{ 720, 3, 576,			/* 750p 1024x576 (77) */
-          { 1238, 600, 0x0003, 0x0005 }
-        },
-        { 693, 2, 576,
-          { 1191, 623, 0x0003, 0x0005 }
-        },
-        { 667, 1, 576,
-          { 1146, 648, 0x0003, 0x0005 }
-        },
-        { 640, 0, 576,
-          { 1100, 675, 0x0003, 0x0005 }
-        },
-	{ 630, -1, 576,
-          { 1083, 686, 0x0003, 0x0005 }
-	},
-	{ 620, -2, 576,
-          { 1066, 697, 0x0003, 0x0005 }
-        },
-	{ 616, -3, 576,
-          { 1059, 701, 0x0003, 0x0005 }
-        },
-	{ 720, 3, 768,			/* 750p 1024x768 (84) */
-          { 1547, 800, 0x0001, 0x0001 }
-        },
-        { 693, 2, 768,
-          { 1489, 831, 0x0001, 0x0001 }
-        },
-        { 667, 1, 768,
-          { 1433, 864, 0x0001, 0x0001 }
-        },
-        { 640, 0, 768,
-          { 1375, 900, 0x0001, 0x0001 }
-        },
-        { 613, -1, 768,
-          { 1317, 940, 0x0001, 0x0001 }
-        },
-        { 587, -2, 768,
-          { 1261, 981, 0x0001, 0x0001 }
-        },
-        { 560, -3, 768,
-          { 1203, 1029, 0x0001, 0x0001 }
-        },
-#ifdef OLD1280720P
-	{ 720, 3, 720,			/* 750p 1280x720-old (91) */
-          { 1584, 750, 0x0018, 0x0019 }
-        },
-        { 707, 2, 720,
-          { 1555, 764, 0x0018, 0x0019 }
-        },
-        { 693, 1, 720,
-          { 1525, 779, 0x0018, 0x0019 }
-        },
-        { 680, 0, 720,
-          { 1496, 794, 0x0018, 0x0019 }
-        },
-        { 667, -1, 720,
-          { 1467, 810, 0x0018, 0x0019 }
-        },
-        { 653, -2, 720,
-          { 1437, 827, 0x0018, 0x0019 }
-        },
-        { 640, -3, 720,
-          { 1408, 844, 0x0018, 0x0019 }
-        },
-#endif
-#ifndef OLD1280720P
-	{ 720, 3, 720,			/* 750p 1280x720-new (91) */
-	  { 1650, 750, 0x0001, 0x0001 }
-	},
-	{ 720, 2, 720,
-	  { 1650, 750, 0x0001, 0x0001 }
-	},
-	{ 720, 1, 720,
-	  { 1650, 750, 0x0001, 0x0001 }
-	},
-	{ 720, 0, 720,
-	  { 1650, 750, 0x0001, 0x0001 }
-	},
-	{ 704, -1, 720,
-          { 1613, 767, 0x0001, 0x0001 }
-        },
-        { 688, -2, 720,
-          { 1577, 785, 0x0001, 0x0001 }
-        },
-        { 672, -3, 720,
-          { 1540, 804, 0x0001, 0x0001 }
-        },
-#endif
-	{ 1080, 3, 480,			/* 1080i 640x480 (98) */
-          { 945, 500, 0x8001, 0x0005 }
-        },
-        { 1040, 2, 480,
-          { 910, 519, 0x8001, 0x0005 }
-        },
-        { 1000, 1, 480,
-          { 875, 540, 0x8001, 0x0005 }
-        },
-        { 960, 0, 480,
-          { 840, 563, 0x8001, 0x0005 }
-        },
-        { 920, -1, 480,
-          { 805, 587, 0x8001, 0x0005 }
-        },
-        { 880, -2, 480,
-          { 770, 614, 0x8001, 0x0005 }
-        },
-        { 840, -3, 480,
-          { 735, 643, 0x8001, 0x0005 }
-        },
-	{ 1080, 3, 480,			/* 1080i 800x480 (105) */
-          { 1181, 500, 0x8001, 0x0004 }
-        },
-        { 1040, 2, 480,
-          { 1138, 519, 0x8001, 0x0004 }
-        },
-        { 1000, 1, 480,
-          { 1094, 540, 0x8001, 0x0004 }
-        },
-        { 960, 0, 480,
-          { 1050, 563, 0x8001, 0x0004 }
-        },
-        { 920, -1, 480,
-          { 1006, 587, 0x8001, 0x0004 }
-        },
-        { 880, -2, 480,
-          { 963, 614, 0x8001, 0x0004 }
-        },
-        { 840, -3, 480,
-          { 919, 643, 0x8001, 0x0004 }
-        },
-	{ 1080, 3, 600,			/* 1080i 800x600 (112) */
-          { 1181, 625, 0x8005, 0x0010 }
-        },
-        { 1040, 2, 600,
-          { 1138, 649, 0x8005, 0x0010 }
-        },
-        { 1000, 1, 600,
-          { 1094, 675, 0x8005, 0x0010 }
-        },
-        { 960, 0, 600,
-          { 1050, 703, 0x8005, 0x0010 }
-        },
-        { 920, -1, 600,
-          { 1006, 734, 0x8005, 0x0010 }
-        },
-        { 880, -2, 600,
-          { 963, 767, 0x8005, 0x0010 }
-        },
-        { 840, -3, 600,
-          { 919, 804, 0x8005, 0x0010 }
-        },
-	{ 1080, 3, 576,			/* 1080i 1024x576 (119) */
-          { 1575, 600, 0x0002, 0x0005 }
-        },
-        { 1040, 2, 576,
-          { 1517, 623, 0x0002, 0x0005 }
-        },
-        { 1000, 1, 576,
-          { 1458, 648, 0x0002, 0x0005 }
-        },
-        { 960, 0, 576,
-          { 1400, 675, 0x0002, 0x0005 }
-        },
-        { 920, -1, 576,
-          { 1342, 704, 0x0002, 0x0005 }
-        },
-        { 880, -2, 576,
-          { 1283, 736, 0x0002, 0x0005 }
-        },
-        { 840, -3, 576,
-          { 1225, 771, 0x0002, 0x0005 }
-        },
-	{ 1080, 3, 768,			/* 1080i 1024x768 (126) */
-          { 1418, 800, 0x000c, 0x0019 }
-        },
-        { 1040, 2, 768,
-          { 1365, 831, 0x000c, 0x0019 }
-        },
-        { 1000, 1, 768,
-          { 1313, 864, 0x000c, 0x0019 }
-        },
-        { 960, 0, 768,
-          { 1260, 900, 0x000c, 0x0019 }
-        },
-        { 920, -1, 768,
-          { 1208, 939, 0x000c, 0x0019 }
-        },
-        { 880, -2, 768,
-          { 1155, 982, 0x000c, 0x0019 }
-        },
-        { 840, -3, 768,
-          { 1103, 1029, 0x000c, 0x0019 }
-        },
-	{ 1080, 3, 720,			/* 1080i 1280x720 (133) */
-          { 1969, 750, 0x0005, 0x0008 }
-        },
-        { 1040, 2, 720,
-          { 1896, 779, 0x0005, 0x0008 }
-        },
-        { 1000, 1, 720,
-          { 1823, 810, 0x0005, 0x0008 }
-        },
-        { 960, 0, 720,
-          { 1750, 844, 0x0005, 0x0008 }
-        },
-        { 920, -1, 720,
-          { 1677, 880, 0x0005, 0x0008 }
-        },
-        { 880, -2, 720,
-          { 1604, 920, 0x0005, 0x0008 }
-        },
-        { 840, -3, 720,
-          { 1531, 964, 0x0005, 0x0008 }
-        },
-	{ 1080, 3, 1024,		/* 1080i 1280x1024 (140) */
-          { 1772, 1067, 0x0004, 0x0005 }
-        },
-        { 1040, 2, 1024,
-          { 1706, 1108, 0x0004, 0x0005 }
-        },
-        { 1000, 1, 1024,
-          { 1641, 1152, 0x0004, 0x0005 }
-        },
-        { 960, 0, 1024,
-          { 1575, 1200, 0x0004, 0x0005 }
-        },
-        { 920, -1, 1024,
-          { 1509, 1252, 0x0004, 0x0005 }
-        },
-        { 880, -2, 1024,
-          { 1444, 1309, 0x0004, 0x0005 }
-        },
-        { 840, -3, 1024,
-          { 1378, 1371, 0x0004, 0x0005 }
-        },
-	{ 470, 3, 576,			/* NTSC 720x576 (147) */
-          { 1175, 602, 0x8078, 0x008f }
-        },
-        { 460, 2, 576,
-          { 1150, 614, 0x8078, 0x008f }
-        },
-        { 450, 1, 576,
-          { 1125, 628, 0x8078, 0x008f }
-        },
-        { 440, 0, 576,
-          { 1100, 643, 0x8078, 0x008f }
-        },
-        { 430, -1, 576,
-          { 1075, 658, 0x8078, 0x008f }
-        },
-        { 420, -2, 576,
-          { 1050, 673, 0x8078, 0x008f }
-        },
-        { 410, -3, 576,
-          { 1025, 680, 0x8078, 0x008f }
-        },
-	{ 550, 3, 768,			/* PAL 1024x768 (154) */
-          { 1238, 776, 0x0001, 0x0001 }
-        },
-        { 540, 2, 768,
-          { 1215, 790, 0x0001, 0x0001 }
-        },
-        { 530, 1, 768,
-          { 1193, 805, 0x0001, 0x0001 }
-        },
-        { 520, 0, 768,
-          { 1170, 821, 0x0001, 0x0001 }
-        },
-        { 510, -1, 768,
-          { 1148, 837, 0x0001, 0x0001 }
-        },
-        { 500, -2, 768,
-          { 1125, 853, 0x0001, 0x0001 }
-        },
-        { 490, -3, 768,
-          { 1103, 871, 0x0001, 0x0001 }
-        },
-	{ 470, 3, 768,			/* NTSC 1024 i (161) */
-          { 1175, 759, 0x8001, 0x0001 }
-        },
-        { 460, 2, 768,
-          { 1150, 775, 0x8001, 0x0001 }
-        },
-        { 450, 1, 768,
-          { 1125, 792, 0x8001, 0x0001 }
-        },
-        { 440, 0, 768,
-          { 1100, 811, 0x8001, 0x0001 }
-        },
-        { 430, -1, 768,
-          { 1075, 829, 0x8001, 0x0001 }
-        },
-        { 430, -2, 768,
-          { 1075, 829, 0x8001, 0x0001 }
-        },
-        { 430, -3, 768,
-          { 1075, 829, 0x8001, 0x0001 }
-        },
-	{ 470, 3, 768,			/* NTSC 1024 p (168) */
-          { 1175, 792, 0x0001, 0x0001 }
-        },
-        { 460, 2, 768,
-          { 1150, 809, 0x0001, 0x0001 }
-        },
-        { 450, 1, 768,
-          { 1125, 827, 0x0001, 0x0001 }
-        },
-        { 440, 0, 768,
-          { 1100, 846, 0x0001, 0x0001 }
-        },
-        { 430, -1, 768,
-          { 1075, 865, 0x0001, 0x0001 }
-        },
-        { 430, -2, 768,
-          { 1075, 865, 0x0001, 0x0001 }
-        },
-        { 430, -3, 768,
-          { 1075, 865, 0x0001, 0x0001 }
-        },
-	{ 470, 3, 480,			/* NTSC 800x480 (175) */
-	  { 893, 509, 0x004c, 0x008f }
-	},
-	{ 460, 2, 480,
-	  { 874, 514, 0x004c, 0x008f }
-	},
-	{ 450, 1, 480,
-	  { 855, 519, 0x004c, 0x008f }
-	},
-	{ 440, 0, 480,	/* default */
-	  { 836, 524, 0x004c, 0x008f }
-	},
-	{ 430, -1, 480,
-	  { 860, 529, 0x0050, 0x008f }
-	},
-	{ 420, -2, 480,
-	  { 840, 534, 0x0050, 0x008f }
-	},
-	{ 420, -3, 480,
-	  { 840, 534, 0x0050, 0x008f }
-	},
-	{ 470, 3, 576,			/* NTSC 1024x576 (182) */
-          { 1175, 602, 0x8078, 0x008f }
-        },
-        { 460, 2, 576,
-          { 1150, 614, 0x8078, 0x008f }
-        },
-        { 450, 1, 576,
-          { 1125, 628, 0x8078, 0x008f }
-        },
-        { 440, 0, 576,
-          { 1100, 643, 0x8078, 0x008f }
-        },
-        { 430, -1, 576,
-          { 1075, 658, 0x8078, 0x008f }
-        },
-        { 430, -2, 576,
-          { 1075, 658, 0x8078, 0x008f }
-        },
-        { 430, -3, 576,
-          { 1075, 658, 0x8078, 0x008f }
-        },
-	{ 564, 3, 576,			/* PAL 1024x576 (189) */
-          { 1128, 592, 0x0002, 0x0003 }
-        },
-        { 556, 2, 576,
-          { 1112, 601, 0x0002, 0x0003 }
-        },
-        { 548, 1, 576,
-          { 1096, 610, 0x0002, 0x0003 }
-        },
-        { 540, 0, 576,
-          { 1080, 619, 0x0002, 0x0003 }
-        },
-        { 532, -1, 576,
-          { 1064, 628, 0x0002, 0x0003 }
-        },
-        { 532, -2, 576,
-          { 1064, 628, 0x0002, 0x0003 }
-        },
-        { 532, -3, 576,
-          { 1064, 628, 0x0002, 0x0003 }
-        },
-	{ 1080, 3, 540,			/* 1080i 960x540 (196) */
-          { 1050, 600, 0x0001, 0x0004 }
-        },
-        { 1080, 2, 540,
-          { 1050, 600, 0x0001, 0x0004 }
-        },
-        { 1080, 1, 540,
-          { 1050, 600, 0x0001, 0x0004 }
-        },
-        { 1080, 0, 540,
-          { 1050, 600, 0x0001, 0x0004 }
-        },
-        { 1040, -1, 540,
-          { 1011, 623, 0x0001, 0x0004 }
-        },
-        { 1000, -2, 540,
-          { 1944, 648, 0x0001, 0x0002 }
-        },
-        { 960, -3, 540,
-          { 1866, 675, 0x0001, 0x0002 }
-        },
-	{ 1080, 3, 600,			/* 1080i 960x600 (203) */
-          { 1418, 670, 0x0003, 0x0008 }
-        },
-        { 1040, 2, 600,
-          { 1365, 700, 0x0003, 0x0008 }
-        },
-        { 1000, 1, 600,
-          { 1313, 816, 0x0003, 0x0008 }
-        },
-        { 960, 0, 600,
-          { 1260, 851, 0x0003, 0x0008 }
-        },
-        { 920, -1, 600,
-          { 1208, 887, 0x0003, 0x0008 }
-        },
-        { 880, -2, 600,
-          { 1155, 928, 0x0003, 0x0008 }
-        },
-        { 840, -3, 600,
-          { 1103, 972, 0x0003, 0x0008 }
-        }
-};
-
-static unsigned const char SiSScalingP1Regs[] = {
-	0x08,0x09,0x0b,0x0c,0x0d,0x0e,0x10,0x11,0x12
-};
-static unsigned const char SiSScalingP4Regs[] = {
-	0x13,0x14,0x15,0x16,0x17,0x18,0x19,0x1a,0x1b
-};
-
-/*     TV filters for SiS video bridges
- */
-static const struct _SiSTVFilter301 {
-	UChar filter[7][4];
-} SiSTVFilter301[] = {
-	{{ {0x00,0xE0,0x10,0x60},   /* NTSCFilter - 320 */
-	   {0x00,0xEE,0x10,0x44},
-	   {0x00,0xF4,0x10,0x38},
-	   {0xF8,0xF4,0x18,0x38},
-	   {0xFC,0xFB,0x14,0x2A},
-	   {0x00,0x00,0x10,0x20},
-	   {0x00,0x04,0x10,0x18} }},
-	{{ {0xF5,0xEE,0x1B,0x44},   /* NTSCFilter - 640 */
-	   {0xF8,0xF4,0x18,0x38},
-	   {0xEB,0x04,0x25,0x18},
-	   {0xF1,0x05,0x1F,0x16},
-	   {0xF6,0x06,0x1A,0x14},
-	   {0xFA,0x06,0x16,0x14},
-	   {0x00,0x04,0x10,0x18} }},
-	{{ {0xEB,0x04,0x25,0x18},   /* NTSCFilter - 720 */
-	   {0xE7,0x0E,0x29,0x04},
-	   {0xEE,0x0C,0x22,0x08},
-	   {0xF6,0x0B,0x1A,0x0A},
-	   {0xF9,0x0A,0x17,0x0C},
-	   {0xFC,0x0A,0x14,0x0C},
-	   {0x00,0x08,0x10,0x10} }},
-	{{ {0xEC,0x02,0x24,0x1C},   /* NTSCFilter - 800/400 */
-	   {0xF2,0x04,0x1E,0x18},
-	   {0xEB,0x15,0x25,0xF6},
-	   {0xF4,0x10,0x1C,0x00},
-	   {0xF8,0x0F,0x18,0x02},
-	   {0x00,0x04,0x10,0x18},
-	   {0x01,0x06,0x0F,0x14} }},
-	{{ {0x00,0xE0,0x10,0x60},   /* PALFilter - 320 */
-	   {0x00,0xEE,0x10,0x44},
-	   {0x00,0xF4,0x10,0x38},
-	   {0xF8,0xF4,0x18,0x38},
-	   {0xFC,0xFB,0x14,0x2A},
-	   {0x00,0x00,0x10,0x20},
-	   {0x00,0x04,0x10,0x18} }},
-	{{ {0xF5,0xEE,0x1B,0x44},   /* PALFilter - 640 */
-	   {0xF8,0xF4,0x18,0x38},
-	   {0xF1,0xF7,0x1F,0x32},
-	   {0xF5,0xFB,0x1B,0x2A},
-	   {0xF9,0xFF,0x17,0x22},
-	   {0xFB,0x01,0x15,0x1E},
-	   {0x00,0x04,0x10,0x18} }},
-	{{ {0xF5,0xEE,0x1B,0x2A},   /* PALFilter - 720 */
-	   {0xEE,0xFE,0x22,0x24},
-	   {0xF3,0x00,0x1D,0x20},
-	   {0xF9,0x03,0x17,0x1A},
-	   {0xFB,0x02,0x14,0x1E},
-	   {0xFB,0x04,0x15,0x18},
-	   {0x00,0x06,0x10,0x14} }},
-	{{ {0xF5,0xEE,0x1B,0x44},   /* PALFilter - 800/400 */
-	   {0xF8,0xF4,0x18,0x38},
-	   {0xFC,0xFB,0x14,0x2A},
-	   {0xEB,0x05,0x25,0x16},
-	   {0xF1,0x05,0x1F,0x16},
-	   {0xFA,0x07,0x16,0x12},
-	   {0x00,0x07,0x10,0x12} }}
-};
-
-static const struct _SiSTVFilter301B {
-	UChar filter[7][7];
-} SiSTVFilter301B[] = {
-	{{ {0x01,0x02,0xfb,0xf8,0x06,0x27,0x3a},   /* NTSC - 640 */
-	   {0x01,0x02,0xfe,0xf7,0x03,0x27,0x3c},
-	   {0x01,0x01,0x00,0xf6,0x00,0x28,0x40},
-	   {0xff,0x03,0x02,0xf6,0xfc,0x27,0x46},
-	   {0xff,0x01,0x04,0xf8,0xfa,0x27,0x46},
-	   {0xff,0x01,0x05,0xf9,0xf7,0x26,0x4a},
-	   {0xff,0xff,0x05,0xfc,0xf4,0x24,0x52} }},
-	{{ {0x01,0x00,0xfb,0xfb,0x0b,0x25,0x32},   /* NTSC - 720 (?) */
-	   {0x01,0x01,0xfb,0xf9,0x09,0x26,0x36},
-	   {0x01,0x02,0xfc,0xf8,0x06,0x27,0x38},
-	   {0x01,0x02,0xfe,0xf7,0x03,0x27,0x3c},
-	   {0x01,0x03,0xff,0xf6,0x00,0x27,0x40},
-	   {0xff,0x03,0x02,0xf6,0xfe,0x27,0x42},
-	   {0xff,0x02,0x03,0xf7,0xfb,0x27,0x46} }},
-	{{ {0x01,0xfe,0xfb,0xfe,0x0e,0x23,0x2e},   /* NTSC - 800 */
-	   {0x01,0xff,0xfb,0xfc,0x0c,0x25,0x30},
-	   {0x01,0x00,0xfb,0xfa,0x0a,0x26,0x34},
-	   {0x01,0x01,0xfc,0xf8,0x08,0x26,0x38},
-	   {0x01,0x02,0xfd,0xf7,0x06,0x27,0x38},
-	   {0x01,0x02,0xfe,0xf7,0x03,0x27,0x3c},
-	   {0xff,0x03,0x00,0xf6,0x00,0x27,0x42} }},
-	{{ {0xff,0xfd,0xfe,0x05,0x11,0x1e,0x24},   /* NTSC - 1024 */
-	   {0xff,0xfd,0xfd,0x04,0x11,0x1f,0x26},
-	   {0xff,0xfd,0xfc,0x02,0x10,0x22,0x28},
-	   {0xff,0xff,0xfc,0x00,0x0f,0x22,0x28},
-	   {0x01,0xfe,0xfb,0xff,0x0e,0x23,0x2c},
-	   {0x01,0xff,0xfb,0xfd,0x0d,0x24,0x2e},
-	   {0x01,0xff,0xfb,0xfb,0x0c,0x25,0x32} }},
-	{{ {0x01,0x02,0xfb,0xf8,0x06,0x27,0x3a},   /* PAL - 640 */
-	   {0x01,0x02,0xfe,0xf7,0x03,0x27,0x3c},
-	   {0x01,0x01,0x00,0xf6,0x00,0x28,0x40},
-	   {0xff,0x03,0x02,0xf6,0xfc,0x27,0x46},
-	   {0xff,0x01,0x04,0xf8,0xfa,0x27,0x46},
-	   {0xff,0x01,0x05,0xf9,0xf7,0x26,0x4a},
-	   {0xff,0xff,0x05,0xfc,0xf4,0x24,0x52} }},
-	{{ {0x01,0x00,0xfb,0xfb,0x0b,0x25,0x32},   /* PAL - 720/768 */
-	   {0x01,0x01,0xfb,0xf9,0x09,0x26,0x36},
-	   {0x01,0x02,0xfc,0xf8,0x06,0x27,0x38},
-	   {0x01,0x02,0xfe,0xf7,0x03,0x27,0x3c},
-	   {0x01,0x03,0xff,0xf6,0x00,0x27,0x40},
-	   {0xff,0x03,0x02,0xf6,0xfe,0x27,0x42},
-	   {0xff,0x02,0x03,0xf7,0xfb,0x27,0x46} }},
-	{{ {0x01,0xfe,0xfb,0xfe,0x0e,0x23,0x2e},   /* PAL - 800 */
-	   {0x01,0xff,0xfb,0xfc,0x0c,0x25,0x30},
-	   {0x01,0x00,0xfb,0xfa,0x0a,0x26,0x34},
-	   {0x01,0x01,0xfc,0xf8,0x08,0x26,0x38},
-	   {0x01,0x02,0xfd,0xf7,0x06,0x27,0x38},
-	   {0x01,0x02,0xfe,0xf7,0x03,0x27,0x3c},
-	   {0xff,0x03,0x00,0xf6,0x00,0x27,0x42} }},
-	{{ {0xff,0xfd,0xfe,0x05,0x11,0x1e,0x24},   /* PAL - 1024 */
-	   {0xff,0xfd,0xfd,0x04,0x11,0x1f,0x26},
-	   {0xff,0xfd,0xfc,0x02,0x10,0x22,0x28},
-	   {0xff,0xff,0xfc,0x00,0x0f,0x22,0x28},
-	   {0x01,0xfe,0xfb,0xff,0x0e,0x23,0x2c},
-	   {0x01,0xff,0xfb,0xfd,0x0d,0x24,0x2e},
-	   {0x01,0xff,0xfb,0xfb,0x0c,0x25,0x32} }},
-	{{ {0x54,0x69,0x6c,0x6c,0x20,0x53,0x6f},   /* PAL-M - 1024 */
-	   {0x66,0x69,0x61,0x20,0x42,0x65,0x72},
-	   {0x6e,0x74,0x73,0x73,0x6f,0x6e,0x20},
-	   {0x2d,0x20,0x42,0x72,0x6f,0x75,0x67},
-	   {0x68,0x74,0x20,0x74,0x6f,0x20,0x79},
-	   {0x6f,0x75,0x20,0x62,0x79,0x20,0x6e},
-	   {0x6f,0x74,0x20,0x61,0x20,0x6d,0x65,} }},
-	{{ {0x72,0x65,0x20,0x57,0x69,0x7a,0x61},   /* PAL-N - 1024 */
-	   {0x72,0x64,0x20,0x62,0x75,0x74,0x20},
-	   {0x74,0x68,0x65,0x20,0x57,0x69,0x7a},
-	   {0x61,0x72,0x64,0x20,0x45,0x78,0x74},
-	   {0x72,0x61,0x6f,0x72,0x64,0x69,0x6e},
-	   {0x61,0x69,0x72,0x65,0x21,0x20,0x48},
-	   {0x69,0x20,0x44,0x61,0x6c,0x65,0x21} }}
-};
-
 /* For communication with the SiS Linux framebuffer driver (sisfb) */
 
 /* ioctl for identifying and giving some info (esp. memory heap start) */
@@ -1573,66 +776,69 @@ static void SISLeaveVT(int scrnIndex, int flags);
 static Bool SISCloseScreen(int scrnIndex, ScreenPtr pScreen);
 static Bool SISSaveScreen(ScreenPtr pScreen, int mode);
 static Bool SISSwitchMode(int scrnIndex, DisplayModePtr mode, int flags);
-void	    SISAdjustFrame(int scrnIndex, int x, int y, int flags);
+static void SISNewAdjustFrame(int scrnIndex, int x, int y, int flags);
 
 /* Optional functions */
 #ifdef SISDUALHEAD
-static Bool 	  SISSaveScreenDH(ScreenPtr pScreen, int mode);
+static Bool	SISSaveScreenDH(ScreenPtr pScreen, int mode);
 #endif
 #ifdef X_XF86MiscPassMessage
-extern int	  SISHandleMessage(int scrnIndex, const char *msgtype,
+extern int	SISHandleMessage(int scrnIndex, const char *msgtype,
 				const char *msgval, char **retmsg);
 #endif
-static void       SISFreeScreen(int scrnIndex, int flags);
+static void     SISFreeScreen(int scrnIndex, int flags);
 static ModeStatus SISValidMode(int scrnIndex, DisplayModePtr mode,
 				Bool verbose, int flags);
+#ifdef SIS_HAVE_RR_FUNC
+#ifdef SIS_HAVE_DRIVER_FUNC
+static Bool SISDriverFunc(ScrnInfoPtr pScrn, xorgDriverFuncOp op, pointer p);
+#else
+static Bool SISDriverFunc(ScrnInfoPtr pScrn, xorgRRFuncFlags op, xorgRRRotationPtr p);
+#endif
+#ifdef SISISXORG6899901
+static Bool SiS_GetModeMM(ScrnInfoPtr pScrn, DisplayModePtr mode, int virtX, int virtY,
+					int *mmWidth, int *mmHeight);
+#endif
+#endif
 
 /* Internally used functions */
-static Bool    SISMapMem(ScrnInfoPtr pScrn);
-static Bool    SISUnmapMem(ScrnInfoPtr pScrn);
 #ifdef SIS_NEED_MAP_IOP
-static Bool    SISMapIOPMem(ScrnInfoPtr pScrn);
-static Bool    SISUnmapIOPMem(ScrnInfoPtr pScrn);
+static Bool	SISMapIOPMem(ScrnInfoPtr pScrn);
+static Bool	SISUnmapIOPMem(ScrnInfoPtr pScrn);
 #endif
-static void    SISSave(ScrnInfoPtr pScrn);
-static void    SISRestore(ScrnInfoPtr pScrn);
-static Bool    SISModeInit(ScrnInfoPtr pScrn, DisplayModePtr mode);
-static void    SISModifyModeInfo(DisplayModePtr mode);
-static void    SiSPreSetMode(ScrnInfoPtr pScrn, DisplayModePtr mode, int viewmode);
-static void    SiSPostSetMode(ScrnInfoPtr pScrn, SISRegPtr sisReg);
-static void    SiS6326PostSetMode(ScrnInfoPtr pScrn, SISRegPtr sisReg);
-static Bool    SiSSetVESAMode(ScrnInfoPtr pScrn, DisplayModePtr pMode);
-static void    SISVESARestore(ScrnInfoPtr pScrn);
-static void    SiSBuildVesaModeList(ScrnInfoPtr pScrn, vbeInfoPtr pVbe, VbeInfoBlock *vbe);
-static UShort  SiSCalcVESAModeIndex(ScrnInfoPtr pScrn, DisplayModePtr mode);
-static void    SISVESASaveRestore(ScrnInfoPtr pScrn, vbeSaveRestoreFunction function);
-static void    SISBridgeRestore(ScrnInfoPtr pScrn);
-static void    SiSEnableTurboQueue(ScrnInfoPtr pScrn);
-static void    SiSRestoreQueueMode(SISPtr pSiS, SISRegPtr sisReg);
-UChar  	       SISSearchCRT1Rate(ScrnInfoPtr pScrn, DisplayModePtr mode);
-static void    SISWaitVBRetrace(ScrnInfoPtr pScrn);
-void           SISWaitRetraceCRT1(ScrnInfoPtr pScrn);
-void           SISWaitRetraceCRT2(ScrnInfoPtr pScrn);
-UShort         SiS_CheckModeCRT1(ScrnInfoPtr pScrn, DisplayModePtr mode,
-				 unsigned int VBFlags, Bool hcm);
-UShort         SiS_CheckModeCRT2(ScrnInfoPtr pScrn, DisplayModePtr mode,
-				 unsigned int VBFlags, Bool hcm);
-
-#ifdef SISMERGED
-static Bool    InRegion(int x, int y, region r);
-static void    SISMergedPointerMoved(int scrnIndex, int x, int y);
+void		SISAdjustFrame(int scrnIndex, int x, int y, int flags);
+UChar		SISSearchCRT1Rate(ScrnInfoPtr pScrn, DisplayModePtr mode);
+UShort		SiS_CheckModeCRT1(ScrnInfoPtr pScrn, DisplayModePtr mode,
+				 unsigned int VBFlags, unsigned int VBFlags3, Bool hcm);
+UShort		SiS_CheckModeCRT2(ScrnInfoPtr pScrn, DisplayModePtr mode,
+				 unsigned int VBFlags, unsigned int VBFlags3, Bool hcm);
+void		SiSPrintModes(ScrnInfoPtr pScrn, Bool printfreq);
+Bool		SiSBridgeIsInSlaveMode(ScrnInfoPtr pScrn);
+UChar		SiS_GetSetBIOSScratch(ScrnInfoPtr pScrn, UShort offset, UChar value);
+Bool		SISDetermineLCDACap(ScrnInfoPtr pScrn);
+void		SISSaveDetectedDevices(ScrnInfoPtr pScrn);
+void		SISErrorLog(ScrnInfoPtr pScrn, const char *format, ...);
+void		SiSFindAspect(ScrnInfoPtr pScrn, xf86MonPtr pMonitor, int crtnum, Bool q);
+DisplayModePtr	SiSDuplicateMode(DisplayModePtr source);
+Bool		SiSMakeOwnModeList(ScrnInfoPtr pScrn, Bool acceptcustommodes,
+				Bool includelcdmodes, Bool isfordvi, Bool *havecustommodes,
+				Bool fakecrt2modes, Bool IsForCRT2);
+xf86MonPtr	SiSInternalDDC(ScrnInfoPtr pScrn, int crtno);
+Bool		SiSFixupHVRanges(ScrnInfoPtr pScrn, int mfbcrt, Bool quiet);
+void		SiSClearModesPrivate(DisplayModePtr modelist);
+DisplayModePtr	SiSSearchMode(ScrnInfoPtr pScrn, DisplayModePtr modelist,
+			DisplayModePtr mode, Bool *needreset, Bool *needrecalcxine);
+void		SISAdjustFrameHW_CRT1(ScrnInfoPtr pScrn, int x, int y);
+void		SISAdjustFrameHW_CRT2(ScrnInfoPtr pScrn, int x, int y);
+#if defined(SISDUALHEAD) || defined(SISMERGED)
+int		SiSRemoveUnsuitableModes(ScrnInfoPtr pScrn, DisplayModePtr initial,
+				const char *reason, Bool quiet);
 #endif
-Bool           SiSBridgeIsInSlaveMode(ScrnInfoPtr pScrn);
-UShort	       SiS_GetModeNumber(ScrnInfoPtr pScrn, DisplayModePtr mode, unsigned int VBFlags);
-UChar  	       SiS_GetSetBIOSScratch(ScrnInfoPtr pScrn, UShort offset, UChar value);
-#ifdef DEBUG
-static void    SiSDumpModeInfo(ScrnInfoPtr pScrn, DisplayModePtr mode);
-#endif
-Bool           SISDetermineLCDACap(ScrnInfoPtr pScrn);
-void           SISSaveDetectedDevices(ScrnInfoPtr pScrn);
 #ifdef SISGAMMARAMP
-void	       SISCalculateGammaRamp(ScreenPtr pScreen, ScrnInfoPtr pScrn);
+void		SISCalculateGammaRamp(ScreenPtr pScreen, ScrnInfoPtr pScrn);
 #endif
+
+extern void	RecalcScreenPitch(ScrnInfoPtr pScrn);
 
 /* Our very own vgaHW functions (sis_vga.c) */
 extern void 	SiSVGASave(ScrnInfoPtr pScrn, SISRegPtr save, int flags);
@@ -1646,9 +852,8 @@ extern Bool 	SiSVGAMapMem(ScrnInfoPtr pScrn);
 extern void 	SiSVGAUnmapMem(ScrnInfoPtr pScrn);
 extern Bool 	SiSVGASaveScreen(ScreenPtr pScreen, int mode);
 
-/* shadow */
+/* shadow, randr, randr-rotation */
 extern void 	SISPointerMoved(int index, int x, int y);
-extern void 	SISPointerMovedReflect(int index, int x, int y);
 extern void 	SISRefreshArea(ScrnInfoPtr pScrn, int num, BoxPtr pbox);
 extern void 	SISRefreshAreaReflect(ScrnInfoPtr pScrn, int num, BoxPtr pbox);
 extern void 	SISRefreshArea8(ScrnInfoPtr pScrn, int num, BoxPtr pbox);
@@ -1664,6 +869,7 @@ extern void 	SISCRT2PreInit(ScrnInfoPtr pScrn, Bool quiet);
 extern void 	SISSense30x(ScrnInfoPtr pScrn, Bool quiet);
 extern void 	SISSenseChrontel(ScrnInfoPtr pScrn, Bool quiet);
 extern void     SiSSetupPseudoPanel(ScrnInfoPtr pScrn);
+extern void	SiSPostSetModeTVParms(ScrnInfoPtr pScrn);
 
 /* utility */
 extern void	SiSCtrlExtInit(ScrnInfoPtr pScrn);
@@ -1696,11 +902,23 @@ extern void		SiS_Chrontel701xBLOn(struct SiS_Private *SiS_Pr);
 extern void		SiS_Chrontel701xBLOff(struct SiS_Private *SiS_Pr);
 extern void		SiS_SiS30xBLOn(struct SiS_Private *SiS_Pr);
 extern void		SiS_SiS30xBLOff(struct SiS_Private *SiS_Pr);
-extern void		SiS_CalcXTapScaler(struct SiS_Private *SiS_Pr, int srcsize, int destsize, int taps, Bool ishoriz);
-/* End of init.c, init301.c ----- */
+extern void		SiS_SetPitchCRT1(struct SiS_Private *SiS_Pr, ScrnInfoPtr pScrn);
+extern void		SiS_SetPitchCRT2(struct SiS_Private *SiS_Pr, ScrnInfoPtr pScrn);
 
-
-
-
-
+/* MergedFB */
+#ifdef SISMERGED
+extern void		SiSMFBInitMergedFB(ScrnInfoPtr pScrn);
+extern void		SiSMFBHandleModesCRT2(ScrnInfoPtr pScrn, ClockRangePtr clockRanges);
+extern void 		SiSMFBMakeModeList(ScrnInfoPtr pScrn);
+extern void		SiSMFBCorrectVirtualAndLayout(ScrnInfoPtr pScrn);
+extern Bool		SiSMFBRebuildModelist(ScrnInfoPtr pScrn, ClockRangePtr clockRanges);
+extern Bool		SiSMFBRevalidateModelist(ScrnInfoPtr pScrn, ClockRangePtr clockRanges);
+extern void		SiSMFBSetDpi(ScrnInfoPtr pScrn1, ScrnInfoPtr pScrn2, SiSScrn2Rel srel);
+extern void		SISMFBPointerMoved(int scrnIndex, int x, int y);
+extern void		SISMFBAdjustFrame(int scrnIndex, int x, int y, int flags);
+#ifdef SISXINERAMA
+extern void		SiSXineramaExtensionInit(ScrnInfoPtr pScrn);
+extern Bool 		SiSnoPanoramiXExtension;
+#endif
+#endif
 

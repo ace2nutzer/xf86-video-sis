@@ -493,10 +493,9 @@ SiSPrepareSolid(PixmapPtr pPixmap, int alu, Pixel planemask, Pixel fg)
 	/* Check that the pitch matches the hardware's requirements. Should
 	 * never be a problem due to pixmapPitchAlign and fbScreenInit.
 	 */
-	if(exaGetPixmapPitch(pPixmap) & 7)
+	if((pSiS->fillPitch = exaGetPixmapPitch(pPixmap)) & 7)
 	   return FALSE;
 
-	pSiS->fillPitch = exaGetPixmapPitch(pPixmap);
 	pSiS->fillBpp = pPixmap->drawable.bitsPerPixel >> 3;
 	pSiS->fillDstBase = (CARD32)exaGetPixmapOffset(pPixmap);
 
@@ -546,16 +545,14 @@ SiSPrepareCopy(PixmapPtr pSrcPixmap, PixmapPtr pDstPixmap, int xdir, int ydir,
 	/* Check that the pitch matches the hardware's requirements. Should
 	 * never be a problem due to pixmapPitchAlign and fbScreenInit.
 	 */
-	if(exaGetPixmapPitch(pSrcPixmap) & 3)
+	if((pSiS->copySPitch = exaGetPixmapPitch(pSrcPixmap)) & 3)
 	   return FALSE;
-	if(exaGetPixmapPitch(pDstPixmap) & 7)
+	if((pSiS->copyDPitch = exaGetPixmapPitch(pDstPixmap)) & 7)
 	   return FALSE;
 
 	pSiS->copyXdir = xdir;
 	pSiS->copyYdir = ydir;
 	pSiS->copyBpp = pSrcPixmap->drawable.bitsPerPixel >> 3;
-	pSiS->copySPitch = exaGetPixmapPitch(pSrcPixmap);
-	pSiS->copyDPitch = exaGetPixmapPitch(pDstPixmap);
 	pSiS->copySrcBase = (CARD32)exaGetPixmapOffset(pSrcPixmap);
 	pSiS->copyDstBase = (CARD32)exaGetPixmapOffset(pDstPixmap);
 
@@ -619,7 +616,6 @@ static void
 SiSDoneCopy(PixmapPtr pDstPixmap)
 {
 }
-
 #endif /* EXA */
 
 /* For DGA usage */
@@ -666,6 +662,23 @@ SiSAccelInit(ScreenPtr pScreen)
     pSiS->exa_scratch = NULL;
 #endif
 
+#if 1
+#ifdef SIS_USE_EXA
+    if(!pSiS->NoAccel) {
+       if(pSiS->useEXA && pScrn->bitsPerPixel == 24) {
+          if(exaGetVersion() <= EXA_MAKE_VERSION(0, 1, 0)) {
+	     xf86DrvMsg(pScrn->scrnIndex, X_INFO,
+			"This version of EXA is broken for 24bpp framebuffers\n");
+	     xf86DrvMsg(pScrn->scrnIndex, X_INFO,
+			"\t- disabling 2D acceleration and Xv\n");
+	     pSiS->NoAccel = TRUE;
+	     pSiS->NoXvideo = TRUE; /* No fbmem manager -> no xv */
+	  }
+       }
+    }
+#endif
+#endif
+
     if(!pSiS->NoAccel) {
 #ifdef SIS_USE_XAA
        if(!pSiS->useEXA) {
@@ -675,7 +688,7 @@ SiSAccelInit(ScreenPtr pScreen)
 #endif
 #ifdef SIS_USE_EXA
        if(pSiS->useEXA) {
-	  if(!(pSiS->EXADriverPtr = exaDriverAlloc())) {
+	  if(!(pSiS->EXADriverPtr = xnfcalloc(sizeof(ExaDriverRec), 1))) {
 	     pSiS->NoAccel = TRUE;
 	     pSiS->NoXvideo = TRUE; /* No fbmem manager -> no xv */
 	  }
@@ -768,8 +781,53 @@ SiSAccelInit(ScreenPtr pScreen)
 
 #ifdef SIS_USE_EXA	/* ----------------------- EXA ----------------------- */
        if(pSiS->useEXA) {
+#if  XORG_VERSION_CURRENT <= XORG_VERSION_NUMERIC(7,0,0,0,0)
+
+	  /* data */
+	  pSiS->EXADriverPtr->card.memoryBase = pSiS->FbBase;
+	  pSiS->EXADriverPtr->card.memorySize = pSiS->maxxfbmem;
+	  pSiS->EXADriverPtr->card.offScreenBase = pScrn->displayWidth * pScrn->virtualY
+						* (pScrn->bitsPerPixel >> 3);
+	  if(pSiS->EXADriverPtr->card.memorySize > pSiS->EXADriverPtr->card.offScreenBase) {
+	     pSiS->EXADriverPtr->card.flags = EXA_OFFSCREEN_PIXMAPS;
+	  } else {
+	     pSiS->NoXvideo = TRUE;
+	     xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
+		"Not enough video RAM for offscreen memory manager. Xv disabled\n");
+	  }
+#if  XORG_VERSION_CURRENT < XORG_VERSION_NUMERIC(6,8,2,0,0)
+	  pSiS->EXADriverPtr->card.offscreenByteAlign = 8;	/* src/dst: double quad word boundary */
+	  pSiS->EXADriverPtr->card.offscreenPitch = 1;
+#else
+	  pSiS->EXADriverPtr->card.pixmapOffsetAlign = 8;	/* src/dst: double quad word boundary */
+	  pSiS->EXADriverPtr->card.pixmapPitchAlign = 8;	/* could possibly be 1, but who knows for sure */
+#endif
+	  pSiS->EXADriverPtr->card.maxX = 2047;
+	  pSiS->EXADriverPtr->card.maxY = 2047;
+
+	  /* Sync */
+	  pSiS->EXADriverPtr->accel.WaitMarker = SiSEXASync;
+
+	  /* Solid fill */
+	  pSiS->EXADriverPtr->accel.PrepareSolid = SiSPrepareSolid;
+	  pSiS->EXADriverPtr->accel.Solid = SiSSolid;
+	  pSiS->EXADriverPtr->accel.DoneSolid = SiSDoneSolid;
+
+	  /* Copy */
+	  pSiS->EXADriverPtr->accel.PrepareCopy = SiSPrepareCopy;
+	  pSiS->EXADriverPtr->accel.Copy = SiSCopy;
+	  pSiS->EXADriverPtr->accel.DoneCopy = SiSDoneCopy;
+
+	  /* Composite not supported */
+
+	  /* Upload, download to/from Screen */
+	  pSiS->EXADriverPtr->accel.UploadToScreen = SiSUploadToScreen;
+	  pSiS->EXADriverPtr->accel.DownloadFromScreen = SiSDownloadFromScreen;
+
+#else /*xorg>=7.0*/
+
 	  pSiS->EXADriverPtr->exa_major = 2;
-	  pSiS->EXADriverPtr->exa_major = 0;
+	  pSiS->EXADriverPtr->exa_minor = 0;
 
 	  /* data */
 	  pSiS->EXADriverPtr->memoryBase = pSiS->FbBase;
@@ -807,6 +865,7 @@ SiSAccelInit(ScreenPtr pScreen)
 	  pSiS->EXADriverPtr->UploadToScreen = SiSUploadToScreen;
 	  pSiS->EXADriverPtr->DownloadFromScreen = SiSDownloadFromScreen;
 
+#endif  /*end of Xorg>=7.0 EXA Setting*/       
        }
 #endif /* EXA */
 
@@ -887,7 +946,11 @@ SiSAccelInit(ScreenPtr pScreen)
 						SiSScratchSave, pSiS);
 	  if(pSiS->exa_scratch) {
 	     pSiS->exa_scratch_next = pSiS->exa_scratch->offset;
-	     pSiS->EXADriverPtr->UploadToScratch = SiSUploadToScratch;
+       #if  XORG_VERSION_CURRENT <= XORG_VERSION_NUMERIC(7,0,0,0,0)
+             pSiS->EXADriverPtr->accel.UploadToScratch = SiSUploadToScratch;
+       #else
+             pSiS->EXADriverPtr->UploadToScratch = SiSUploadToScratch;
+       #endif
 	  }
 
        } else {

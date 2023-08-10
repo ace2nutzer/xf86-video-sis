@@ -25,8 +25,6 @@
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
  *
- * This module doesn't use CurrentLayout, because it is never
- * active when DGA is active and vice versa.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -37,7 +35,6 @@
 #include "servermd.h"
 
 void SISPointerMoved(int index, int x, int y);
-void SISPointerMovedReflect(int index, int x, int y);
 void SISRefreshArea(ScrnInfoPtr pScrn, int num, BoxPtr pbox);
 void SISRefreshAreaReflect(ScrnInfoPtr pScrn, int num, BoxPtr pbox);
 void SISRefreshArea8(ScrnInfoPtr pScrn, int num, BoxPtr pbox);
@@ -45,34 +42,51 @@ void SISRefreshArea16(ScrnInfoPtr pScrn, int num, BoxPtr pbox);
 void SISRefreshArea24(ScrnInfoPtr pScrn, int num, BoxPtr pbox);
 void SISRefreshArea32(ScrnInfoPtr pScrn, int num, BoxPtr pbox);
 
+
 void
 SISPointerMoved(int index, int x, int y)
 {
     ScrnInfoPtr pScrn = xf86Screens[index];
     SISPtr pSiS = SISPTR(pScrn);
+    Bool framechanged = FALSE;
 
-    if(pSiS->Rotate == 1) {
-       (*pSiS->PointerMoved)(index, pScrn->pScreen->height - y - 1, x);
+    /* Beware: This is executed asynchronously. */
+
+    if(pSiS->DGAactive)
+       return;
+
+    if(pSiS->Rotate) {
+       if(pScrn->frameX0 > x) {
+	  pScrn->frameX0 = x;
+	  pScrn->frameX1 = x + pScrn->currentMode->VDisplay - 1;
+	  framechanged = TRUE ;
+       }
+
+       if(pScrn->frameX1 < x) {
+	  pScrn->frameX1 = x + 1;
+	  pScrn->frameX0 = x - pScrn->currentMode->VDisplay + 1;
+	  framechanged = TRUE ;
+       }
+
+       if(pScrn->frameY0 > y) {
+	  pScrn->frameY0 = y;
+	  pScrn->frameY1 = y + pScrn->currentMode->HDisplay - 1;
+	  framechanged = TRUE;
+       }
+
+       if(pScrn->frameY1 < y) {
+	  pScrn->frameY1 = y;
+	  pScrn->frameY0 = y - pScrn->currentMode->HDisplay + 1;
+	  framechanged = TRUE;
+       }
+
+       if(framechanged && pScrn->AdjustFrame)
+	  pScrn->AdjustFrame(pScrn->scrnIndex, pScrn->frameX0, pScrn->frameY0, 0);
+
     } else {
-       (*pSiS->PointerMoved)(index, y, pScrn->pScreen->width - x - 1);
-    }
-}
 
-void
-SISPointerMovedReflect(int index, int x, int y)
-{
-    ScrnInfoPtr pScrn = xf86Screens[index];
-    SISPtr pSiS = SISPTR(pScrn);
+       (*pSiS->PointerMoved)(index, x, y);
 
-    switch(pSiS->Reflect) {
-    case 1: /* x */
-       (*pSiS->PointerMoved)(index, pScrn->pScreen->width - x - 1, y);
-       break;
-    case 2: /* y */
-       (*pSiS->PointerMoved)(index, x, pScrn->pScreen->height - y - 1);
-       break;
-    case 3: /* x + y */
-       (*pSiS->PointerMoved)(index, pScrn->pScreen->width - x - 1, pScrn->pScreen->height - y - 1);
     }
 }
 
@@ -85,8 +99,8 @@ SISRefreshArea(ScrnInfoPtr pScrn, int num, BoxPtr pbox)
     int    width, height, Bpp, FBPitch;
     CARD8  *src, *dst;
 
-    Bpp = pScrn->bitsPerPixel >> 3;
-    FBPitch = BitmapBytePad(pScrn->displayWidth * pScrn->bitsPerPixel);
+    Bpp = pSiS->CurrentLayout.bytesPerPixel;
+    FBPitch = BitmapBytePad(pScrn->displayWidth * pSiS->CurrentLayout.bitsPerPixel);
 
     while(num--) {
 
@@ -107,8 +121,9 @@ SISRefreshArea(ScrnInfoPtr pScrn, int num, BoxPtr pbox)
 
 /* RefreshArea for reflection */
 
-void
-SISRefreshAreaReflect(ScrnInfoPtr pScrn, int num, BoxPtr pbox)
+static void
+SISRealRefreshAreaReflect(ScrnInfoPtr pScrn, int num, BoxPtr pbox,
+			CARD8 *sourcePtr, CARD8 *destPtr, int srcPitch, int dstWidth)
 {
     SISPtr pSiS = SISPTR(pScrn);
     int    width, height, Bpp, FBPitch, twidth;
@@ -116,17 +131,17 @@ SISRefreshAreaReflect(ScrnInfoPtr pScrn, int num, BoxPtr pbox)
     CARD16 *tdst16, *tsrc16;
     CARD32 *tdst32, *tsrc32;
 
-    Bpp = pScrn->bitsPerPixel >> 3;
-    FBPitch = BitmapBytePad(pScrn->displayWidth * pScrn->bitsPerPixel);
+    Bpp = pSiS->CurrentLayout.bytesPerPixel;
+    FBPitch = dstWidth * Bpp;
 
     while(num--) {
        width = (pbox->x2 - pbox->x1) * Bpp;
        height = pbox->y2 - pbox->y1;
-       src = pSiS->ShadowPtr + (pbox->y1 * pSiS->ShadowPitch) +  (pbox->x1 * Bpp);
-       dst = pSiS->FbBase;
+       src = sourcePtr + (pbox->y1 * srcPitch) + (pbox->x1 * Bpp);
+       dst = destPtr;
        switch(pSiS->Reflect) {
        case 1:	/* x */
-	  dst += (pbox->y1 * FBPitch) + ((pScrn->displayWidth - pbox->x1 - 1) * Bpp);
+	  dst += (pbox->y1 * FBPitch) + ((pScrn->virtualX - pbox->x1 - 1) * Bpp);
 	  switch(Bpp) {
 	     case 1:
 		while(height--) {
@@ -135,7 +150,7 @@ SISRefreshAreaReflect(ScrnInfoPtr pScrn, int num, BoxPtr pbox)
 		   twidth = width;
 		   while(twidth--) *tdst-- = *tsrc++;
 		   dst += FBPitch;
-		   src += pSiS->ShadowPitch;
+		   src += srcPitch;
 		}
 		break;
 	     case 2:
@@ -146,7 +161,7 @@ SISRefreshAreaReflect(ScrnInfoPtr pScrn, int num, BoxPtr pbox)
 		   twidth = width;
 		   while(twidth--) *tdst16-- = *tsrc16++;
 		   dst += FBPitch;
-		   src += pSiS->ShadowPitch;
+		   src += srcPitch;
 		}
 		break;
 	     case 4:
@@ -157,7 +172,7 @@ SISRefreshAreaReflect(ScrnInfoPtr pScrn, int num, BoxPtr pbox)
 		   twidth = width;
 		   while(twidth--) *tdst32-- = *tsrc32++;
 		   dst += FBPitch;
-		   src += pSiS->ShadowPitch;
+		   src += srcPitch;
 		}
 	  }
 	  break;
@@ -166,11 +181,11 @@ SISRefreshAreaReflect(ScrnInfoPtr pScrn, int num, BoxPtr pbox)
 	  while(height--) {
 	     SiSMemCopyToVideoRam(pSiS, dst, src, width);
 	     dst -= FBPitch;
-	     src += pSiS->ShadowPitch;
+	     src += srcPitch;
 	  }
 	  break;
        case 3:	/* x + y */
-	  dst += ((pScrn->virtualY - pbox->y1 - 1) * FBPitch) + ((pScrn->displayWidth - pbox->x1 - 1) * Bpp);
+	  dst += ((pScrn->virtualY - pbox->y1 - 1) * FBPitch) + ((pScrn->virtualX - pbox->x1 - 1) * Bpp);
 	  switch(Bpp) {
 	     case 1:
 		while(height--) {
@@ -179,7 +194,7 @@ SISRefreshAreaReflect(ScrnInfoPtr pScrn, int num, BoxPtr pbox)
 		   twidth = width;
 		   while(twidth--) *tdst-- = *tsrc++;
 		   dst -= FBPitch;
-		   src += pSiS->ShadowPitch;
+		   src += srcPitch;
 		}
 		break;
 	     case 2:
@@ -190,7 +205,7 @@ SISRefreshAreaReflect(ScrnInfoPtr pScrn, int num, BoxPtr pbox)
 		   twidth = width;
 		   while(twidth--) *tdst16-- = *tsrc16++;
 		   dst -= FBPitch;
-		   src += pSiS->ShadowPitch;
+		   src += srcPitch;
 		}
 		break;
 	     case 4:
@@ -201,7 +216,7 @@ SISRefreshAreaReflect(ScrnInfoPtr pScrn, int num, BoxPtr pbox)
 		   twidth = width;
 		   while(twidth--) *tdst32-- = *tsrc32++;
 		   dst -= FBPitch;
-		   src += pSiS->ShadowPitch;
+		   src += srcPitch;
 		}
 		break;
 	  }
@@ -210,18 +225,27 @@ SISRefreshAreaReflect(ScrnInfoPtr pScrn, int num, BoxPtr pbox)
     }
 }
 
-/* RefreshArea()s for rotation */
-
 void
-SISRefreshArea8(ScrnInfoPtr pScrn, int num, BoxPtr pbox)
+SISRefreshAreaReflect(ScrnInfoPtr pScrn, int num, BoxPtr pbox)
 {
     SISPtr pSiS = SISPTR(pScrn);
-    int    count, width, height, y1, y2, dstPitch, srcPitch;
+
+    SISRealRefreshAreaReflect(pScrn, num, pbox, (CARD8 *)pSiS->ShadowPtr,
+    		(CARD8 *)pSiS->FbBase, pSiS->ShadowPitch, pScrn->displayWidth);
+}
+
+/* RefreshArea()s for rotation */
+
+static void
+SISRealRefreshArea8(ScrnInfoPtr pScrn, int num, BoxPtr pbox,
+		CARD8 *sourcePtr, CARD8 *destPtr, int srcPitch, int dstWidth)
+{
+    SISPtr pSiS = SISPTR(pScrn);
+    int    count, width, height, y1, y2;
     CARD8  *dstPtr, *srcPtr, *src;
     CARD32 *dst;
 
-    dstPitch = pScrn->displayWidth;
-    srcPitch = -pSiS->Rotate * pSiS->ShadowPitch;
+    srcPitch *= (-pSiS->Rotate);
 
     while(num--) {
        width = pbox->x2 - pbox->x1;
@@ -230,11 +254,11 @@ SISRefreshArea8(ScrnInfoPtr pScrn, int num, BoxPtr pbox)
        height = (y2 - y1) >> 2;  /* in dwords */
 
        if(pSiS->Rotate == 1) {
-	  dstPtr = pSiS->FbBase + (pbox->x1 * dstPitch) + pScrn->virtualX - y2;
-	  srcPtr = pSiS->ShadowPtr + ((1 - y2) * srcPitch) + pbox->x1;
+	  dstPtr = destPtr + (pbox->x1 * dstWidth) + pScrn->virtualX - y2;
+	  srcPtr = sourcePtr + ((1 - y2) * srcPitch) + pbox->x1;
        } else {
-	  dstPtr = pSiS->FbBase +  ((pScrn->virtualY - pbox->x2) * dstPitch) + y1;
-	  srcPtr = pSiS->ShadowPtr + (y1 * srcPitch) + pbox->x2 - 1;
+	  dstPtr = destPtr +  ((pScrn->virtualY - pbox->x2) * dstWidth) + y1;
+	  srcPtr = sourcePtr + (y1 * srcPitch) + pbox->x2 - 1;
        }
 
        while(width--) {
@@ -249,7 +273,7 @@ SISRefreshArea8(ScrnInfoPtr pScrn, int num, BoxPtr pbox)
 	     src += (srcPitch * 4);
 	  }
 	  srcPtr += pSiS->Rotate;
-	  dstPtr += dstPitch;
+	  dstPtr += dstWidth;
        }
 
        pbox++;
@@ -257,15 +281,24 @@ SISRefreshArea8(ScrnInfoPtr pScrn, int num, BoxPtr pbox)
 }
 
 void
-SISRefreshArea16(ScrnInfoPtr pScrn, int num, BoxPtr pbox)
+SISRefreshArea8(ScrnInfoPtr pScrn, int num, BoxPtr pbox)
 {
     SISPtr pSiS = SISPTR(pScrn);
-    int count, width, height, y1, y2, dstPitch, srcPitch;
+
+    SISRealRefreshArea8(pScrn, num, pbox, (CARD8 *)pSiS->ShadowPtr,
+	(CARD8 *)pSiS->FbBase, pSiS->ShadowPitch, pScrn->displayWidth);
+}
+
+static void
+SISRealRefreshArea16(ScrnInfoPtr pScrn, int num, BoxPtr pbox,
+		CARD16 *sourcePtr, CARD16 *destPtr, int srcPitch, int dstWidth)
+{
+    SISPtr pSiS = SISPTR(pScrn);
+    int count, width, height, y1, y2;
     CARD16 *dstPtr, *srcPtr, *src;
     CARD32 *dst;
 
-    dstPitch = pScrn->displayWidth;
-    srcPitch = -pSiS->Rotate * pSiS->ShadowPitch >> 1;
+    srcPitch = -pSiS->Rotate * srcPitch >> 1;
 
     while(num--) {
        width = pbox->x2 - pbox->x1;
@@ -274,11 +307,11 @@ SISRefreshArea16(ScrnInfoPtr pScrn, int num, BoxPtr pbox)
        height = (y2 - y1) >> 1;  /* in dwords */
 
        if(pSiS->Rotate == 1) {
-	  dstPtr = (CARD16 *)pSiS->FbBase + (pbox->x1 * dstPitch) + pScrn->virtualX - y2;
-	  srcPtr = (CARD16 *)pSiS->ShadowPtr + ((1 - y2) * srcPitch) + pbox->x1;
+	  dstPtr = destPtr + (pbox->x1 * dstWidth) + pScrn->virtualX - y2;
+	  srcPtr = sourcePtr + ((1 - y2) * srcPitch) + pbox->x1;
        } else {
-	  dstPtr = (CARD16 *)pSiS->FbBase + ((pScrn->virtualY - pbox->x2) * dstPitch) + y1;
-	  srcPtr = (CARD16 *)pSiS->ShadowPtr + (y1 * srcPitch) + pbox->x2 - 1;
+	  dstPtr = destPtr + ((pScrn->virtualY - pbox->x2) * dstWidth) + y1;
+	  srcPtr = sourcePtr + (y1 * srcPitch) + pbox->x2 - 1;
        }
 
        while(width--) {
@@ -290,11 +323,20 @@ SISRefreshArea16(ScrnInfoPtr pScrn, int num, BoxPtr pbox)
 	     src += (srcPitch * 2);
 	  }
 	  srcPtr += pSiS->Rotate;
-	  dstPtr += dstPitch;
+	  dstPtr += dstWidth;
        }
 
        pbox++;
     }
+}
+
+void
+SISRefreshArea16(ScrnInfoPtr pScrn, int num, BoxPtr pbox)
+{
+    SISPtr pSiS = SISPTR(pScrn);
+
+    SISRealRefreshArea16(pScrn, num, pbox, (CARD16 *)pSiS->ShadowPtr,
+	(CARD16 *)pSiS->FbBase, pSiS->ShadowPitch, pScrn->displayWidth);
 }
 
 /* this one could be faster */
@@ -351,26 +393,26 @@ SISRefreshArea24(ScrnInfoPtr pScrn, int num, BoxPtr pbox)
     }
 }
 
-void
-SISRefreshArea32(ScrnInfoPtr pScrn, int num, BoxPtr pbox)
+static void
+SISRealRefreshArea32(ScrnInfoPtr pScrn, int num, BoxPtr pbox,
+		CARD32 *sourcePtr, CARD32 *destPtr, int srcPitch, int dstWidth)
 {
     SISPtr pSiS = SISPTR(pScrn);
-    int    count, width, height, dstPitch, srcPitch;
+    int    count, width, height;
     CARD32 *dstPtr, *srcPtr, *src, *dst;
 
-    dstPitch = pScrn->displayWidth;
-    srcPitch = -pSiS->Rotate * pSiS->ShadowPitch >> 2;
+    srcPitch = -pSiS->Rotate * srcPitch >> 2;
 
     while(num--) {
        width = pbox->x2 - pbox->x1;
        height = pbox->y2 - pbox->y1;
 
        if(pSiS->Rotate == 1) {
-	  dstPtr = (CARD32 *)pSiS->FbBase + (pbox->x1 * dstPitch) + pScrn->virtualX - pbox->y2;
-	  srcPtr = (CARD32 *)pSiS->ShadowPtr + ((1 - pbox->y2) * srcPitch) + pbox->x1;
+	  dstPtr = destPtr + (pbox->x1 * dstWidth) + pScrn->virtualX - pbox->y2;
+	  srcPtr = sourcePtr + ((1 - pbox->y2) * srcPitch) + pbox->x1;
        } else {
-	  dstPtr = (CARD32 *)pSiS->FbBase + ((pScrn->virtualY - pbox->x2) * dstPitch) + pbox->y1;
-	  srcPtr = (CARD32 *)pSiS->ShadowPtr + (pbox->y1 * srcPitch) + pbox->x2 - 1;
+	  dstPtr = destPtr + ((pScrn->virtualY - pbox->x2) * dstWidth) + pbox->y1;
+	  srcPtr = sourcePtr + (pbox->y1 * srcPitch) + pbox->x2 - 1;
        }
 
        while(width--) {
@@ -382,9 +424,24 @@ SISRefreshArea32(ScrnInfoPtr pScrn, int num, BoxPtr pbox)
 	     src += srcPitch;
 	  }
 	  srcPtr += pSiS->Rotate;
-	  dstPtr += dstPitch;
+	  dstPtr += dstWidth;
        }
 
        pbox++;
     }
 }
+
+void
+SISRefreshArea32(ScrnInfoPtr pScrn, int num, BoxPtr pbox)
+{
+    SISPtr pSiS = SISPTR(pScrn);
+
+    SISRealRefreshArea32(pScrn, num, pbox, (CARD32 *)pSiS->ShadowPtr,
+	(CARD32 *)pSiS->FbBase, pSiS->ShadowPitch, pScrn->displayWidth);
+}
+
+
+
+
+
+

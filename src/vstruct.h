@@ -233,6 +233,8 @@ struct SiS_ModeResInfo_S {
 #define CUT_UNKNOWNLCD		19
 #define CUT_AOP8060		20
 #define CUT_PANEL856		21
+#define CUT_ICOP550		22
+#define CUT_ICOP550_2		23
 
 struct SiS_Private
 {
@@ -246,6 +248,7 @@ struct SiS_Private
 #endif
 	unsigned char 			*VirtualRomBase;
 	BOOLEAN				UseROM;
+	int                                    BIOSVersion;
 #ifdef SIS_LINUX_KERNEL
 	unsigned char SISIOMEMTYPE	*VideoMemoryAddress;
 	unsigned int			VideoMemorySize;
@@ -298,6 +301,7 @@ struct SiS_Private
 	BOOLEAN				SiS_CHSOverScan;
 	BOOLEAN				SiS_ChSW;
 	BOOLEAN				SiS_UseLCDA;
+	BOOLEAN				SiS_EnableBackLight;
 	int				SiS_UseOEM;
 	unsigned int			SiS_CustomT;
 	int				SiS_UseWide, SiS_UseWideCRT2;
@@ -383,6 +387,8 @@ struct SiS_Private
 
 	const struct SiS_PanelDelayTbl	*SiS_PanelDelayTbl;
 	const struct SiS_PanelDelayTbl	*SiS_PanelDelayTblLVDS;
+       BOOLEAN		UseFetroTiming;		/*for Fuji-Siemans Fetro*/
+	
 
 	/* SiS bridge */
 

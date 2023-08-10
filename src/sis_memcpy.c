@@ -1057,7 +1057,7 @@ SiSVidCopyInitGen(ScreenPtr pScreen, SISMCFuncData *MCFunctions, vidCopyFunc *UM
     SISPtr pSiS = SISPTR(pScrn);
     void *fbhandle = NULL;
     char  *frqBuf = NULL;
-    UChar *buf1, *buf2, *buf3;
+    UChar *buf1 = NULL, *buf2 = NULL, *buf3 = NULL;
     double cpuFreq = 0.0;
     unsigned int myCPUflags = pSiS->CPUFlags | Def_FL;
     int best, secondbest;

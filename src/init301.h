@@ -64,9 +64,6 @@
 #ifdef SIS_LINUX_KERNEL
 #include "vgatypes.h"
 #include "vstruct.h"
-#ifdef SIS_CP
-#undef SIS_CP
-#endif
 #include <linux/config.h>
 #include <linux/version.h>
 #include <linux/types.h>
@@ -449,5 +446,4 @@ extern unsigned int	sisfb_read_lpc_pci_dword(struct SiS_Private *SiS_Pr, int reg
 extern void		SiS_SetGroup2_C_ELV(struct SiS_Private *SiS_Pr, unsigned short ModeNo,
 				unsigned short ModeIdIndex, unsigned short RefreshRateTableIndex);
 #endif
-
 #endif

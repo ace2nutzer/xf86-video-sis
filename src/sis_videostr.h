@@ -43,12 +43,13 @@ typedef struct {
     void *	 handle;
     CARD32	 bufAddr[2];
 
-    UChar	 currentBuf;
+    UChar	 currentBuf, nextBuf;
 
     short	 drw_x, drw_y, drw_w, drw_h;
     short	 src_x, src_y, src_w, src_h;
     int		 id;
     short	 srcPitch, height;
+    Bool	 isRGB;
 
     char         brightness;
     UChar        contrast;
@@ -58,6 +59,7 @@ typedef struct {
     RegionRec    clip;
     CARD32       colorKey;
     Bool 	 autopaintColorKey;
+    int		 forceColorkey;
 
     Bool 	 disablegfx;
     Bool	 disablegfxlr;
@@ -65,9 +67,6 @@ typedef struct {
     Bool         usechromakey;
     Bool	 insidechromakey, yuvchromakey;
     CARD32	 chromamin, chromamax;
-#ifdef SISDEINT
-    int		 deinterlacemethod;
-#endif
 
     CARD32       videoStatus;
     Bool	 overlayStatus;
@@ -96,6 +95,7 @@ typedef struct {
 
     short  	 linebufMergeLimit;
     CARD8        linebufmask;
+    CARD8 	PitchAlignmentMask;
 
     short        oldx1, oldx2, oldy1, oldy2;
 #ifdef SISMERGED
@@ -117,6 +117,7 @@ typedef struct {
     Bool	 is760;
     Bool	 is340;
     Bool	 is761;
+    Bool	 is670;
     Bool	 isXGI;
 
 } SISPortPrivRec, *SISPortPrivPtr;

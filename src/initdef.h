@@ -53,24 +53,6 @@
 #ifndef _INITDEF_
 #define _INITDEF_
 
-#define IS_SIS330		(SiS_Pr->ChipType == SIS_330)
-#define IS_SIS550		(SiS_Pr->ChipType == SIS_550)
-#define IS_SIS650		(SiS_Pr->ChipType == SIS_650)  /* All versions, incl 651, M65x */
-#define IS_SIS740		(SiS_Pr->ChipType == SIS_740)
-#define IS_SIS651	        (SiS_Pr->SiS_SysFlags & (SF_Is651 | SF_Is652))
-#define IS_SISM650	        (SiS_Pr->SiS_SysFlags & (SF_IsM650 | SF_IsM652 | SF_IsM653))
-#define IS_SIS65x               (IS_SIS651 || IS_SISM650)       /* Only special versions of 65x */
-#define IS_SIS661		(SiS_Pr->ChipType == SIS_661)
-#define IS_SIS741		(SiS_Pr->ChipType == SIS_741)
-#define IS_SIS660		(SiS_Pr->ChipType == SIS_660)
-#define IS_SIS760		(SiS_Pr->ChipType == SIS_760)
-#define IS_SIS761		(SiS_Pr->ChipType == SIS_761)
-#define IS_SIS661741660760	(IS_SIS661 || IS_SIS741 || IS_SIS660 || IS_SIS760 || IS_SIS761)
-#define IS_SIS650740            ((SiS_Pr->ChipType >= SIS_650) && (SiS_Pr->ChipType < SIS_330))
-#define IS_SIS550650740         (IS_SIS550 || IS_SIS650740)
-#define IS_SIS650740660         (IS_SIS650 || IS_SIS740 || IS_SIS661741660760)
-#define IS_SIS550650740660      (IS_SIS550 || IS_SIS650740660)
-
 #define SISGETROMW(x)		(ROMAddr[(x)] | (ROMAddr[(x)+1] << 8))
 
 /* SiS_VBType */
@@ -91,7 +73,7 @@
 #define VB_SISLVDS		(VB_SIS301LV | VB_SIS302LV | VB_SIS302ELV | VB_SIS307LV)
 #define VB_SIS30xBLV		(VB_SIS30xB | VB_SISLVDS)
 #define VB_SIS30xCLV		(VB_SIS30xC | VB_SIS302ELV | VB_SIS307LV)
-#define VB_SISVB		(VB_SIS301 | VB_SIS30xBLV)
+#define VB_SISVB		(VB_SISTMDS | VB_SISLVDS)
 #define VB_SISLCDA		(VB_SIS302B | VB_SIS301C  | VB_SIS307T  | VB_SISLVDS)
 #define VB_SISTMDSLCDA		(VB_SIS301C | VB_SIS307T)
 #define VB_SISPART4SCALER	(VB_SIS301C | VB_SIS307T | VB_SIS302ELV | VB_SIS307LV)
@@ -173,8 +155,8 @@
 #define SupportRAMDAC2_162      0x0200  /* B, C          (<= 162Mhz) */
 #define SupportRAMDAC2_202      0x0400  /* C             (<= 202Mhz) */
 #define InterlaceMode           0x0080
-#define SyncPP                  0x0000
 #define HaveWideTiming		0x2000	/* Have specific wide- and non-wide timing */
+#define SyncPP                  0x0000
 #define SyncPN                  0x4000
 #define SyncNP                  0x8000
 #define SyncNN                  0xc000
@@ -213,7 +195,7 @@
 
 #define TVSetYPbPrProg		(TVSetYPbPr525p | TVSetYPbPr625p | TVSetYPbPr750p)
 #define TVSetPALTiming		(TVSetPAL | TVSetYPbPr625i | TVSetYPbPr625p)
-
+#define TVSetInterlace                  (TVSetPAL |TVSetNTSCJ|TVSetNTSC1024|TVSetPALM|TVSetPALN|TVSetYPbPr525i|TVSetYPbPr625i)
 /* YPbPr flag (>=315, <661; converted to TVMode) */
 #define YPbPr525p               0x0001
 #define YPbPr750p               0x0002
@@ -227,6 +209,7 @@
 #define SF_Is652		0x0004
 #define SF_IsM652		0x0008
 #define SF_IsM653		0x0010
+#define SF_Is65x		(SF_Is651 | SF_IsM650 | SF_Is652 | SF_IsM652 | SF_IsM653)
 #define SF_IsM661		0x0020
 #define SF_IsM741		0x0040
 #define SF_IsM760		0x0080
@@ -431,6 +414,8 @@
 #define Panel661_1680x1050      0x0d
 #define Panel661_1280x720       0x0e
 #define Panel661_Custom		0x0f
+/*#define Panel661_1440x900	0x?? */
+/*#define Panel661_1920x1200	0x?? */
 
 #define Panel_800x600           0x01	/* Unified values */
 #define Panel_1024x768          0x02    /* MUST match BIOS values from 0-e */
@@ -457,6 +442,8 @@
 #define Panel_1280x800_2	0x17    /* 30xLV */
 #define Panel_856x480		0x18
 #define Panel_1280x854		0x19	/* 661etc */
+#define Panel_1440x900		0x1a
+#define Panel_1920x1200		0x1b
 
 /* Index in ModeResInfo table */
 #define SIS_RI_320x200    0
@@ -494,6 +481,8 @@
 #define SIS_RI_960x540   32
 #define SIS_RI_960x600   33
 #define SIS_RI_1280x854  34
+#define SIS_RI_1440x900  35
+#define SIS_RI_1920x1200 36
 
 /* CR5F */
 #define IsM650                  0x80
@@ -501,6 +490,7 @@
 /* Timing data */
 #define NTSCHT                  1716
 #define NTSC2HT                 1920
+#define NTSC3HT					1907				/* (karma) for TV composite mode 1024x768 */
 #define NTSCVT                  525
 #define PALHT                   1728
 #define PALVT                   625
@@ -550,6 +540,7 @@
 #define VCLK_1360x768		0x58
 #define VCLK_1280x800_315	0x6c
 #define VCLK_1280x854		0x76
+#define VCLKLCD1440_900		0x77
 
 #define TVCLKBASE_300		0x21   /* Indices on TV clocks in VCLKData table (300) */
 #define TVCLKBASE_315	        0x3a   /* Indices on TV clocks in (VB)VCLKData table (315) */

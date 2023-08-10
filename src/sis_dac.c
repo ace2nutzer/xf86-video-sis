@@ -82,6 +82,10 @@
 #include "sis_regs.h"
 #include "sis_dac.h"
 
+#if 0
+#define TWDEBUG_VID
+#endif
+
 static void SiSSave(ScrnInfoPtr pScrn, SISRegPtr sisReg);
 static void SiSRestore(ScrnInfoPtr pScrn, SISRegPtr sisReg);
 static void SiS300Save(ScrnInfoPtr pScrn, SISRegPtr sisReg);
@@ -211,9 +215,7 @@ int SiS_compute_vclk(
     }
     *out_n = best_n;
     *out_dn = best_dn;
-    PDEBUG(ErrorF("SiS_compute_vclk: Clock=%d, n=%d, dn=%d, div=%d, sbit=%d,"
-                    " scale=%d\n", Clock, best_n, best_dn, *out_div,
-                    *out_sbit, *out_scale));
+
     return 1;
 }
 
@@ -221,7 +223,7 @@ void
 SiSCalcClock(ScrnInfoPtr pScrn, int clock, int max_VLD, unsigned int *vclk)
 {
     SISPtr pSiS = SISPTR(pScrn);
-    int M, N, P , PSN, VLD , PSNx ;
+    int M, N, P, PSN, VLD, PSNx;
     int bestM=0, bestN=0, bestP=0, bestPSN=0, bestVLD=0;
     double abest = 42.0;
     double target;
@@ -229,7 +231,7 @@ SiSCalcClock(ScrnInfoPtr pScrn, int clock, int max_VLD, unsigned int *vclk)
     double error, aerror;
 
     /*
-     *  fd = fref*(Numerator/Denumerator)*(Divider/PostScaler)
+     *  fd = fref * (Numerator / Denumerator) * (Divider / PostScaler)
      *
      *  M       = Numerator [1:128]
      *  N       = DeNumerator [1:32]
@@ -237,13 +239,9 @@ SiSCalcClock(ScrnInfoPtr pScrn, int clock, int max_VLD, unsigned int *vclk)
      *  P       = Post Scaler : divide by 1, 2, 3, 4
      *  PSN     = Pre Scaler (Reference Divisor Select)
      *
-     * result in vclk[]
+     *  result in vclk[]
      */
-#define Midx    0
-#define Nidx    1
-#define VLDidx  2
-#define Pidx    3
-#define PSNidx  4
+
 #define Fref 14318180
 /* stability constraints for internal VCO -- MAX_VCO also determines
  * the maximum Video pixel clock */
@@ -275,102 +273,105 @@ SiSCalcClock(ScrnInfoPtr pScrn, int clock, int max_VLD, unsigned int *vclk)
 
      for(N = low_N; N <= high_N; N++) {
 
-         double M_desired = Fvco / Fref * N;
-         if(M_desired > M_max * max_VLD)  continue;
+	double M_desired = Fvco / Fref * N;
 
-         if(M_desired > M_max) {
-            M = M_desired / 2 + 0.5;
-            VLD = 2;
-         } else {
-            M = Fvco / Fref * N + 0.5;
-            VLD = 1;
-         }
+	if(M_desired > M_max * max_VLD)
+	   continue;
 
-         Fout = (double)Fref * (M * VLD)/(N * P);
+	if(M_desired > M_max) {
+	   M = M_desired / 2 + 0.5;
+	   VLD = 2;
+	} else {
+	   M = Fvco / Fref * N + 0.5;
+	   VLD = 1;
+	}
 
-         error = (target - Fout) / target;
-         aerror = (error < 0) ? -error : error;
-         if(aerror < abest) {
-            abest = aerror;
-            bestM = M;
-            bestN = N;
-            bestP = P;
-            bestPSN = PSN;
-            bestVLD = VLD;
-         }
+	Fout = (double)Fref * (M * VLD) / (N * P);
+
+	error = (target - Fout) / target;
+	aerror = (error < 0) ? -error : error;
+	if(aerror < abest) {
+	   abest = aerror;
+	   bestM = M;
+	   bestN = N;
+	   bestP = P;
+	   bestPSN = PSN;
+	   bestVLD = VLD;
+	}
      }
 
   } else {
 
      for(PSNx = 0; PSNx <= MAX_PSN ; PSNx++) {
 
-        int low_N, high_N;
-        double FrefVLDPSN;
+	int low_N, high_N;
+	double FrefVLDPSN;
 
-        PSN = !PSNx ? 1 : 4;
+	PSN = !PSNx ? 1 : 4;
 
-        low_N = 2;
-        high_N = 32;
+	low_N = 2;
+	high_N = 32;
 
-        for(VLD = 1 ; VLD <= max_VLD ; VLD++) {
+	for(VLD = 1 ; VLD <= max_VLD ; VLD++) {
 
-           FrefVLDPSN = (double)Fref * VLD / PSN;
+	   FrefVLDPSN = (double)Fref * VLD / PSN;
 
 	   for(N = low_N; N <= high_N; N++) {
-              double tmp = FrefVLDPSN / N;
 
-              for(P = 1; P <= 4; P++) {
-                 double Fvco_desired = target * ( P );
-                 double M_desired = Fvco_desired / tmp;
+	      double tmp = FrefVLDPSN / N;
 
-                 /* Which way will M_desired be rounded?
-                  *  Do all three just to be safe.
-                  */
-                 int M_low = M_desired - 1;
-                 int M_hi = M_desired + 1;
+	      for(P = 1; P <= 4; P++) {
 
-                 if(M_hi < M_min || M_low > M_max) continue;
+		 double Fvco_desired = target * P;
+		 double M_desired = Fvco_desired / tmp;
 
-		 if(M_low < M_min)  M_low = M_min;
+		 /* Which way will M_desired be rounded?
+		  * Do all three just to be safe.
+		  */
+		 int M_low = M_desired - 1;
+		 int M_hi  = M_desired + 1;
 
-		 if(M_hi > M_max)   M_hi = M_max;
+		 if(M_hi < M_min || M_low > M_max)
+		    continue;
 
-                 for(M = M_low; M <= M_hi; M++) {
-                    Fvco = tmp * M;
-                    if(Fvco <= MIN_VCO) continue;
-                    if(Fvco > MAX_VCO)  break;
+		 if(M_low < M_min)
+		    M_low = M_min;
 
-                    Fout = Fvco / ( P );
+		 if(M_hi > M_max)
+		    M_hi = M_max;
 
-                    error = (target - Fout) / target;
-                    aerror = (error < 0) ? -error : error;
-                    if(aerror < abest) {
-                       abest = aerror;
-                       bestM = M;
-                       bestN = N;
-                       bestP = P;
-                       bestPSN = PSN;
-                       bestVLD = VLD;
-                    }
-#ifdef TWDEBUG
-                    xf86DrvMsgVerb(pScrn->scrnIndex, X_INFO,3,
-			       "Freq. selected: %.2f MHz, M=%d, N=%d, VLD=%d, P=%d, PSN=%d\n",
-                               (float)(clock / 1000.), M, N, P, VLD, PSN);
-                    xf86DrvMsgVerb(pScrn->scrnIndex, X_INFO,3,
-			       "Freq. set: %.2f MHz\n", Fout / 1.0e6);
-#endif
-                 }
-              }
-           }
-        }
+		 for(M = M_low; M <= M_hi; M++) {
+
+		    Fvco = tmp * M;
+		    if(Fvco <= MIN_VCO) continue;
+		    if(Fvco > MAX_VCO)  break;
+
+		    Fout = Fvco / P;
+
+		    error = (target - Fout) / target;
+
+		    aerror = (error < 0) ? -error : error;
+
+		    if(aerror < abest) {
+		       abest = aerror;
+		       bestM = M;
+		       bestN = N;
+		       bestP = P;
+		       bestPSN = PSN;
+		       bestVLD = VLD;
+		    }
+		 }
+	      }
+	   }
+	}
      }
   }
 
-  vclk[Midx]   = bestM;
-  vclk[Nidx]   = bestN;
-  vclk[VLDidx] = bestVLD;
-  vclk[Pidx]   = bestP;
-  vclk[PSNidx] = bestPSN;
+  vclk[SIS_VCLK_Midx]   = bestM;
+  vclk[SIS_VCLK_Nidx]   = bestN;
+  vclk[SIS_VCLK_VLDidx] = bestVLD;
+  vclk[SIS_VCLK_Pidx]   = bestP;
+  vclk[SIS_VCLK_PSNidx] = bestPSN;
 }
 
 static void
@@ -378,8 +379,6 @@ SiSSave(ScrnInfoPtr pScrn, SISRegPtr sisReg)
 {
     SISPtr pSiS = SISPTR(pScrn);
     int i, max;
-
-    PDEBUG(xf86DrvMsgVerb(pScrn->scrnIndex, X_INFO, 3, "SiSSave()\n"));
 
 #ifdef UNLOCK_ALWAYS
     sisSaveUnlockExtRegisterLock(pSiS, NULL, NULL);
@@ -438,8 +437,6 @@ SiSRestore(ScrnInfoPtr pScrn, SISRegPtr sisReg)
     SISPtr pSiS = SISPTR(pScrn);
     int i, max;
     UChar tmp;
-
-    PDEBUG(xf86DrvMsgVerb(pScrn->scrnIndex, X_INFO, 4, "SiSRestore()\n"));
 
 #ifdef UNLOCK_ALWAYS
     sisSaveUnlockExtRegisterLock(pSiS, NULL, NULL);
@@ -516,8 +513,6 @@ SiS300Save(ScrnInfoPtr pScrn, SISRegPtr sisReg)
     SISPtr pSiS = SISPTR(pScrn);
     int i;
 
-    PDEBUG(xf86DrvMsgVerb(pScrn->scrnIndex, X_INFO, 3, "SiS300Save()\n"));
-
 #ifdef UNLOCK_ALWAYS
     sisSaveUnlockExtRegisterLock(pSiS, NULL, NULL);
 #endif
@@ -585,8 +580,6 @@ SiS300Restore(ScrnInfoPtr pScrn, SISRegPtr sisReg)
     SISPtr pSiS = SISPTR(pScrn);
     int i,temp;
     CARD32 temp1, temp2;
-
-    PDEBUG(xf86DrvMsgVerb(pScrn->scrnIndex, X_INFO, 4, "SiS300Restore()\n"));
 
 #ifdef UNLOCK_ALWAYS
     sisSaveUnlockExtRegisterLock(pSiS, NULL, NULL);
@@ -729,14 +722,13 @@ SiS315Save(ScrnInfoPtr pScrn, SISRegPtr sisReg)
     SISPtr pSiS = SISPTR(pScrn);
     int i, max;
 
-    PDEBUG(xf86DrvMsgVerb(pScrn->scrnIndex, X_INFO, 3, "SiS315Save()\n"));
-
 #ifdef UNLOCK_ALWAYS
     sisSaveUnlockExtRegisterLock(pSiS, NULL, NULL);
 #endif
 
     /* Save SR registers */
-    for(i = 0x00; i <= 0x60; i++) {
+    /*for(i = 0x00; i <= 0x60; i++) {     //Chaoyu Modified: Register number is wrong.*/
+    for(i = 0x00; i <= 0x3f; i++) {  
        inSISIDXREG(SISSR, i, sisReg->sisRegs3C4[i]);
 #ifdef TWDEBUG
        xf86DrvMsg(pScrn->scrnIndex, X_INFO,
@@ -748,9 +740,10 @@ SiS315Save(ScrnInfoPtr pScrn, SISRegPtr sisReg)
     sisReg->sisMMIO85C0 = SIS_MMIO_IN32(pSiS->IOBase, 0x85C0);
 
     /* Save CR registers */
-    max = 0x7c;
+    /*max = 0x7c;  //Chaoyu Modified: Register number is wrong.*/
+    max=0x7f;
     if(pSiS->ChipType >= XGI_20) max = 0xff;
-    for(i = 0x00; i <= max; i++)  {
+    for(i = 0x00; i <= max; i++)  {  
        inSISIDXREG(SISCR, i, sisReg->sisRegs3D4[i]);
 #ifdef TWDEBUG
        xf86DrvMsg(pScrn->scrnIndex, X_INFO,
@@ -768,7 +761,7 @@ SiS315Save(ScrnInfoPtr pScrn, SISRegPtr sisReg)
     }
 
     /* Save video playback registers */
-    for(i = 0x00; i <= 0x3f; i++) {
+    for(i = 0x00; i <= 0x73; i++) {
        inSISIDXREG(SISVID, i, sisReg->sisVid[i]);
 #ifdef TWDEBUG_VID
        xf86DrvMsg(pScrn->scrnIndex, X_INFO,
@@ -807,9 +800,7 @@ static void
 SiS315Restore(ScrnInfoPtr pScrn, SISRegPtr sisReg)
 {
     SISPtr pSiS = SISPTR(pScrn);
-    int i,temp;
-
-    PDEBUG(xf86DrvMsgVerb(pScrn->scrnIndex, X_INFO, 4, "SiS315Restore()\n"));
+    int i, temp;
 
 #ifdef UNLOCK_ALWAYS
     sisSaveUnlockExtRegisterLock(pSiS, NULL, NULL);
@@ -938,9 +929,15 @@ SiSVBSave(ScrnInfoPtr pScrn, SISRegPtr sisReg, int p1, int p2, int p3, int p4)
     for(i=0; i<=p2; i++)  {
        inSISIDXREG(SISPART2, i, sisReg->VBPart2[i]);
 #ifdef TWDEBUG
-       xf86DrvMsg(0, X_INFO, "301xSave: Part2 0x%02x = 0x%02x\n", i, sisReg->VBPart2[i]);
+       if(i>=0x80&&i<=0xbf)
+           xf86DrvMsg(0, X_INFO, "301xSave: Part2 (H scale coeff) 0x%02x = 0x%02x\n", i, sisReg->VBPart2[i]);
+       else if(i>=0xc0&&i<=0xff)
+           xf86DrvMsg(0, X_INFO, "301xSave: Part2 (V scale coeff) 0x%02x = 0x%02x\n", i, sisReg->VBPart2[i]);
+       else
+           xf86DrvMsg(0, X_INFO, "301xSave: Part2 0x%02x = 0x%02x\n", i, sisReg->VBPart2[i]);
 #endif
     }
+
     for(i=0; i<=p3; i++)  {
        inSISIDXREG(SISPART3, i, sisReg->VBPart3[i]);
 #ifdef TWDEBUG
@@ -1059,8 +1056,10 @@ SiS301BSave(ScrnInfoPtr pScrn, SISRegPtr sisReg)
     } else if(pSiS->VBFlags2 & (VB2_301C | VB2_302ELV)) {
        Part2max = 0xff;
        Part4max = 0x3c;
-    } /* TODO for 307 */
-
+    } else if(pSiS->VBFlags2 &(VB2_307LV | VB2_307T)){
+       Part2max = 0xff;
+       Part4max = 0xff;
+    }
     SiSVBSave(pScrn, sisReg, Part1max, Part2max, Part3max, Part4max);
 
     sisReg->VBPart2[0x00] &= ~0x20;      /* Disable VB Processor */
@@ -1083,7 +1082,10 @@ SiS301BRestore(ScrnInfoPtr pScrn, SISRegPtr sisReg)
     } else if(pSiS->VBFlags2 & (VB2_301C|VB2_302ELV)) {
        Part2max = 0xff;
        Part4max = 0x3c;
-    } /* TODO for 307 */
+    } else if(pSiS->VBFlags2 &(VB2_307LV | VB2_307T)){
+       Part2max = 0xff;
+       Part4max = 0x90;
+    }
 
     SiSRegInit(pSiS->SiS_Pr, pSiS->RelIO + 0x30);
     SiSSetLVDSetc(pSiS->SiS_Pr, 0);
@@ -1152,7 +1154,11 @@ SiSLVDSChrontelSave(ScrnInfoPtr pScrn, SISRegPtr sisReg)
     int     i;
 
     /* Save Part1 */
-    for(i=0; i<0x46; i++) {
+
+    /*Chaoyu Modified: Number of register should be 0x4e*/
+    /*for(i=0; i<0x46; i++) {*/
+
+   for(i=0; i<0x4e; i++) {
        inSISIDXREG(SISPART1, i, sisReg->VBPart1[i]);
 #ifdef TWDEBUG
        xf86DrvMsg(pScrn->scrnIndex, X_INFO,
@@ -1243,6 +1249,7 @@ SiSLVDSChrontelRestore(ScrnInfoPtr pScrn, SISRegPtr sisReg)
     if(pSiS->VGAEngine == SIS_315_VGA) {
        SetBlock(SISPART1, 0x2C, 0x2E, &(sisReg->VBPart1[0x2C]));
        SetBlock(SISPART1, 0x35, 0x37, &(sisReg->VBPart1[0x35]));  /* Panel Link Scaler */
+	outSISIDXREG(SISPART1, 0x24, sisReg->VBPart1[0x24]);  /* Chaoyu Modified:  reg[0x24] si not restored */
     }
 
     /* For 550 DSTN registers */
@@ -1301,6 +1308,8 @@ SiSMclk(SISPtr pSiS)
     case PCI_CHIP_SIS330:
     case PCI_CHIP_SIS660:
     case PCI_CHIP_SIS340:
+    case PCI_CHIP_SIS670:
+    case PCI_CHIP_SIS671:
     case PCI_CHIP_XGIXG20:
     case PCI_CHIP_XGIXG40:
 
@@ -1432,7 +1441,8 @@ SiSEstimateCRT2Clock(ScrnInfoPtr pScrn, Bool FakeForCRT2)
 }
 
 /* Calculate the maximum dotclock */
-int SiSMemBandWidth(ScrnInfoPtr pScrn, Bool IsForCRT2)
+int
+SiSMemBandWidth(ScrnInfoPtr pScrn, Bool IsForCRT2, Bool quiet)
 {
 	SISPtr pSiS = SISPTR(pScrn);
 #ifdef SISDUALHEAD
@@ -1455,31 +1465,26 @@ int SiSMemBandWidth(ScrnInfoPtr pScrn, Bool IsForCRT2)
 #ifdef __SUNPRO_C
 #undef const
 #endif
+	static const char *maxpixstr = "Maximum pixel clock at %d bpp is %g MHz\n";
 
 	switch(pSiS->Chipset) {
 
 	case PCI_CHIP_SIS5597:
 		total = ((mclk * (bus / 8)) * 0.7) / bytesperpixel;
 		if(total > 135000) total = 135000;
-		xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
-			"Maximum pixel clock at %d bpp is %g MHz\n",
-			bpp, total/1000);
+		xf86DrvMsg(pScrn->scrnIndex, X_PROBED, maxpixstr, bpp, total/1000);
 		return(int)(total);
 
 	case PCI_CHIP_SIS6326:
 		total = ((mclk * (bus / 8)) * 0.7) / bytesperpixel;
 		if(total > 175500) total = 175500;
-		xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
-			"Maximum pixel clock at %d bpp is %g MHz\n",
-			bpp, total/1000);
+		xf86DrvMsg(pScrn->scrnIndex, X_PROBED, maxpixstr, bpp, total/1000);
 		return(int)(total);
 
 	case PCI_CHIP_SIS530:
 		total = ((mclk * (bus / 8)) * 0.7) / bytesperpixel;
 		if(total > 230000) total = 230000;
-		xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
-			"Maximum pixel clock at %d bpp is %g MHz\n",
-			bpp, total/1000);
+		xf86DrvMsg(pScrn->scrnIndex, X_PROBED, maxpixstr, bpp, total/1000);
 		return(int)(total);
 
 	case PCI_CHIP_SIS300:
@@ -1493,6 +1498,8 @@ int SiSMemBandWidth(ScrnInfoPtr pScrn, Bool IsForCRT2)
 	case PCI_CHIP_SIS330:
 	case PCI_CHIP_SIS660:
 	case PCI_CHIP_SIS340:
+	case PCI_CHIP_SIS670:
+	case PCI_CHIP_SIS671:
 	case PCI_CHIP_XGIXG20:
 	case PCI_CHIP_XGIXG40:
 		switch(pSiS->Chipset) {
@@ -1528,6 +1535,7 @@ int SiSMemBandWidth(ScrnInfoPtr pScrn, Bool IsForCRT2)
 		       magic = magicINT[bus/64];
 		    }
 		    max = 680000;
+		    break;
 		case PCI_CHIP_SIS340:
 		case PCI_CHIP_XGIXG40:
 		    magic = magicDED[bus/64];
@@ -1537,6 +1545,11 @@ int SiSMemBandWidth(ScrnInfoPtr pScrn, Bool IsForCRT2)
 		    magic = 1.0; /* magicDED[bus/64]; */
 		    max = 332000;
 		    break;
+		case PCI_CHIP_SIS670:
+		case PCI_CHIP_SIS671:
+		    magic = magicINT[bus/64];
+		    max = 680000; /* ? */
+		    break;
 		}
 
 		PDEBUG(ErrorF("mclk: %d, bus: %d, magic: %g, bpp: %d\n",
@@ -1544,8 +1557,10 @@ int SiSMemBandWidth(ScrnInfoPtr pScrn, Bool IsForCRT2)
 
 		total = mclk * bus / bpp;
 
-		xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
+		if(!quiet) {
+		   xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
 			"Memory bandwidth at %d bpp is %g MHz\n", bpp, total/1000);
+		}
 
 		if((pSiS->VBFlags & CRT2_ENABLE) && (!pSiS->CRT1off)) {
 
@@ -1613,9 +1628,11 @@ int SiSMemBandWidth(ScrnInfoPtr pScrn, Bool IsForCRT2)
 
 			     }
 
-			     xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
+			     if(!quiet) {
+			        xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
 				  "Bandwidth reserved for CRT2 is %g MHz\n",
 				      crt2used/1000);
+			     }
 
 			} else {
 #ifdef SISDUALHEAD
@@ -1627,20 +1644,26 @@ int SiSMemBandWidth(ScrnInfoPtr pScrn, Bool IsForCRT2)
 
 			     if(crt2clock) {
 				total -= (crt2used * pSiSEnt->pScrn_1->bitsPerPixel / bpp);
-				xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
-				   "Bandwidth reserved for CRT2 at %d bpp is %g Mhz\n",
-				      bpp,
-				      (crt2used * pSiSEnt->pScrn_1->bitsPerPixel / bpp)/1000);
+				if(!quiet) {
+				   xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
+				      "Bandwidth reserved for CRT2 at %d bpp is %g Mhz\n",
+				         bpp,
+				         (crt2used * pSiSEnt->pScrn_1->bitsPerPixel / bpp)/1000);
+				}
 			     } else {
 				total -= (pSiSEnt->maxUsedClock * pSiSEnt->pScrn_1->bitsPerPixel / bpp);
-				xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
-				   "Bandwidth reserved for CRT2 at %d bpp is %d Mhz\n",
+				if(!quiet) {
+				   xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
+				      "Bandwidth reserved for CRT2 at %d bpp is %d Mhz\n",
 				      bpp,
 				      (pSiSEnt->maxUsedClock * pSiSEnt->pScrn_1->bitsPerPixel / bpp)/1000);
+				}
 			     }
 
-			     xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
-				 "Bandwidth available for CRT1 is %g MHz\n", total/1000);
+			     if(!quiet) {
+			        xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
+				    "Bandwidth available for CRT1 is %g MHz\n", total/1000);
+			     }
 #endif
 			}
 
@@ -1657,11 +1680,13 @@ int SiSMemBandWidth(ScrnInfoPtr pScrn, Bool IsForCRT2)
 				crt2used = total;
 			    }
 			}
-			xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
-			  "Bandwidth reserved for CRT2 is %g Mhz\n", crt2used/1000);
 
-			xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
-			  "Bandwidth available for CRT1 is %g MHz\n", total/1000);
+			if(!quiet) {
+			   xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
+				"Bandwidth reserved for CRT2 is %g Mhz\n", crt2used/1000);
+			   xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
+				"Bandwidth available for CRT1 is %g MHz\n", total/1000);
+			}
 
 		    }
 
@@ -1693,6 +1718,7 @@ SISLoadPalette(ScrnInfoPtr pScrn, int numColors, int *indices, LOCO *colors,
      int     i, j, index;
      int     myshift = 8 - pScrn->rgbBits;
      UChar   backup = 0;
+     CARD32  val;
      Bool    dogamma1 = pSiS->CRT1gamma;
      Bool    resetxvgamma = FALSE;
 #ifdef SISDUALHEAD
@@ -1700,8 +1726,6 @@ SISLoadPalette(ScrnInfoPtr pScrn, int numColors, int *indices, LOCO *colors,
 
      if(pSiS->DualHeadMode) dogamma1 = pSiSEnt->CRT1gamma;
 #endif
-
-     PDEBUG(xf86DrvMsg(pScrn->scrnIndex, X_INFO, "LoadPalette()\n"));
 
 #ifdef SISDUALHEAD
      if((!pSiS->DualHeadMode) || (pSiS->SecondHead)) {
@@ -1746,12 +1770,11 @@ SISLoadPalette(ScrnInfoPtr pScrn, int numColors, int *indices, LOCO *colors,
 		   for(i=0; i<numColors; i++) {
 		      index = indices[i];
 		      if(index < 64) {  /* Paranoia */
+		         val = (colors[index].green     << (myshift + 8))  |
+			       (colors[index >> 1].blue << (myshift + 16)) |
+			       (colors[index >> 1].red  << myshift);
 			 for(j=0; j<4; j++) {
-			    SIS_MMIO_OUT32(pSiS->IOBase, 0x8570,
-					   (colors[index].green     << (myshift + 8))  |
-					   (colors[index >> 1].blue << (myshift + 16)) |
-					   (colors[index >> 1].red  << myshift)        |
-					   (((index << 2) + j)      << 24));
+			    SIS_MMIO_OUT32(pSiS->IOBase, 0x8570,  val | (((index << 2) + j) << 24));
 			 }
 		      }
 		   }
@@ -1831,6 +1854,8 @@ SISLoadPalette(ScrnInfoPtr pScrn, int numColors, int *indices, LOCO *colors,
 	      (pSiS->ResetXvGamma)(pScrn);
 	   }
 	}
+
+	if(pSiS->ChipType == SIS_770)		andSISIDXREG(SISSR,0x07,~0x04);
 
 #ifdef SISDUALHEAD
     }
@@ -1965,35 +1990,20 @@ SISDACPreInit(ScrnInfoPtr pScrn)
        IsForCRT2 = TRUE;
 #endif
 
-    pSiS->MaxClock = SiSMemBandWidth(pScrn, IsForCRT2);
+    pSiS->MaxClock = SiSMemBandWidth(pScrn, IsForCRT2, FALSE);
 
-    switch (pSiS->Chipset) {
-       case PCI_CHIP_SIS550:
-       case PCI_CHIP_SIS315:
-       case PCI_CHIP_SIS315H:
-       case PCI_CHIP_SIS315PRO:
-       case PCI_CHIP_SIS650:
-       case PCI_CHIP_SIS330:
-       case PCI_CHIP_SIS660:
-       case PCI_CHIP_SIS340:
-       case PCI_CHIP_XGIXG20:
-       case PCI_CHIP_XGIXG40:
-          pSiS->SiSSave     = SiS315Save;
-          pSiS->SiSRestore  = SiS315Restore;
-          break;
-       case PCI_CHIP_SIS300:
-       case PCI_CHIP_SIS540:
-       case PCI_CHIP_SIS630:
-          pSiS->SiSSave     = SiS300Save;
-          pSiS->SiSRestore  = SiS300Restore;
-          break;
-       case PCI_CHIP_SIS5597:
-       case PCI_CHIP_SIS6326:
-       case PCI_CHIP_SIS530:
-       default:
-          pSiS->SiSSave     = SiSSave;
-          pSiS->SiSRestore  = SiSRestore;
-          break;
+    switch(pSiS->VGAEngine) {
+    case SIS_315_VGA:
+       pSiS->SiSSave     = SiS315Save;
+       pSiS->SiSRestore  = SiS315Restore;
+       break;
+    case SIS_300_VGA:
+       pSiS->SiSSave     = SiS300Save;
+       pSiS->SiSRestore  = SiS300Restore;
+       break;
+    default:
+       pSiS->SiSSave     = SiSSave;
+       pSiS->SiSRestore  = SiSRestore;
     }
 }
 

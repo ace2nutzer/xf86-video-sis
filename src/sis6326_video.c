@@ -72,8 +72,7 @@ static void 	SIS6326QueryBestSize(ScrnInfoPtr, Bool, short, short, short,
 			short, unsigned int *,unsigned int *, pointer);
 static int 	SIS6326PutImage( ScrnInfoPtr,
 			short, short, short, short, short, short, short, short,
-			int, unsigned char*, short, short, Bool, RegionPtr, pointer,
-			DrawablePtr);
+			int, unsigned char*, short, short, Bool, RegionPtr, pointer);
 static int 	SIS6326QueryImageAttributes(ScrnInfoPtr,
 			int, unsigned short *, unsigned short *, int *, int *);
 static void 	SIS6326VideoTimerCallback(ScrnInfoPtr pScrn, Time now);
@@ -1232,14 +1231,11 @@ SIS6326PutImage(
   int id, unsigned char* buf,
   short width, short height,
   Bool sync,
-  RegionPtr clipBoxes, pointer data,
-  DrawablePtr pDraw
+  RegionPtr clipBoxes, pointer data
 ){
    SISPtr pSiS = SISPTR(pScrn);
    SISPortPrivPtr pPriv = (SISPortPrivPtr)data;
    int totalSize=0;
-   CARD32 *src, *dest;
-   unsigned long i;
 
    if(pPriv->grabbedByV4L) return Success;
 
@@ -1309,18 +1305,7 @@ SIS6326PutImage(
    pPriv->bufAddr[1] = pPriv->bufAddr[0] + totalSize;
 
    /* copy data */
-   if((pSiS->XvUseMemcpy) || (totalSize < 16)) {
-      SiSMemCopyToVideoRam(pSiS, pSiS->FbBase + pPriv->bufAddr[pPriv->currentBuf], buf, totalSize);
-   } else {
-      dest = (CARD32 *)(pSiS->FbBase + pPriv->bufAddr[pPriv->currentBuf]);
-      src  = (CARD32 *)buf;
-      for(i = 0; i < (totalSize/16); i++) {
-	 *dest++ = *src++;
-	 *dest++ = *src++;
-	 *dest++ = *src++;
-	 *dest++ = *src++;
-      }
-   }
+   SiSMemCopyToVideoRam(pSiS, pSiS->FbBase + pPriv->bufAddr[pPriv->currentBuf], buf, totalSize);
 
    SIS6326DisplayVideo(pScrn, pPriv);
 

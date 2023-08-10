@@ -58,6 +58,9 @@ static void SIS_FillRect(ScrnInfoPtr, int, int, int, int, unsigned long);
 static void SIS_BlitRect(ScrnInfoPtr, int, int, int, int, int, int);
 static void SIS_BlitTransRect(ScrnInfoPtr, int, int, int, int, int, int, unsigned long);
 
+extern DisplayModePtr	SiSSearchMode(ScrnInfoPtr pScrn, DisplayModePtr modelist,
+						DisplayModePtr mode, Bool *needreset);
+
 static
 DGAFunctionRec SISDGAFuncs = {
    SIS_OpenFramebuffer,
@@ -96,7 +99,8 @@ SISSetupDGAMode(
    ULong red,
    ULong green,
    ULong blue,
-   short visualClass
+   short visualClass,
+   Bool quiet
 ){
    SISPtr pSiS = SISPTR(pScrn);
    DGAModePtr newmodes = NULL, currentMode;
@@ -138,9 +142,9 @@ SISSetupDGAMode(
 		 nogood = TRUE;
 	   }
 	   if(nogood) {
-	      if(depth == 16) { /* Print this only the first time */
+	      if((depth == 16) && !quiet) { /* Print this only the first time */
 		 xf86DrvMsg(pScrn->scrnIndex, X_INFO,
-			"DGA: MetaMode %dx%d not suitable for DGA, skipping\n",
+			"DGA: MetaMode %dx%d not suitable for DGA\n",
 			pMode->HDisplay, pMode->VDisplay);
 	      }
 	      goto mode_nogood;
@@ -246,78 +250,122 @@ mode_nogood:
     return modes;
 }
 
-Bool
-SISDGAInit(ScreenPtr pScreen)
+static DGAModePtr
+SISDGAMakeModes(ScrnInfoPtr pScrn, int *num, Bool quiet)
 {
-   ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum];
-   SISPtr pSiS = SISPTR(pScrn);
-   DGAModePtr modes = NULL;
-   int num = 0;
+    SISPtr pSiS = SISPTR(pScrn);
+    DGAModePtr modes = NULL;
 
-   /* 8 */
-   /* We don't support 8bpp modes in dual head or MergedFB mode,
-    * so don't offer them to DGA either.
-    */
+    *num = 0;
+
+    /* 8 */
+    /* We don't support 8bpp modes in dual head or MergedFB mode,
+     * so don't offer them to DGA either.
+     */
 #ifdef SISDUALHEAD
-   if(!pSiS->DualHeadMode) {
+    if(!pSiS->DualHeadMode) {
 #endif
 #ifdef SISMERGED
-      if(!(pSiS->MergedFB)) {
+       if(!(pSiS->MergedFB)) {
 #endif
-         modes = SISSetupDGAMode(pScrn, modes, &num, 8, 8,
+          modes = SISSetupDGAMode(pScrn, modes, num, 8, 8,
 				 (pScrn->bitsPerPixel == 8),
 				 ((pScrn->bitsPerPixel != 8)
 				     ? 0 : pScrn->displayWidth),
-				 0, 0, 0, PseudoColor);
+				 0, 0, 0, PseudoColor, quiet);
 #ifdef SISMERGED
-      }
+       }
 #endif
 #ifdef SISDUALHEAD
-   }
+    }
 #endif
 
-   /* 16 */
-   modes = SISSetupDGAMode(pScrn, modes, &num, 16, 16,
+    /* 16 */
+    modes = SISSetupDGAMode(pScrn, modes, num, 16, 16,
 			   (pScrn->bitsPerPixel == 16),
 			   ((pScrn->depth != 16)
 				? 0 : pScrn->displayWidth),
-			   0xf800, 0x07e0, 0x001f, TrueColor);
+			   0xf800, 0x07e0, 0x001f, TrueColor, quiet);
 
-   if((pSiS->VGAEngine == SIS_530_VGA) || (pSiS->VGAEngine == SIS_OLD_VGA)) {
-      /* 24 */
-      modes = SISSetupDGAMode(pScrn, modes, &num, 24, 24,
+    /* 24 */
+    if((pSiS->VGAEngine == SIS_530_VGA) || (pSiS->VGAEngine == SIS_OLD_VGA)) {
+       modes = SISSetupDGAMode(pScrn, modes, num, 24, 24,
 			      (pScrn->bitsPerPixel == 24),
 			      ((pScrn->bitsPerPixel != 24)
 				 ? 0 : pScrn->displayWidth),
-			      0xff0000, 0x00ff00, 0x0000ff, TrueColor);
-   }
+			      0xff0000, 0x00ff00, 0x0000ff, TrueColor, quiet);
+    }
 
-   if(pSiS->VGAEngine != SIS_OLD_VGA) {
-      /* 32 */
-      modes = SISSetupDGAMode(pScrn, modes, &num, 32, 24,
+    /* 32 */
+    if(pSiS->VGAEngine != SIS_OLD_VGA) {
+       modes = SISSetupDGAMode(pScrn, modes, num, 32, 24,
 			      (pScrn->bitsPerPixel == 32),
 			      ((pScrn->bitsPerPixel != 32)
 				  ? 0 : pScrn->displayWidth),
-			      0xff0000, 0x00ff00, 0x0000ff, TrueColor);
-   }
+			      0xff0000, 0x00ff00, 0x0000ff, TrueColor, quiet);
+    }
 
-   pSiS->numDGAModes = num;
-   pSiS->DGAModes = modes;
-
-   if(num) {
-      if((pSiS->VGAEngine == SIS_300_VGA) ||
-         (pSiS->VGAEngine == SIS_315_VGA) ||
-         (pSiS->VGAEngine == SIS_530_VGA)) {
-         return DGAInit(pScreen, &SISDGAFuncs3xx, modes, num);
-      } else {
-         return DGAInit(pScreen, &SISDGAFuncs, modes, num);
-      }
-   } else {
-      xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
-		"No DGA-suitable modes found, disabling DGA\n");
-      return TRUE;
-   }
+    return modes;
 }
+
+Bool
+SISDGAInit(ScreenPtr pScreen)
+{
+    ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum];
+    SISPtr pSiS = SISPTR(pScrn);
+    int num = 0;
+
+    pSiS->DGAModes = SISDGAMakeModes(pScrn, &num, FALSE);
+    pSiS->numDGAModes = num;
+
+    if(num) {
+       if((pSiS->VGAEngine == SIS_300_VGA) ||
+          (pSiS->VGAEngine == SIS_315_VGA) ||
+          (pSiS->VGAEngine == SIS_530_VGA)) {
+          return DGAInit(pScreen, &SISDGAFuncs3xx, pSiS->DGAModes, num);
+       } else {
+          return DGAInit(pScreen, &SISDGAFuncs, pSiS->DGAModes, num);
+       }
+    } else {
+       xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
+		"No DGA-suitable modes found, disabling DGA\n");
+       return TRUE;
+    }
+}
+
+/* DGAReInit:
+ * Re-initialize our DGA modes. Needs X.org 6.9+.
+ * For older versions, DGA will be disabled if
+ * the dynamic modelist is enabled.
+ */
+Bool
+SISDGAReInit(ScrnInfoPtr pScrn)
+{
+#ifdef SISISXORG6899900
+    SISPtr pSiS = SISPTR(pScrn);
+    DGAModePtr newdgamodes = NULL;
+    int newdgamodenum = 0;
+
+    /* DGA wasn't enabled */
+    if(!pSiS->DGAModes || !pSiS->numDGAModes)
+       return TRUE;
+
+    newdgamodes = SISDGAMakeModes(pScrn, &newdgamodenum, TRUE);
+
+    if(DGAReInitModes(screenInfo.screens[pScrn->scrnIndex], newdgamodes, newdgamodenum)) {
+       xfree(pSiS->DGAModes);
+       pSiS->DGAModes = newdgamodes;
+       pSiS->numDGAModes = newdgamodenum;
+       return TRUE;
+    } else {
+       xfree(newdgamodes);
+       return FALSE;
+    }
+#else
+    return TRUE;
+#endif
+}
+
 
 static Bool
 SIS_OpenFramebuffer(
@@ -359,9 +407,9 @@ SIS_SetMode(
    ScrnInfoPtr pScrn,
    DGAModePtr pMode
 ){
-   static SISFBLayout BackupLayouts[MAXSCREENS];
-   int index = pScrn->pScreen->myNum;
-   SISPtr pSiS = SISPTR(pScrn);
+    static SISFBLayout BackupLayouts[MAXSCREENS];
+    int index = pScrn->pScreen->myNum;
+    SISPtr pSiS = SISPTR(pScrn);
 
     if(!pMode) { /* restore the original mode */
 
@@ -378,6 +426,12 @@ SIS_SetMode(
 
     } else {	/* set new mode */
 
+	/* Check if this mode is still there. This is
+	 * due to our new dynamic modelist handling.
+	 */
+        if(!pMode->mode)
+           return FALSE;
+
         if(!pSiS->DGAactive) {
 	    /* save the old parameters */
 	    memcpy(&BackupLayouts[index], &pSiS->CurrentLayout, sizeof(SISFBLayout));
@@ -385,6 +439,7 @@ SIS_SetMode(
 	}
 
 	pSiS->CurrentLayout.bitsPerPixel  = pMode->bitsPerPixel;
+	pSiS->CurrentLayout.bytesPerPixel = pMode->bitsPerPixel >> 3;
 	pSiS->CurrentLayout.depth         = pMode->depth;
 	pSiS->CurrentLayout.displayWidth  = pMode->bytesPerScanline / (pMode->bitsPerPixel >> 3);
 	pSiS->CurrentLayout.displayHeight = pMode->imageHeight;
@@ -414,12 +469,12 @@ SIS_SetViewport(
    int x, int y,
    int flags
 ){
-   SISPtr pSiS = SISPTR(pScrn);
+    SISPtr pSiS = SISPTR(pScrn);
 
-   (*pScrn->AdjustFrame)(pScrn->pScreen->myNum, x, y, flags);
-   pSiS->DGAViewportStatus = 0;  /* There are never pending Adjusts */
-   pSiS->CurrentLayout.DGAViewportX = x;
-   pSiS->CurrentLayout.DGAViewportY = y;
+    (*pScrn->AdjustFrame)(pScrn->pScreen->myNum, x, y, flags);
+    pSiS->DGAViewportStatus = 0;  /* There are never pending Adjusts */
+    pSiS->CurrentLayout.DGAViewportX = x;
+    pSiS->CurrentLayout.DGAViewportY = y;
 }
 
 static void

@@ -106,6 +106,7 @@ static char SISKernelDriverName[] = "sis";
 /* The client side DRI drivers are different: */
 static char SISClientDriverNameSiS300[] = "sis";	/* 300, 540, 630, 730 */
 static char SISClientDriverNameSiS315[] = "sis315";	/* All of 315/330 series */
+static char SISClientDriverNameSiS671[] = "sis671";	/* for sis671 */
 static char SISClientDriverNameXGI[]    = "xgi";	/* XGI V3, V5, V8 */
 
 static Bool SISInitVisualConfigs(ScreenPtr pScreen);
@@ -122,6 +123,9 @@ static void SISDRISwapContext(ScreenPtr pScreen, DRISyncType syncType,
 static void SISDRIInitBuffers(WindowPtr pWin, RegionPtr prgn, CARD32 index);
 static void SISDRIMoveBuffers(WindowPtr pParent, DDXPointRec ptOldOrg,
                    RegionPtr prgnSrc, CARD32 index);
+
+extern int *CmdQueBusy;  /* flag to show command Quese state*/
+extern int *_2DCmdFlushing;  /* flag to show command Quese state*/
 
 static Bool
 SISInitVisualConfigs(ScreenPtr pScreen)
@@ -218,11 +222,11 @@ SISInitVisualConfigs(ScreenPtr pScreen)
 	        pConfigs[i].stencilSize = 0;
 	        break;
 	     case 2:
-	       pConfigs[i].depthSize = 32;
+	       pConfigs[i].depthSize = 20;
 	       pConfigs[i].stencilSize = 0;
 	       break;
 	     case 3:
-	       pConfigs[i].depthSize = 24;
+	       pConfigs[i].depthSize = 20;
 	       pConfigs[i].stencilSize = 8;
 	       break;
              }
@@ -309,7 +313,10 @@ SISDRIScreenInit(ScreenPtr pScreen)
   } else if(pSIS->ChipFlags & SiSCF_IsXGI) {
      pDRIInfo->clientDriverName = SISClientDriverNameXGI;
   } else {
-     pDRIInfo->clientDriverName = SISClientDriverNameSiS315;
+     if (pSIS->Chipset == PCI_CHIP_SIS671)
+	 	pDRIInfo->clientDriverName = SISClientDriverNameSiS671;
+     else
+	 	pDRIInfo->clientDriverName = SISClientDriverNameSiS315;
   }
 
 #ifdef SISHAVECREATEBUSID
@@ -351,7 +358,10 @@ SISDRIScreenInit(ScreenPtr pScreen)
 #endif
   pDRIInfo->frameBufferSize = pSIS->FbMapSize;
 
-  /* scrnOffset is being calulated in sis_vga.c */
+  /* scrnOffset is being calulated in sis_vga.c. It
+   * is constant throughout server livetime (apart
+   * from when DGA is active)
+   */
   pDRIInfo->frameBufferStride = pSIS->scrnOffset;
 
   pDRIInfo->ddxDrawableTableEntry = SIS_MAX_DRAWABLES;
@@ -362,17 +372,9 @@ SISDRIScreenInit(ScreenPtr pScreen)
      pDRIInfo->maxDrawableTableEntry = SIS_MAX_DRAWABLES;
 
 #ifdef NOT_DONE
-  /* FIXME need to extend DRI protocol to pass this size back to client
-   * for SAREA mapping that includes a device private record
-   */
   pDRIInfo->SAREASize =
     ((sizeof(XF86DRISAREARec) + getpagesize() - 1) & getpagesize()); /* round to page */
-    /* ((sizeof(XF86DRISAREARec) + 0xfff) & 0x1000); */ /* round to page */
-  /* + shared memory device private rec */
 #else
-  /* For now the mapping works by using a fixed size defined
-   * in the SAREA header
-   */
   if(sizeof(XF86DRISAREARec) + sizeof(SISSAREAPriv) > SAREA_MAX) {
      xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
 		"[dri] Data does not fit in SAREA. Disabling the DRI.\n");
@@ -404,6 +406,7 @@ SISDRIScreenInit(ScreenPtr pScreen)
      DRIDestroyInfoRec(pSIS->pDRIInfo);
      pSIS->pDRIInfo = 0;
      pSIS->drmSubFD = -1;
+     pSIS->DRIEnabled = FALSE;
      return FALSE;
   }
 
@@ -430,7 +433,13 @@ SISDRIScreenInit(ScreenPtr pScreen)
         drm_sis_fb_t fb;
         fb.offset = pSIS->DRIheapstart;
         fb.size = pSIS->DRIheapend - pSIS->DRIheapstart;
-        drmCommandWrite(pSIS->drmSubFD, DRM_SIS_FB_INIT, &fb, sizeof(fb));
+        if (drmCommandWrite(pSIS->drmSubFD, DRM_SIS_FB_INIT, &fb, sizeof(fb))) {
+           xf86DrvMsg(pScreen->myNum, X_ERROR,
+                      "[dri] Initializing Video RAM heap failed. Disabling DRI.\n");
+           drmFreeVersion(version);
+           SISDRICloseScreen(pScreen);
+           return FALSE;
+        }
         xf86DrvMsg(pScreen->myNum, X_INFO,
 		"[dri] Video RAM memory heap: 0x%0x to 0x%0x (%dKB)\n",
 		pSIS->DRIheapstart, pSIS->DRIheapend,
@@ -440,20 +449,21 @@ SISDRIScreenInit(ScreenPtr pScreen)
   }
 #endif
 
-  /* MMIO */
-  pSISDRI->regs.size = SISIOMAPSIZE;
-#ifndef SISISXORG6899900
-  pSISDRI->regs.map = 0;
-#endif
+    
+ /* MMIO */
+	pSISDRI->regs.size = SISIOMAPSIZE;
+/* chris, marked */
+/*#ifndef SISISXORG6899900*/
+	pSISDRI->regs.map = 0;
+/*#endif*/
   if(drmAddMap(pSIS->drmSubFD, (drm_handle_t)pSIS->IOAddress,
 		pSISDRI->regs.size, DRM_REGISTERS, 0,
 		&pSISDRI->regs.handle) < 0) {
      SISDRICloseScreen(pScreen);
      return FALSE;
   }
-
-  xf86DrvMsg(pScreen->myNum, X_INFO, "[drm] MMIO registers mapped to 0x%0x\n",
-		pSISDRI->regs.handle);
+	xf86DrvMsg(pScreen->myNum, X_INFO, "[dri] handle = 0x%x, size = %d\n",
+				pSISDRI->regs.handle, pSISDRI->regs.size);
 
   /* AGP */
   do {
@@ -673,6 +683,8 @@ SISDRIFinishScreenInit(ScreenPtr pScreen)
   pSISDRI->deviceID = pSiS->Chipset;
 #ifdef SIS315DRI
   pSISDRI->deviceRev= pSiS->ChipRev;
+  pSISDRI->cmdQueueOffset = pSiS->cmdQueueOffset;
+  pSISDRI->cmdQueueSize = pSiS->cmdQueueSize;
 #endif
   pSISDRI->width    = pScrn->virtualX;
   pSISDRI->height   = pScrn->virtualY;
@@ -682,12 +694,6 @@ SISDRIFinishScreenInit(ScreenPtr pScreen)
   /* TODO */
   pSISDRI->scrnX    = pSISDRI->width;
   pSISDRI->scrnY    = pSISDRI->height;
-
-  /* Offset of the front buffer (relative from beginning
-   * of video RAM). This is usually 0, but eventually not
-   * if running on a SiS76x with LFB and UMA memory.
-   * THE DRI DRIVER DOES NOT USE THIS YET (MESA 6.2.1)
-   */
   pSISDRI->fbOffset      = pSiS->FbBaseOffset;
 
   /* These are unused. Offsets are set up by the DRI */
@@ -705,6 +711,10 @@ SISDRIFinishScreenInit(ScreenPtr pScreen)
     assert(saPriv);
 
     saPriv->CtxOwner = -1;
+    saPriv->CmdQueBusy = FALSE;
+    saPriv->_2DCmdFlushing = 0;
+    CmdQueBusy = &(saPriv->CmdQueBusy);
+    _2DCmdFlushing = &(saPriv->_2DCmdFlushing);
 
     switch(pSiS->VGAEngine) {
 
@@ -712,17 +722,11 @@ SISDRIFinishScreenInit(ScreenPtr pScreen)
     case SIS_315_VGA:
        saPriv->AGPVtxBufNext = 0;
 
-       saPriv->QueueLength = pSiS->cmdQueueSize;  /* Total (not: current) size, in bytes! */
-
-       /* Copy current queue position to sarea */
+       saPriv->QueueLength = pSiS->cmdQueueSize; 
        saPriv->sharedWPoffset = *(pSiS->cmdQ_SharedWritePort);
-       /* Delegate our shared offset to current queue position */
+       saPriv->agpCmdBufWriteOffset = 0xFFFFFFFF;
        pSiS->cmdQ_SharedWritePortBackup = pSiS->cmdQ_SharedWritePort;
        pSiS->cmdQ_SharedWritePort = &(saPriv->sharedWPoffset);
-
-       saPriv->cmdQueueOffset = pSiS->cmdQueueOffset;
-
-       /* TODO: Reset frame control */
 
        break;
 #endif

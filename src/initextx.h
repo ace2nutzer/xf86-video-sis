@@ -462,6 +462,7 @@ unsigned short	SiS_CheckBuildCustomMode(ScrnInfoPtr pScrn, DisplayModePtr mode, 
 DisplayModePtr	SiSBuildBuiltInModeList(ScrnInfoPtr pScrn, BOOLEAN, BOOLEAN, BOOLEAN, BOOLEAN);
 int		SiSTranslateToVESA(ScrnInfoPtr pScrn, int modenumber);
 int		SiSTranslateToOldMode(int modenumber);
+unsigned short	SiS_GetModeNumber(ScrnInfoPtr pScrn, DisplayModePtr mode, unsigned int VBFlags);
 BOOLEAN		SiS_GetPanelID(struct SiS_Private *SiS_Pr);
 
 unsigned short	SiS_SenseLCDDDC(struct SiS_Private *SiS_Pr, SISPtr pSiS);
@@ -482,6 +483,8 @@ extern int		SiS_compute_vclk(int Clock, int *out_n, int *out_dn, int *out_div,
 extern void		SiSCalcClock(ScrnInfoPtr pScrn, int clock, int max_VLD, unsigned int *vclk);
 extern void		SiS_CalcCRRegisters(struct SiS_Private *SiS_Pr, int depth);
 extern BOOLEAN		SiSInitPtr(struct SiS_Private *SiS_Pr);
+extern unsigned short	SiS_GetModeID(int VGAEngine, unsigned int VBFlags, int HDisplay, int VDisplay,
+				int Depth, BOOLEAN FSTN, int LCDwith, int LCDheight);
 extern unsigned short	SiS_GetRefCRT1CRTC(struct SiS_Private *SiS_Pr, unsigned short Index, int UseWide);
 extern unsigned short	SiS_GetRefCRTVCLK(struct SiS_Private *SiS_Pr, unsigned short Index, int UseWide);
 extern void		SiS_Generic_ConvertCRData(struct SiS_Private *SiS_Pr, unsigned char *crdata,

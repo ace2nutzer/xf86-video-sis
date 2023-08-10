@@ -55,8 +55,10 @@ typedef struct {
   unsigned int FrameCount;
 #ifdef SIS315DRI
   unsigned int  sharedWPoffset;	/* Offset to current queue position (shared with 2D) */
-  unsigned int  cmdQueueOffset;	/* Offset of start of command queue in VRAM */
+  unsigned int agpCmdBufWriteOffset;
 #endif
+  int CmdQueBusy;/* flag to show command Quese state*/
+  int _2DCmdFlushing; /* flag to reflect 2D commands are being flushed */
 } SISSAREAPriv, *SISSAREAPrivPtr;
 
 #define AGPVtxBufNext AGPCmdBufNext
@@ -68,9 +70,10 @@ typedef struct {
 typedef struct {
   drm_handle_t handle;
   drmSize size;
-#ifndef SISISXORG6899900
+/* chris, remove the variable for compatible with sizeof(SISDRIRec) in 3D driver(sis315_dri.so) */
+/*#ifndef SISISXORG6899900*/
   drmAddress map;
-#endif
+/*#endif*/
 } sisRegion, *sisRegionPtr;
 
 typedef struct {
@@ -94,10 +97,8 @@ typedef struct {
   unsigned int scrnX;			/* TODO: = width = pScrn->virtualX */
   unsigned int scrnY;			/* TODO: = height = pScrn->virtualY */
 #ifdef SIS315DRI
-  unsigned char *AGPCmdBufBase;
-  unsigned long AGPCmdBufAddr;
-  unsigned long AGPCmdBufOffset2;	/* (rename to AGPCmdBufOffset) */
-  unsigned int  AGPCmdBufSize2;		/* (rename to AGPCmdBufSize)   */
+  unsigned int  cmdQueueOffset;	        /* Offset of start of command queue in VRAM */                                            /* Size of VRAM command queue */
+  unsigned int  cmdQueueSize; 
   int deviceRev;			/* Chip revision */
 #endif
 } SISDRIRec, *SISDRIPtr;

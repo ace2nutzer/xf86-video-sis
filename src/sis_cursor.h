@@ -214,7 +214,7 @@
   SIS_MMIO_OUT32(pSiS->IOBase,CS(8),temp); \
   }
 
-/* 315/330 series CRT1 */
+/* 315/330/later series CRT1 */
 
 /* 80000000 = RGB(1) - MONO(0)
  * 40000000 = enable(1) - disable(0)
