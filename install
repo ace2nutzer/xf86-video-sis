@@ -1,0 +1,7 @@
+#!/bin/bash
+
+sudo make -j2 install
+
+if [ -f xorg.conf ] ; then
+	sudo cp xorg.conf /etc/X11/xorg.conf
+fi
