@@ -1,5 +1,10 @@
 #! /bin/sh
 
+if [ -f Makefile ] ; then
+	make -j2 clean
+	make -j2 distclean
+fi
+
 srcdir=`dirname "$0"`
 test -z "$srcdir" && srcdir=.
 
@@ -9,9 +14,11 @@ cd "$srcdir"
 autoreconf -v --install || exit 1
 cd "$ORIGDIR" || exit $?
 
-git config --local --get format.subjectPrefix >/dev/null 2>&1 ||
-    git config --local format.subjectPrefix "PATCH xf86-video-sis"
+CFLAGS_ABI="-march=core2 -mcpu=core2 -mtune=core2"
 
 if test -z "$NOCONFIGURE"; then
-    exec "$srcdir"/configure "$@"
+    exec "$srcdir"/configure \
+		CFLAGS="$CFLAGS_ABI -O3 -fomit-frame-pointer -fno-strict-aliasing -Werror-implicit-function-declaration \
+		-Wno-stringop-overflow -DNDEBUG -pipe" \
+		--prefix=/usr "$@"
 fi
