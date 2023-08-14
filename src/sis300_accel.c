@@ -1226,7 +1226,7 @@ SiS300AccelInit(ScreenPtr pScreen)
 
 #ifdef SIS_USE_EXA	/* ----------------------- EXA ----------------------- */
 	   if(pSiS->useEXA) {
-#if  XORG_VERSION_CURRENT <= XORG_VERSION_NUMERIC(7,0,0,0,0)
+#if  XORG_VERSION_CURRENT >= XORG_VERSION_NUMERIC(7,0,0,0,0)
          
 	      if(pSiS->scrnOffset < 8192) {
 	         int obase = 0;
@@ -1414,7 +1414,7 @@ SiS300AccelInit(ScreenPtr pScreen)
 	      pSiS->exa_scratch = exaOffscreenAlloc(pScreen, 128 * 1024, 16, TRUE,
 						SiSScratchSave, pSiS);
     
-    #if  XORG_VERSION_CURRENT <= XORG_VERSION_NUMERIC(7,0,0,0,0)
+    #if  XORG_VERSION_CURRENT >= XORG_VERSION_NUMERIC(7,0,0,0,0)
               if(pSiS->exa_scratch) {
 		 pSiS->exa_scratch_next = pSiS->exa_scratch->offset;
 		 pSiS->EXADriverPtr->accel.UploadToScratch = SiSUploadToScratch;

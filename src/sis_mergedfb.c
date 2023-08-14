@@ -53,7 +53,7 @@ void		SiSMFBMakeModeList(ScrnInfoPtr pScrn);
 void		SiSMFBCorrectVirtualAndLayout(ScrnInfoPtr pScrn);
 void		SiSMFBSetDpi(ScrnInfoPtr pScrn1, ScrnInfoPtr pScrn2, SiSScrn2Rel srel);
 void		SISMFBPointerMoved(SCRN_ARG_TYPE arg, int x, int y);
-void		SISMFBAdjustFrame(int scrnIndex, int x, int y, int flags);
+void		SISMFBAdjustFrame(ADJUST_FRAME_ARGS_DECL);
 
 Bool		SiSMFBRebuildModelist(ScrnInfoPtr pScrn, ClockRangePtr clockRanges);
 Bool		SiSMFBRevalidateModelist(ScrnInfoPtr pScrn, ClockRangePtr clockRanges);
@@ -90,6 +90,10 @@ extern void		SISAdjustFrameHW_CRT2(ScrnInfoPtr pScrn, int x, int y);
 	x = y;			\
 	y = temp;		\
 	}
+
+#ifndef DEFAULT_DPI
+#define DEFAULT_DPI 96
+#endif
 
 /* Helper function for CRT2 monitor vrefresh/hsync options
  * (Code based on code from mga driver)
@@ -357,7 +361,7 @@ SiSCopyModeNLink(ScrnInfoPtr pScrn, DisplayModePtr dest,
 
        strcat(printbuffer, namebuf1);
 
-       xf86DrvMsg(pScrn->scrnIndex, X_INFO, printbuffer);
+       xf86DrvMsg(pScrn->scrnIndex, X_INFO, "%s", printbuffer);
     }
 
     mode->next = mode;
@@ -544,7 +548,7 @@ SiSMetaModeParseError(ScrnInfoPtr pScrn, char *src, char *curr, char *lastcurr, 
        char backup = *curr;
        *curr = 0;
        xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
-		"Error parsing Metamodes at character no %d (near or in \"%s\")\n",
+		"Error parsing Metamodes at character no %ld (near or in \"%s\")\n",
 		curr - src,
 		lastcurr);
        *curr = backup;
@@ -1724,7 +1728,7 @@ SISMFBPointerMoved(SCRN_ARG_TYPE arg, int x, int y)
        /* Need to go the official way to avoid hw access and
         * to update Xv's overlays
         */
-       (pScrn1->AdjustFrame)(scrnIndex, pScrn1->frameX0, pScrn1->frameY0, 0);
+       (pScrn1->AdjustFrame)(ADJUST_FRAME_ARGS(pScrn, pScrn1->frameX0, pScrn1->frameY0));
     }
 }
 
@@ -1936,7 +1940,11 @@ SiSTellChanged(WindowPtr pWin, pointer value)
     ClientPtr				client;
     xXineramaLayoutChangeNotifyEvent	se;
 
+#ifdef SISISXORG6899900
+    dixLookupResourceByType((pointer) &pHead, pWin->drawable.id, EventType, NullClient, DixUnknownAccess);
+#else
     pHead = (SiSXineramaEventPtr *)LookupIDByType(pWin->drawable.id, EventType);
+#endif
     if(!pHead) {
        return WT_WALKCHILDREN;
     }
@@ -2156,7 +2164,7 @@ SiSUpdateXineramaScreenInfo(ScrnInfoPtr pScrn1)
        if(infochanged && !usenonrect) {
 	  xf86DrvMsgVerb(pScrn1->scrnIndex, X_INFO, pSiS->XineVerb,
 			"Current screen size does not match maximum display modes...\n");
-	  xf86DrvMsgVerb(pScrn1->scrnIndex, X_INFO, pSiS->XineVerb, rectxine);
+	  xf86DrvMsgVerb(pScrn1->scrnIndex, X_INFO, pSiS->XineVerb, "%s", rectxine);
        }
 
     } else if(infochanged && usenonrect) {
@@ -2164,7 +2172,7 @@ SiSUpdateXineramaScreenInfo(ScrnInfoPtr pScrn1)
        usenonrect = FALSE;
        xf86DrvMsgVerb(pScrn1->scrnIndex, X_INFO, pSiS->XineVerb,
 		"Only clone modes available for this screen size...\n");
-       xf86DrvMsgVerb(pScrn1->scrnIndex, X_INFO, pSiS->XineVerb, rectxine);
+       xf86DrvMsgVerb(pScrn1->scrnIndex, X_INFO, pSiS->XineVerb, "%s", rectxine);
 
     }
 
@@ -2668,13 +2676,23 @@ SiSProcXineramaSelectInput(ClientPtr client)
 
     REQUEST_SIZE_MATCH(xXineramaSelectInputReq);
 
+#ifdef SISISXORG6899900
+    dixLookupWindow(&pWin, stuff->window, client, DixWriteAccess);
+#else
     pWin = SecurityLookupWindow(stuff->window, client, SecurityWriteAccess);
+#endif
     if(!pWin)
        return BadWindow;
 
+#ifdef SISISXORG6899900
+    dixLookupResourceByType((pointer) &pHead, 
+					pWin->drawable.id, EventType, 
+					client, DixWriteAccess);
+#else
     pHead = (SiSXineramaEventPtr *)SecurityLookupIDByType(client,
 						 pWin->drawable.id, EventType,
 						 SecurityWriteAccess);
+#endif
 
     if(stuff->enable & (XineramaLayoutChangeNotifyMask)) {
 
@@ -2860,8 +2878,8 @@ SiSSProcXineramaSelectInput(ClientPtr client)
 {
     REQUEST(xXineramaSelectInputReq);
     register int n;
-    swaps(&stuff->length, n);
-    swapl(&stuff->window, n);
+    _swaps(&stuff->length, n);
+    _swapl(&stuff->window, n);
     return SiSProcXineramaSelectInput(client);
 }
 
@@ -2905,7 +2923,12 @@ SiSXineramaFreeClient(pointer data, XID id)
     SiSXineramaEventPtr *pHead, pCur, pPrev;
     WindowPtr pWin = pXineramaEvent->window;
 
+#ifdef SISISXORG6899900
+    dixLookupResourceByType((pointer) &pHead, pWin->drawable.id, EventType, NullClient, DixUnknownAccess);
+#else
     pHead = (SiSXineramaEventPtr *)LookupIDByType(pWin->drawable.id, EventType);
+#endif
+
     if(pHead) {
        pPrev = NULL;
        for(pCur = *pHead; pCur && pCur != pXineramaEvent; pCur = pCur->next) {
@@ -2987,11 +3010,11 @@ SiSXineramaExtensionInit(ScrnInfoPtr pScrn)
 
        while(SiSXineramaGeneration != serverGeneration) {
 
-	  ClientType = CreateNewResourceType(SiSXineramaFreeClient);
+	  ClientType = CreateNewResourceType(SiSXineramaFreeClient, "XineramaClient");
 	  if(!ClientType)
 	     break;
 
-	  EventType = CreateNewResourceType(SiSXineramaFreeEvents);
+	  EventType = CreateNewResourceType(SiSXineramaFreeEvents, "XineramaEvents");
 	  if(!EventType)
 	     break;
 

@@ -774,7 +774,7 @@ static void SISLeaveVT(VT_FUNC_ARGS_DECL);
 static Bool SISCloseScreen(CLOSE_SCREEN_ARGS_DECL);
 static Bool SISSaveScreen(ScreenPtr pScreen, int mode);
 static Bool SISSwitchMode(SWITCH_MODE_ARGS_DECL);
-static void SISNewAdjustFrame(int scrnIndex, int x, int y, int flags);
+static void SISNewAdjustFrame(ADJUST_FRAME_ARGS_DECL);
 
 /* Optional functions */
 #ifdef SISDUALHEAD
@@ -811,7 +811,7 @@ Bool		SiSBridgeIsInSlaveMode(ScrnInfoPtr pScrn);
 UChar		SiS_GetSetBIOSScratch(ScrnInfoPtr pScrn, UShort offset, UChar value);
 Bool		SISDetermineLCDACap(ScrnInfoPtr pScrn);
 void		SISSaveDetectedDevices(ScrnInfoPtr pScrn);
-void		SISErrorLog(ScrnInfoPtr pScrn, const char *format, ...);
+static void	SISErrorLog(ScrnInfoPtr pScrn, const char *format, ...);
 void		SiSFindAspect(ScrnInfoPtr pScrn, xf86MonPtr pMonitor, int crtnum, Bool q);
 DisplayModePtr	SiSDuplicateMode(DisplayModePtr source);
 Bool		SiSMakeOwnModeList(ScrnInfoPtr pScrn, Bool acceptcustommodes,
@@ -909,7 +909,7 @@ extern Bool		SiSMFBRebuildModelist(ScrnInfoPtr pScrn, ClockRangePtr clockRanges)
 extern Bool		SiSMFBRevalidateModelist(ScrnInfoPtr pScrn, ClockRangePtr clockRanges);
 extern void		SiSMFBSetDpi(ScrnInfoPtr pScrn1, ScrnInfoPtr pScrn2, SiSScrn2Rel srel);
 extern void		SISMFBPointerMoved(SCRN_ARG_TYPE arg, int x, int y);
-extern void		SISMFBAdjustFrame(int scrnIndex, int x, int y, int flags);
+extern void		SISMFBAdjustFrame(ADJUST_FRAME_ARGS_DECL);
 #ifdef SISXINERAMA
 extern void		SiSXineramaExtensionInit(ScrnInfoPtr pScrn);
 extern Bool 		SiSnoPanoramiXExtension;

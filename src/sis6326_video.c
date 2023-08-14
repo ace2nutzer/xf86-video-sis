@@ -70,7 +70,8 @@ static void 	SIS6326QueryBestSize(ScrnInfoPtr, Bool, short, short, short,
 			short, unsigned int *,unsigned int *, pointer);
 static int 	SIS6326PutImage( ScrnInfoPtr,
 			short, short, short, short, short, short, short, short,
-			int, unsigned char*, short, short, Bool, RegionPtr, pointer);
+			int, unsigned char*, short, short, Bool, RegionPtr, pointer,
+			DrawablePtr);
 static int 	SIS6326QueryImageAttributes(ScrnInfoPtr,
 			int, unsigned short *, unsigned short *, int *, int *);
 static void 	SIS6326VideoTimerCallback(ScrnInfoPtr pScrn, Time now);
@@ -1229,7 +1230,8 @@ SIS6326PutImage(
   int id, unsigned char* buf,
   short width, short height,
   Bool sync,
-  RegionPtr clipBoxes, pointer data
+  RegionPtr clipBoxes, pointer data,
+  DrawablePtr pDraw
 ){
    SISPtr pSiS = SISPTR(pScrn);
    SISPortPrivPtr pPriv = (SISPortPrivPtr)data;

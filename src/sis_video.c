@@ -3848,7 +3848,8 @@ SISPutImage(
   int id, UChar *buf,
   short width, short height,
   Bool sync,
-  RegionPtr clipBoxes, pointer data
+  RegionPtr clipBoxes, pointer data,
+  DrawablePtr pDraw
 ){
    SISPtr pSiS = SISPTR(pScrn);
    SISPortPrivPtr pPriv = (SISPortPrivPtr)data;
@@ -3988,9 +3989,11 @@ SISPutImage(
 
 static int
 SISReputImage(
-  ScrnInfoPtr pScrn,
-  short drw_x, short drw_y,
-  RegionPtr clipBoxes, pointer data
+   ScrnInfoPtr pScrn, short src_x, short src_y,
+          short drw_x, short drw_y, short src_w,
+          short src_h, short drw_w, short drw_h,
+          RegionPtr clipBoxes, void *data,
+          DrawablePtr pDraw
 ){
    SISPtr pSiS = SISPTR(pScrn);
    SISPortPrivPtr pPriv = (SISPortPrivPtr)data;
@@ -4575,7 +4578,8 @@ SISPutImageBlit(
   int id, UChar *buf,
   short width, short height,
   Bool sync,
-  RegionPtr clipBoxes, ULong index
+  RegionPtr clipBoxes, ULong index,
+  DrawablePtr pDraw
 ){
    SISPtr pSiS = SISPTR(pScrn);
    SISBPortPrivPtr pPriv = (SISBPortPrivPtr)(pSiS->blitPriv);

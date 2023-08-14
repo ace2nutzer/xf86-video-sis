@@ -658,7 +658,7 @@ SiSAccelInit(ScreenPtr pScreen)
     pSiS->exa_scratch = NULL;
 #endif
 
-#if 1
+#if 0
 #ifdef SIS_USE_EXA
     if(!pSiS->NoAccel) {
        if(pSiS->useEXA && pScrn->bitsPerPixel == 24) {
@@ -777,7 +777,7 @@ SiSAccelInit(ScreenPtr pScreen)
 
 #ifdef SIS_USE_EXA	/* ----------------------- EXA ----------------------- */
        if(pSiS->useEXA) {
-#if  XORG_VERSION_CURRENT <= XORG_VERSION_NUMERIC(7,0,0,0,0)
+#if  XORG_VERSION_CURRENT >= XORG_VERSION_NUMERIC(7,0,0,0,0)
 
 	  /* data */
 	  pSiS->EXADriverPtr->card.memoryBase = pSiS->FbBase;
@@ -934,7 +934,7 @@ SiSAccelInit(ScreenPtr pScreen)
 						SiSScratchSave, pSiS);
 	  if(pSiS->exa_scratch) {
 	     pSiS->exa_scratch_next = pSiS->exa_scratch->offset;
-       #if  XORG_VERSION_CURRENT <= XORG_VERSION_NUMERIC(7,0,0,0,0)
+       #if  XORG_VERSION_CURRENT >= XORG_VERSION_NUMERIC(7,0,0,0,0)
              pSiS->EXADriverPtr->accel.UploadToScratch = SiSUploadToScratch;
        #else
              pSiS->EXADriverPtr->UploadToScratch = SiSUploadToScratch;

@@ -36,6 +36,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
+#include <xf86fbman.h>
 
 #include <sispcirename.h>
 
@@ -64,7 +65,6 @@
 #define TWDEBUG    
 #endif
 
-#include "xf86_ansic.h"
 #include "compiler.h"
 #include "xf86Pci.h"
 #include "xf86_OSproc.h"
@@ -100,7 +100,6 @@
 	(((major) * 10000000) + ((minor) * 100000) + ((patch) * 1000) + snap)
 #define XF86_VERSION_CURRENT XF86_VERSION_NUMERIC(4,3,99,902,0)
 #endif
-#if XORG_VERSION_CURRENT >= XORG_VERSION_NUMERIC(6,8,0,0,0)
 #define SIS_HAVE_RR_FUNC
 #ifdef HaveDriverFuncs
 #undef  SIS_HaveDriverFuncs
@@ -117,7 +116,6 @@
 #endif /* RANDR */
 #endif /* >= 6.8.99.901 */
 #endif /* >= 6.8.99.900 */
-#endif /* >= 6.8.0.0    */
 #else   /* XORG_VERSION_CURRENT */
 #include "xf86Version.h"
 #define SISMYSERVERNAME "XFree86"
@@ -1241,7 +1239,7 @@ typedef struct {
     unsigned int	cmdQueueSize;
     unsigned int	cmdQueueSizeMask;
     unsigned int	cmdQ_SharedWritePort_2D;
-    volatile unsigned int	*cmdQ_SharedWritePort;
+    unsigned int	*cmdQ_SharedWritePort;
     unsigned int	*cmdQ_SharedWritePortBackup;
     unsigned int	cmdQueueSize_div2;
     unsigned int	cmdQueueSize_div4;
@@ -1269,11 +1267,10 @@ typedef struct {
     Bool		IsAGPCard, IsPCIExpress;
     unsigned int	DRIheapstart, DRIheapend;
     Bool		NeedFlush;	/* Need to flush cmd buf mem (760) */
-
+    FBLinearPtr		AccelLinearScratch;
 #ifdef SIS_USE_XAA
     void		(*RenderCallback)(ScrnInfoPtr);
     Time		RenderTime;
-    FBLinearPtr		AccelLinearScratch;
 #endif
 #ifdef SIS_USE_EXA
     void		(*ExaRenderCallback)(ScrnInfoPtr);

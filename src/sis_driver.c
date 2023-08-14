@@ -120,9 +120,6 @@
 #include "dri.h"
 #endif
 
-#ifndef DEFAULT_DPI
-#define DEFAULT_DPI 96
-#endif
 
 /*
  * LookupWindow was removed with video abi 11.
@@ -272,8 +269,6 @@ sisSetup(pointer module, pointer opts, int *errmaj, int *errmin)
     if(!setupDone) {
        setupDone = TRUE;
        xf86AddDriver(&SIS, module, SIS_HaveDriverFuncs);
-       LoaderRefSymLists(fbSymbols,
-			 NULL);
        return (pointer)TRUE;
     }
 
@@ -3578,7 +3573,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	  break;
        case PCI_CHIP_SIS660: /* 660, 661, 741, 760, 761, 662*/
 	  {	  	
-	     ULong hpciid = pciReadLong(0x00000000, 0x00);
+	     ULong hpciid = sis_pci_read_host_bridge_u32(0x00);
 	     switch(hpciid) {
 	     case 0x06601039:
 		pSiS->ChipType = SIS_660;
@@ -5502,7 +5497,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 
        if(memreq > pSiS->maxxfbmem) {
 	  SISErrorLog(pScrn,
-	     "Virtual screen too big for memory; %ldK needed, %ldK available\n",
+	     "Virtual screen too big for memory; %ldK needed, %uK available\n",
 	     memreq/1024, pSiS->maxxfbmem/1024);
 	  goto my_error_1;
        }
@@ -8527,7 +8522,7 @@ SISModeInit(ScrnInfoPtr pScrn, DisplayModePtr mode)
 
 		SiS_SiSLVDSBackLight(pSiS, TRUE);
 
-		(*pScrn->AdjustFrame)(pScrn->scrnIndex, pScrn->frameX0, pScrn->frameY0, 0);
+		(*pScrn->AdjustFrame)(ADJUST_FRAME_ARGS(pScrn, pScrn->frameX0, pScrn->frameY0));
 
 	     } else {
 #endif
@@ -8661,7 +8656,8 @@ SISBlockHandler(BLOCKHANDLER_ARGS_DECL)
 #endif
 
     if(pSiS->AdjustFramePending && pSiS->AdjustFrame) {
-       (*pSiS->AdjustFrame)(i, pSiS->AdjustFrameX, pSiS->AdjustFrameY, pSiS->AdjustFrameFlags);
+	(*pSiS->AdjustFrame)(ADJUST_FRAME_ARGS(pScrn, pSiS->AdjustFrameX, pSiS->AdjustFrameY));
+
        /* Reset it since Xv insists on installing its own every time. */
        pScrn->AdjustFrame = SISNewAdjustFrame;
        pSiS->AdjustFramePending = FALSE;
@@ -10256,7 +10252,7 @@ SISSwitchMode(SWITCH_MODE_ARGS_DECL)
     }
 #ifdef SISDRI
     if(pSiS->directRenderingEnabled) {       
-	DRILock(screenInfo.screens[scrnIndex], DRM_LOCK_QUIESCENT);
+	DRILock(xf86ScrnToScreen(pScrn), DRM_LOCK_QUIESCENT);
     }
 #endif
 
@@ -10283,7 +10279,7 @@ SISSwitchMode(SWITCH_MODE_ARGS_DECL)
 
 #ifdef SISDRI
     if(pSiS->directRenderingEnabled) {
-       DRIUnlock(screenInfo.screens[scrnIndex]);
+       DRIUnlock(xf86ScrnToScreen(pScrn));
     }
 #endif
 
@@ -10378,15 +10374,15 @@ SISAdjustFrameHW_CRT2(ScrnInfoPtr pScrn, int x, int y)
 }
 
 static void
-SISNewAdjustFrame(int scrnIndex, int x, int y, int flags)
+SISNewAdjustFrame(ADJUST_FRAME_ARGS_DECL)
 {
-    ScrnInfoPtr pScrn = xf86Screens[scrnIndex];
+    SCRN_INFO_PTR(arg);
     SISPtr      pSiS = SISPTR(pScrn);
 
     pSiS->AdjustFramePending = TRUE;
-    pSiS->AdjustFrameX = x;
-    pSiS->AdjustFrameY = y;
-    pSiS->AdjustFrameFlags = flags;
+    pSiS->AdjustFrameX = 0;
+    pSiS->AdjustFrameY = 0;
+    pSiS->AdjustFrameFlags = 0;
 }
 
 void

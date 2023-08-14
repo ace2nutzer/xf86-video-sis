@@ -719,7 +719,7 @@ sis550Setup(ScrnInfoPtr pScrn)
     } else if(pSiS->Chipset == PCI_CHIP_SIS670) {
 
        pScrn->videoRam = 0;
-       pciconfig = pciReadByte(0x00000000, 0x4c);
+       pciconfig = sis_pci_read_host_bridge_u8(0x4c);
        if(pciconfig & 0xe0) {
 	  pScrn->videoRam = (1 << (((pciconfig & 0xe0) >> 5) - 2)) * 32768;
 	  pSiS->ChipFlags |= SiSCF_760UMA;
@@ -805,7 +805,7 @@ sis550Setup(ScrnInfoPtr pScrn)
 	     dimmnum = 2;
 	  }
 
-	  pciconfig = pciReadByte(0x00000000, 0x64);
+	  pciconfig = sis_pci_read_host_bridge_u8(0x64);
 	  if(pciconfig & 0x80) {
 	     pScrn->videoRam = (1 << (((pciconfig & 0x60) >> 5) )) * 32768;
 	     pSiS->UMAsize = pScrn->videoRam;
@@ -817,7 +817,7 @@ sis550Setup(ScrnInfoPtr pScrn)
 		pSiS->BusWidth = 64;
 		for(i = 0; i <= (dimmnum - 1); i++) {
 		   if(pciconfig & (1 << i)) {
-		      temp = pciReadByte(0x00000000, 0x60 + i);
+		      temp = sis_pci_read_host_bridge_u8(0x60 + i);
 		      xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
 			  "DIMM%d is %s SDRAM\n",
 			  i, (temp & 0x40) ? "DDR2" : "non-DDR2");
