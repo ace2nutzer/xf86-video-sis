@@ -308,11 +308,7 @@ SiSCopyModeNLink(ScrnInfoPtr pScrn, DisplayModePtr dest,
      */
     mode->Clock = (int)(mode->VRefresh * 1000.0);
 
-    /* Generate a mode name */
     sprintf(namebuffer, "%dx%d", mode->HDisplay, mode->VDisplay);
-    if((mode->name = malloc(strlen(namebuffer) + 1))) {
-       strcpy(mode->name, namebuffer);
-    }
 
     if(!quiet) {
        Bool printname1 = TRUE, printname2 = TRUE;
