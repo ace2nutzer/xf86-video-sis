@@ -157,6 +157,39 @@ static int	SISEntityIndex = -1;
  */
 static int pix24bpp = 0;
 
+#if XSERVER_LIBPCIACCESS
+#define SIS_DEVICE_MATCH(d, i)\
+    {PCI_VENDOR_SIS, (d), PCI_MATCH_ANY, PCI_MATCH_ANY, 0, 0, (i) }
+
+static const struct pci_id_match SIS_device_match[] = {
+    SIS_DEVICE_MATCH (PCI_CHIP_SG86C201,  0),
+    SIS_DEVICE_MATCH (PCI_CHIP_SG86C202,  0),
+    SIS_DEVICE_MATCH (PCI_CHIP_SIS5597,   0),
+    SIS_DEVICE_MATCH (PCI_CHIP_SIS82C204, 0),
+    SIS_DEVICE_MATCH (PCI_CHIP_SG86C205, 0),
+    SIS_DEVICE_MATCH (PCI_CHIP_SG86C215, 0),
+    SIS_DEVICE_MATCH (PCI_CHIP_SG86C225, 0),
+    SIS_DEVICE_MATCH (PCI_CHIP_SIS530, 0),
+    SIS_DEVICE_MATCH (PCI_CHIP_SIS6326,0),
+    SIS_DEVICE_MATCH (PCI_CHIP_SIS300, 0),
+    SIS_DEVICE_MATCH (PCI_CHIP_SIS630, 0),
+    SIS_DEVICE_MATCH (PCI_CHIP_SIS540, 0),
+    SIS_DEVICE_MATCH (PCI_CHIP_SIS315, 0),
+    SIS_DEVICE_MATCH (PCI_CHIP_SIS315H,0),
+    SIS_DEVICE_MATCH (PCI_CHIP_SIS315PRO, 0),
+    SIS_DEVICE_MATCH (PCI_CHIP_SIS550, 0),
+    SIS_DEVICE_MATCH (PCI_CHIP_SIS650, 0),
+    SIS_DEVICE_MATCH (PCI_CHIP_SIS660, 0),
+    SIS_DEVICE_MATCH (PCI_CHIP_SIS330, 0),
+    SIS_DEVICE_MATCH (PCI_CHIP_SIS340, 0),
+    SIS_DEVICE_MATCH (PCI_CHIP_SIS670, 0),
+    SIS_DEVICE_MATCH (PCI_CHIP_SIS671, 0),
+    SIS_DEVICE_MATCH (PCI_CHIP_XGIXG20,0), 
+    SIS_DEVICE_MATCH (PCI_CHIP_XGIXG40,0),
+	{0, 0, 0 },
+	};
+#endif
+
 /*
  * This contains the functions needed by the server after loading the driver
  * module. It must be supplied, and gets passed back by the SetupProc
@@ -164,7 +197,6 @@ static int pix24bpp = 0;
  * is compiled in, and this requires that the name of this DriverRec be
  * an upper-case version of the driver name.
  */
-
 #ifdef _X_EXPORT
 _X_EXPORT
 #endif
@@ -172,14 +204,27 @@ DriverRec SIS = {
     SIS_CURRENT_VERSION,
     SIS_DRIVER_NAME,
     SISIdentify,
+#if XSERVER_LIBPCIACCESS
+    NULL,
+#else
     SISProbe,
+#endif
     SISAvailableOptions,
     NULL,
-    0
+    0,
 #ifdef SIS_HAVE_DRIVER_FUNC
-     ,
-    SISDriverFunc
+    SISDriverFunc,
+#else
+    NULL,
 #endif
+#if XSERVER_LIBPCIACCESS
+    SIS_device_match,
+    SIS_pci_probe,
+#else
+    NULL,
+    NULL,
+#endif
+    NULL
 };
 
 static SymTabRec SISChipsets[] = {
@@ -443,7 +488,7 @@ SISProbe(DriverPtr drv, int flags)
 	    pScrn->driverVersion    = SIS_CURRENT_VERSION;
 	    pScrn->driverName       = SIS_DRIVER_NAME;
 	    pScrn->name             = SIS_NAME;
-	    pScrn->Probe            = SISProbe;
+	    pScrn->Probe            = NULL;
 	    pScrn->PreInit          = SISPreInit;
 	    pScrn->ScreenInit       = SISScreenInit;
 	    pScrn->SwitchMode       = SISSwitchMode;
@@ -460,20 +505,28 @@ SISProbe(DriverPtr drv, int flags)
 	pEnt = xf86GetEntityInfo((i < numUsedSiS) ? usedChipsSiS[i] : usedChipsXGI[i-numUsedSiS]);
 
 	switch(pEnt->chipset) {
-	case PCI_CHIP_SIS300:
-	case PCI_CHIP_SIS540:
-	case PCI_CHIP_SIS630:
-	case PCI_CHIP_SIS550:
-	case PCI_CHIP_SIS315:
-	case PCI_CHIP_SIS315H:
-	case PCI_CHIP_SIS315PRO:
-	case PCI_CHIP_SIS650:
-	case PCI_CHIP_SIS330:
-	case PCI_CHIP_SIS660:
-	case PCI_CHIP_SIS340:
-	case PCI_CHIP_SIS670:
-	case PCI_CHIP_SIS671:
-	case PCI_CHIP_XGIXG40:
+		case PCI_CHIP_SG86C201:
+		case PCI_CHIP_SG86C202:
+		case PCI_CHIP_SIS5597:
+		case PCI_CHIP_SIS82C204:
+		case PCI_CHIP_SG86C205:
+		case PCI_CHIP_SG86C215:
+		case PCI_CHIP_SG86C225:
+		case PCI_CHIP_SIS530:
+		case PCI_CHIP_SIS6326:
+		case PCI_CHIP_SIS300:
+		case PCI_CHIP_SIS315H:
+		case PCI_CHIP_SIS315:
+		case PCI_CHIP_SIS315PRO:
+		case PCI_CHIP_SIS540:
+		case PCI_CHIP_SIS630:
+		case PCI_CHIP_SIS550:
+		case PCI_CHIP_SIS650:
+		case PCI_CHIP_SIS330:
+		case PCI_CHIP_SIS660:
+		case PCI_CHIP_SIS340:
+		case PCI_CHIP_SIS670:
+		case PCI_CHIP_SIS671:
 	    {
 	       SISEntPtr pSiSEnt = NULL;
 	       DevUnion  *pPriv;
@@ -507,6 +560,95 @@ SISProbe(DriverPtr drv, int flags)
     if(usedChipsSiS) free(usedChipsSiS);
     if(usedChipsXGI) free(usedChipsXGI);
 
+    return foundScreen;
+}
+
+static Bool SIS_pci_probe (DriverPtr driver, int entity_num, struct pci_device *device, intptr_t match_data)
+{
+    ScrnInfoPtr pScrn = NULL;
+#ifdef SISDUALHEAD
+    EntityInfoPtr pEnt;
+    Bool    foundScreen = FALSE;
+#endif
+xf86DrvMsg(0, X_INFO, "SIS_pci_probe - begin, entity_num=%d\n", entity_num);
+xf86DrvMsg(0, X_INFO, "                       vendor_id=0x%x\n", device->vendor_id);
+xf86DrvMsg(0, X_INFO, "                       device_id=0x%x\n", device->device_id);
+xf86DrvMsg(0, X_INFO, "                       bus=%d\n", device->bus);
+xf86DrvMsg(0, X_INFO, "                       dev=%d\n", device->dev);
+xf86DrvMsg(0, X_INFO, "                       func=%d\n", device->func);
+    pScrn = xf86ConfigPciEntity(pScrn, 0, entity_num, SISPciChipsets, NULL, NULL, NULL, NULL, NULL);
+    if(!pScrn) pScrn = xf86ConfigPciEntity(pScrn, 0, entity_num, XGIPciChipsets, NULL, NULL, NULL, NULL, NULL);
+    if(pScrn) {
+	    xf86DrvMsg(0, X_INFO, "SIS_pci_probe - ConfigPciEntity found\n");
+	    /* Fill in what we can of the ScrnInfoRec */
+	    pScrn->driverVersion    = SIS_CURRENT_VERSION;
+	    pScrn->driverName       = SIS_DRIVER_NAME;
+	    pScrn->name             = SIS_NAME;
+	    pScrn->Probe            = NULL;
+	    pScrn->PreInit          = SISPreInit;
+	    pScrn->ScreenInit       = SISScreenInit;
+	    pScrn->SwitchMode       = SISSwitchMode;
+	    pScrn->AdjustFrame      = SISAdjustFrame;
+	    pScrn->EnterVT          = SISEnterVT;
+	    pScrn->LeaveVT          = SISLeaveVT;
+	    pScrn->FreeScreen       = SISFreeScreen;
+	    pScrn->ValidMode        = SISValidMode;
+	    foundScreen = TRUE;
+	}
+    #ifdef SISDUALHEAD
+	pEnt = xf86GetEntityInfo(entity_num);
+xf86DrvMsg(0, X_INFO, "SIS_pci_probe - GetEntityInfo chipset is 0x%x\n",pEnt->chipset);
+	switch(pEnt->chipset) {
+		case PCI_CHIP_SG86C201:
+		case PCI_CHIP_SG86C202:
+		case PCI_CHIP_SIS5597:
+		case PCI_CHIP_SIS82C204:
+		case PCI_CHIP_SG86C205:
+		case PCI_CHIP_SG86C215:
+		case PCI_CHIP_SG86C225:
+		case PCI_CHIP_SIS530:
+		case PCI_CHIP_SIS6326:
+		case PCI_CHIP_SIS300:
+		case PCI_CHIP_SIS315H:
+		case PCI_CHIP_SIS315:
+		case PCI_CHIP_SIS315PRO:
+		case PCI_CHIP_SIS540:
+		case PCI_CHIP_SIS630:
+		case PCI_CHIP_SIS550:
+		case PCI_CHIP_SIS650:
+		case PCI_CHIP_SIS330:
+		case PCI_CHIP_SIS660:
+		case PCI_CHIP_SIS340:
+		case PCI_CHIP_SIS670:
+		case PCI_CHIP_SIS671:
+	    {
+	       SISEntPtr pSiSEnt = NULL;
+	       DevUnion  *pPriv;
+
+	       xf86SetEntitySharable(entity_num);
+	       if(SISEntityIndex < 0) {
+		  SISEntityIndex = xf86AllocateEntityPrivateIndex();
+	       }
+	       pPriv = xf86GetEntityPrivate(pScrn->entityList[0], SISEntityIndex);
+	       if(!pPriv->ptr) {
+		  pPriv->ptr = xnfcalloc(sizeof(SISEntRec), 1);
+		  pSiSEnt = pPriv->ptr;
+		  memset(pSiSEnt, 0, sizeof(SISEntRec));
+		  pSiSEnt->lastInstance = -1;
+	       } else {
+		  pSiSEnt = pPriv->ptr;
+	       }
+	       pSiSEnt->lastInstance++;
+	       xf86SetEntityInstanceForScreen(pScrn, pScrn->entityList[0],
+						pSiSEnt->lastInstance);
+	    }
+	    break;
+
+	default:
+	    break;
+	}
+#endif /* DUALHEAD */
+xf86DrvMsg(0, X_INFO, "SIS_pci_probe - end\n");
     return foundScreen;
 }
 

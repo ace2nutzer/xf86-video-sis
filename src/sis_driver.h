@@ -775,6 +775,9 @@ static Bool SISCloseScreen(CLOSE_SCREEN_ARGS_DECL);
 static Bool SISSaveScreen(ScreenPtr pScreen, int mode);
 static Bool SISSwitchMode(SWITCH_MODE_ARGS_DECL);
 static void SISNewAdjustFrame(ADJUST_FRAME_ARGS_DECL);
+#if XSERVER_LIBPCIACCESS
+static Bool SIS_pci_probe(DriverPtr driver, int entity_num, struct pci_device *device, intptr_t match_data);
+#endif
 
 /* Optional functions */
 #ifdef SISDUALHEAD
