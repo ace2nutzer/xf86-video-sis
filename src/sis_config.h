@@ -71,11 +71,9 @@
 #endif
 
 #ifdef SISVRAMQ
-#ifdef XORG_VERSION_CURRENT
 #if defined(SIS_HAVE_EXA) || (defined(USE_EXA) && (USE_EXA != 0))
 #if 1
 #define SIS_USE_EXA		/* Include support for EXA */
-#endif
 #endif
 #endif
 #endif

@@ -63,9 +63,9 @@
 #  define SIS_NEED_ARRAY
 #  undef SISNEWRENDER
 #  ifdef XORG_VERSION_CURRENT
-#   if XORG_VERSION_CURRENT > XORG_VERSION_NUMERIC(6,7,0,0,0)
+//#   if XORG_VERSION_CURRENT > XORG_VERSION_NUMERIC(6,7,0,0,0)
 #    define SISNEWRENDER
-#   endif
+//#   endif
 #  endif
 # endif
 #endif
@@ -1662,8 +1662,8 @@ SiS315AccelInit(ScreenPtr pScreen)
 	         pSiS->AccelLinearScratch = NULL;
 
 #ifdef SISNEWRENDER
-		 infoPtr->SetupForCPUToScreenAlphaTexture2 = (pSiS->ChipType == SIS_671)? 
-		 		SiSSetupForCPUToScreenAlphaTexture3D : SiSSetupForCPUToScreenAlphaTexture;
+		 infoPtr->SetupForCPUToScreenAlphaTexture2 = (pSiS->ChipType == SIS_671)?
+				SiSSetupForCPUToScreenAlphaTexture3D : SiSSetupForCPUToScreenAlphaTexture;
 		 infoPtr->CPUToScreenAlphaTextureDstFormats = (pScrn->bitsPerPixel == 16) ?
 				SiSDstTextureFormats16 : SiSDstTextureFormats32;
 #else
@@ -1671,8 +1671,8 @@ SiS315AccelInit(ScreenPtr pScreen)
 		 		SiSSetupForCPUToScreenAlphaTexture3D : SiSSetupForCPUToScreenAlphaTexture;
 
 #endif
-		 infoPtr->SubsequentCPUToScreenAlphaTexture = (pSiS->ChipType == SIS_671)? 
-		 		SiSSubsequentCPUToScreenTexture3D : SiSSubsequentCPUToScreenTexture;
+		 infoPtr->SubsequentCPUToScreenAlphaTexture = (pSiS->ChipType == SIS_671)?
+				SiSSubsequentCPUToScreenTexture3D : SiSSubsequentCPUToScreenTexture;
 		 infoPtr->CPUToScreenAlphaTextureFormats = (pSiS->ChipType == SIS_671)? 
 				SiS3DAlphaTextureFormats : SiSAlphaTextureFormats;  /*3D accelerator needs a8r8g8b8 format*/
 		 infoPtr->CPUToScreenAlphaTextureFlags = XAA_RENDER_NO_TILE;
@@ -1684,7 +1684,8 @@ SiS315AccelInit(ScreenPtr pScreen)
 #else
 		 infoPtr->SetupForCPUToScreenTexture = SiSSetupForCPUToScreenTexture;
 #endif
-		 infoPtr->SubsequentCPUToScreenTexture = SiSSubsequentCPUToScreenTexture;
+		 infoPtr->SubsequentCPUToScreenTexture = (pSiS->ChipType == SIS_671)?
+				SiSSubsequentCPUToScreenTexture3D : SiSSubsequentCPUToScreenTexture;
 		 infoPtr->CPUToScreenTextureFormats = SiSTextureFormats;
 		 infoPtr->CPUToScreenTextureFlags = XAA_RENDER_NO_TILE;
 
