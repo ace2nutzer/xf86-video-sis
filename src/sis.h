@@ -37,7 +37,7 @@
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <xf86fbman.h>
-
+#include "sis_config.h"
 #include <sispcirename.h>
 
 #define SISDRIVERVERSIONYEAR    6
@@ -100,22 +100,22 @@
 	(((major) * 10000000) + ((minor) * 100000) + ((patch) * 1000) + snap)
 #define XF86_VERSION_CURRENT XF86_VERSION_NUMERIC(4,3,99,902,0)
 #endif
+#ifdef XORG_NEW
 #define SIS_HAVE_RR_FUNC
 #ifdef HaveDriverFuncs
 #undef  SIS_HaveDriverFuncs
 #define SIS_HaveDriverFuncs HaveDriverFuncs
 #define SIS_HAVE_DRIVER_FUNC
 #endif /* HaveDriverFuncs */
-#if XORG_VERSION_CURRENT >= XORG_VERSION_NUMERIC(6,8,99,900,0) || XORG_VERSION_CURRENT < XORG_VERSION_NUMERIC(4,0,0,0,0)
+#ifdef XORG_NEW
 #define SISISXORG6899900
-#if XORG_VERSION_CURRENT >= XORG_VERSION_NUMERIC(6,8,99,901,0)
 #define SISISXORG6899901
 #ifdef RANDR
 #define SIS_HAVE_RR_GET_MODE_MM
 #define SIS_HAVE_RANDR_SIZE_PATCH
 #endif /* RANDR */
-#endif /* >= 6.8.99.901 */
-#endif /* >= 6.8.99.900 */
+#endif
+#endif
 #else   /* XORG_VERSION_CURRENT */
 #include "xf86Version.h"
 #define SISMYSERVERNAME "XFree86"
@@ -207,8 +207,6 @@
 #include "sis_dri.h"
 #endif /* SISDRI */
 
-#include "sis_config.h"
-
 #define UNLOCK_ALWAYS		/* Always unlock the registers (should be set!) */
 
 #if !defined(SIS_USE_XAA) && !defined(SIS_USE_EXA)
@@ -246,16 +244,18 @@
 
 #include "compat-api.h"
 
+#if 0
 #undef SISCHECKOSSSE
 #ifdef XORG_VERSION_CURRENT
-#if (XORG_VERSION_CURRENT >= XORG_VERSION_NUMERIC(6,8,99,13,0)) || (XORG_VERSION_CURRENT < XORG_VERSION_NUMERIC(1,19,99,1,0))
+#ifdef XORG_NEW
 #define SISCHECKOSSSE		/* Automatic check OS for SSE; requires SigIll facility */
+#endif
 #endif
 #endif
 
 #undef SISGAMMARAMP
 #ifdef XORG_VERSION_CURRENT
-#if (XORG_VERSION_CURRENT >= XORG_VERSION_NUMERIC(6,8,99,13,0)) || (XORG_VERSION_CURRENT >= XORG_VERSION_NUMERIC(1,0,0,0,0))
+#ifdef XORG_NEW
 #define SISGAMMARAMP		/* Driver can set gamma ramp; requires additional symbols in xf86sym.h */
 #endif
 #endif
@@ -1267,10 +1267,10 @@ typedef struct {
     Bool		IsAGPCard, IsPCIExpress;
     unsigned int	DRIheapstart, DRIheapend;
     Bool		NeedFlush;	/* Need to flush cmd buf mem (760) */
-    FBLinearPtr		AccelLinearScratch;
 #ifdef SIS_USE_XAA
     void		(*RenderCallback)(ScrnInfoPtr);
     Time		RenderTime;
+    FBLinearPtr		AccelLinearScratch;
 #endif
 #ifdef SIS_USE_EXA
     void		(*ExaRenderCallback)(ScrnInfoPtr);

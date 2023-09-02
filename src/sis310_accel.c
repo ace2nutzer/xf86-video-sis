@@ -63,9 +63,9 @@
 #  define SIS_NEED_ARRAY
 #  undef SISNEWRENDER
 #  ifdef XORG_VERSION_CURRENT
-//#   if XORG_VERSION_CURRENT > XORG_VERSION_NUMERIC(6,7,0,0,0)
+#   ifdef XORG_NEW
 #    define SISNEWRENDER
-//#   endif
+#   endif
 #  endif
 # endif
 #endif
@@ -1435,14 +1435,16 @@ SiSUploadToScratch(PixmapPtr pSrc, PixmapPtr pDst)
 
 	w = pSrc->drawable.width;
 
-#if  XORG_VERSION_CURRENT > XORG_VERSION_NUMERIC(6,8,2,0,0)
+#ifndef XORG_NEW
+#if  XORG_VERSION_CURRENT < XORG_VERSION_NUMERIC(6,8,2,0,0)
 	dst_pitch = ((w * (pSrc->drawable.bitsPerPixel >> 3)) +
 		     pSiS->EXADriverPtr->card.offscreenPitch - 1) &
 		    ~(pSiS->EXADriverPtr->card.offscreenPitch - 1);
-#elif XORG_VERSION_CURRENT >= XORG_VERSION_NUMERIC(7,0,0,0,0)
+#elif XORG_VERSION_CURRENT <= XORG_VERSION_NUMERIC(7,0,0,0,0)
 	dst_pitch = ((w * (pSrc->drawable.bitsPerPixel >> 3)) +
 		     pSiS->EXADriverPtr->card.pixmapPitchAlign - 1) &
 		    ~(pSiS->EXADriverPtr->card.pixmapPitchAlign - 1);
+#endif
 #else
 	dst_pitch = ((w * (pSrc->drawable.bitsPerPixel >> 3)) +
 		     pSiS->EXADriverPtr->pixmapPitchAlign - 1) &
@@ -1454,21 +1456,23 @@ SiSUploadToScratch(PixmapPtr pSrc, PixmapPtr pDst)
 	if(size > pSiS->exa_scratch->size)
 	   return FALSE;
 
-#if  XORG_VERSION_CURRENT > XORG_VERSION_NUMERIC(6,8,2,0,0)
+#ifndef XORG_NEW
+#if  XORG_VERSION_CURRENT < XORG_VERSION_NUMERIC(6,8,2,0,0)
 	pSiS->exa_scratch_next = (pSiS->exa_scratch_next +
 				  pSiS->EXADriverPtr->card.offscreenByteAlign - 1) &
 				  ~(pSiS->EXADriverPtr->card.offscreenByteAlign - 1);
-#elif  XORG_VERSION_CURRENT >= XORG_VERSION_NUMERIC(7,0,0,0,0)
+#elif  XORG_VERSION_CURRENT <= XORG_VERSION_NUMERIC(7,0,0,0,0)
 	pSiS->exa_scratch_next = (pSiS->exa_scratch_next +
 				  pSiS->EXADriverPtr->card.pixmapOffsetAlign - 1) &
 				  ~(pSiS->EXADriverPtr->card.pixmapOffsetAlign - 1);
+#endif
 #else
 	pSiS->exa_scratch_next = (pSiS->exa_scratch_next +
 				  pSiS->EXADriverPtr->pixmapOffsetAlign - 1) &
 				  ~(pSiS->EXADriverPtr->pixmapOffsetAlign - 1);
 #endif
 
-#if  XORG_VERSION_CURRENT >= XORG_VERSION_NUMERIC(7,0,0,0,0)
+#ifndef XORG_NEW
 	if(pSiS->exa_scratch_next + size >
 	   pSiS->exa_scratch->offset + pSiS->exa_scratch->size) {
 	   (pSiS->EXADriverPtr->accel.WaitMarker)(pSrc->drawable.pScreen, 0);
@@ -1485,7 +1489,7 @@ SiSUploadToScratch(PixmapPtr pSrc, PixmapPtr pDst)
 	memcpy(pDst, pSrc, sizeof(*pDst));
 	pDst->devKind = dst_pitch;
 
-#if  XORG_VERSION_CURRENT >= XORG_VERSION_NUMERIC(7,0,0,0,0)
+#ifndef XORG_NEW
 	pDst->devPrivate.ptr = pSiS->EXADriverPtr->card.memoryBase + pSiS->exa_scratch_next;
 #else
 	pDst->devPrivate.ptr = pSiS->EXADriverPtr->memoryBase + pSiS->exa_scratch_next;
@@ -1702,7 +1706,7 @@ SiS315AccelInit(ScreenPtr pScreen)
 
 #ifdef SIS_USE_EXA	/* ----------------------- EXA ----------------------- */
 	   if(pSiS->useEXA) {
-#if  XORG_VERSION_CURRENT >= XORG_VERSION_NUMERIC(7,0,0,0,0)
+#ifndef XORG_NEW
 
 	      int obase = 0;
 
@@ -1885,11 +1889,11 @@ SiS315AccelInit(ScreenPtr pScreen)
 						SiSScratchSave, pSiS);
 	      if(pSiS->exa_scratch) {
 		 pSiS->exa_scratch_next = pSiS->exa_scratch->offset;
-        #if  XORG_VERSION_CURRENT >= XORG_VERSION_NUMERIC(7,0,0,0,0)
+#ifndef XORG_NEW
 		 pSiS->EXADriverPtr->accel.UploadToScratch = SiSUploadToScratch;
-	#else
+#else
                  pSiS->EXADriverPtr->UploadToScratch = SiSUploadToScratch;
-        #endif
+#endif
                }
 
 	   } else {

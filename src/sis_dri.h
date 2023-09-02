@@ -68,10 +68,9 @@ typedef struct {
 typedef struct {
   drm_handle_t handle;
   drmSize size;
-/* chris, remove the variable for compatible with sizeof(SISDRIRec) in 3D driver(sis315_dri.so) */
-/*#ifndef SISISXORG6899900*/
+#ifndef SISISXORG6899900
   drmAddress map;
-/*#endif*/
+#endif
 } sisRegion, *sisRegionPtr;
 
 typedef struct {

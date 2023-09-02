@@ -42,6 +42,10 @@
 
 /* Configurable stuff: ------------------------------------- */
 
+#if 1
+#define XORG_NEW
+#endif
+
 #define SISDUALHEAD		/* Include Dual Head support  */
 
 #define SISMERGED		/* Include Merged-FB support */

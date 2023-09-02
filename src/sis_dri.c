@@ -55,7 +55,7 @@ extern Bool drmSiSAgpInit(int driSubFD, int offset, int size);
 
 #ifdef XORG_VERSION_CURRENT
 #define SISHAVECREATEBUSID
-#if XORG_VERSION_CURRENT < XORG_VERSION_NUMERIC(6,7,99,1,0)
+#ifndef XORG_NEW
 #ifndef XSERVER_LIBPCIACCESS
 extern char *DRICreatePCIBusID(pciVideoPtr PciInfo);
 #endif
@@ -310,10 +310,9 @@ SISDRIScreenInit(ScreenPtr pScreen)
     
  /* MMIO */
 	pSISDRI->regs.size = SISIOMAPSIZE;
-/* chris, marked */
-/*#ifndef SISISXORG6899900*/
+#ifndef SISISXORG6899900
 	pSISDRI->regs.map = 0;
-/*#endif*/
+#endif
   if(drmAddMap(pSIS->drmSubFD, (drm_handle_t)pSIS->IOAddress,
 		pSISDRI->regs.size, DRM_REGISTERS, 0,
 		&pSISDRI->regs.handle) < 0) {

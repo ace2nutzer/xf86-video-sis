@@ -224,7 +224,6 @@ DriverRec SIS = {
     NULL,
     NULL,
 #endif
-    NULL
 };
 
 static SymTabRec SISChipsets[] = {

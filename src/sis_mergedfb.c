@@ -47,6 +47,8 @@
 #include "windowstr.h"
 #endif
 
+#include <inputstr.h> /* for inputInfo */
+
 void		SiSMFBInitMergedFB(ScrnInfoPtr pScrn);
 void		SiSMFBHandleModesCRT2(ScrnInfoPtr pScrn, ClockRangePtr clockRanges);
 void		SiSMFBMakeModeList(ScrnInfoPtr pScrn);

@@ -64,9 +64,9 @@
 #  define SIS_NEED_ARRAY
 #  undef SISNEWRENDER
 #  ifdef XORG_VERSION_CURRENT
-//#   if XORG_VERSION_CURRENT > XORG_VERSION_NUMERIC(6,7,0,0,0)
+#   ifdef XORG_NEW
 #    define SISNEWRENDER
-//#   endif
+#   endif
 #  endif
 # endif
 #endif
@@ -382,8 +382,7 @@ unsigned long GetTexturePitch(unsigned long dwPitch)
     return dwPitch | (i<<9);
 }
 
-
-
+#if defined(RENDER) && defined(INCL_RENDER)
 Bool
 SiSSetupForCPUToScreenAlphaTexture3D(ScrnInfoPtr pScrn,
 			int op, CARD16 red, CARD16 green,
@@ -593,9 +592,6 @@ SiSSetupForCPUToScreenAlphaTexture3D(ScrnInfoPtr pScrn,
 	return TRUE;
 }
 
-
-
-
 void
 SiSSubsequentCPUToScreenTexture3D(ScrnInfoPtr pScrn,
 			int dst_x, int dst_y,
@@ -682,5 +678,5 @@ SiSSubsequentCPUToScreenTexture3D(ScrnInfoPtr pScrn,
 	SiS3DTexture0Setting(dwTexSet0, dwTexSet1, dwTexDepth, dwTexSize, dwTexAddr)
 	SiS3DSetupVertexData(vect)
 	SiS3DListEnd(EngineId, dwStamp++)
-
 }
+#endif
