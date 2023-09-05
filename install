@@ -4,6 +4,12 @@ sudo make -j2 install
 
 if [ -f /usr/lib/xorg/modules/libxaa.so ] ; then
 	sudo cp xorg.conf.xaa /etc/X11/xorg.conf
+	if [ -f XvMCConfig ] ; then
+		sudo cp XvMCConfig /usr/lib/xvmcconfig-standard
+	fi
 else
 	sudo cp xorg.conf.exa /etc/X11/xorg.conf
+	if [ -f XvMCConfig ] ; then
+		sudo cp XvMCConfig /etc/X11
+	fi
 fi
