@@ -1,0 +1,30 @@
+Tested to work on Xorg 1.20 with sis671
+
+How to download, build and install this driver:
+
+# Install required packages
+sudo apt-get install git make autoconf xorg-dev xutils-dev mesa-common-dev libdrm-dev libtool 
+
+# download
+git clone https://github.com/ace2nutzer/xf86-video-sis.git
+cd xf86-video-sis
+
+# cleanup
+./clean
+
+# build the driver
+./build
+
+# install the driver
+./install
+
+# optional, but recommended:
+# use your console in text mode to improve scrolling (up to 3x faster!)
+sudo nano /etc/default/grub
+# uncomment "GRUB_TERMINAL=console" in order to disable graphical terminal (grub-pc only)
+# add "nomodeset" to GRUB_CMDLINE_LINUX_DEFAULT if DRI is not supported
+# save with Strg+X  then Y then ENTER
+# update bootloader
+sudo update-grub
+
+# reboot and enjoy!
