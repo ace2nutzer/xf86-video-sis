@@ -26,7 +26,7 @@ Section "Device"
         Option     "FastVram"           	"true"
         #Option     "HostBus"            	# [<bool>]
         Option     "BenchmarkMemcpy"    	"false"
-        Option     "UseSSE"             	"true"
+        Option     "UseSSE"             	"false"
         #Option     "MaxXFBMem"          	# <i>
         Option     "Accel"              	"true"
         Option     "TurboQueue"         	"true"
