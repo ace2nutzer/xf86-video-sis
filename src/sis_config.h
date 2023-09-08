@@ -82,6 +82,8 @@
 #endif
 #endif
 
+#if 0
+#define SISCHECKOSSSE		/* Automatic check OS for SSE; requires SigIll facility */
+#endif
+
 /* End of configurable stuff --------------------------------- */
-
-

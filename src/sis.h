@@ -244,15 +244,6 @@
 
 #include "compat-api.h"
 
-#if 0
-#undef SISCHECKOSSSE
-#ifdef XORG_VERSION_CURRENT
-#ifdef XORG_NEW
-#define SISCHECKOSSSE		/* Automatic check OS for SSE; requires SigIll facility */
-#endif
-#endif
-#endif
-
 #undef SISGAMMARAMP
 #ifdef XORG_VERSION_CURRENT
 #ifdef XORG_NEW

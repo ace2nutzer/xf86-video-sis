@@ -310,7 +310,7 @@ SISDRIScreenInit(ScreenPtr pScreen)
     
  /* MMIO */
 	pSISDRI->regs.size = SISIOMAPSIZE;
-#ifndef SISISXORG6899900
+#ifdef SISISXORG6899900
 	pSISDRI->regs.map = 0;
 #endif
   if(drmAddMap(pSIS->drmSubFD, (drm_handle_t)pSIS->IOAddress,

@@ -9,7 +9,6 @@ EndSection
 
 Section "Module"
 	Load         "glx"
-	Load         "dri"
 EndSection
 
 Section "Monitor"
@@ -31,7 +30,7 @@ Section "Device"
         Option     "Accel"              	"true"
         Option     "TurboQueue"         	"true"
         Option     "RenderAcceleration" 	"true"
-        Option     "DRI"                	"true"
+        Option     "DRI"                	"false"
         #Option     "AGPSize"            	# <i>
         #Option     "GARTSize"           	# <i>
         Option     "ShadowFB"           	"true"
