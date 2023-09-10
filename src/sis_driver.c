@@ -3623,7 +3623,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
     pSiS->HWCursorMBufNum = pSiS->HWCursorCBufNum = 0;
     pSiS->NeedFlush = FALSE;
     pSiS->NewCRLayout = FALSE;
-    pSiS->mmioSize = 64;
+    pSiS->mmioSize = 128;
 
     switch(pSiS->Chipset) {
        case PCI_CHIP_SIS530:
