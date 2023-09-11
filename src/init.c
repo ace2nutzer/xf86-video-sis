@@ -1232,6 +1232,7 @@ SiSSetLVDSetc(struct SiS_Private *SiS_Pr)
    case SIS_340:
    case SIS_341:
    case SIS_342:
+   case SIS_671:
    case XGI_20:
    case XGI_40:
 	temp = (SiS_GetReg(SiS_Pr->SiS_P3d4,0x38) & 0xe0) >> 5;
@@ -1863,6 +1864,7 @@ SiS_CloseCRTC(struct SiS_Private *SiS_Pr)
    case SIS_741:
    case SIS_660:
    case SIS_760:
+   case SIS_671:
       if(SiS_Pr->SiS_VBInfo & SetCRT2ToLCDA) {
          temp1 = 0xa0; temp2 = 0x08;
       }

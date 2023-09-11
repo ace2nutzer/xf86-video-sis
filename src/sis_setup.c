@@ -735,7 +735,7 @@ sis550Setup(ScrnInfoPtr pScrn)
 
     } else if(pSiS->Chipset == PCI_CHIP_SIS660) {
 
-       if(pSiS->ChipType >= SIS_660&&pSiS->ChipType <= SIS_761) {
+       if(pSiS->ChipType >= SIS_660 && pSiS->ChipType <= SIS_761) {
 
           /* 660, 760 */
 
