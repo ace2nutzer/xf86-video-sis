@@ -11,10 +11,8 @@ elif [ -f /usr/lib/xorg/modules/libexa.so ] ; then
 elif [ -f /usr/lib/xorg/modules/libshadowfb.so ] ; then
 	sudo cp xorg.conf.exa /etc/X11/xorg.conf
 	sudo cp XvMCConfig /etc/X11
-else
-	if [ -f /usr/lib/xorg/modules/drivers/vesa_drv.so ] ; then
-		sudo cp xorg.conf.vesa /etc/X11/xorg.conf
-	fi
+elif [ -f /usr/lib/xorg/modules/drivers/vesa_drv.so ] ; then
+	sudo cp xorg.conf.vesa /etc/X11/xorg.conf
 fi
 
 sudo cp xorg.conf.vesa /etc/X11

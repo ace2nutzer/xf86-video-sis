@@ -1,4 +1,5 @@
-# /etc/X11/xorg.conf file for sis671 with LCD panel 1280x800@60 using XAA
+# /etc/X11/xorg.conf file for SIS_671 with LCD panel 1280x800@60
+# using XAA accelerator for 2D/video acceleration
 
 Section "Files"
 	ModulePath   "/usr/lib/xorg/modules"
@@ -9,7 +10,6 @@ EndSection
 
 Section "Module"
 	Load         "glx"
-	Load         "dri"
 EndSection
 
 Section "Monitor"
@@ -31,7 +31,7 @@ Section "Device"
         Option     "Accel"              	"true"
         Option     "TurboQueue"         	"true"
         Option     "RenderAcceleration" 	"true"
-        Option     "DRI"                	"true"
+        Option     "DRI"                	"false"
         #Option     "AGPSize"            	# <i>
         #Option     "GARTSize"           	# <i>
         Option     "ShadowFB"           	"false"
@@ -54,7 +54,7 @@ Section "Device"
         #Option     "ForceCRT2Type"      	# <str>
         Option     "CRT2Detection"      	"true"
         #Option     "CRT1LCD"            	# [<bool>]
-        #Option     "ForceCRT2ReDetection" 	# [<bool>]
+        Option     "ForceCRT2ReDetection" 	"true"
         #Option     "EnableHotkey"       	# [<bool>]
         #Option     "ForceCRT1VGAAspect" 	# <str>
         #Option     "ForceCRT2VGAAspect" 	# <str>

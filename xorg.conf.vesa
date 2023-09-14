@@ -21,7 +21,8 @@ Section "Device"
         ### [arg]: arg optional
         Option     "ShadowFB"           	"true"
         Option     "DefaultRefresh"     	"true"
-        Option     "ModeSetClearScreen" 	"true"
+        #Option     "ModeSetClearScreen" 	"true"
+        Option     "DRI"                	"false"
 	Identifier  "Card0"
 	Driver      "vesa"
 	BusID       "PCI:1:0:0"
@@ -33,8 +34,34 @@ Section "Screen"
 	Monitor    "Monitor0"
 	SubSection "Display"
 		Viewport   0 0
+		Depth     1
+	EndSubSection
+	SubSection "Display"
+		Viewport   0 0
+		Depth     4
+	EndSubSection
+	SubSection "Display"
+		Viewport   0 0
+		Depth     8
+	EndSubSection
+	SubSection "Display"
+		Viewport   0 0
+		Depth     15
+	EndSubSection
+	SubSection "Display"
+		Viewport   0 0
+		Depth     16
+	EndSubSection
+	SubSection "Display"
+		Viewport   0 0
 		Depth     24
-		Modes     "1280x800@60"    "1024x768@60"    "800x600@60"    "640x480@60"
 	EndSubSection
 EndSection
 
+Section "DRI"
+	Mode 0666
+EndSection
+
+Section "ServerFlags"
+	Option        "IgnoreABI"	"true"
+EndSection
