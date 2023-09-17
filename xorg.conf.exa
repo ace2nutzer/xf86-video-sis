@@ -1,5 +1,5 @@
 # /etc/X11/xorg.conf file for SIS_671 with LCD panel 1280x800@60
-# using EXA accelerator for 2D/video acceleration
+# using ShadowFB
 
 Section "Files"
 	ModulePath   "/usr/lib/xorg/modules"
@@ -34,7 +34,7 @@ Section "Device"
         Option     "DRI"                	"false"
         #Option     "AGPSize"            	# <i>
         #Option     "GARTSize"           	# <i>
-        Option     "ShadowFB"           	"false"
+        Option     "ShadowFB"                   "true"
         #Option     "Rotate"             	# <str>
         #Option     "Reflect"            	# <str>
         Option     "EnableSiSCtrl"      	"false"
@@ -174,4 +174,8 @@ EndSection
 
 Section "ServerFlags"
 	Option        "IgnoreABI"	"true"
+EndSection
+
+Section "Extensions"
+    Option "Composite" "enable"
 EndSection

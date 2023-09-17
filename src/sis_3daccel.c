@@ -49,8 +49,6 @@
 
 #define DEV_HEIGHT	0xfff	/* "Device height of destination bitmap" */
 
-#undef SIS_NEED_ARRAY
-
 /* For XAA */
 
 #ifdef SIS_USE_XAA
@@ -61,32 +59,14 @@
 # ifdef RENDER
 #  include "mipict.h"
 #  include "dixstruct.h"
-#  define SIS_NEED_ARRAY
 #  undef SISNEWRENDER
-#  ifdef XORG_VERSION_CURRENT
 #   ifdef XORG_NEW
 #    define SISNEWRENDER
 #   endif
-#  endif
 # endif
 #endif
 
 #endif /* XAA */
-
-/* For EXA */
-
-#ifdef SIS_USE_EXA
-#if 0
-#define SIS_HAVE_COMPOSITE		/* Have our own EXA composite */
-#endif
-#ifdef SIS_HAVE_COMPOSITE
-#if 0
-#ifndef SIS_NEED_ARRAY
-#define SIS_NEED_ARRAY
-#endif
-#endif
-#endif
-#endif
 
 #if defined(SIS_USE_XAA) && defined(INCL_RENDER) && defined(RENDER)  /* XAA */
 static CARD32 SiSAlphaTextureFormats[2] = { PICT_a8      , 0 };

@@ -929,8 +929,8 @@ SiSAccelInit(ScreenPtr pScreen)
 	     return FALSE;
           }
 
-          /* Reserve locked offscreen scratch area of 64K for glyph data */
-	  pSiS->exa_scratch = exaOffscreenAlloc(pScreen, 64 * 1024, 16, TRUE,
+          /* Reserve locked offscreen scratch area of 128K for glyph data */
+	  pSiS->exa_scratch = exaOffscreenAlloc(pScreen, 128 * 1024, 16, TRUE,
 						SiSScratchSave, pSiS);
 	  if(pSiS->exa_scratch) {
 	     pSiS->exa_scratch_next = pSiS->exa_scratch->offset;

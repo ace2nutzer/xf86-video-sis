@@ -884,15 +884,15 @@ SiSPrintLogHeader(ScrnInfoPtr pScrn)
      */
 
     xf86DrvMsg(pScrn->scrnIndex, X_INFO,
-	"SiS driver (%d/%02d/%02d-%d, compiled for " SISMYSERVERNAME " %d.%d.%d.%d)\n",
+	"SiS driver (%d/%02d/%02d-%d, compiled for " SISMYSERVERNAME " %d.%d.%d)\n",
 	SISDRIVERVERSIONYEAR + 2000, SISDRIVERVERSIONMONTH,
 	SISDRIVERVERSIONDAY, SISDRIVERREVISION,
 #ifdef XORG_VERSION_CURRENT
 	XORG_VERSION_MAJOR, XORG_VERSION_MINOR,
-	XORG_VERSION_PATCH, XORG_VERSION_SNAP
+	XORG_VERSION_PATCH
 #else
 	XF86_VERSION_MAJOR, XF86_VERSION_MINOR,
-	XF86_VERSION_PATCH, XF86_VERSION_SNAP
+	XF86_VERSION_PATCH
 #endif
 	);
 
@@ -6465,7 +6465,7 @@ SISWaitVBRetrace(ScrnInfoPtr pScrn)
    }
 }
 
-/* Enable the Turboqueue/Commandqueue (For 300 series and later only) */
+/* Enable the Turboqueue/Commandqueue (For 300 and 315/330/340 series only) */
 static void
 SiSEnableTurboQueue(ScrnInfoPtr pScrn)
 {
@@ -6489,8 +6489,8 @@ SiSEnableTurboQueue(ScrnInfoPtr pScrn)
 
 	case SIS_315_VGA:
 	   if(!pSiS->NoAccel) {
-	      /* On 315/330/340/350 series, there are three queue modes
-	       * available which are chosen by setting bits 7:5 in SR26:
+	      /* On 315/330/340 series, there are three queue modes available
+	       * which are chosen by setting bits 7:5 in SR26:
 	       * 1. MMIO queue mode (bit 5, 0x20). The hardware will keep
 	       *    track of the queue, the FIFO, command parsing and so
 	       *    on. This is the one comparable to the 300 series.
@@ -6553,7 +6553,7 @@ SiSEnableTurboQueue(ScrnInfoPtr pScrn)
 	      pSiS->cmdQueueBase = (unsigned int *)temp;
 	      outSISIDXREG(SISCR, 0x55, tempCR55);
 #ifdef TWDEBUG
-+	      xf86DrvMsg(0, 0, "CmdQueueOffs 0x%x, CmdQueueAdd %p, shwrp 0x%x, status %lx, base %p\n",
+		xf86DrvMsg(0, 0, "CmdQueueOffs 0x%x, CmdQueueAdd %p, shwrp 0x%x, status %lx, base %p\n",
 		pSiS->cmdQueueOffset, pSiS->cmdQueueBase, *(pSiS->cmdQ_SharedWritePort),
 		SIS_MMIO_IN32(pSiS->IOBase, 0x85cc), (ULong *)temp);
 #endif

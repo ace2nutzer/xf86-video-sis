@@ -41,9 +41,11 @@
 #define SIS_NEED_ACCELBUF
 #include "sis_regs.h"
 #include "sis310_accel.h"
-/*
+
+#if 0
 #define ACCELDEBUG
-*/
+#endif
+
 #define FBOFFSET 	(pSiS->dhmOffset)
 
 #define DEV_HEIGHT	0xfff	/* "Device height of destination bitmap" */
@@ -75,11 +77,11 @@
 /* For EXA */
 
 #ifdef SIS_USE_EXA
-#if 0
+#if 1
 #define SIS_HAVE_COMPOSITE		/* Have our own EXA composite */
 #endif
 #ifdef SIS_HAVE_COMPOSITE
-#if 0
+#if 1
 #ifndef SIS_NEED_ARRAY
 #define SIS_NEED_ARRAY
 #endif
@@ -228,7 +230,7 @@ SiSSync(ScrnInfoPtr pScrn)
 static CARD32
 SISSiSUpdateQueue(SISPtr pSiS, CARD32 ttt, pointer tt)
 {
-	SiSUpdateQueue
+	SiSUpdateQueue;
 
 	return ttt;
 }
@@ -290,29 +292,29 @@ SiSSetupForScreenToScreenCopy(ScrnInfoPtr pScrn,
 #ifdef SISVRAMQ
 	SiSSetupDSTColorDepth(pSiS->SiS310_AccelDepth);
 	SiSCheckQueue(16 * 2);
-	SiSSetupSRCPitchDSTRect(pSiS->scrnOffset, pSiS->scrnOffset, DEV_HEIGHT)
+	SiSSetupSRCPitchDSTRect(pSiS->scrnOffset, pSiS->scrnOffset, DEV_HEIGHT);
 #else
 	SiSSetupDSTColorDepth(pSiS->DstColor);
-	SiSSetupSRCPitch(pSiS->scrnOffset)
-	SiSSetupDSTRect(pSiS->scrnOffset, DEV_HEIGHT)
+	SiSSetupSRCPitch(pSiS->scrnOffset);
+	SiSSetupDSTRect(pSiS->scrnOffset, DEV_HEIGHT);
 #endif
 
 	if(trans_color != -1) {
-	   SiSSetupROP(0x0A)
-	   SiSSetupSRCTrans(trans_color)
-	   SiSSetupCMDFlag(TRANSPARENT_BITBLT)
+	   SiSSetupROP(0x0A);
+	   SiSSetupSRCTrans(trans_color);
+	   SiSSetupCMDFlag(TRANSPARENT_BITBLT);
 	} else {
-	   SiSSetupROP(SiSGetCopyROP(rop))
+	   SiSSetupROP(SiSGetCopyROP(rop));
 	   /* Set command - not needed, both 0 */
 	   /* SiSSetupCMDFlag(BITBLT | SRCVIDEO) */
 	}
 
 #ifndef SISVRAMQ
-	SiSSetupCMDFlag(pSiS->SiS310_AccelDepth)
+	SiSSetupCMDFlag(pSiS->SiS310_AccelDepth);
 #endif
 
 #ifdef SISVRAMQ
-	SiSSyncWP
+	SiSSyncWP;
 #endif
 	SiSReleaseCmdQue(pSiS);
 
@@ -396,16 +398,16 @@ SiSSubsequentScreenToScreenCopy(ScrnInfoPtr pScrn,
 	SiSOccpyCmdQue(pSiS);
 #ifdef SISVRAMQ
 	SiSCheckQueue(16 * 3);
-	SiSSetupSRCDSTBase(srcbase, dstbase)
-	SiSSetupSRCDSTXY(src_x, src_y, dst_x, dst_y)
-	SiSSetRectDoCMD(width,height)
+	SiSSetupSRCDSTBase(srcbase, dstbase);
+	SiSSetupSRCDSTXY(src_x, src_y, dst_x, dst_y);
+	SiSSetRectDoCMD(width,height);
 #else
 	SiSSetupSRCBase(srcbase);
 	SiSSetupDSTBase(dstbase);
-	SiSSetupRect(width, height)
-	SiSSetupSRCXY(src_x, src_y)
-	SiSSetupDSTXY(dst_x, dst_y)
-	SiSDoCMD
+	SiSSetupRect(width, height);
+	SiSSetupSRCXY(src_x, src_y);
+	SiSSetupDSTXY(dst_x, dst_y);
+	SiSDoCMD;
 #endif
 	SiSReleaseCmdQue(pSiS);
 
@@ -431,16 +433,16 @@ SiSSetupForSolidFill(ScrnInfoPtr pScrn, int color,
 #ifdef SISVRAMQ
 	SiSSetupDSTColorDepth(pSiS->SiS310_AccelDepth);
 	SiSCheckQueue(16 * 1);
-	SiSSetupPATFGDSTRect(color, pSiS->scrnOffset, DEV_HEIGHT)
-	SiSSetupROP(SiSGetPatternROP(rop))
-	SiSSetupCMDFlag(PATFG)
-	SiSSyncWP
+	SiSSetupPATFGDSTRect(color, pSiS->scrnOffset, DEV_HEIGHT);
+	SiSSetupROP(SiSGetPatternROP(rop));
+	SiSSetupCMDFlag(PATFG);
+	SiSSyncWP;
 #else
-	SiSSetupPATFG(color)
-	SiSSetupDSTRect(pSiS->scrnOffset, DEV_HEIGHT)
+	SiSSetupPATFG(color);
+	SiSSetupDSTRect(pSiS->scrnOffset, DEV_HEIGHT);
 	SiSSetupDSTColorDepth(pSiS->DstColor);
-	SiSSetupROP(SiSGetPatternROP(rop))
-	SiSSetupCMDFlag(PATFG | pSiS->SiS310_AccelDepth)
+	SiSSetupROP(SiSGetPatternROP(rop));
+	SiSSetupCMDFlag(PATFG | pSiS->SiS310_AccelDepth);
 #endif
 	SiSReleaseCmdQue(pSiS);
 }
@@ -472,14 +474,14 @@ SiSSubsequentSolidFillRect(ScrnInfoPtr pScrn,
 
 	SiSOccpyCmdQue(pSiS);
 #ifdef SISVRAMQ
-	SiSCheckQueue(16 * 2)
-	SiSSetupDSTXYRect(x, y, w, h)
-	SiSSetupDSTBaseDoCMD(dstbase)
+	SiSCheckQueue(16 * 2);
+	SiSSetupDSTXYRect(x, y, w, h);
+	SiSSetupDSTBaseDoCMD(dstbase);
 #else
-	SiSSetupDSTBase(dstbase)
-	SiSSetupDSTXY(x, y)
-	SiSSetupRect(w, h)
-	SiSDoCMD
+	SiSSetupDSTBase(dstbase);
+	SiSSetupDSTXY(x, y);
+	SiSSetupRect(w, h);
+	SiSDoCMD;
 #endif
 	SiSReleaseCmdQue(pSiS);
 }
@@ -500,18 +502,18 @@ SiSSetupForSolidLine(ScrnInfoPtr pScrn, int color, int rop,
 #ifdef SISVRAMQ
 	SiSSetupDSTColorDepth(pSiS->SiS310_AccelDepth);
 	SiSCheckQueue(16 * 3);
-	SiSSetupLineCountPeriod(1, 1)
-	SiSSetupPATFGDSTRect(color, pSiS->scrnOffset, DEV_HEIGHT)
-	SiSSetupROP(SiSGetPatternROP(rop))
-	SiSSetupCMDFlag(PATFG | LINE)
-	SiSSyncWP
+	SiSSetupLineCountPeriod(1, 1);
+	SiSSetupPATFGDSTRect(color, pSiS->scrnOffset, DEV_HEIGHT);
+	SiSSetupROP(SiSGetPatternROP(rop));
+	SiSSetupCMDFlag(PATFG | LINE);
+	SiSSyncWP;
 #else
-	SiSSetupLineCount(1)
-	SiSSetupPATFG(color)
-	SiSSetupDSTRect(pSiS->scrnOffset, DEV_HEIGHT)
-	SiSSetupDSTColorDepth(pSiS->DstColor)
-	SiSSetupROP(SiSGetPatternROP(rop))
-	SiSSetupCMDFlag(PATFG | LINE | pSiS->SiS310_AccelDepth)
+	SiSSetupLineCount(1);
+	SiSSetupPATFG(color);
+	SiSSetupDSTRect(pSiS->scrnOffset, DEV_HEIGHT);
+	SiSSetupDSTColorDepth(pSiS->DstColor);
+	SiSSetupROP(SiSGetPatternROP(rop));
+	SiSSetupCMDFlag(PATFG | LINE | pSiS->SiS310_AccelDepth);
 #endif
 	SiSReleaseCmdQue(pSiS);
 }
@@ -539,7 +541,7 @@ SiSSubsequentSolidTwoPointLine(ScrnInfoPtr pScrn,
 	dstbase += FBOFFSET;
 
 	if(flags & OMIT_LAST) {
-	   SiSSetupCMDFlag(NO_LAST_PIXEL)
+	   SiSSetupCMDFlag(NO_LAST_PIXEL);
 	} else {
 	   pSiS->CommandReg &= ~(NO_LAST_PIXEL);
 	}
@@ -547,13 +549,13 @@ SiSSubsequentSolidTwoPointLine(ScrnInfoPtr pScrn,
 	SiSOccpyCmdQue(pSiS);
 #ifdef SISVRAMQ
 	SiSCheckQueue(16 * 2);
-	SiSSetupX0Y0X1Y1(x1, y1, x2, y2)
-	SiSSetupDSTBaseDoCMD(dstbase)
+	SiSSetupX0Y0X1Y1(x1, y1, x2, y2);
+	SiSSetupDSTBaseDoCMD(dstbase);
 #else
-	SiSSetupDSTBase(dstbase)
-	SiSSetupX0Y0(x1, y1)
-	SiSSetupX1Y1(x2, y2)
-	SiSDoCMD
+	SiSSetupDSTBase(dstbase);
+	SiSSetupX0Y0(x1, y1);
+	SiSSetupX1Y1(x2, y2);
+	SiSDoCMD;
 #endif
 	SiSReleaseCmdQue(pSiS);
 }
@@ -582,20 +584,20 @@ SiSSubsequentSolidHorzVertLine(ScrnInfoPtr pScrn,
 #ifdef SISVRAMQ
 	SiSCheckQueue(16 * 2);
 	if(dir == DEGREES_0) {
-	   SiSSetupX0Y0X1Y1(x, y, (x + len), y)
+	   SiSSetupX0Y0X1Y1(x, y, (x + len), y);
 	} else {
-	   SiSSetupX0Y0X1Y1(x, y, x, (y + len))
+	   SiSSetupX0Y0X1Y1(x, y, x, (y + len));
 	}
-	SiSSetupDSTBaseDoCMD(dstbase)
+	SiSSetupDSTBaseDoCMD(dstbase);
 #else
-	SiSSetupDSTBase(dstbase)
-	SiSSetupX0Y0(x,y)
+	SiSSetupDSTBase(dstbase);
+	SiSSetupX0Y0(x,y);
 	if(dir == DEGREES_0) {
 	   SiSSetupX1Y1(x + len, y);
 	} else {
 	   SiSSetupX1Y1(x, y + len);
 	}
-	SiSDoCMD
+	SiSDoCMD;
 #endif
 	SiSReleaseCmdQue(pSiS);
 }
@@ -615,34 +617,34 @@ SiSSetupForDashedLine(ScrnInfoPtr pScrn,
 #ifdef SISVRAMQ
 	SiSSetupDSTColorDepth(pSiS->SiS310_AccelDepth);
 	SiSCheckQueue(16 * 3);
-	SiSSetupLineCountPeriod(1, (length - 1))
-	SiSSetupStyle(*pattern,*(pattern + 4))
-	SiSSetupPATFGDSTRect(fg, pSiS->scrnOffset, DEV_HEIGHT)
+	SiSSetupLineCountPeriod(1, (length - 1));
+	SiSSetupStyle(*pattern,*(pattern + 4));
+	SiSSetupPATFGDSTRect(fg, pSiS->scrnOffset, DEV_HEIGHT);
 #else
-	SiSSetupLineCount(1)
-	SiSSetupDSTRect(pSiS->scrnOffset, DEV_HEIGHT)
+	SiSSetupLineCount(1);
+	SiSSetupDSTRect(pSiS->scrnOffset, DEV_HEIGHT);
 	SiSSetupDSTColorDepth(pSiS->DstColor);
-	SiSSetupStyleLow(*pattern)
-	SiSSetupStyleHigh(*(pattern + 4))
+	SiSSetupStyleLow(*pattern);
+	SiSSetupStyleHigh(*(pattern + 4));
 	SiSSetupStylePeriod(length - 1);
-	SiSSetupPATFG(fg)
+	SiSSetupPATFG(fg);
 #endif
 
-	SiSSetupROP(SiSGetPatternROP(rop))
+	SiSSetupROP(SiSGetPatternROP(rop));
 
-	SiSSetupCMDFlag(LINE | LINE_STYLE)
+	SiSSetupCMDFlag(LINE | LINE_STYLE);
 
 	if(bg != -1) {
-	   SiSSetupPATBG(bg)
+	   SiSSetupPATBG(bg);
 	} else {
-	   SiSSetupCMDFlag(TRANSPARENT)
+	   SiSSetupCMDFlag(TRANSPARENT);
 	}
 #ifndef SISVRAMQ
-	SiSSetupCMDFlag(pSiS->SiS310_AccelDepth)
+	SiSSetupCMDFlag(pSiS->SiS310_AccelDepth);
 #endif
 
 #ifdef SISVRAMQ
-        SiSSyncWP
+        SiSSyncWP;
 #endif
 	SiSReleaseCmdQue(pSiS);
 }
@@ -679,13 +681,13 @@ SiSSubsequentDashedTwoPointLine(ScrnInfoPtr pScrn,
 	SiSOccpyCmdQue(pSiS);
 #ifdef SISVRAMQ
 	SiSCheckQueue(16 * 2);
-	SiSSetupX0Y0X1Y1(x1, y1, x2, y2)
-	SiSSetupDSTBaseDoCMD(dstbase)
+	SiSSetupX0Y0X1Y1(x1, y1, x2, y2);
+	SiSSetupDSTBaseDoCMD(dstbase);
 #else
-	SiSSetupDSTBase(dstbase)
-	SiSSetupX0Y0(x1, y1)
-	SiSSetupX1Y1(x2, y2)
-	SiSDoCMD
+	SiSSetupDSTBase(dstbase);
+	SiSSetupX0Y0(x1, y1);
+	SiSSetupX1Y1(x2, y2);
+	SiSDoCMD;
 #endif
 	SiSReleaseCmdQue(pSiS);
 }
@@ -705,31 +707,31 @@ SiSSetupForMonoPatternFill(ScrnInfoPtr pScrn,
 #ifdef SISVRAMQ
 	SiSSetupDSTColorDepth(pSiS->SiS310_AccelDepth);
 	SiSCheckQueue(16 * 3);
-	SiSSetupPATFGDSTRect(fg, pSiS->scrnOffset, DEV_HEIGHT)
+	SiSSetupPATFGDSTRect(fg, pSiS->scrnOffset, DEV_HEIGHT);
 #else
-	SiSSetupDSTRect(pSiS->scrnOffset, DEV_HEIGHT)
+	SiSSetupDSTRect(pSiS->scrnOffset, DEV_HEIGHT);
 	SiSSetupDSTColorDepth(pSiS->DstColor);
 #endif
 
-	SiSSetupMONOPAT(patx,paty)
+	SiSSetupMONOPAT(patx,paty);
 
-	SiSSetupROP(SiSGetPatternROP(rop))
+	SiSSetupROP(SiSGetPatternROP(rop));
 
 #ifdef SISVRAMQ
-	SiSSetupCMDFlag(PATMONO)
+	SiSSetupCMDFlag(PATMONO);
 #else
-	SiSSetupPATFG(fg)
-	SiSSetupCMDFlag(PATMONO | pSiS->SiS310_AccelDepth)
+	SiSSetupPATFG(fg);
+	SiSSetupCMDFlag(PATMONO | pSiS->SiS310_AccelDepth);
 #endif
 
 	if(bg != -1) {
-	   SiSSetupPATBG(bg)
+	   SiSSetupPATBG(bg);
 	} else {
-	   SiSSetupCMDFlag(TRANSPARENT)
+	   SiSSetupCMDFlag(TRANSPARENT);
 	}
 
 #ifdef SISVRAMQ
-	SiSSyncWP
+	SiSSyncWP;
 #endif
 	SiSReleaseCmdQue(pSiS);
 
@@ -764,13 +766,13 @@ SiSSubsequentMonoPatternFill(ScrnInfoPtr pScrn,
 	SiSOccpyCmdQue(pSiS);
 #ifdef SISVRAMQ
 	SiSCheckQueue(16 * 2);
-	SiSSetupDSTXYRect(x,y,w,h)
-	SiSSetupDSTBaseDoCMD(dstbase)
+	SiSSetupDSTXYRect(x,y,w,h);
+	SiSSetupDSTBaseDoCMD(dstbase);
 #else
-	SiSSetupDSTBase(dstbase)
-	SiSSetupDSTXY(x,y)
-	SiSSetupRect(w,h)
-	SiSDoCMD
+	SiSSetupDSTBase(dstbase);
+	SiSSetupDSTXY(x,y);
+	SiSSetupRect(w,h);
+	SiSDoCMD;
 #endif
 	SiSReleaseCmdQue(pSiS);
 
@@ -1125,9 +1127,9 @@ SiSSetupForCPUToScreenTexture(ScrnInfoPtr pScrn,
 	case PictOpDisjointClear:
 	case PictOpConjointClear:
 #endif
-	   SiSSetupPATFGDSTRect(0, pSiS->scrnOffset, DEV_HEIGHT)
+	   SiSSetupPATFGDSTRect(0, pSiS->scrnOffset, DEV_HEIGHT);
 	   /* SiSSetupROP(0x00) - is already zero */
-	   SiSSetupCMDFlag(PATFG)
+	   SiSSetupCMDFlag(PATFG);
 	   docopy = FALSE;
 	   break;
 	case PictOpSrc:
@@ -1213,19 +1215,19 @@ SiSSubsequentCPUToScreenTexture(ScrnInfoPtr pScrn,
 
 	SiSOccpyCmdQue(pSiS);
 #ifdef SISVRAMQ
-	SiSCheckQueue(16 * 3)
-	if(pSiS->ChipType == SIS_770)	
-		SiSSetupSafeReg(0x26a90000)
+	SiSCheckQueue(16 * 3);
+	if(pSiS->ChipType == SIS_770)
+		SiSSetupSafeReg(0x26a90000);
 	SiSSetupSRCDSTBase(srcbase,dstbase);
-	SiSSetupSRCDSTXY(src_x, src_y, dst_x, dst_y)
-	SiSSetRectDoCMD(width,height)
+	SiSSetupSRCDSTXY(src_x, src_y, dst_x, dst_y);
+	SiSSetRectDoCMD(width,height);
 #else
 	SiSSetupSRCBase(srcbase);
 	SiSSetupDSTBase(dstbase);
-	SiSSetupRect(width, height)
-	SiSSetupSRCXY(src_x, src_y)
-	SiSSetupDSTXY(dst_x, dst_y)
-	SiSDoCMD
+	SiSSetupRect(width, height);
+	SiSSetupSRCXY(src_x, src_y);
+	SiSSetupDSTXY(dst_x, dst_y);
+	SiSDoCMD;
 #endif
 	SiSReleaseCmdQue(pSiS);
 
@@ -1242,7 +1244,7 @@ SiSEXASync(ScreenPtr pScreen, int marker)
 {
 	SISPtr pSiS = SISPTR(xf86ScreenToScrn(pScreen));
 
-	SiSIdle
+	SiSIdle;
 }
 
 static Bool
@@ -1280,10 +1282,12 @@ SiSPrepareSolid(PixmapPtr pPixmap, int alu, Pixel planemask, Pixel fg)
 
 	SiSSetupDSTColorDepth((pPixmap->drawable.bitsPerPixel >> 4) << 16);
 	SiSCheckQueue(16 * 1);
-	SiSSetupPATFGDSTRect(fg, pitch, DEV_HEIGHT)
-	SiSSetupROP(SiSGetPatternROP(alu))
-	SiSSetupCMDFlag(PATFG)
-	SiSSyncWP
+#ifdef SISVRAMQ
+	SiSSetupPATFGDSTRect(fg, pitch, DEV_HEIGHT);
+#endif
+	SiSSetupROP(SiSGetPatternROP(alu));
+	SiSSetupCMDFlag(PATFG);
+	SiSSyncWP;
 
 	pSiS->fillDstBase = (CARD32)exaGetPixmapOffset(pPixmap) + FBOFFSET;
 
@@ -1298,9 +1302,11 @@ SiSSolid(PixmapPtr pPixmap, int x1, int y1, int x2, int y2)
 
 	/* SiSSetupCMDFlag(BITBLT)  - BITBLT = 0 */
 
-	SiSCheckQueue(16 * 2)
-	SiSSetupDSTXYRect(x1, y1, x2-x1, y2-y1)
-	SiSSetupDSTBaseDoCMD(pSiS->fillDstBase)
+	SiSCheckQueue(16 * 2);
+#ifdef SISVRAMQ
+	SiSSetupDSTXYRect(x1, y1, x2-x1, y2-y1);
+	SiSSetupDSTBaseDoCMD(pSiS->fillDstBase);
+#endif
 }
 
 static void
@@ -1349,10 +1355,14 @@ SiSPrepareCopy(PixmapPtr pSrcPixmap, PixmapPtr pDstPixmap, int xdir, int ydir,
 
 	SiSSetupDSTColorDepth((pDstPixmap->drawable.bitsPerPixel >> 4) << 16);
 	SiSCheckQueue(16 * 3);
-	SiSSetupSRCPitchDSTRect(srcpitch, dstpitch, DEV_HEIGHT)
-	SiSSetupROP(SiSGetCopyROP(alu))
-	SiSSetupSRCDSTBase(srcbase, dstbase)
-	SiSSyncWP
+#ifdef SISVRAMQ
+	SiSSetupSRCPitchDSTRect(srcpitch, dstpitch, DEV_HEIGHT);
+#endif
+	SiSSetupROP(SiSGetCopyROP(alu));
+#ifdef SISVRAMQ
+	SiSSetupSRCDSTBase(srcbase, dstbase);
+#endif
+	SiSSyncWP;
 
 	return TRUE;
 }
@@ -1364,8 +1374,10 @@ SiSCopy(PixmapPtr pDstPixmap, int srcX, int srcY, int dstX, int dstY, int width,
 	SISPtr pSiS = SISPTR(pScrn);
 
 	SiSCheckQueue(16 * 2);
-	SiSSetupSRCDSTXY(srcX, srcY, dstX, dstY)
-	SiSSetRectDoCMD(width, height)
+#ifdef SISVRAMQ
+	SiSSetupSRCDSTXY(srcX, srcY, dstX, dstY);
+	SiSSetRectDoCMD(width, height);
+#endif
 }
 
 static void
@@ -1378,22 +1390,23 @@ static Bool
 SiSCheckComposite(int op, PicturePtr pSrcPicture, PicturePtr pMaskPicture,
 				PicturePtr pDstPicture)
 {
-	ScrnInfoPtr pScrn = xf86ScreenToScrn(pDstPicture->pDrawable->pScreen);
-	SISPtr pSiS = SISPTR(pScrn);
-
-	xf86DrvMsg(0, 0, "CC: %d Src %x (fi %d ca %d) Msk %x (%d %d) Dst %x (%d %d)\n",
+	//ScrnInfoPtr pScrn = xf86ScreenToScrn(pDstPicture->pDrawable->pScreen);
+	//SISPtr pSiS = SISPTR(pScrn);
+/*
+	xf86DrvMsg(0, X_INFO, "CC: %d Src %x (fi %d ca %d) Msk %x (%d %d) Dst %x (%d %d)\n",
 		op, pSrcPicture->format, pSrcPicture->filter, pSrcPicture->componentAlpha,
 		pMaskPicture ? pMaskPicture->format : 0x2011, pMaskPicture ? pMaskPicture->filter : -1,
 			pMaskPicture ? pMaskPicture->componentAlpha : -1,
 		pDstPicture->format, pDstPicture->filter, pDstPicture->componentAlpha);
-
+*/
+#ifdef ACCELDEBUG
 	if(pSrcPicture->transform || (pMaskPicture && pMaskPicture->transform) || pDstPicture->transform) {
-		xf86DrvMsg(0, 0, "CC: src tr %p msk %p dst %p  !!!!!!!!!!!!!!!\n",
+		xf86DrvMsg(0, X_WARNING, "CC: src tr %p msk %p dst %p  !!!!!!!!!!!!!!!\n",
 			pSrcPicture->transform,
 			pMaskPicture ? pMaskPicture->transform : 0,
 			pDstPicture->transform);
         }
-
+#endif
 	return FALSE;
 }
 
@@ -1401,10 +1414,13 @@ static Bool
 SiSPrepareComposite(int op, PicturePtr pSrcPicture, PicturePtr pMaskPicture,
 				PicturePtr pDstPicture, PixmapPtr pSrc, PixmapPtr pMask, PixmapPtr pDst)
 {
-#if 0
-	ScrnInfoPtr pScrn = xf86ScreenToScrn(pDst->drawable.pScreen);
-	SISPtr pSiS = SISPTR(pScrn);
+	//ScrnInfoPtr pScrn = xf86ScreenToScrn(pDst->drawable.pScreen);
+	//SISPtr pSiS = SISPTR(pScrn);
+
+#ifdef ACCELDEBUG
+	xf86DrvMsg(0, X_INFO, "calling SiSPrepareComposite\n");
 #endif
+
 	return FALSE;
 }
 
@@ -1412,9 +1428,11 @@ static void
 SiSComposite(PixmapPtr pDst, int srcX, int srcY, int maskX, int maskY, int dstX, int dstY,
 				int width, int height)
 {
-#if 0
-	ScrnInfoPtr pScrn = xf86ScreenToScrn(pDst->drawable.pScreen);
-	SISPtr pSiS = SISPTR(pScrn);
+	//ScrnInfoPtr pScrn = xf86ScreenToScrn(pDst->drawable.pScreen);
+	//SISPtr pSiS = SISPTR(pScrn);
+
+#ifdef ACCELDEBUG
+	xf86DrvMsg(0, X_INFO, "calling SiSComposite\n");
 #endif
 }
 
@@ -1520,15 +1538,14 @@ SiSUploadToScratch(PixmapPtr pSrc, PixmapPtr pDst)
 void
 SISWriteBlitPacket(SISPtr pSiS, CARD32 *packet)
 {
-	CARD32 dummybuf;
-
+#ifdef SISVRAMQ
 	SiSWritePacketPart(packet[0], packet[1], packet[2], packet[3]);
 	SiSWritePacketPart(packet[4], packet[5], packet[6], packet[7]);
 	SiSWritePacketPart(packet[8], packet[9], packet[10], packet[11]);
 	SiSWritePacketPart(packet[12], packet[13], packet[14], packet[15]);
 	SiSWritePacketPart(packet[16], packet[17], packet[18], packet[19]);
+#endif
 	SiSSyncWP;
-	(void)dummybuf; /* Suppress compiler warning */
 }
 
 
@@ -1714,9 +1731,7 @@ SiS315AccelInit(ScreenPtr pScreen)
 	      pSiS->EXADriverPtr->card.memoryBase = pSiS->FbBase;
 	      pSiS->EXADriverPtr->card.memorySize = pSiS->maxxfbmem;
 
-	      if(!obase) {
-	         obase = pScrn->displayWidth * pScrn->virtualY * (pScrn->bitsPerPixel >> 3);
-	      }
+	      obase = pScrn->displayWidth * pScrn->virtualY * (pScrn->bitsPerPixel >> 3);
 
 	      pSiS->EXADriverPtr->card.offScreenBase = obase;
 	      if(pSiS->EXADriverPtr->card.memorySize > pSiS->EXADriverPtr->card.offScreenBase) {
@@ -1810,7 +1825,7 @@ SiS315AccelInit(ScreenPtr pScreen)
 #endif /*end of Xorg>=7.0*/ 
 	   
 	   }
-#endif /*end of EXA accelation*/
+#endif /*end of EXA acceleration*/
 	}  /* NoAccel */
 
 	/* Init framebuffer memory manager */

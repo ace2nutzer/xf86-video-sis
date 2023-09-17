@@ -1212,6 +1212,7 @@ SiS300AccelInit(ScreenPtr pScreen)
 			"Virtual screen width too large for accelerator engine\n");
 		 xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
 			"\t2D acceleration and Xv disabled\n");
+		 pSiS->NoAccel = TRUE;
 		 pSiS->NoXvideo = TRUE;
 
 	      }
@@ -1414,17 +1415,14 @@ SiS300AccelInit(ScreenPtr pScreen)
 	      pSiS->exa_scratch = exaOffscreenAlloc(pScreen, 128 * 1024, 16, TRUE,
 						SiSScratchSave, pSiS);
     
+              if(pSiS->exa_scratch) {
+		 pSiS->exa_scratch_next = pSiS->exa_scratch->offset;
 #ifndef XORG_NEW
-              if(pSiS->exa_scratch) {
-		 pSiS->exa_scratch_next = pSiS->exa_scratch->offset;
 		 pSiS->EXADriverPtr->accel.UploadToScratch = SiSUploadToScratch;
-	      }
 #else
-              if(pSiS->exa_scratch) {
-		 pSiS->exa_scratch_next = pSiS->exa_scratch->offset;
 		 pSiS->EXADriverPtr->UploadToScratch = SiSUploadToScratch;
-	      }
 #endif
+	      }
 
 	   } else {
 

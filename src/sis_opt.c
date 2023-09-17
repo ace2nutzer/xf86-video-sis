@@ -752,10 +752,9 @@ SiSOptions(ScrnInfoPtr pScrn)
     }
 #endif
 
-    /* RenderAcceleration (for XAA only)
+    /* RenderAcceleration
      * En/Disables RENDER acceleration (315 and later only, not 550, not XGI Z7)
      */
-#ifdef SIS_USE_XAA
     if((pSiS->VGAEngine == SIS_315_VGA)   &&
        (pSiS->Chipset != PCI_CHIP_SIS550) &&
        (pSiS->Chipset != PCI_CHIP_XGIXG20) &&
@@ -766,10 +765,6 @@ SiSOptions(ScrnInfoPtr pScrn)
 	  }
        }
     }
-#else
-    pSiS->doRender = FALSE;
-#endif
-
 
     /* SWCursor, HWCursor
      * Chooses whether to use the hardware or software cursor
