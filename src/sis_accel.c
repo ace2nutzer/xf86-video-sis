@@ -51,9 +51,13 @@
 
 #endif /* XAA */
 
-#ifdef SIS_USE_EXA
+#ifdef SIS_USE_EXA		/* EXA */
+#ifndef XORG_NEW
 extern void SiSScratchSave(ScreenPtr pScreen, ExaOffscreenArea *area);
 extern Bool SiSUploadToScratch(PixmapPtr pSrc, PixmapPtr pDst);
+#endif
+extern Bool SiSUploadToScreen(PixmapPtr pDst, int x, int y, int w, int h, char *src, int src_pitch);
+extern Bool SiSDownloadFromScreen(PixmapPtr pSrc, int x, int y, int w, int h, char *dst, int dst_pitch);
 #endif /* EXA */
 
 extern UChar SiSGetCopyROP(int rop);
@@ -814,6 +818,10 @@ SiSAccelInit(ScreenPtr pScreen)
 	  pSiS->EXADriverPtr->accel.Copy = SiSCopy;
 	  pSiS->EXADriverPtr->accel.DoneCopy = SiSDoneCopy;
 
+	  /* Upload, download to/from Screen */
+	  pSiS->EXADriverPtr->accel.UploadToScreen = SiSUploadToScreen;
+	  pSiS->EXADriverPtr->accel.DownloadFromScreen = SiSDownloadFromScreen;
+
 	  /* Composite not supported */
 
 #else /*xorg>=7.0*/
@@ -850,6 +858,10 @@ SiSAccelInit(ScreenPtr pScreen)
 	  pSiS->EXADriverPtr->PrepareCopy = SiSPrepareCopy;
 	  pSiS->EXADriverPtr->Copy = SiSCopy;
 	  pSiS->EXADriverPtr->DoneCopy = SiSDoneCopy;
+
+	  /* Upload, download to/from Screen */
+	  pSiS->EXADriverPtr->UploadToScreen = SiSUploadToScreen;
+	  pSiS->EXADriverPtr->DownloadFromScreen = SiSDownloadFromScreen;
 
 	  /* Composite not supported */
 
@@ -929,17 +941,16 @@ SiSAccelInit(ScreenPtr pScreen)
 	     return FALSE;
           }
 
+#ifndef XORG_NEW
           /* Reserve locked offscreen scratch area of 128K for glyph data */
 	  pSiS->exa_scratch = exaOffscreenAlloc(pScreen, 128 * 1024, 16, TRUE,
 						SiSScratchSave, pSiS);
 	  if(pSiS->exa_scratch) {
 	     pSiS->exa_scratch_next = pSiS->exa_scratch->offset;
-#ifndef XORG_NEW
              pSiS->EXADriverPtr->accel.UploadToScratch = SiSUploadToScratch;
-#else
-             pSiS->EXADriverPtr->UploadToScratch = SiSUploadToScratch;
-#endif
+             //pSiS->EXADriverPtr->UploadToScratch = SiSUploadToScratch;
 	  }
+#endif
 
        } else {
 

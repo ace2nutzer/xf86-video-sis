@@ -77,13 +77,6 @@ static CARD32 SiSDstTextureFormats32[3] = { PICT_x8r8g8b8, PICT_a8r8g8b8, 0 };
 #endif
 #endif
 
-#ifdef SIS_USE_EXA		/* EXA */
-void SiSScratchSave(ScreenPtr pScreen, ExaOffscreenArea *area);
-Bool SiSUploadToScratch(PixmapPtr pSrc, PixmapPtr pDst);
-#endif /* EXA */
-
-
-
 #define _SHT_PS_SrcNum	        6
 #define _SHT_PS_DstNum	        18
 #define _SHT_PS_DstL   14
