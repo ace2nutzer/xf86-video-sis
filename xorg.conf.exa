@@ -23,6 +23,8 @@ Section "Device"
         ### <percent>: "<f>%"
         ### [arg]: arg optional
 	Option     "AccelMethod"               "EXA"
+	Option     "MigrationHeuristic"        "greedy"
+	Option     "ExaNoComposite"            "true"
         Option     "FastVram"           	"true"
         #Option     "HostBus"            	# [<bool>]
         Option     "BenchmarkMemcpy"    	"false"
@@ -34,7 +36,7 @@ Section "Device"
         Option     "DRI"                	"false"
         #Option     "AGPSize"            	# <i>
         #Option     "GARTSize"           	# <i>
-        Option     "ShadowFB"                   "true"
+        Option     "ShadowFB"                   "false"
         #Option     "Rotate"             	# <str>
         #Option     "Reflect"            	# <str>
         Option     "EnableSiSCtrl"      	"false"
@@ -54,7 +56,7 @@ Section "Device"
         #Option     "ForceCRT2Type"      	# <str>
         Option     "CRT2Detection"      	"true"
         #Option     "CRT1LCD"            	# [<bool>]
-        Option     "ForceCRT2ReDetection" 	"true"
+        #Option     "ForceCRT2ReDetection" 	"true"
         #Option     "EnableHotkey"       	# [<bool>]
         #Option     "ForceCRT1VGAAspect" 	# <str>
         #Option     "ForceCRT2VGAAspect" 	# <str>
@@ -176,6 +178,3 @@ Section "ServerFlags"
 	Option        "IgnoreABI"	"true"
 EndSection
 
-Section "Extensions"
-    Option "Composite" "enable"
-EndSection

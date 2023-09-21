@@ -54,7 +54,7 @@ Section "Device"
         #Option     "ForceCRT2Type"      	# <str>
         Option     "CRT2Detection"      	"true"
         #Option     "CRT1LCD"            	# [<bool>]
-        Option     "ForceCRT2ReDetection" 	"true"
+        #Option     "ForceCRT2ReDetection" 	"true"
         #Option     "EnableHotkey"       	# [<bool>]
         #Option     "ForceCRT1VGAAspect" 	# <str>
         #Option     "ForceCRT2VGAAspect" 	# <str>
