@@ -5633,7 +5633,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 
        if(memreq > pSiS->maxxfbmem) {
 	  SISErrorLog(pScrn,
-	     "Virtual screen too big for memory; %ldK needed, %uK available\n",
+	     "Virtual screen too big for memory; %ldK needed, %dK available\n",
 	     memreq/1024, pSiS->maxxfbmem/1024);
 	  goto my_error_1;
        }
