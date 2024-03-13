@@ -147,8 +147,6 @@ extern void SiSSubsequentCPUToScreenTexture3D(ScrnInfoPtr pScrn,
 	int dst_x, int dst_y,
 	int src_x, int src_y,
 	int width, int height);
-
-volatile CARD32 dummybuf;
 	
 #ifdef SIS_NEED_ARRAY
 #if XF86_VERSION_CURRENT >= XF86_VERSION_NUMERIC(4,2,0,0,0)
