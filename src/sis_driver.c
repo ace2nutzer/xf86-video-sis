@@ -859,7 +859,7 @@ static void _X_ATTRIBUTE_PRINTF(2, 3)
 SISErrorLog(ScrnInfoPtr pScrn, const char *format, ...)
 {
     va_list ap;
-    static const char *str = "**************************************************\n";
+    static const char * const str = "**************************************************\n";
 
     va_start(ap, format);
     xf86DrvMsg(pScrn->scrnIndex, X_ERROR, "%s", str);
@@ -2151,8 +2151,8 @@ SiSGetDDCAndEDID(ScrnInfoPtr pScrn)
     SISPtr pSiS = SISPTR(pScrn);
     Bool didddc2 = FALSE;
     xf86MonPtr pMonitor = NULL;
-    static const char *ddcsstr = "CRT%d DDC monitor info: *******************************************\n";
-    static const char *ddcestr = "End of CRT%d DDC monitor info *************************************\n";
+    static const char * const ddcsstr = "CRT%d DDC monitor info: *******************************************\n";
+    static const char * const ddcestr = "End of CRT%d DDC monitor info *************************************\n";
 
     /* For 300 series and later, we provide our own
      * routines (in order to probe CRT2 as well).
@@ -2516,10 +2516,10 @@ SiSFixupHVRanges(ScrnInfoPtr pScrn, int mfbcrt, Bool quiet)
 {
     SISPtr pSiS = SISPTR(pScrn);
     Bool fromDDC, freqoverruled;
-    static const char *subshstr = "Substituting missing CRT%d monitor HSync range by DDC data\n";
-    static const char *subsvstr = "Substituting missing CRT%d monitor VRefresh range by DDC data\n";
-    static const char *saneh = "Correcting %s CRT%d monitor HSync range\n";
-    static const char *sanev = "Correcting %s CRT%d monitor VRefresh range\n";
+    static const char * const subshstr = "Substituting missing CRT%d monitor HSync range by DDC data\n";
+    static const char * const subsvstr = "Substituting missing CRT%d monitor VRefresh range by DDC data\n";
+    static const char * const saneh = "Correcting %s CRT%d monitor HSync range\n";
+    static const char * const sanev = "Correcting %s CRT%d monitor VRefresh range\n";
     int crtnum;
 
 #ifdef SISDUALHEAD
@@ -3003,7 +3003,7 @@ SiSRemoveUnsuitableModes(ScrnInfoPtr pScrn, DisplayModePtr initial, const char *
     SISPtr pSiS = SISPTR(pScrn);
     DisplayModePtr first, p, n;
     int maxUsedClock = 0;
-    static const char *notsuitablestr = "Not using mode \"%s\" (not suitable for %s mode)\n";
+    static const char * const notsuitablestr = "Not using mode \"%s\" (not suitable for %s mode)\n";
 
     if((p = first = initial)) {
 
@@ -3155,11 +3155,11 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
     Bool crt1freqoverruled = FALSE;
     UChar CR5F, tempreg;
 #ifdef SISMERGED
-    static const char *mergednocrt1 = "CRT1 not detected or forced off. %s.\n";
-    static const char *mergednocrt2 = "No CRT2 output selected or no video bridge detected. %s.\n";
-    static const char *mergeddisstr = "MergedFB mode disabled";
-    static const char *modesforstr = "Modes for CRT%d: **************************************************\n";
-    static const char *crtsetupstr = "*************************** CRT%d setup ***************************\n";
+    static const char * const mergednocrt1 = "CRT1 not detected or forced off. %s.\n";
+    static const char * const mergednocrt2 = "No CRT2 output selected or no video bridge detected. %s.\n";
+    static const char * const mergeddisstr = "MergedFB mode disabled";
+    static const char * const modesforstr = "Modes for CRT%d: **************************************************\n";
+    static const char * const crtsetupstr = "*************************** CRT%d setup ***************************\n";
 #endif
 
     if(flags & PROBE_DETECT) {
@@ -3904,7 +3904,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
        case PCI_CHIP_SIS650:
 	  {
 	     UChar tempreg1, tempreg2;
-	     static const char *id650str[] = {
+	     static const char * const id650str[] = {
 		"650",       "650",       "650",       "650",
 		"650 A0 AA", "650 A2 CA", "650",       "650",
 		"M650 A0",   "M650 A1 AA","651 A0 AA", "651 A1 AA",

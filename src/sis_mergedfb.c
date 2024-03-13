@@ -749,8 +749,8 @@ SiSRecalcDefaultVirtualSize(ScrnInfoPtr pScrn)
     SISPtr pSiS = SISPTR(pScrn);
     DisplayModePtr mode, bmode;
     int maxh, maxv;
-    static const char *str = "MergedFB: Virtual %s %d\n";
-    static const char *errstr = "Virtual %s to small for given CRT2Position offset\n";
+    static const char * const str = "MergedFB: Virtual %s %d\n";
+    static const char * const errstr = "Virtual %s to small for given CRT2Position offset\n";
 
     mode = bmode = pScrn->modes;
     maxh = maxv = 0;
@@ -796,8 +796,8 @@ SiSMFBHandleCRT2DDCAndRanges(ScrnInfoPtr pScrn, Bool quiet)
 {
     SISPtr pSiS = SISPTR(pScrn);
     xf86MonPtr pMonitor = NULL;
-    static const char *ddcsstr = "CRT%d DDC monitor info: *******************************************\n";
-    static const char *ddcestr = "End of CRT%d DDC monitor info *************************************\n";
+    static const char * const ddcsstr = "CRT%d DDC monitor info: *******************************************\n";
+    static const char * const ddcestr = "End of CRT%d DDC monitor info *************************************\n";
 
     if(pSiS->CRT2HSync) {
        pSiS->CRT2pScrn->monitor->nHsync =
@@ -847,7 +847,7 @@ void
 SiSMFBInitMergedFB(ScrnInfoPtr pScrn)
 {
     SISPtr pSiS = SISPTR(pScrn);
-    static const char *crt2monname = "CRT2";
+    static const char * const crt2monname = "CRT2";
 
     if(pSiS->MergedFB) {
 
@@ -977,9 +977,9 @@ SiSMFBHandleModesCRT2(ScrnInfoPtr pScrn, ClockRangePtr clockRanges)
     Bool fakecrt2modes;
     int i;
 
-    static const char *crtsetupstr = "*************************** CRT%d setup ***************************\n";
-    static const char *modesforstr = "Modes for CRT%d: **************************************************\n";
-    static const char *mergeddisstr = "MergedFB mode disabled";
+    static const char * const crtsetupstr = "*************************** CRT%d setup ***************************\n";
+    static const char * const modesforstr = "Modes for CRT%d: **************************************************\n";
+    static const char * const mergeddisstr = "MergedFB mode disabled";
 
     if(pSiS->MergedFB) {
 
