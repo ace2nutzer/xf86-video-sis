@@ -871,7 +871,7 @@ SISSense30x(ScrnInfoPtr pScrn, Bool quiet)
        SISDoSense(pScrn, 0, 0);
     }
 	
-    if(pSiS->VBFlags2 != VB2_307LV||pSiS->VBFlags2 != VB2_307T){
+    if ((pSiS->VBFlags2 != VB2_307LV) && (pSiS->VBFlags2 != VB2_307T)) {
         andSISIDXREG(SISCR, 0x32, ~0x14);
         pSiS->postVBCR32 &= ~0x14;
         if(vga2_c || vga2) {

@@ -6930,7 +6930,7 @@ static void
 SiS_SetGroup2(struct SiS_Private *SiS_Pr, unsigned short ModeNo, unsigned short ModeIdIndex,
 		unsigned short RefreshRateTableIndex)
 {
-  unsigned short i, j, tempax, tempbx, tempcx, tempch, tempcl, temp;
+  unsigned short i, j, tempax, tempbx, tempcx, temp;
   unsigned short push2, modeflag, crt2crtc, bridgeoffset;
   unsigned int   longtemp, PhaseIndex;
   BOOLEAN        newtvphase;
@@ -7192,7 +7192,6 @@ SiS_SetGroup2(struct SiS_Private *SiS_Pr, unsigned short ModeNo, unsigned short 
      }
   }
 
-  tempch = tempcl = 1;
   longtemp = SiS_Pr->SiS_VGAHDE;
   if(SiS_Pr->SiS_VBInfo & SetCRT2ToTV) {
   	if(SiS_Pr->ChipType < SIS_761){
@@ -7208,19 +7207,6 @@ SiS_SetGroup2(struct SiS_Private *SiS_Pr, unsigned short ModeNo, unsigned short 
                     } else if(SiS_Pr->SiS_VGAHDE == 848) {
                         longtemp = 664;
                     }
-#if 0
-	   tempcl = 32;
-	   if(SiS_Pr->SiS_VGAHDE >= 1280) {
-              tempch = 20;
-              tempbx &= ~0x20;
-           } else if(SiS_Pr->SiS_VGAHDE >= 1024) {
-              tempch = 25;
-           } else if(SiS_Pr->SiS_VGAHDE >= 960) {
-	      tempch = 25; /* OK */
-	   } else {
-	      tempch = 30;
-	   }
-#endif
                 }
             }
   	}
@@ -7236,10 +7222,6 @@ SiS_SetGroup2(struct SiS_Private *SiS_Pr, unsigned short ModeNo, unsigned short 
   }
   
      longtemp <<= 13;
-#if 0
-     if(modeflag & HalfDCLK) tempcl <<= 1;
-     longtemp = ((SiS_Pr->SiS_VGAHDE * tempch) / tempcl) << 13;
-#endif
      if(SiS_Pr->SiS_VBType & VB_SIS30xBLV) longtemp <<= 3;
      tempax = longtemp / SiS_Pr->SiS_HDE;
      if(longtemp % SiS_Pr->SiS_HDE) tempax++;
@@ -7793,18 +7775,15 @@ static void
 SiS_SetGroup4(struct SiS_Private *SiS_Pr, unsigned short ModeNo, unsigned short ModeIdIndex,
 		unsigned short RefreshRateTableIndex)
 {
-  unsigned short tempax, tempcx, tempbx, modeflag, temp, resinfo;
+  unsigned short tempax, tempcx, tempbx, modeflag, temp;
   unsigned int   tempebx, tempeax, templong;
 
   if(ModeNo <= 0x13) {
      modeflag = SiS_Pr->SiS_SModeIDTable[ModeIdIndex].St_ModeFlag;
-     resinfo = SiS_Pr->SiS_SModeIDTable[ModeIdIndex].St_ResInfo;
   } else if(SiS_Pr->UseCustomMode) {
      modeflag = SiS_Pr->CModeFlag;
-     resinfo = 0;
   } else {
      modeflag = SiS_Pr->SiS_EModeIDTable[ModeIdIndex].Ext_ModeFlag;
-     resinfo = SiS_Pr->SiS_EModeIDTable[ModeIdIndex].Ext_RESINFO;
   }
 
   if(SiS_Pr->ChipType >= SIS_315H) {

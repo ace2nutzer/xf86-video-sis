@@ -19,6 +19,7 @@ CFLAGS_ABI="-march=core2 -mcpu=core2 -mtune=core2"
 if test -z "$NOCONFIGURE"; then
     exec "$srcdir"/configure \
 		CFLAGS="$CFLAGS_ABI -O2 -fomit-frame-pointer -fno-strict-aliasing -Werror-implicit-function-declaration \
-		-Wno-stringop-overflow -DNDEBUG -pipe" \
+		-Wno-stringop-overflow -Wno-redundant-decls -Wno-unused-variable -Wno-unused-function \
+		-Wno-unused-but-set-variable -DNDEBUG -pipe" \
 		--prefix=/usr "$@"
 fi

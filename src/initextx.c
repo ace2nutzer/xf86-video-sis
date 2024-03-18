@@ -1310,7 +1310,6 @@ SiS_SenseLCDDDC(struct SiS_Private *SiS_Pr, SISPtr pSiS)
        * Treat such wrongly reporting panels as custom.
        */
       if(paneltype != Panel_Custom) {
-	 int maxx, maxy, prefx, prefy;
 	 if((SiS_FindPanelFromDB(pSiS, panelvendor, panelproduct, &maxx, &maxy, &prefx, &prefy))) {
 	    paneltype = Panel_Custom;
 	    SiS_Pr->CP_MaxX = maxx;

@@ -883,9 +883,9 @@ typedef struct {
     ULong		masterFbSize;
     ULong		slaveFbAddress;
     ULong		slaveFbSize;
-    void		*FbBase;         	/* VRAM linear address */
+    UChar		*FbBase;         	/* VRAM linear address */
     UChar		*RealFbBase;         	/* Real VRAM linear address (for DHM, SiS76x UMA skipping) */
-    void		*IOBase;         	/* MMIO linear address */
+    UChar		*IOBase;         	/* MMIO linear address */
     UShort		MapCountIOBase;		/* map/unmap queue counter */
     UShort		MapCountFbBase;		/* map/unmap queue counter */
     Bool		forceUnmapIOBase;	/* ignore counter and unmap */
@@ -1013,10 +1013,10 @@ typedef struct {
     /* FB and MMIO */
     ULong		FbAddress;	/* VRAM physical address (in DHM: for each Fb!) */
     ULong		realFbAddress;	/* For DHM/PCI mem mapping: store global FBAddress */
-    void 		*FbBase;	/* VRAM virtual linear address */
+    UChar 		*FbBase;	/* VRAM virtual linear address */
     void 		*RealFbBase;	/* Real VRAM virtual linear address (for DHM and SiS76x UMA skipping) */
     CARD32		IOAddress;	/* MMIO physical address */
-    void		*IOBase;	/* MMIO linear address */
+    UChar		*IOBase;	/* MMIO linear address */
     unsigned long	IODBase;	/* Base of PIO memory area */
 #ifdef __alpha__
     void		*IOBaseDense;	/* MMIO for Alpha platform */

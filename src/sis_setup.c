@@ -676,6 +676,7 @@ sis550Setup(ScrnInfoPtr pScrn)
     CARD8	 pciconfig, temp;
     Bool	 alldone = FALSE;
     Bool	 ddrtimes2 = TRUE;
+    unsigned int power;
 
     pSiS->IsAGPCard = TRUE;
     pSiS->IsPCIExpress = FALSE;
@@ -695,7 +696,7 @@ sis550Setup(ScrnInfoPtr pScrn)
 
 	/* share mem (UMA) size */
        	pScrn->videoRam = 0;
-	unsigned int power = (config & 0xf0) >> 4;
+	power = (config & 0xf0) >> 4;
       	if(power){
 		for(pScrn->videoRam = 1; power>0 ; power--)
 			pScrn->videoRam *= 2;

@@ -870,14 +870,14 @@ SISGetMergedModeDetails(ScrnInfoPtr pScrn,
     tmode = ((SiSMergedDisplayModePtr)mode->Private)->CRT1;
     *crt1x = tmode->HDisplay;
     *crt1y = tmode->VDisplay;
-    *crt1clk = (unsigned int)SiSCalcVRate(tmode);
+    *crt1clk = SiSCalcVRate(tmode);
     if(tmode->Flags & V_INTERLACE) *crt1clk /= 2;
     /* OK to use the mode flag here, targets info on CRT device */
 
     tmode = ((SiSMergedDisplayModePtr)mode->Private)->CRT2;
     *crt2x = tmode->HDisplay;
     *crt2y = tmode->VDisplay;
-    *crt2clk = (unsigned int)SiSCalcVRate(tmode);
+    *crt2clk = SiSCalcVRate(tmode);
 
 }
 #endif

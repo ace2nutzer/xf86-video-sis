@@ -234,7 +234,7 @@ extern Bool SiSAllocateLinear(ScrnInfoPtr pScrn, int sizeNeeded);
 
 #define FBOFFSET	(pSiS->dhmOffset)
 
-unsigned long Float2FixedS7(unsigned long dwValue)
+static unsigned long Float2FixedS7(unsigned long dwValue)
 {
     unsigned long dwMantissa;
     int nTemp;
@@ -274,7 +274,7 @@ unsigned long Float2FixedS7(unsigned long dwValue)
 
 
 
-unsigned long Float2Fixed(unsigned long dwValue, int nInterger, int nFraction)
+static unsigned long Float2Fixed(unsigned long dwValue, int nInterger, int nFraction)
 {
     unsigned long dwMantissa, dwMantissa_771;
     int nTemp;
@@ -282,7 +282,7 @@ unsigned long Float2Fixed(unsigned long dwValue, int nInterger, int nFraction)
     if(dwValue == 0) return 0;
     nTemp = (int) (dwValue & 0x7F800000) >> 23;
     nTemp = nTemp - 127 + nFraction - 23;
-    dwMantissa_771=dwMantissa = (dwValue & 0x007FFFFF) | 0x00800000;   /*  Mantissa */
+    dwMantissa_771 = dwMantissa = (dwValue & 0x007FFFFF) | 0x00800000;   /*  Mantissa */
 
     /* if(nTemp < -25) return 0; */
     if(nTemp > 0)
@@ -302,7 +302,7 @@ unsigned long Float2Fixed(unsigned long dwValue, int nInterger, int nFraction)
           dwMantissa >>= -nTemp;
 	
            if(-nTemp > 4)
-              dwMantissa_771 = dwMantissa_771 >>= ((-nTemp)-4);
+              dwMantissa_771 >>= ((-nTemp)-4);
 	   /* if(d3d.Registry.PatchFloat2Fix == 1)
 	    { */          
               /* if((dwMantissa_771 & d3d.Registry.ManMsk) >= d3d.Registry.ManVal)  .ManMsk = 0xf, ManVal = 0xc */
@@ -326,7 +326,7 @@ unsigned long Float2Fixed(unsigned long dwValue, int nInterger, int nFraction)
 
 
 
-Bool IsPower2(unsigned long dw)
+static Bool IsPower2(unsigned long dw)
 {
     unsigned long i;
 
@@ -340,7 +340,7 @@ Bool IsPower2(unsigned long dw)
 }
 
 
-unsigned long GetTexturePitch(unsigned long dwPitch)
+static unsigned long GetTexturePitch(unsigned long dwPitch)
 {
     unsigned long i = 0;
     if(dwPitch == 0)

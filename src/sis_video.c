@@ -134,7 +134,7 @@
 
 static CARD32 _sisread(SISPtr pSiS, CARD32 reg)
 {
-    SIS_MMIO_IN32(pSiS->IOBase, reg);
+   return SIS_MMIO_IN32(pSiS->IOBase, reg);
 }
 
 static void _siswrite(SISPtr pSiS, CARD32 reg, CARD32 data)
@@ -1834,7 +1834,7 @@ tap_dda_func(float x)
 }
 
 
-void 
+static void 
 set_dda_regs_6tap(SISPtr pSiS, float scale)
 {
 	float WW, W[6], tempW[6];
@@ -3965,10 +3965,10 @@ SISPutImage(
       if(!(pPriv->bufAddr[0] = SISAllocateFBMemory(pScrn, &pPriv->handle, totalSize << 1)))
          return BadAlloc;
 
-         pPriv->bufAddr[1] = pPriv->bufAddr[0] + totalSize;
+      pPriv->bufAddr[1] = pPriv->bufAddr[0] + totalSize;
 
-         /* copy data */
-         SiSMemCopyToVideoRam(pSiS, pSiS->FbBase + pPriv->bufAddr[pPriv->currentBuf], buf, totalSize);
+      /* copy data */
+      SiSMemCopyToVideoRam(pSiS, pSiS->FbBase + pPriv->bufAddr[pPriv->currentBuf], buf, totalSize);
 
 
       SISDisplayVideo(pScrn, pPriv, &overlay);

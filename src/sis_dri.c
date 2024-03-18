@@ -319,7 +319,7 @@ SISDRIScreenInit(ScreenPtr pScreen)
      SISDRICloseScreen(pScreen);
      return FALSE;
   }
-	xf86DrvMsg(pScreen->myNum, X_INFO, "[dri] handle = 0x%0llx, size = %d\n",
+	xf86DrvMsg(pScreen->myNum, X_INFO, "[dri] handle = 0x%0x, size = %d\n",
 				pSISDRI->regs.handle, pSISDRI->regs.size);
 
   /* AGP */

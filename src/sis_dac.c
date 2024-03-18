@@ -1463,7 +1463,7 @@ SiSMemBandWidth(ScrnInfoPtr pScrn, Bool IsForCRT2, Bool quiet)
 #ifdef __SUNPRO_C
 #undef const
 #endif
-	static const char *maxpixstr = "Maximum pixel clock at %d bpp is %g MHz\n";
+	static const char * const maxpixstr = "Maximum pixel clock at %d bpp is %g MHz\n";
 
 	switch(pSiS->Chipset) {
 

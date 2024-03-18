@@ -1166,7 +1166,7 @@ SiSMFBCalcDPI(ScrnInfoPtr pScrn1, ScrnInfoPtr pScrn2, SiSScrn2Rel srel, Bool qui
     xf86MonPtr DDC1 = (xf86MonPtr)(pScrn1->monitor->DDC);
     xf86MonPtr DDC2 = (xf86MonPtr)(pScrn2->monitor->DDC);
     int ddcWidthmm = 0, ddcHeightmm = 0;
-    const char *dsstr = "MergedFB: Display dimensions: %dx%d mm\n";
+    const char * const dsstr = "MergedFB: Display dimensions: %dx%d mm\n";
 
     /* This sets the DPI for MergedFB mode. The problem is that
      * this can never be exact, because the output devices may

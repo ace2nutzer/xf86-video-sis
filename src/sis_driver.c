@@ -1678,14 +1678,15 @@ static void
 SiSHandlePDCEMI(ScrnInfoPtr pScrn)
 {
     SISPtr pSiS = SISPTR(pScrn);
-    const char *unable = "Unable to detect LCD PanelDelayCompensation, %s\n";
-    const char *oldsisfb = "please update sisfb";
-    const char *nolcd = "LCD is not active";
-    const char *usingpdc = "Using LCD PanelDelayCompensation 0x%02x%s\n";
-    const char *detected = "Detected LCD PanelDelayCompensation 0x%02x%s\n";
-    const char *forcrt1 = " (for LCD=CRT1)";
-    const char *forcrt2 = " (for LCD=CRT2)";
-    const char *biosuses = "BIOS uses OEM LCD Panel Delay Compensation 0x%02x\n";
+    MessageType from = X_DEFAULT;
+    const char * const unable = "Unable to detect LCD PanelDelayCompensation, %s\n";
+    const char * const oldsisfb = "please update sisfb";
+    const char * const nolcd = "LCD is not active";
+    const char * const usingpdc = "Using LCD PanelDelayCompensation 0x%02x%s\n";
+    const char * const detected = "Detected LCD PanelDelayCompensation 0x%02x%s\n";
+    const char * const forcrt1 = " (for LCD=CRT1)";
+    const char * const forcrt2 = " (for LCD=CRT2)";
+    const char * const biosuses = "BIOS uses OEM LCD Panel Delay Compensation 0x%02x\n";
 
 #ifdef SISDUALHEAD
     if((!pSiS->DualHeadMode) || (!pSiS->SecondHead)) {
@@ -2958,7 +2959,7 @@ static void
 SiSSetMinMaxPixelClock(ScrnInfoPtr pScrn)
 {
     SISPtr pSiS = SISPTR(pScrn);
-    MessageType from;
+    MessageType from = X_DEFAULT;
 
     /* Set the min pixel clock */
     pSiS->MinClock = 5000;
@@ -3147,7 +3148,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 #ifdef SISDUALHEAD
     SISEntPtr pSiSEnt = NULL;
 #endif
-    MessageType from;
+    MessageType from = X_DEFAULT;
     UChar usScratchCR17, usScratchCR32, usScratchCR63;
     UChar usScratchSR1F, srlockReg, crlockReg;
     unsigned int i;
@@ -5780,12 +5781,12 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
        char *modName = NULL;
 #ifdef SIS_USE_XAA
        if(!pSiS->useEXA) {
-	  modName = "xaa";
+	 modName = (char *) "xaa";
        }
 #endif
 #ifdef SIS_USE_EXA
        if(pSiS->useEXA) {
-	  modName = "exa";
+	  modName = (char *) "exa";
        }
 #endif
        if(modName && (!xf86LoadSubModule(pScrn, modName))) {
@@ -6653,7 +6654,7 @@ SISSearchCRT1Rate(ScrnInfoPtr pScrn, DisplayModePtr mode)
 
    defindex = (xres == 800 || xres == 1024 || xres == 1280) ? 0x02 : 0x01;
 
-   irefresh = (int)SiSCalcVRate(mode);
+   irefresh = SiSCalcVRate(mode);
    if(!irefresh) return defindex;
 
    /* SiS730 has troubles on CRT2 if CRT1 is at 32bpp */

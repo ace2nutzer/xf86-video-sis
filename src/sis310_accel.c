@@ -113,7 +113,7 @@ extern unsigned char SiSGetPatternROP(int rop);
 int *CmdQueBusy;  /* flag to show command Quese state*/
 int *_2DCmdFlushing;  /* flag to reflect 2D commands are being flushed */
 
-void SiSOccpyCmdQue(SISPtr pSiS){
+static void SiSOccpyCmdQue(SISPtr pSiS){
 	if(pSiS->DRIEnabled){
 		*_2DCmdFlushing = TRUE; 
 		while(*CmdQueBusy){xf86DrvMsg(0,X_INFO,"--garbage--");}
@@ -123,7 +123,7 @@ void SiSOccpyCmdQue(SISPtr pSiS){
 	return;
 }
 
-void SiSReleaseCmdQue(SISPtr pSiS){
+static void SiSReleaseCmdQue(SISPtr pSiS){
 	if(pSiS->DRIEnabled)
 		*CmdQueBusy = *_2DCmdFlushing = FALSE;
 	return;
@@ -147,6 +147,8 @@ extern void SiSSubsequentCPUToScreenTexture3D(ScrnInfoPtr pScrn,
 	int dst_x, int dst_y,
 	int src_x, int src_y,
 	int width, int height);
+
+volatile CARD32 dummybuf;
 	
 #ifdef SIS_NEED_ARRAY
 #if XF86_VERSION_CURRENT >= XF86_VERSION_NUMERIC(4,2,0,0,0)
@@ -154,6 +156,7 @@ extern void SiSSubsequentCPUToScreenTexture3D(ScrnInfoPtr pScrn,
 #else
 #define SiSRenderOpsMAX 0x0f
 #endif
+#if defined(RENDER) && defined(INCL_RENDER)
 static const CARD8 SiSRenderOps[] = {	/* PictOpXXX 1 = supported, 0 = unsupported */
      1, 1, 1, 1,
      0, 0, 0, 0,
@@ -168,6 +171,7 @@ static const CARD8 SiSRenderOps[] = {	/* PictOpXXX 1 = supported, 0 = unsupporte
      0, 0, 0, 0,
      0, 0, 0, 0
 };
+#endif
 #endif /* NEED ARRAY */
 
 #ifdef SIS_NEED_ARRAY
@@ -227,16 +231,6 @@ SiSSync(ScrnInfoPtr pScrn)
 
 	SiSIdle
 }
-
-#ifdef SISVRAMQ
-static CARD32
-SISSiSUpdateQueue(SISPtr pSiS, CARD32 ttt, pointer tt)
-{
-	SiSUpdateQueue;
-
-	return ttt;
-}
-#endif
 
 static void
 SiSSyncAccel(ScrnInfoPtr pScrn)

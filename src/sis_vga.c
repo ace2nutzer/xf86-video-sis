@@ -179,7 +179,7 @@ SISOldInit(ScrnInfoPtr pScrn, DisplayModePtr mode)
     int          clock = mode->Clock;
     int          width = mode->HDisplay;
     int          height = mode->VDisplay;
-    int          rate = (int)SiSCalcVRate(mode);
+    int          rate = SiSCalcVRate(mode);
     int          buswidth = pSiS->BusWidth;
     unsigned int vclk[5];
     UShort       CRT_CPUthresholdLow, CRT_CPUthresholdHigh, CRT_ENGthreshold;
@@ -1021,7 +1021,7 @@ SISIsUMC(SISPtr pSiS)
 void SISVGAPreInit(ScrnInfoPtr pScrn)
 {
     SISPtr pSiS = SISPTR(pScrn);
-    int    temp,temp1,temp2,sistypeidx;
+    int    temp,temp1,temp2,sistypeidx = 0;
     int    upperlimitlvds, lowerlimitlvds;
     int    upperlimitch, lowerlimitch;
     int    chronteltype, chrontelidreg, upperlimitvb;
