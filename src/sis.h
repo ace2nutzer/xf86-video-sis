@@ -727,7 +727,7 @@ typedef unsigned char  UChar;
 
 /* AGP stuff for DRI */
 #define AGP_PAGE_SIZE 4096
-#define AGP_PAGES     8192	 /* Default: 8192 pages @ 4096 = 32MB */
+#define AGP_PAGES     2048	 /* Default: 2048 pages @ 4096 = 8MB */
 /* 300 */
 #define AGP_CMDBUF_PAGES 256
 #define AGP_CMDBUF_SIZE (AGP_PAGE_SIZE * AGP_CMDBUF_PAGES)
