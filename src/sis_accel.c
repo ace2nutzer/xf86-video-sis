@@ -688,7 +688,7 @@ SiSAccelInit(ScreenPtr pScreen)
 #endif
 #ifdef SIS_USE_EXA
        if(pSiS->useEXA) {
-	  if(!(pSiS->EXADriverPtr = xnfcalloc(sizeof(ExaDriverRec), 1))) {
+	  if(!(pSiS->EXADriverPtr = XNFcallocarray(sizeof(ExaDriverRec), 1))) {
 	     pSiS->NoAccel = TRUE;
 	     pSiS->NoXvideo = TRUE; /* No fbmem manager -> no xv */
 	  }

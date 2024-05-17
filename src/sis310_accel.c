@@ -189,7 +189,7 @@ SiSCalcRenderAccelArray(ScrnInfoPtr pScrn)
 	   if(pSiSEnt) pSiS->RenderAccelArray = pSiSEnt->RenderAccelArray;
 #endif
 	   if(!pSiS->RenderAccelArray) {
-	      if((pSiS->RenderAccelArray = xnfcalloc(65536, 1))) {
+	      if((pSiS->RenderAccelArray = XNFcallocarray(65536, 1))) {
 #ifdef SISDUALHEAD
 	         if(pSiSEnt) pSiSEnt->RenderAccelArray = pSiS->RenderAccelArray;
 #endif
@@ -1616,7 +1616,7 @@ SiS315AccelInit(ScreenPtr pScreen)
 #endif
 #ifdef SIS_USE_EXA
 	   if(pSiS->useEXA) {
-	      if(!(pSiS->EXADriverPtr = xnfcalloc(sizeof(ExaDriverRec), 1))) {
+	      if(!(pSiS->EXADriverPtr = XNFcallocarray(sizeof(ExaDriverRec), 1))) {
 		 pSiS->NoAccel = TRUE;
 		 pSiS->NoXvideo = TRUE; /* No fbmem manager -> no xv */
 	      }
