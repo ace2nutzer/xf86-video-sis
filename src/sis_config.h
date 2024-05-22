@@ -34,7 +34,6 @@
 #undef SISDUALHEAD
 #undef SISMERGED
 #undef SISXINERAMA
-#undef INCL_YUV_BLIT_ADAPTOR
 #undef SIS_USE_XAA
 #undef SIS_USE_EXA
 
@@ -51,11 +50,6 @@
 #undef SISXINERAMA
 #ifdef SISMERGED
 #define SISXINERAMA		/* Include SiS Pseudo-Xinerama support for MergedFB mode */
-#endif
-
-#undef INCL_YUV_BLIT_ADAPTOR
-#if 1
-#define INCL_YUV_BLIT_ADAPTOR	/* Include support for YUV->RGB blit adaptors (VRAM queue mode only) */
 #endif
 
 #ifdef HAVE_XAA_H

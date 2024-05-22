@@ -121,10 +121,7 @@
 #define SIS_NEED_MYMMIO
 #include "sis_regs.h"
 
-#ifdef INCL_YUV_BLIT_ADAPTOR
 #include "sis310_accel.h"
-#endif
-
 #include "sis_video.h"
 
 /*********************************
@@ -316,7 +313,6 @@ SISInitVideo(ScreenPtr pScreen)
 
     pSiS->HaveBlitAdaptor = FALSE;
 
-#ifdef INCL_YUV_BLIT_ADAPTOR
     if( ( (pSiS->ChipFlags & SiSCF_Is65x) ||
           (pSiS->ChipType >= SIS_330) )		&&
         (pSiS->ChipType != XGI_20)		&&
@@ -325,7 +321,6 @@ SISInitVideo(ScreenPtr pScreen)
           pSiS->HaveBlitAdaptor = TRUE;
        }
     }
-#endif
 
     num_adaptors = xf86XVListGenericAdaptors(pScrn, &adaptors);
 
@@ -4413,8 +4408,6 @@ SISInitOffscreenImages(ScreenPtr pScreen)
 /*****************************************************************/
 /*                         BLIT ADAPTORS                         */
 /*****************************************************************/
-#ifdef INCL_YUV_BLIT_ADAPTOR
-
 static void
 SISSetPortDefaultsBlit(ScrnInfoPtr pScrn, SISBPortPrivPtr pPriv)
 {
@@ -4920,7 +4913,6 @@ SISQueryBestSizeBlit(
   *p_w = drw_w;
   *p_h = drw_h;
 }
-#endif /* INCL_YUV */
 
 /*****************************************/
 /*            TIMER CALLBACK             */
@@ -4931,9 +4923,7 @@ SISVideoTimerCallback(ScrnInfoPtr pScrn, Time now)
 {
     SISPtr          pSiS = SISPTR(pScrn);
     SISPortPrivPtr  pPriv = NULL;
-#ifdef INCL_YUV_BLIT_ADAPTOR
     SISBPortPrivPtr pPrivBlit = NULL;
-#endif
     UChar           sridx, cridx;
     Bool	    setcallback = FALSE;
 
@@ -4966,7 +4956,6 @@ SISVideoTimerCallback(ScrnInfoPtr pScrn, Time now)
        }
     }
 
-#ifdef INCL_YUV_BLIT_ADAPTOR
     if(pSiS->blitadaptor) {
        int i;
        pPrivBlit = (SISBPortPrivPtr)(pSiS->blitPriv);
@@ -4981,7 +4970,6 @@ SISVideoTimerCallback(ScrnInfoPtr pScrn, Time now)
           }
        }
     }
-#endif
 
     pSiS->VideoTimerCallback = (setcallback) ? SISVideoTimerCallback : NULL;
 }

@@ -124,7 +124,6 @@ void		SISUpdateVideoParms(SISPtr pSiS, SISPortPrivPtr pPriv);
 void		SiSUpdateXvGamma(SISPtr pSiS, SISPortPrivPtr pPriv);
 extern Bool     SiSBridgeIsInSlaveMode(ScrnInfoPtr pScrn);
 
-#ifdef INCL_YUV_BLIT_ADAPTOR
 static 		XF86VideoAdaptorPtr SISSetupBlitVideo(ScreenPtr);
 static void 	SISStopVideoBlit(ScrnInfoPtr, ULong, Bool);
 static int 	SISSetPortAttributeBlit(ScrnInfoPtr, Atom, INT32, ULong);
@@ -138,7 +137,6 @@ static int 	SISPutImageBlit( ScrnInfoPtr,
 static int 	SISQueryImageAttributesBlit(ScrnInfoPtr,
 			int, UShort *, UShort *, int *, int *);
 extern void     SISWriteBlitPacket(SISPtr pSiS, CARD32 *packet);
-#endif
 
 #ifdef TWDEBUG
 extern int	SISSetPortUtilAttribute(ScrnInfoPtr pScrn, Atom attribute,
@@ -222,10 +220,8 @@ static char sisxvchromamax[] 				= "XV_CHROMAMAX";
 static char sisxvsetreg[]				= "XV_SD_SETREG";
 #endif
 
-#ifdef INCL_YUV_BLIT_ADAPTOR
 #if 0
 static char sisxvvsync[]				= "XV_SYNC_TO_VBLANK";
-#endif
 #endif
 
 /***********************************************/
@@ -479,8 +475,6 @@ typedef struct {
 /*               BLITTER ADAPTOR               */
 /***********************************************/
 
-#ifdef INCL_YUV_BLIT_ADAPTOR
-
 #define NUM_BLIT_PORTS 16
 
 #define IMAGE_MAX_WIDTH_BLIT    2046
@@ -617,8 +611,6 @@ typedef struct {
     CARD32	 AccelCmd;
     CARD32       VBlankTriggerCRT1, VBlankTriggerCRT2;
 } SISBPortPrivRec, *SISBPortPrivPtr;
-
-#endif /* INCL_BLIT */
 
 #endif
 
