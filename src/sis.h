@@ -158,24 +158,12 @@
 #define SIS_USE_BIOS_SCRATCH
 #endif
 
-/* SIS_NEED_MAP_IOP: Map i/o port area to virtual memory? */
-/* List of architectures likely to be incomplete */
-/* This is BROKEN, see comment in sis_driver.c */
-#undef SIS_NEED_MAP_IOP
-#if 0
-#if defined(__arm32__) || defined(__mips__)
-#define SIS_NEED_MAP_IOP
-#endif
-#endif
-
 /* SISUSEDEVPORT: Used on architectures without direct inX/outX access. In this case,
  * we use read()/write() to /dev/port. LINUX ONLY! (How can this be done on *BSD?)
  */
 #undef SISUSEDEVPORT
 #if defined(SIS_LINUX) && (defined(__arm32__) || defined(__mips__))
-#ifndef SIS_NEED_MAP_IOP
 #define SISUSEDEVPORT
-#endif
 #endif
 
 /* Our #includes: Require the arch/platform dependent #defines above */
@@ -951,12 +939,6 @@ typedef struct {
     vidCopyFunc		SiSFastVidCopy, SiSFastMemCopy;
     vidCopyFunc		SiSFastVidCopyFrom, SiSFastMemCopyFrom;
     unsigned int	CPUFlags;
-#ifdef SIS_NEED_MAP_IOP
-    CARD32		IOPAddress;		/* I/O port physical address */
-    void		*IOPBase;		/* I/O port linear address */
-    UShort		MapCountIOPBase;	/* map/unmap queue counter */
-    Bool		forceUnmapIOPBase;	/* ignore counter and unmap */
-#endif
 } SISEntRec, *SISEntPtr;
 #endif
 
@@ -1441,11 +1423,6 @@ typedef struct {
     float		NewGammaConR, NewGammaConG, NewGammaConB;
     float		NewGammaBriR2, NewGammaBriG2, NewGammaBriB2;
     float		NewGammaConR2, NewGammaConG2, NewGammaConB2;
-
-#ifdef SIS_NEED_MAP_IOP
-    CARD32		IOPAddress;		/* I/O port physical address */
-    void 		*IOPBase;		/* I/O port linear address */
-#endif
 
 #ifdef SISMERGED
     Bool		MergedFB, MergedFBAuto;
