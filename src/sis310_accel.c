@@ -252,23 +252,11 @@ SiSInitializeAccelerator(ScrnInfoPtr pScrn)
 
 	if(!pSiS->NoAccel) {
 
-
-	
-#ifndef SISVRAMQ
-	   if(pSiS->ChipFlags & SiSCF_Integrated) {
-	      CmdQueLen = 0;
-	   } else {
-	      CmdQueLen = ((128 * 1024) / 4) - 64;
-	   }
-#endif
-
-#ifdef SISVRAMQ
 	   if(pSiS->ChipFlags & SiSCF_DualPipe) {
 	      SiSSync(pScrn);
 	      SiSDualPipe(1);	/* 1 = disable, 0 = enable */
 	      SiSSync(pScrn);
 	   }
-#endif
 
 	}
 }
@@ -285,15 +273,9 @@ SiSSetupForScreenToScreenCopy(ScrnInfoPtr pScrn,
 	xf86DrvMsg(0, X_INFO, "XAA calling ScreenToScreenCopy\n");
 #endif
 
-#ifdef SISVRAMQ
 	SiSSetupDSTColorDepth(pSiS->SiS310_AccelDepth);
 	SiSCheckQueue(16 * 2);
 	SiSSetupSRCPitchDSTRect(pSiS->scrnOffset, pSiS->scrnOffset, DEV_HEIGHT);
-#else
-	SiSSetupDSTColorDepth(pSiS->DstColor);
-	SiSSetupSRCPitch(pSiS->scrnOffset);
-	SiSSetupDSTRect(pSiS->scrnOffset, DEV_HEIGHT);
-#endif
 
 	if(trans_color != -1) {
 	   SiSSetupROP(0x0A);
@@ -305,13 +287,7 @@ SiSSetupForScreenToScreenCopy(ScrnInfoPtr pScrn,
 	   /* SiSSetupCMDFlag(BITBLT | SRCVIDEO) */
 	}
 
-#ifndef SISVRAMQ
-	SiSSetupCMDFlag(pSiS->SiS310_AccelDepth);
-#endif
-
-#ifdef SISVRAMQ
 	SiSSyncWP;
-#endif
 	SiSReleaseCmdQue(pSiS);
 
 	/* The chip is smart enough to know the direction */
@@ -392,21 +368,11 @@ SiSSubsequentScreenToScreenCopy(ScrnInfoPtr pScrn,
 	dstbase += FBOFFSET;
 
 	SiSOccpyCmdQue(pSiS);
-#ifdef SISVRAMQ
 	SiSCheckQueue(16 * 3);
 	SiSSetupSRCDSTBase(srcbase, dstbase);
 	SiSSetupSRCDSTXY(src_x, src_y, dst_x, dst_y);
 	SiSSetRectDoCMD(width,height);
-#else
-	SiSSetupSRCBase(srcbase);
-	SiSSetupDSTBase(dstbase);
-	SiSSetupRect(width, height);
-	SiSSetupSRCXY(src_x, src_y);
-	SiSSetupDSTXY(dst_x, dst_y);
-	SiSDoCMD;
-#endif
 	SiSReleaseCmdQue(pSiS);
-
 }
 
 static void
@@ -426,20 +392,12 @@ SiSSetupForSolidFill(ScrnInfoPtr pScrn, int color,
 #endif
 
 	SiSOccpyCmdQue(pSiS);
-#ifdef SISVRAMQ
 	SiSSetupDSTColorDepth(pSiS->SiS310_AccelDepth);
 	SiSCheckQueue(16 * 1);
 	SiSSetupPATFGDSTRect(color, pSiS->scrnOffset, DEV_HEIGHT);
 	SiSSetupROP(SiSGetPatternROP(rop));
 	SiSSetupCMDFlag(PATFG);
 	SiSSyncWP;
-#else
-	SiSSetupPATFG(color);
-	SiSSetupDSTRect(pSiS->scrnOffset, DEV_HEIGHT);
-	SiSSetupDSTColorDepth(pSiS->DstColor);
-	SiSSetupROP(SiSGetPatternROP(rop));
-	SiSSetupCMDFlag(PATFG | pSiS->SiS310_AccelDepth);
-#endif
 	SiSReleaseCmdQue(pSiS);
 }
 
@@ -469,16 +427,9 @@ SiSSubsequentSolidFillRect(ScrnInfoPtr pScrn,
 	/* SiSSetupCMDFlag(BITBLT)  - BITBLT = 0 */
 
 	SiSOccpyCmdQue(pSiS);
-#ifdef SISVRAMQ
 	SiSCheckQueue(16 * 2);
 	SiSSetupDSTXYRect(x, y, w, h);
 	SiSSetupDSTBaseDoCMD(dstbase);
-#else
-	SiSSetupDSTBase(dstbase);
-	SiSSetupDSTXY(x, y);
-	SiSSetupRect(w, h);
-	SiSDoCMD;
-#endif
 	SiSReleaseCmdQue(pSiS);
 }
 
@@ -495,7 +446,6 @@ SiSSetupForSolidLine(ScrnInfoPtr pScrn, int color, int rop,
 #endif
 
 	SiSOccpyCmdQue(pSiS);
-#ifdef SISVRAMQ
 	SiSSetupDSTColorDepth(pSiS->SiS310_AccelDepth);
 	SiSCheckQueue(16 * 3);
 	SiSSetupLineCountPeriod(1, 1);
@@ -503,14 +453,6 @@ SiSSetupForSolidLine(ScrnInfoPtr pScrn, int color, int rop,
 	SiSSetupROP(SiSGetPatternROP(rop));
 	SiSSetupCMDFlag(PATFG | LINE);
 	SiSSyncWP;
-#else
-	SiSSetupLineCount(1);
-	SiSSetupPATFG(color);
-	SiSSetupDSTRect(pSiS->scrnOffset, DEV_HEIGHT);
-	SiSSetupDSTColorDepth(pSiS->DstColor);
-	SiSSetupROP(SiSGetPatternROP(rop));
-	SiSSetupCMDFlag(PATFG | LINE | pSiS->SiS310_AccelDepth);
-#endif
 	SiSReleaseCmdQue(pSiS);
 }
 
@@ -543,16 +485,9 @@ SiSSubsequentSolidTwoPointLine(ScrnInfoPtr pScrn,
 	}
 
 	SiSOccpyCmdQue(pSiS);
-#ifdef SISVRAMQ
 	SiSCheckQueue(16 * 2);
 	SiSSetupX0Y0X1Y1(x1, y1, x2, y2);
 	SiSSetupDSTBaseDoCMD(dstbase);
-#else
-	SiSSetupDSTBase(dstbase);
-	SiSSetupX0Y0(x1, y1);
-	SiSSetupX1Y1(x2, y2);
-	SiSDoCMD;
-#endif
 	SiSReleaseCmdQue(pSiS);
 }
 
@@ -577,7 +512,6 @@ SiSSubsequentSolidHorzVertLine(ScrnInfoPtr pScrn,
 	dstbase += FBOFFSET;
 
 	SiSOccpyCmdQue(pSiS);
-#ifdef SISVRAMQ
 	SiSCheckQueue(16 * 2);
 	if(dir == DEGREES_0) {
 	   SiSSetupX0Y0X1Y1(x, y, (x + len), y);
@@ -585,16 +519,6 @@ SiSSubsequentSolidHorzVertLine(ScrnInfoPtr pScrn,
 	   SiSSetupX0Y0X1Y1(x, y, x, (y + len));
 	}
 	SiSSetupDSTBaseDoCMD(dstbase);
-#else
-	SiSSetupDSTBase(dstbase);
-	SiSSetupX0Y0(x,y);
-	if(dir == DEGREES_0) {
-	   SiSSetupX1Y1(x + len, y);
-	} else {
-	   SiSSetupX1Y1(x, y + len);
-	}
-	SiSDoCMD;
-#endif
 	SiSReleaseCmdQue(pSiS);
 }
 
@@ -610,22 +534,11 @@ SiSSetupForDashedLine(ScrnInfoPtr pScrn,
 #endif
 
 	SiSOccpyCmdQue(pSiS);
-#ifdef SISVRAMQ
 	SiSSetupDSTColorDepth(pSiS->SiS310_AccelDepth);
 	SiSCheckQueue(16 * 3);
 	SiSSetupLineCountPeriod(1, (length - 1));
 	SiSSetupStyle(*pattern,*(pattern + 4));
 	SiSSetupPATFGDSTRect(fg, pSiS->scrnOffset, DEV_HEIGHT);
-#else
-	SiSSetupLineCount(1);
-	SiSSetupDSTRect(pSiS->scrnOffset, DEV_HEIGHT);
-	SiSSetupDSTColorDepth(pSiS->DstColor);
-	SiSSetupStyleLow(*pattern);
-	SiSSetupStyleHigh(*(pattern + 4));
-	SiSSetupStylePeriod(length - 1);
-	SiSSetupPATFG(fg);
-#endif
-
 	SiSSetupROP(SiSGetPatternROP(rop));
 
 	SiSSetupCMDFlag(LINE | LINE_STYLE);
@@ -635,13 +548,7 @@ SiSSetupForDashedLine(ScrnInfoPtr pScrn,
 	} else {
 	   SiSSetupCMDFlag(TRANSPARENT);
 	}
-#ifndef SISVRAMQ
-	SiSSetupCMDFlag(pSiS->SiS310_AccelDepth);
-#endif
-
-#ifdef SISVRAMQ
         SiSSyncWP;
-#endif
 	SiSReleaseCmdQue(pSiS);
 }
 
@@ -675,16 +582,9 @@ SiSSubsequentDashedTwoPointLine(ScrnInfoPtr pScrn,
 	}
 
 	SiSOccpyCmdQue(pSiS);
-#ifdef SISVRAMQ
 	SiSCheckQueue(16 * 2);
 	SiSSetupX0Y0X1Y1(x1, y1, x2, y2);
 	SiSSetupDSTBaseDoCMD(dstbase);
-#else
-	SiSSetupDSTBase(dstbase);
-	SiSSetupX0Y0(x1, y1);
-	SiSSetupX1Y1(x2, y2);
-	SiSDoCMD;
-#endif
 	SiSReleaseCmdQue(pSiS);
 }
 
@@ -700,25 +600,12 @@ SiSSetupForMonoPatternFill(ScrnInfoPtr pScrn,
 #endif
 
 	SiSOccpyCmdQue(pSiS);
-#ifdef SISVRAMQ
 	SiSSetupDSTColorDepth(pSiS->SiS310_AccelDepth);
 	SiSCheckQueue(16 * 3);
 	SiSSetupPATFGDSTRect(fg, pSiS->scrnOffset, DEV_HEIGHT);
-#else
-	SiSSetupDSTRect(pSiS->scrnOffset, DEV_HEIGHT);
-	SiSSetupDSTColorDepth(pSiS->DstColor);
-#endif
-
 	SiSSetupMONOPAT(patx,paty);
-
 	SiSSetupROP(SiSGetPatternROP(rop));
-
-#ifdef SISVRAMQ
 	SiSSetupCMDFlag(PATMONO);
-#else
-	SiSSetupPATFG(fg);
-	SiSSetupCMDFlag(PATMONO | pSiS->SiS310_AccelDepth);
-#endif
 
 	if(bg != -1) {
 	   SiSSetupPATBG(bg);
@@ -726,9 +613,7 @@ SiSSetupForMonoPatternFill(ScrnInfoPtr pScrn,
 	   SiSSetupCMDFlag(TRANSPARENT);
 	}
 
-#ifdef SISVRAMQ
 	SiSSyncWP;
-#endif
 	SiSReleaseCmdQue(pSiS);
 
 }
@@ -760,21 +645,13 @@ SiSSubsequentMonoPatternFill(ScrnInfoPtr pScrn,
 			      TRAPAZOID_FILL);
 	
 	SiSOccpyCmdQue(pSiS);
-#ifdef SISVRAMQ
 	SiSCheckQueue(16 * 2);
 	SiSSetupDSTXYRect(x,y,w,h);
 	SiSSetupDSTBaseDoCMD(dstbase);
-#else
-	SiSSetupDSTBase(dstbase);
-	SiSSetupDSTXY(x,y);
-	SiSSetupRect(w,h);
-	SiSDoCMD;
-#endif
 	SiSReleaseCmdQue(pSiS);
 
 }
 
-#ifdef SISVRAMQ
 static void
 SiSSetupForColor8x8PatternFill(ScrnInfoPtr pScrn, int patternx, int patterny,
 			int rop, unsigned int planemask, int trans_col)
@@ -843,7 +720,6 @@ SiSSubsequentColor8x8PatternFillRect(ScrnInfoPtr pScrn, int patternx,
 
 	SiSReleaseCmdQue(pSiS);
 }
-#endif
 
 #ifdef SISDUALHEAD
 static void
@@ -947,12 +823,8 @@ SiSSetupForCPUToScreenAlphaTexture(ScrnInfoPtr pScrn,
 
 	if((width > 2048) || (height > 2048)) return FALSE;
 
-#ifdef SISVRAMQ
 	if(op > SiSRenderOpsMAX) return FALSE;
 	if(!SiSRenderOps[op])    return FALSE;
-#else
-	if(op != PictOpOver) return FALSE;
-#endif
 
 	if(!((renderaccelarray = pSiS->RenderAccelArray)))
 	   return FALSE;
@@ -974,7 +846,6 @@ SiSSetupForCPUToScreenAlphaTexture(ScrnInfoPtr pScrn,
 
 	SiSOccpyCmdQue(pSiS);
 
-#ifdef SISVRAMQ
 	SiSSetupDSTColorDepth(pSiS->SiS310_AccelDepth);
 	switch(op) {
 	case PictOpClear:
@@ -1012,13 +883,6 @@ SiSSetupForCPUToScreenAlphaTexture(ScrnInfoPtr pScrn,
 	   break;
 	}
         SiSSyncWP
-#else
-	SiSSetupDSTColorDepth(pSiS->DstColor);
-	SiSSetupSRCPitch((pitch << 2));
-	SiSSetupDSTRect(pSiS->scrnOffset, DEV_HEIGHT)
-	SiSSetupROP(0)
-	SiSSetupCMDFlag(ALPHA_BLEND | SRCVIDEO | A_PERPIXELALPHA | pSiS->SiS310_AccelDepth)
-#endif
 	SiSReleaseCmdQue(pSiS);
 
 	/* Don't need source for clear and dest */
@@ -1092,13 +956,8 @@ SiSSetupForCPUToScreenTexture(ScrnInfoPtr pScrn,
 #endif
 
 	SiSOccpyCmdQue(pSiS);
-#ifdef SISVRAMQ
 	if(op > SiSRenderOpsMAX) return FALSE;
 	if(!SiSRenderOps[op])    return FALSE;
-#else
-	if(op != PictOpOver) return FALSE;
-#endif
-
 	if((width > 2048) || (height > 2048)) return FALSE;
 
 	pitch = (width + 31) & ~31;
@@ -1115,7 +974,6 @@ SiSSetupForCPUToScreenTexture(ScrnInfoPtr pScrn,
 	width <<= bppshift;  /* -> bytes (for engine and memcpy) */
 	pitch <<= bppshift;  /* -> bytes */
 
-#ifdef SISVRAMQ
 	SiSSetupDSTColorDepth(pSiS->SiS310_AccelDepth);
 	switch(op) {
 	case PictOpClear:
@@ -1210,21 +1068,12 @@ SiSSubsequentCPUToScreenTexture(ScrnInfoPtr pScrn,
 	dstbase += FBOFFSET;
 
 	SiSOccpyCmdQue(pSiS);
-#ifdef SISVRAMQ
 	SiSCheckQueue(16 * 3);
 	if(pSiS->ChipType == SIS_770)
 		SiSSetupSafeReg(0x26a90000);
 	SiSSetupSRCDSTBase(srcbase,dstbase);
 	SiSSetupSRCDSTXY(src_x, src_y, dst_x, dst_y);
 	SiSSetRectDoCMD(width,height);
-#else
-	SiSSetupSRCBase(srcbase);
-	SiSSetupDSTBase(dstbase);
-	SiSSetupRect(width, height);
-	SiSSetupSRCXY(src_x, src_y);
-	SiSSetupDSTXY(dst_x, dst_y);
-	SiSDoCMD;
-#endif
 	SiSReleaseCmdQue(pSiS);
 
 	pSiS->alphaBlitBusy = TRUE;
@@ -1278,9 +1127,7 @@ SiSPrepareSolid(PixmapPtr pPixmap, int alu, Pixel planemask, Pixel fg)
 
 	SiSSetupDSTColorDepth((pPixmap->drawable.bitsPerPixel >> 4) << 16);
 	SiSCheckQueue(16 * 1);
-#ifdef SISVRAMQ
 	SiSSetupPATFGDSTRect(fg, pitch, DEV_HEIGHT);
-#endif
 	SiSSetupROP(SiSGetPatternROP(alu));
 	SiSSetupCMDFlag(PATFG);
 	SiSSyncWP;
@@ -1299,10 +1146,8 @@ SiSSolid(PixmapPtr pPixmap, int x1, int y1, int x2, int y2)
 	/* SiSSetupCMDFlag(BITBLT)  - BITBLT = 0 */
 
 	SiSCheckQueue(16 * 2);
-#ifdef SISVRAMQ
 	SiSSetupDSTXYRect(x1, y1, x2-x1, y2-y1);
 	SiSSetupDSTBaseDoCMD(pSiS->fillDstBase);
-#endif
 }
 
 static void
@@ -1351,13 +1196,9 @@ SiSPrepareCopy(PixmapPtr pSrcPixmap, PixmapPtr pDstPixmap, int xdir, int ydir,
 
 	SiSSetupDSTColorDepth((pDstPixmap->drawable.bitsPerPixel >> 4) << 16);
 	SiSCheckQueue(16 * 3);
-#ifdef SISVRAMQ
 	SiSSetupSRCPitchDSTRect(srcpitch, dstpitch, DEV_HEIGHT);
-#endif
 	SiSSetupROP(SiSGetCopyROP(alu));
-#ifdef SISVRAMQ
 	SiSSetupSRCDSTBase(srcbase, dstbase);
-#endif
 	SiSSyncWP;
 
 	return TRUE;
@@ -1370,10 +1211,8 @@ SiSCopy(PixmapPtr pDstPixmap, int srcX, int srcY, int dstX, int dstY, int width,
 	SISPtr pSiS = SISPTR(pScrn);
 
 	SiSCheckQueue(16 * 2);
-#ifdef SISVRAMQ
 	SiSSetupSRCDSTXY(srcX, srcY, dstX, dstY);
 	SiSSetRectDoCMD(width, height);
-#endif
 }
 
 static void
@@ -1549,13 +1388,11 @@ SiSDownloadFromScreen(PixmapPtr pSrc, int x, int y, int w, int h, char *dst, int
 void
 SISWriteBlitPacket(SISPtr pSiS, CARD32 *packet)
 {
-#ifdef SISVRAMQ
 	SiSWritePacketPart(packet[0], packet[1], packet[2], packet[3]);
 	SiSWritePacketPart(packet[4], packet[5], packet[6], packet[7]);
 	SiSWritePacketPart(packet[8], packet[9], packet[10], packet[11]);
 	SiSWritePacketPart(packet[12], packet[13], packet[14], packet[15]);
 	SiSWritePacketPart(packet[16], packet[17], packet[18], packet[19]);
-#endif
 	SiSSyncWP;
 }
 
@@ -1677,14 +1514,12 @@ SiS315AccelInit(ScreenPtr pScreen)
 
 
 
-#ifdef SISVRAMQ
 	      /* 8x8 color pattern fill (MMIO support not implemented) */
 	      infoPtr->SetupForColor8x8PatternFill = SiSSetupForColor8x8PatternFill;
 	      infoPtr->SubsequentColor8x8PatternFillRect = SiSSubsequentColor8x8PatternFillRect;
 	      infoPtr->Color8x8PatternFillFlags = NO_PLANEMASK |
 						  HARDWARE_PATTERN_SCREEN_ORIGIN |
 						  NO_TRANSPARENCY;
-#endif
 
 
 #if defined(RENDER) && defined(INCL_RENDER)

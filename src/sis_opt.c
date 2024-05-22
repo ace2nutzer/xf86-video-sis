@@ -462,7 +462,6 @@ SiSOptions(ScrnInfoPtr pScrn)
     pSiS->newFastVram = -1;
     pSiS->HostBus = TRUE;
     pSiS->TurboQueue = TRUE;
-#ifdef SISVRAMQ
     /* TODO: Option (315 series VRAM command queue) */
     /* But beware: sisfb does not know about this!!! */
     pSiS->cmdQueueSize = 512*1024;
@@ -470,7 +469,6 @@ SiSOptions(ScrnInfoPtr pScrn)
        /* Hardware maximum on Z7: 128k */
        pSiS->cmdQueueSize = 128*1024;
     }
-#endif
     pSiS->doRender = TRUE;
     pSiS->HWCursor = TRUE;
     pSiS->Rotate = 0;
@@ -1076,16 +1074,9 @@ SiSOptions(ScrnInfoPtr pScrn)
 #endif
     {
        if(pSiS->VGAEngine == SIS_315_VGA) {
-
-#ifdef SISVRAMQ
           xf86DrvMsg(pScrn->scrnIndex, X_INFO, "Using VRAM command queue, size %dk\n",
 		pSiS->cmdQueueSize / 1024);
-#else
-	  xf86DrvMsg(pScrn->scrnIndex, X_INFO, "Using MMIO command queue\n");
-#endif
-
        } else {
-
 	  /* TurboQueue */
 	  from = X_DEFAULT;
 	  if(xf86GetOptValBool(pSiS->Options, OPTION_TURBOQUEUE, &pSiS->TurboQueue)) {
@@ -1093,7 +1084,6 @@ SiSOptions(ScrnInfoPtr pScrn)
 	  }
 	  xf86DrvMsg(pScrn->scrnIndex, from, "TurboQueue %s\n",
 		     pSiS->TurboQueue ? enabledstr : disabledstr);
-
        }
 
        if((pSiS->VGAEngine == SIS_300_VGA) || (pSiS->VGAEngine == SIS_315_VGA)) {

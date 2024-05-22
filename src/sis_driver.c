@@ -4411,7 +4411,6 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	break;
 
       case SIS_315_VGA:
-#ifdef SISVRAMQ		/* VRAM queue */
 	pSiS->cmdQueueSizeMask = pSiS->cmdQueueSize - 1;	/* VRAM Command Queue is variable (in therory) */
 	pSiS->cmdQueueOffset = (pScrn->videoRam * 1024) - pSiS->cmdQueueSize;
 	pSiS->cmdQueueLen = 0;
@@ -4429,13 +4428,6 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 #endif
 	   pSiS->cmdQ_SharedWritePort = &(pSiS->cmdQ_SharedWritePort_2D);
 
-
-#else			/* MMIO */
-	if(pSiS->TurboQueue) {
-	   pSiS->availMem -= (512*1024);			/* MMIO Command Queue is 512k (variable in theory) */
-	   pSiS->cursorOffset = 512;
-	}
-#endif
 	if(pSiS->HWCursor) {
 	   pSiS->availMem -= (pSiS->CursorSize * 2);
 	   if(pSiS->OptUseColorCursor) pSiS->availMem -= (pSiS->CursorSize * 2);
@@ -6380,7 +6372,7 @@ SiSEnableTurboQueue(ScrnInfoPtr pScrn)
 	       *    11  (0x0C)  4M
 	       * The queue location is to be written to 0x85C0.
 	       */
-#ifdef SISVRAMQ
+
 	      /* We use VRAM Cmd Queue, not MMIO or AGP */
 	      UChar tempCR55 = 0;
 
@@ -6428,25 +6420,6 @@ SiSEnableTurboQueue(ScrnInfoPtr pScrn)
 		pSiS->cmdQueueOffset, pSiS->cmdQueueBase, *(pSiS->cmdQ_SharedWritePort),
 		SIS_MMIO_IN32(pSiS->IOBase, 0x85cc), (ULong *)temp);
 #endif
-#else
-	      /* For MMIO */
-	      /* Synchronous reset for Command Queue */
-	      orSISIDXREG(SISSR, 0x26, 0x01);
-	      /* Set Command Queue Threshold to max value 11111b */
-	      outSISIDXREG(SISSR, 0x27, 0x1F);
-	      /* Do some magic (cp readport to writeport) */
-	      temp = SIS_MMIO_IN32(pSiS->IOBase, 0x85C8);
-	      SIS_MMIO_OUT32(pSiS->IOBase, 0x85C4, temp);
-	      /* Enable MMIO Command Queue mode (0x20),
-	       * Enable_command_queue_auto_correction (0x02)
-	       *        (no idea, but sounds good, so use it)
-	       * 512k (0x00) (does this apply to MMIO mode?) */
-	      outSISIDXREG(SISSR, 0x26, 0x22);
-	      /* Calc Command Queue position (Q is always 512k)*/
-	      temp = (pScrn->videoRam - 512) * 1024;
-	      /* Set Q position */
-	      SIS_MMIO_OUT32(pSiS->IOBase, 0x85C0, temp);
-#endif
 	   }
 	   break;
 	default:
@@ -6454,7 +6427,6 @@ SiSEnableTurboQueue(ScrnInfoPtr pScrn)
     }
 }
 
-#ifdef SISVRAMQ
 static void
 SiSRestoreQueueMode(SISPtr pSiS, SISRegPtr sisReg)
 {
@@ -6471,7 +6443,6 @@ SiSRestoreQueueMode(SISPtr pSiS, SISRegPtr sisReg)
        outSISIDXREG(SISCR,0x55,tempCR55);
     }
 }
-#endif
 
 /* Calculate the vertical refresh rate from a mode */
 float
@@ -7014,11 +6985,9 @@ SISRestore(ScrnInfoPtr pScrn)
            }
            outSISIDXREG(SISSR, 0x1f, pSiS->oldSR1F);
 
-#ifdef SISVRAMQ
 	   /* Restore queue mode registers on 315/330/340/350 series */
 	   /* (This became necessary due to the switch to VRAM queue) */
 	   SiSRestoreQueueMode(pSiS, sisReg);
-#endif
 
         } else {
 
@@ -7143,17 +7112,13 @@ static void
 SISVESARestore(ScrnInfoPtr pScrn)
 {
    SISPtr pSiS = SISPTR(pScrn);
-#ifdef SISVRAMQ
    SISRegPtr sisReg = &pSiS->SavedReg;
-#endif
 
    if(pSiS->UseVESA) {
       SISVESASaveRestore(pScrn, MODE_RESTORE);
-#ifdef SISVRAMQ
       /* Restore queue mode registers on 315/330/340/350 series */
       /* (This became necessary due to the switch to VRAM queue) */
       SiSRestoreQueueMode(pSiS, sisReg);
-#endif
    }
 }
 
@@ -7528,9 +7493,7 @@ SiSPreSetMode(ScrnInfoPtr pScrn, DisplayModePtr mode, int viewmode)
      pSiS->SiS_Pr->SiS_UseOEM = pSiS->OptUseOEM;
 
      /* Enable TurboQueue */
-#ifdef SISVRAMQ
      if(pSiS->VGAEngine != SIS_315_VGA)
-#endif
 	SiSEnableTurboQueue(pScrn);
 
      if((!pSiS->UseVESA) && (pSiS->VBFlags & CRT2_ENABLE)) {
@@ -8101,10 +8064,8 @@ SiSPostSetMode(ScrnInfoPtr pScrn, SISRegPtr sisReg)
 
     if(pSiS->VGAEngine == SIS_315_VGA) {
        int i;
-#ifdef SISVRAMQ
        /* Re-Enable and reset command queue */
        SiSEnableTurboQueue(pScrn);
-#endif
        /* Get HWCursor register contents for backup */
        for(i = 0; i < 16; i++) {
           pSiS->HWCursorBackup[i] = SIS_MMIO_IN32(pSiS->IOBase, 0x8500 + (i << 2));
@@ -9199,9 +9160,7 @@ SISScreenInit(SCREEN_INIT_ARGS_DECL)
      * This is done on 300 and 315 series only.
      */
     if(pSiS->UseVESA) {
-#ifdef SISVRAMQ
        if(pSiS->VGAEngine != SIS_315_VGA)
-#endif
           SiSEnableTurboQueue(pScrn);
     }
 
@@ -10232,7 +10191,6 @@ SiSResetDPI(ScrnInfoPtr pScrn, Bool force)
 
     }
 }
-#endif
 
 Bool
 SISSwitchMode(SWITCH_MODE_ARGS_DECL)
