@@ -792,8 +792,6 @@ SiSOptions(ScrnInfoPtr pScrn)
      *
      */
 #if XF86_VERSION_CURRENT >= XF86_VERSION_NUMERIC(4,2,99,0,0)
-#ifdef ARGB_CURSOR
-#ifdef SIS_ARGB_CURSOR
     if((pSiS->HWCursor) &&
        ((pSiS->VGAEngine == SIS_300_VGA) || (pSiS->VGAEngine == SIS_315_VGA)) &&
        (pSiS->Chipset != PCI_CHIP_XGIXG20)) {
@@ -835,8 +833,6 @@ SiSOptions(ScrnInfoPtr pScrn)
 	  }
        }
     }
-#endif
-#endif
 #endif
 
     /* OverruleFrequencyRanges

@@ -333,7 +333,7 @@ SiSNewUseHWCursor(ScreenPtr pScreen, CursorPtr pCurs)
     return TRUE;
 }
 
-#if (XF86_VERSION_CURRENT >= XF86_VERSION_NUMERIC(4,2,99,0,0)) && defined(ARGB_CURSOR) && defined(SIS_ARGB_CURSOR)
+#if (XF86_VERSION_CURRENT >= XF86_VERSION_NUMERIC(4,2,99,0,0))
 static Bool
 SiSUseHWCursorARGB(ScreenPtr pScreen, CursorPtr pCurs)
 {
@@ -678,7 +678,7 @@ SiS300LoadCursorImage(ScrnInfoPtr pScrn, UChar *src)
     pSiS->UseHWARGBCursor = FALSE;
 }
 
-#if (XF86_VERSION_CURRENT >= XF86_VERSION_NUMERIC(4,2,99,0,0)) && defined(ARGB_CURSOR) && defined(SIS_ARGB_CURSOR)
+#if (XF86_VERSION_CURRENT >= XF86_VERSION_NUMERIC(4,2,99,0,0))
 static void
 SiS300LoadCursorImageARGB(ScrnInfoPtr pScrn, CursorPtr pCurs)
 {
@@ -1096,7 +1096,7 @@ SiS310LoadCursorImage(ScrnInfoPtr pScrn, UChar *src)
     pSiS->UseHWARGBCursor = FALSE;
 }
 
-#if (XF86_VERSION_CURRENT >= XF86_VERSION_NUMERIC(4,2,99,0,0)) && defined(ARGB_CURSOR) && defined(SIS_ARGB_CURSOR)
+#if (XF86_VERSION_CURRENT >= XF86_VERSION_NUMERIC(4,2,99,0,0))
 static void
 SiS310LoadCursorImageARGB(ScrnInfoPtr pScrn, CursorPtr pCurs)
 {
@@ -1273,7 +1273,7 @@ SiSHWCursorInit(ScreenPtr pScreen)
 	infoPtr->SetCursorPosition = SiS300SetCursorPosition;
 	infoPtr->SetCursorColors = SiS300SetCursorColors;
 	infoPtr->LoadCursorImage = SiS300LoadCursorImage;
-#if (XF86_VERSION_CURRENT >= XF86_VERSION_NUMERIC(4,2,99,0,0)) && defined(ARGB_CURSOR) && defined(SIS_ARGB_CURSOR)
+#if (XF86_VERSION_CURRENT >= XF86_VERSION_NUMERIC(4,2,99,0,0))
 	if(pSiS->OptUseColorCursor) {
 	   infoPtr->UseHWCursorARGB = SiSUseHWCursorARGB;
 	   infoPtr->LoadCursorARGB = SiS300LoadCursorImageARGB;
@@ -1301,7 +1301,7 @@ SiSHWCursorInit(ScreenPtr pScreen)
 	infoPtr->SetCursorPosition = SiS310SetCursorPosition;
 	infoPtr->SetCursorColors = SiS310SetCursorColors;
 	infoPtr->LoadCursorImage = SiS310LoadCursorImage;
-#if (XF86_VERSION_CURRENT >= XF86_VERSION_NUMERIC(4,2,99,0,0)) && defined(ARGB_CURSOR) && defined(SIS_ARGB_CURSOR)
+#if (XF86_VERSION_CURRENT >= XF86_VERSION_NUMERIC(4,2,99,0,0))
 	if(pSiS->OptUseColorCursor) {
 	   infoPtr->UseHWCursorARGB = SiSUseHWCursorARGB;
 	   infoPtr->LoadCursorARGB = SiS310LoadCursorImageARGB;

@@ -34,7 +34,6 @@
 #undef SISDUALHEAD
 #undef SISMERGED
 #undef SISXINERAMA
-#undef SIS_ARGB_CURSOR
 #undef SISVRAMQ
 #undef INCL_YUV_BLIT_ADAPTOR
 #undef SIS_USE_XAA
@@ -53,10 +52,6 @@
 #undef SISXINERAMA
 #ifdef SISMERGED
 #define SISXINERAMA		/* Include SiS Pseudo-Xinerama support for MergedFB mode */
-#endif
-
-#if 1
-#define SIS_ARGB_CURSOR		/* Include support for color hardware cursors */
 #endif
 
 #if 1
