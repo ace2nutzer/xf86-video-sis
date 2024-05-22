@@ -4335,7 +4335,6 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 #ifdef SISDUALHEAD
        if(pSiSEnt) pSiSEnt->ErrorAfterFirst = TRUE;
 #endif
-       sisRestoreExtRegisterLock(pSiS,srlockReg,crlockReg);
        if(pSiS->pInt) xf86FreeInt10(pSiS->pInt);
        SISFreeRec(pScrn);
        return FALSE;
@@ -5821,8 +5820,6 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
     xf86SetPrimInitDone(pScrn->entityList[0]);
 #endif
 
-    sisRestoreExtRegisterLock(pSiS, srlockReg, crlockReg);
-
     if(pSiS->pInt) xf86FreeInt10(pSiS->pInt);
     pSiS->pInt = NULL;
 
@@ -5893,7 +5890,6 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
     /* ---- */
 
 my_error_1:
-    sisRestoreExtRegisterLock(pSiS, srlockReg, crlockReg);
 my_error_0:
 #ifdef SISDUALHEAD
     if(pSiSEnt) pSiSEnt->ErrorAfterFirst = TRUE;
@@ -6726,9 +6722,7 @@ SISSpecialRestore(ScrnInfoPtr pScrn)
     if(temp > 0x13)
        return;
 
-#ifdef UNLOCK_ALWAYS
     sisSaveUnlockExtRegisterLock(pSiS, NULL, NULL);
-#endif
 
     SiS_UnLockCRT2(pSiS->SiS_Pr);
 
@@ -6776,9 +6770,7 @@ SiSFixupSR11(ScrnInfoPtr pScrn)
     SISPtr pSiS = SISPTR(pScrn);
     CARD8  tmpreg;
 
-#ifdef UNLOCK_ALWAYS
     sisSaveUnlockExtRegisterLock(pSiS, NULL, NULL);
-#endif
 
     if(pSiS->SiS_Pr->SiS_SensibleSR11) {
        inSISIDXREG(SISSR,0x11,tmpreg);
@@ -6849,9 +6841,7 @@ SISRestore(ScrnInfoPtr pScrn)
        if(pSiS->DualHeadMode && pSiS->SecondHead) return;
 #endif
 
-#ifdef UNLOCK_ALWAYS
        sisSaveUnlockExtRegisterLock(pSiS, NULL, NULL);
-#endif
 
        /* We must not disable the sequencer if the bridge is in SlaveMode! */
        if(!(SiSBridgeIsInSlaveMode(pScrn))) {
@@ -7053,16 +7043,11 @@ SISRestore(ScrnInfoPtr pScrn)
 	  (*pSiS->SiSSave)(pScrn, pReg);
 	}
 #endif
-
-	sisRestoreExtRegisterLock(pSiS,sisReg->sisRegs3C4[0x05],sisReg->sisRegs3D4[0x80]);
-
     } else {	/* All other chipsets */
 
         SiSVGAProtect(pScrn, TRUE);
 
-#ifdef UNLOCK_ALWAYS
         sisSaveUnlockExtRegisterLock(pSiS, NULL, NULL);
-#endif
 
         (*pSiS->SiSRestore)(pScrn, sisReg);
 
@@ -7101,8 +7086,6 @@ SISRestore(ScrnInfoPtr pScrn)
               andSISIDXREG(SISSR, 0x01, ~0x20);
 	   }
         }
-
-        sisRestoreExtRegisterLock(pSiS,sisReg->sisRegs3C4[5],sisReg->sisRegs3D4[0x80]);
 
         SiSVGAProtect(pScrn, FALSE);
     }
@@ -7196,10 +7179,7 @@ SiSPreSetMode(ScrnInfoPtr pScrn, DisplayModePtr mode, int viewmode)
           }
        }
     }
-
-#ifdef UNLOCK_ALWAYS
     sisSaveUnlockExtRegisterLock(pSiS, NULL, NULL);    /* Unlock Registers */
-#endif
 
     inSISIDXREG(SISCR, 0x30, CR30);
     inSISIDXREG(SISCR, 0x31, CR31);
@@ -7557,9 +7537,7 @@ SiSPostSetMode(ScrnInfoPtr pScrn, SISRegPtr sisReg)
 
     pSiS->CRT1isoff = pSiS->CRT1off;
 
-#ifdef UNLOCK_ALWAYS
     sisSaveUnlockExtRegisterLock(pSiS, NULL, NULL);
-#endif
 
     SiSFixupSR11(pScrn);
 
@@ -8165,9 +8143,7 @@ SiS6326PostSetMode(ScrnInfoPtr pScrn, SISRegPtr sisReg)
 
     if(!(pSiS->SiS6326Flags & SIS6326_TVDETECTED)) return;
 
-#ifdef UNLOCK_ALWAYS
     sisSaveUnlockExtRegisterLock(pSiS, NULL, NULL);
-#endif
 
     /* Backup default TV position registers */
     pSiS->tvx1 = SiS6326GetTVReg(pScrn,0x3a);
@@ -8699,9 +8675,7 @@ SISSaveScreen(ScreenPtr pScreen, int mode)
 
     pSiS = SISPTR(pScrn);
 
-#ifdef UNLOCK_ALWAYS
     sisSaveUnlockExtRegisterLock(pSiS, NULL, NULL);
-#endif
 
     if(pSiS->VBFlags & (CRT2_LCD | CRT1_LCDA)) {
        SiSHandleBackLight(pSiS, IsUnblank);
@@ -8742,9 +8716,7 @@ SISSaveScreenDH(ScreenPtr pScreen, int mode)
        /* We can only blank LCD, not other CRT2 devices */
        if(pSiS->VBFlags & (CRT2_LCD|CRT1_LCDA)) {
 
-#ifdef UNLOCK_ALWAYS
 	  sisSaveUnlockExtRegisterLock(pSiS, NULL, NULL);
-#endif
 	  SiSHandleBackLight(pSiS, IsUnblank);
 
        }
@@ -8783,9 +8755,7 @@ SISDisplayPowerManagementSet(ScrnInfoPtr pScrn, int PowerManagementMode, int fla
     inSISIDXREG(SISSR,0x05,pmreg);
     if(pmreg != 0xa1) return;
 
-#ifdef UNLOCK_ALWAYS
     sisSaveUnlockExtRegisterLock(pSiS, NULL, NULL);
-#endif
 
     switch(PowerManagementMode) {
 
@@ -9149,9 +9119,7 @@ SISScreenInit(SCREEN_INIT_ARGS_DECL)
 
     SiS_SiSFB_Lock(pScrn, TRUE);
 
-#ifdef UNLOCK_ALWAYS
     sisSaveUnlockExtRegisterLock(pSiS, NULL, NULL);
-#endif
 
     /* Enable TurboQueue so that SISSave() saves it in enabled
      * state. If we don't do this, X will hang after a restart!
@@ -10358,9 +10326,7 @@ SISAdjustFrame(ADJUST_FRAME_ARGS_DECL)
     UChar       temp, cr11backup;
     ULong       base;
 
-#ifdef UNLOCK_ALWAYS
     sisSaveUnlockExtRegisterLock(pSiS, NULL, NULL);
-#endif
 
 
 #ifdef SISMERGED
@@ -10904,17 +10870,4 @@ sisSaveUnlockExtRegisterLock(SISPtr pSiS, UChar *reg1, UChar *reg2)
        }
     }
 }
-
-void
-sisRestoreExtRegisterLock(SISPtr pSiS, UChar reg1, UChar reg2)
-{
-    /* restore lock */
-#ifndef UNLOCK_ALWAYS
-    outSISIDXREG(SISSR, 0x05, reg1 == 0xA1 ? 0x86 : 0x00);
-    if((pSiS->VGAEngine == SIS_OLD_VGA) || (pSiS->VGAEngine == SIS_530_VGA)) {
-       outSISIDXREG(SISCR, 0x80, reg2 == 0xA1 ? 0x86 : 0x00);
-    }
-#endif
-}
-
 

@@ -229,9 +229,7 @@ SISOldInit(ScrnInfoPtr pScrn, DisplayModePtr mode)
        }
     }
 
-#ifdef UNLOCK_ALWAYS
     outSISIDXREG(SISSR, 0x05, 0x86);
-#endif
 
     if(!pSiS->UseVESA) {
        pReg->sisRegs3C4[0x06] &= 0x01;
@@ -896,9 +894,7 @@ SISNewInit(ScrnInfoPtr pScrn, DisplayModePtr mode)
     /* display pitch (used by init.c only) */
     RecalcScreenPitch(pScrn);
 
-#ifdef UNLOCK_ALWAYS
     outSISIDXREG(SISSR, 0x05, 0x86);
-#endif
 
     /* Enable PCI LINEAR ADDRESSING (0x80), MMIO (0x01), PCI_IO (0x20) */
     pReg->sisRegs3C4[0x20] = 0xA1;

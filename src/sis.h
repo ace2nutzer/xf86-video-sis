@@ -195,8 +195,6 @@
 #include "sis_dri.h"
 #endif /* SISDRI */
 
-#define UNLOCK_ALWAYS		/* Always unlock the registers (should be set!) */
-
 #if !defined(SIS_USE_XAA) && !defined(SIS_USE_EXA)
 #define SIS_USE_XAA
 #endif
@@ -1564,7 +1562,6 @@ extern const customttable SiS_customttable[];
 /* prototypes */
 
 extern void  sisSaveUnlockExtRegisterLock(SISPtr pSiS, UChar *reg1, UChar *reg2);
-extern void  sisRestoreExtRegisterLock(SISPtr pSiS, UChar reg1, UChar reg2);
 extern void  SiSOptions(ScrnInfoPtr pScrn);
 extern const OptionInfoRec * SISAvailableOptions(int chipid, int busid);
 extern void  SiSSetup(ScrnInfoPtr pScrn);

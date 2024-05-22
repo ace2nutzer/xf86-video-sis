@@ -378,9 +378,7 @@ SiSSave(ScrnInfoPtr pScrn, SISRegPtr sisReg)
     SISPtr pSiS = SISPTR(pScrn);
     int i, max;
 
-#ifdef UNLOCK_ALWAYS
     sisSaveUnlockExtRegisterLock(pSiS, NULL, NULL);
-#endif
 
     switch(pSiS->Chipset) {
         case PCI_CHIP_SIS5597:
@@ -436,9 +434,7 @@ SiSRestore(ScrnInfoPtr pScrn, SISRegPtr sisReg)
     int i, max;
     UChar tmp;
 
-#ifdef UNLOCK_ALWAYS
     sisSaveUnlockExtRegisterLock(pSiS, NULL, NULL);
-#endif
 
     switch(pSiS->Chipset) {
         case PCI_CHIP_SIS5597:
@@ -511,9 +507,7 @@ SiS300Save(ScrnInfoPtr pScrn, SISRegPtr sisReg)
     SISPtr pSiS = SISPTR(pScrn);
     int i;
 
-#ifdef UNLOCK_ALWAYS
     sisSaveUnlockExtRegisterLock(pSiS, NULL, NULL);
-#endif
 
     /* Save SR registers */
     for(i = 0x00; i <= 0x3D; i++) {
@@ -579,9 +573,7 @@ SiS300Restore(ScrnInfoPtr pScrn, SISRegPtr sisReg)
     int i,temp;
     CARD32 temp1, temp2;
 
-#ifdef UNLOCK_ALWAYS
     sisSaveUnlockExtRegisterLock(pSiS, NULL, NULL);
-#endif
 
     /* Wait for accelerator to finish on-going drawing operations. */
     inSISIDXREG(SISSR, 0x1E, temp);
@@ -720,9 +712,7 @@ SiS315Save(ScrnInfoPtr pScrn, SISRegPtr sisReg)
     SISPtr pSiS = SISPTR(pScrn);
     int i, max;
 
-#ifdef UNLOCK_ALWAYS
     sisSaveUnlockExtRegisterLock(pSiS, NULL, NULL);
-#endif
 
     /* Save SR registers */
     /*for(i = 0x00; i <= 0x60; i++) {     //Chaoyu Modified: Register number is wrong.*/
@@ -800,9 +790,7 @@ SiS315Restore(ScrnInfoPtr pScrn, SISRegPtr sisReg)
     SISPtr pSiS = SISPTR(pScrn);
     int i, temp;
 
-#ifdef UNLOCK_ALWAYS
     sisSaveUnlockExtRegisterLock(pSiS, NULL, NULL);
-#endif
 
     /* Wait for accelerator to finish on-going drawing operations. */
     inSISIDXREG(SISSR, 0x1E, temp);
@@ -1264,9 +1252,7 @@ SiSRestoreBridge(ScrnInfoPtr pScrn, SISRegPtr sisReg)
    SISPtr pSiS = SISPTR(pScrn);
    int i;
 
-#ifdef UNLOCK_ALWAYS
    sisSaveUnlockExtRegisterLock(pSiS, NULL, NULL);
-#endif
 
    for(i = 0x30; i <= 0x3b; i++) {
       if(i == 0x34) continue;
