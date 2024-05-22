@@ -2301,11 +2301,9 @@ void SiS_SetTVxposoffset(ScrnInfoPtr pScrn, int val)
 		            if(val < -26) val = -26;
 		         }
 		      } else if(pSiS->VBFlags & TV_YPBPR750P) {
-#ifndef OLD1280720P
 			 if(CR34 == 0x79 || CR34 == 0x75 || CR34 == 0x78) {
 			    if(val < -17) val = -17;
 			 }
-#endif
 		      }
 		   }
 		}
