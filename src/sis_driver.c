@@ -157,7 +157,7 @@ static int	SISEntityIndex = -1;
  */
 static int pix24bpp = 0;
 
-#if XSERVER_LIBPCIACCESS
+#ifdef XSERVER_LIBPCIACCESS
 #define SIS_DEVICE_MATCH(d, i)\
     {PCI_VENDOR_SIS, (d), PCI_MATCH_ANY, PCI_MATCH_ANY, 0, 0, (i) }
 
@@ -204,7 +204,7 @@ DriverRec SIS = {
     SIS_CURRENT_VERSION,
     SIS_DRIVER_NAME,
     SISIdentify,
-#if XSERVER_LIBPCIACCESS
+#ifdef XSERVER_LIBPCIACCESS
     NULL,
 #else
     SISProbe,
@@ -217,7 +217,7 @@ DriverRec SIS = {
 #else
     NULL,
 #endif
-#if XSERVER_LIBPCIACCESS
+#ifdef XSERVER_LIBPCIACCESS
     SIS_device_match,
     SIS_pci_probe,
 #else
@@ -1329,7 +1329,7 @@ SiSReadROM(ScrnInfoPtr pScrn)
 			      biossize = 0x8000;
 			      break;
 	     }
-#if XSERVER_LIBPCIACCESS
+#ifdef XSERVER_LIBPCIACCESS
 	     if(readpci) {
 		pSiS->PciInfo->rom_size = biossize;
 		pci_device_read_rom(pSiS->PciInfo, pSiS->BIOS);
