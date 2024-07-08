@@ -10159,6 +10159,7 @@ SiSResetDPI(ScrnInfoPtr pScrn, Bool force)
 
     }
 }
+#endif
 
 Bool
 SISSwitchMode(SWITCH_MODE_ARGS_DECL)

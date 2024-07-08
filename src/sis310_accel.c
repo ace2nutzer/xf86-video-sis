@@ -1014,13 +1014,6 @@ SiSSetupForCPUToScreenTexture(ScrnInfoPtr pScrn,
 	   return FALSE;
  	}
         SiSSyncWP
-#else
-	SiSSetupDSTColorDepth(pSiS->DstColor);
-	SiSSetupSRCPitch(pitch);
-	SiSSetupDSTRect(pSiS->scrnOffset, DEV_HEIGHT)
-	SiSSetupAlpha(0x00)
-	SiSSetupCMDFlag(ALPHA_BLEND | SRCVIDEO | A_PERPIXELALPHA | pSiS->SiS310_AccelDepth)
-#endif
 	SiSReleaseCmdQue(pSiS);
 	/* Don't need source for clear and dest */
 	if(!docopy) return TRUE;

@@ -799,10 +799,6 @@ static Bool SiS_GetModeMM(ScrnInfoPtr pScrn, DisplayModePtr mode, int virtX, int
 #endif
 
 /* Internally used functions */
-#ifdef SIS_NEED_MAP_IOP
-static Bool	SISMapIOPMem(ScrnInfoPtr pScrn);
-static Bool	SISUnmapIOPMem(ScrnInfoPtr pScrn);
-#endif
 void		SISAdjustFrame(ADJUST_FRAME_ARGS_DECL);
 UChar		SISSearchCRT1Rate(ScrnInfoPtr pScrn, DisplayModePtr mode);
 UShort		SiS_CheckModeCRT1(ScrnInfoPtr pScrn, DisplayModePtr mode,
