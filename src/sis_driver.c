@@ -536,7 +536,7 @@ SISProbe(DriverPtr drv, int flags)
 	       }
 	       pPriv = xf86GetEntityPrivate(pScrn->entityList[0], SISEntityIndex);
 	       if(!pPriv->ptr) {
-		  pPriv->ptr = XNFcallocarray(sizeof(SISEntRec), 1);
+		  pPriv->ptr = XNFcallocarray(1, sizeof(SISEntRec));
 		  pSiSEnt = pPriv->ptr;
 		  memset(pSiSEnt, 0, sizeof(SISEntRec));
 		  pSiSEnt->lastInstance = -1;
@@ -630,7 +630,7 @@ xf86DrvMsg(0, X_INFO, "SIS_pci_probe - GetEntityInfo chipset is 0x%x\n",pEnt->ch
 	       }
 	       pPriv = xf86GetEntityPrivate(pScrn->entityList[0], SISEntityIndex);
 	       if(!pPriv->ptr) {
-		  pPriv->ptr = XNFcallocarray(sizeof(SISEntRec), 1);
+		  pPriv->ptr = XNFcallocarray(1, sizeof(SISEntRec));
 		  pSiSEnt = pPriv->ptr;
 		  memset(pSiSEnt, 0, sizeof(SISEntRec));
 		  pSiSEnt->lastInstance = -1;
@@ -667,7 +667,7 @@ SISGetRec(ScrnInfoPtr pScrn)
     if(pScrn->driverPrivate != NULL)
        return TRUE;
 
-    pScrn->driverPrivate = XNFcallocarray(sizeof(SISRec), 1);
+    pScrn->driverPrivate = XNFcallocarray(1, sizeof(SISRec));
 
     /* Initialise it to 0 */
     memset(pScrn->driverPrivate, 0, sizeof(SISRec));
@@ -2932,7 +2932,7 @@ SiSBuildVesaModeList(ScrnInfoPtr pScrn, vbeInfoPtr pVbe, VbeInfoBlock *vbe)
 	  continue;
        }
 
-       m = XNFcallocarray(sizeof(sisModeInfoRec), 1);
+       m = XNFcallocarray(1, sizeof(sisModeInfoRec));
        if(!m) {
 	  VBEFreeModeInfo(mode);
 	  continue;
@@ -4043,7 +4043,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 #endif
 
     if(!pSiS->SiS_Pr) {
-       if(!(pSiS->SiS_Pr = XNFcallocarray(sizeof(struct SiS_Private), 1))) {
+       if(!(pSiS->SiS_Pr = XNFcallocarray(1, sizeof(struct SiS_Private)))) {
 	  SISErrorLog(pScrn, "Could not allocate memory for SiS_Pr structure\n");
 	  goto my_error_1;
        }
@@ -5470,7 +5470,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
     SiSSetMinMaxPixelClock(pScrn);
 
     /* Setup the ClockRanges */
-    clockRanges = XNFcallocarray(sizeof(ClockRange), 1);
+    clockRanges = XNFcallocarray(1, sizeof(ClockRange));
     clockRanges->next = NULL;
     clockRanges->minClock = pSiS->MinClock;
     clockRanges->maxClock = pSiS->MaxClock;
