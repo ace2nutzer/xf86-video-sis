@@ -20,11 +20,12 @@ Section "Device"
         ### <percent>: "<f>%"
         ### [arg]: arg optional
         #Option     "ShadowFB"           	"true"
-        #Option     "DefaultRefresh"     	"true"
-        #Option     "ModeSetClearScreen" 	"true"
+        #Option     "Rotate"             	# <str>
+        #Option     "fbdev"              	# <str>
+        #Option     "debug"              	"true"
         Option     "DRI"                	"false"
 	Identifier  "Card0"
-	Driver      "vesa"
+	Driver      "fbdev"
 	BusID       "PCI:1:0:0"
 EndSection
 

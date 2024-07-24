@@ -1,5 +1,4 @@
 # /etc/X11/xorg.conf file for SIS_671 with LCD panel 1280x800@60
-# using ShadowFB
 
 Section "Files"
 	ModulePath   "/usr/lib/xorg/modules"
@@ -22,9 +21,7 @@ Section "Device"
         ### <string>: "String", <freq>: "<f> Hz/kHz/MHz",
         ### <percent>: "<f>%"
         ### [arg]: arg optional
-	Option     "AccelMethod"               "EXA"
 	Option     "MigrationHeuristic"        "greedy"
-	Option     "ExaNoComposite"            "true"
         Option     "FastVram"           	"true"
         #Option     "HostBus"            	# [<bool>]
         Option     "BenchmarkMemcpy"    	"false"

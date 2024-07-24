@@ -4,15 +4,17 @@ sudo make -j2 install
 
 if [ -f /usr/lib/xorg/modules/libxaa.so ] ; then
 	sudo cp xorg.conf.xaa /etc/X11/xorg.conf
+	sudo cp xorg.conf.xaa /etc/X11
 	sudo cp XvMCConfig /usr/lib/xvmcconfig-standard
 elif [ -f /usr/lib/xorg/modules/libexa.so ] ; then
 	sudo cp xorg.conf.exa /etc/X11/xorg.conf
+	sudo cp xorg.conf.exa /etc/X11
 	sudo cp XvMCConfig /etc/X11
-elif [ -f /usr/lib/xorg/modules/libshadowfb.so ] ; then
-	sudo cp xorg.conf.exa /etc/X11/xorg.conf
-	sudo cp XvMCConfig /etc/X11
+elif [ -f /dev/fb0 ] ; then
+	sudo cp xorg.conf.fbdev /etc/X11/xorg.conf
 elif [ -f /usr/lib/xorg/modules/drivers/vesa_drv.so ] ; then
 	sudo cp xorg.conf.vesa /etc/X11/xorg.conf
 fi
 
 sudo cp xorg.conf.vesa /etc/X11
+sudo cp xorg.conf.fbdev /etc/X11
