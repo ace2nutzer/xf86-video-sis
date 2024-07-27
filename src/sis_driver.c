@@ -6412,7 +6412,7 @@ SiSEnableTurboQueue(ScrnInfoPtr pScrn)
 	      pSiS->cmdQueueBase = (unsigned int *)temp;
 	      outSISIDXREG(SISCR, 0x55, tempCR55);
 #ifdef TWDEBUG
-		xf86DrvMsg(0, 0, "CmdQueueOffs 0x%x, CmdQueueAdd %p, shwrp 0x%x, status %lx, base %p\n",
+		xf86DrvMsg(0, 0, "CmdQueueOffs 0x%x, CmdQueueAdd %p, shwrp 0x%x, status %x, base %p\n",
 		pSiS->cmdQueueOffset, pSiS->cmdQueueBase, *(pSiS->cmdQ_SharedWritePort),
 		SIS_MMIO_IN32(pSiS->IOBase, 0x85cc), (ULong *)temp);
 #endif
