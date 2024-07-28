@@ -5750,6 +5750,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 #endif
        if(modName && (!xf86LoadSubModule(pScrn, modName))) {
 	  SISErrorLog(pScrn, "Could not load %s module\n", modName);
+	  xf86DrvMsg(pScrn->scrnIndex, X_WARNING, "2D acceleration disabled, modename %s\n",modName);
 	  xf86DrvMsg(pScrn->scrnIndex, X_INFO,
 			 "Falling back to shadowfb\n");
 	  pSiS->NoAccel = TRUE;
@@ -5759,8 +5760,12 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 	     pSiS->NoXvideo = TRUE;
 	  }
 #endif
-       } else
-	  xf86DrvMsg(pScrn->scrnIndex, X_INFO, "2D acceleration enabled, modename %s\n",modName);
+       } else {
+	  if(pSiS->useEXA)
+		xf86DrvMsg(pScrn->scrnIndex, X_INFO, "Basic 2D acceleration enabled, modename %s\n",modName);
+	  else
+		xf86DrvMsg(pScrn->scrnIndex, X_INFO, "Full 2D acceleration enabled, modename %s\n",modName);
+	  }
     }
 
     /* Load shadowfb (if needed) */
