@@ -126,7 +126,7 @@
 
 #ifdef SIS_XORG_XF86
 
-#define SIS300
+//#define SIS300
 #define SIS315H
 
 #define OutPortByte(p,v) outSISREG((unsigned long)(p),(CARD8)(v))
