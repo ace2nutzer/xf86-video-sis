@@ -1172,16 +1172,12 @@ SiS_GetVBInfo(struct SiS_Private *SiS_Pr, unsigned short ModeNo,
 #endif
 
 #ifdef SIS_LINUX_KERNEL
-#if 0
    printk(KERN_DEBUG "sisfb: (init301: VBInfo= 0x%04x, SetFlag=0x%04x)\n",
       SiS_Pr->SiS_VBInfo, SiS_Pr->SiS_SetFlag);
 #endif
-#endif
 #ifdef SIS_XORG_XF86
-#ifdef TWDEBUG
    xf86DrvMsg(0, X_PROBED, "(init301: VBInfo=0x%04x, SetFlag=0x%04x)\n",
       SiS_Pr->SiS_VBInfo, SiS_Pr->SiS_SetFlag);
-#endif
 #endif
 }
 
