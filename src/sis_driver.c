@@ -9781,7 +9781,8 @@ SISScreenInit(SCREEN_INIT_ARGS_DECL)
 #endif
 
     /* Initialize SISCTRL extension */
-    SiSCtrlExtInit(pScrn);
+    if(pSiS->enablesisctrl)
+       SiSCtrlExtInit(pScrn);
 
     pSiS->virtualX = pScrn->virtualX;
     pSiS->virtualY = pScrn->virtualY;
