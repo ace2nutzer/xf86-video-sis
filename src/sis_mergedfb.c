@@ -469,9 +469,7 @@ SiSGenerateModeListFromLargestModes(ScrnInfoPtr pScrn,
 		    DisplayModePtr i, DisplayModePtr j,
 		    SiSScrn2Rel srel, Bool quiet)
 {
-#ifdef SISXINERAMA
     SISPtr pSiS = SISPTR(pScrn);
-#endif
     DisplayModePtr mode1 = NULL;
     DisplayModePtr mode2 = NULL;
     DisplayModePtr mode3 = NULL;

@@ -687,7 +687,7 @@ sis550Setup(ScrnInfoPtr pScrn)
     if(pSiS->Chipset == PCI_CHIP_SIS671){
        inSISIDXREG(SISCR,0x79,config);
        /* DDR */
-       ramtype = 8; 
+       ramtype = 0xa;
 
        /* Bus Data Width*/
        pSiS->BusWidth = (!(config & 0x0C))? 64 : 0;
@@ -1017,22 +1017,26 @@ sis550Setup(ScrnInfoPtr pScrn)
      */
     switch(pSiS->ChipType) {
     case SIS_760:
+#ifdef SIS671MEMFIX
+    case SIS_671:
+#endif
 #ifdef SIS761MEMFIX
     case SIS_761:
 #endif
 #ifdef SIS770MEMFIX
     case SIS_770:
 #endif
-       if(!(pSiS->ChipFlags & SiSCF_760LFB)) {
-	  ddrtimes2 = FALSE;
-	  pSiS->SiS_SD2_Flags |= SiS_SD2_SUPPORT760OO;
-       }
+	if(!(pSiS->ChipFlags & SiSCF_760LFB)) {
+		ddrtimes2 = FALSE;
+		if (pSiS->ChipType == SIS_760)
+			pSiS->SiS_SD2_Flags |= SiS_SD2_SUPPORT760OO;
+	}
     }
 
     /* DDR -> Mclk * 2 - needed for bandwidth calculation */
     if(ddrtimes2) {
-       if(ramtype == 8) pSiS->MemClock *= 2;
-       if(ramtype == 0xa) pSiS->MemClock *= 2;	   
+       if(ramtype == 8 || ramtype == 0xa)
+           pSiS->MemClock *= 2;
     }
 
     xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
@@ -1040,7 +1044,7 @@ sis550Setup(ScrnInfoPtr pScrn)
 		dramTypeStr[ramtype]);
 
     xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
-		"Memory clock: %3.3f MHz\n",
+		"DRAM clock: %3.3f MHz\n",
 		pSiS->MemClock/1000.0);
 
     xf86DrvMsg(pScrn->scrnIndex, X_PROBED,

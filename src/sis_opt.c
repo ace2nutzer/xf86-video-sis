@@ -496,7 +496,7 @@ SiSOptions(ScrnInfoPtr pScrn)
     pSiS->PDC = -1;
     pSiS->PDCA = -1;
     pSiS->EMI = -1;
-    pSiS->PRGB = -1;
+    pSiS->PRGB = 0;
     pSiS->OptTVStand = -1;
     pSiS->OptROMUsage = -1;
     pSiS->noInternalModes = FALSE;
@@ -1594,13 +1594,12 @@ SiSOptions(ScrnInfoPtr pScrn)
 	  */
 	  if(xf86GetOptValInteger(pSiS->Options, OPTION_PRGB, &pSiS->PRGB)) {
 	     if((pSiS->PRGB != 18 && pSiS->PRGB != 24)) {
-		pSiS->PRGB = -1;
+		pSiS->PRGB = 24;
 		SiS_PrintBadOpt(pScrn, strptr, OPTION_PRGB);
-	     } else {
-		   xf86DrvMsg(pScrn->scrnIndex, X_CONFIG,
+	     }
+	     xf86DrvMsg(pScrn->scrnIndex, X_CONFIG,
 			"LCD panel color depth is %d\n",
 			pSiS->PRGB);
-	     }
 	  }
 
        }

@@ -53,8 +53,22 @@
 #define _SIS_OSDEF_H_
 
 /* The choices are: */
-#undef  SIS_LINUX_KERNEL		/* Linux kernel framebuffer */
+#if 1
 #define SIS_XORG_XF86			/* XFree86/X.org */
+
+#if 0
+#define SIS300				/* SiS 300 series */
+#endif
+
+#if 1
+#define SIS315H				/* SiS 315 series */
+#endif
+
+#endif
+
+#if 0
+#define  SIS_LINUX_KERNEL		/* Linux kernel framebuffer */
+#endif
 
 #undef SIS_LINUX_KERNEL_24
 #undef SIS_LINUX_KERNEL_26
@@ -125,9 +139,6 @@
 /**********************************************************************/
 
 #ifdef SIS_XORG_XF86
-
-//#define SIS300
-#define SIS315H
 
 #define OutPortByte(p,v) outSISREG((unsigned long)(p),(CARD8)(v))
 #define OutPortWord(p,v) outSISREGW((unsigned long)(p),(CARD16)(v))

@@ -19,13 +19,17 @@ Section "Device"
         ### <string>: "String", <freq>: "<f> Hz/kHz/MHz",
         ### <percent>: "<f>%"
         ### [arg]: arg optional
-        #Option     "ShadowFB"           	"true"
-        #Option     "Rotate"             	# <str>
-        #Option     "fbdev"              	# <str>
-        #Option     "debug"              	"true"
-        Option     "DRI"                	"false"
+        Option     "SWcursor"           	"false"
+        #Option     "kmsdev"             	# <str>
+        Option      "ShadowFB"           	"false"
+        #Option     "AccelMethod"        	# <str>
+        #Option     "PageFlip"           	# [<bool>]
+        #Option     "ZaphodHeads"        	# <str>
+        #Option     "DoubleShadow"       	# [<bool>]
+        #Option     "Atomic"             	# [<bool>]
+        Option      "DRI"                	"true"
 	Identifier  "Card0"
-	Driver      "fbdev"
+	Driver      "modesetting"
 	BusID       "PCI:1:0:0"
 EndSection
 

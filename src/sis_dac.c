@@ -80,10 +80,6 @@
 #include "sis_regs.h"
 #include "sis_dac.h"
 
-#if 0
-#define TWDEBUG_VID
-#endif
-
 static void SiSSave(ScrnInfoPtr pScrn, SISRegPtr sisReg);
 static void SiSRestore(ScrnInfoPtr pScrn, SISRegPtr sisReg);
 static void SiS300Save(ScrnInfoPtr pScrn, SISRegPtr sisReg);
@@ -1272,7 +1268,7 @@ SiSRestoreBridge(ScrnInfoPtr pScrn, SISRegPtr sisReg)
 int
 SiSMclk(SISPtr pSiS)
 {
-    int mclk=0;
+    int mclk = 0;
     UChar Num, Denum, Base;
 
     switch (pSiS->Chipset)  {
@@ -1295,7 +1291,7 @@ SiSMclk(SISPtr pSiS)
 
 	/* Numerator */
 	inSISIDXREG(SISSR, 0x28, Num);
-	mclk = 14318 * ((Num & 0x7f) + 1);
+	mclk = 16000 * ((Num & 0x7f) + 1);
 
 	/* Denumerator */
 	inSISIDXREG(SISSR, 0x29, Denum);
@@ -1528,7 +1524,7 @@ SiSMemBandWidth(ScrnInfoPtr pScrn, Bool IsForCRT2, Bool quiet)
 		case PCI_CHIP_SIS670:
 		case PCI_CHIP_SIS671:
 		    magic = magicINT[bus/64];
-		    max = 680000; /* ? */
+		    max = 666666;
 		    break;
 		}
 

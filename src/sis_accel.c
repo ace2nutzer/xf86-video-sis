@@ -52,10 +52,8 @@
 #endif /* XAA */
 
 #ifdef SIS_USE_EXA		/* EXA */
-#ifndef XORG_NEW
 extern void SiSScratchSave(ScreenPtr pScreen, ExaOffscreenArea *area);
 extern Bool SiSUploadToScratch(PixmapPtr pSrc, PixmapPtr pDst);
-#endif
 extern Bool SiSUploadToScreen(PixmapPtr pDst, int x, int y, int w, int h, char *src, int src_pitch);
 extern Bool SiSDownloadFromScreen(PixmapPtr pSrc, int x, int y, int w, int h, char *dst, int dst_pitch);
 #endif /* EXA */
@@ -493,9 +491,10 @@ SiSPrepareSolid(PixmapPtr pPixmap, int alu, Pixel planemask, Pixel fg)
 	/* Check that the pitch matches the hardware's requirements. Should
 	 * never be a problem due to pixmapPitchAlign and fbScreenInit.
 	 */
-	if((pSiS->fillPitch = exaGetPixmapPitch(pPixmap)) & 7)
+	if(exaGetPixmapPitch(pPixmap) & 7)
 	   return FALSE;
 
+	pSiS->fillPitch = exaGetPixmapPitch(pPixmap);
 	pSiS->fillBpp = pPixmap->drawable.bitsPerPixel >> 3;
 	pSiS->fillDstBase = (CARD32)exaGetPixmapOffset(pPixmap);
 
@@ -545,14 +544,16 @@ SiSPrepareCopy(PixmapPtr pSrcPixmap, PixmapPtr pDstPixmap, int xdir, int ydir,
 	/* Check that the pitch matches the hardware's requirements. Should
 	 * never be a problem due to pixmapPitchAlign and fbScreenInit.
 	 */
-	if((pSiS->copySPitch = exaGetPixmapPitch(pSrcPixmap)) & 3)
+	if(exaGetPixmapPitch(pSrcPixmap) & 3)
 	   return FALSE;
-	if((pSiS->copyDPitch = exaGetPixmapPitch(pDstPixmap)) & 7)
+	if(exaGetPixmapPitch(pDstPixmap) & 7)
 	   return FALSE;
 
 	pSiS->copyXdir = xdir;
 	pSiS->copyYdir = ydir;
 	pSiS->copyBpp = pSrcPixmap->drawable.bitsPerPixel >> 3;
+	pSiS->copySPitch = exaGetPixmapPitch(pSrcPixmap);
+	pSiS->copyDPitch = exaGetPixmapPitch(pDstPixmap);
 	pSiS->copySrcBase = (CARD32)exaGetPixmapOffset(pSrcPixmap);
 	pSiS->copyDstBase = (CARD32)exaGetPixmapOffset(pDstPixmap);
 
@@ -616,6 +617,7 @@ static void
 SiSDoneCopy(PixmapPtr pDstPixmap)
 {
 }
+
 #endif /* EXA */
 
 /* For DGA usage */
@@ -662,23 +664,6 @@ SiSAccelInit(ScreenPtr pScreen)
     pSiS->exa_scratch = NULL;
 #endif
 
-#ifndef XORG_NEW
-#ifdef SIS_USE_EXA
-    if(!pSiS->NoAccel) {
-       if(pSiS->useEXA && pScrn->bitsPerPixel == 24) {
-          if(exaGetVersion() <= EXA_MAKE_VERSION(0, 1, 0)) {
-	     xf86DrvMsg(pScrn->scrnIndex, X_INFO,
-			"This version of EXA is broken for 24bpp framebuffers\n");
-	     xf86DrvMsg(pScrn->scrnIndex, X_INFO,
-			"\t- disabling 2D acceleration and Xv\n");
-	     pSiS->NoAccel = TRUE;
-	     pSiS->NoXvideo = TRUE; /* No fbmem manager -> no xv */
-	  }
-       }
-    }
-#endif
-#endif
-
     if(!pSiS->NoAccel) {
 #ifdef SIS_USE_XAA
        if(!pSiS->useEXA) {
@@ -688,7 +673,7 @@ SiSAccelInit(ScreenPtr pScreen)
 #endif
 #ifdef SIS_USE_EXA
        if(pSiS->useEXA) {
-	  if(!(pSiS->EXADriverPtr = XNFcallocarray(sizeof(ExaDriverRec), 1))) {
+	      if(!(pSiS->EXADriverPtr = exaDriverAlloc())) {
 	     pSiS->NoAccel = TRUE;
 	     pSiS->NoXvideo = TRUE; /* No fbmem manager -> no xv */
 	  }
@@ -818,11 +803,11 @@ SiSAccelInit(ScreenPtr pScreen)
 	  pSiS->EXADriverPtr->accel.Copy = SiSCopy;
 	  pSiS->EXADriverPtr->accel.DoneCopy = SiSDoneCopy;
 
+	  /* Composite not supported */
+
 	  /* Upload, download to/from Screen */
 	  pSiS->EXADriverPtr->accel.UploadToScreen = SiSUploadToScreen;
 	  pSiS->EXADriverPtr->accel.DownloadFromScreen = SiSDownloadFromScreen;
-
-	  /* Composite not supported */
 
 #else /*xorg>=7.0*/
 
@@ -859,11 +844,12 @@ SiSAccelInit(ScreenPtr pScreen)
 	  pSiS->EXADriverPtr->Copy = SiSCopy;
 	  pSiS->EXADriverPtr->DoneCopy = SiSDoneCopy;
 
+	  /* Composite not supported */
+
 	  /* Upload, download to/from Screen */
 	  pSiS->EXADriverPtr->UploadToScreen = SiSUploadToScreen;
 	  pSiS->EXADriverPtr->DownloadFromScreen = SiSDownloadFromScreen;
 
-	  /* Composite not supported */
 
 #endif  /*end of Xorg>=7.0 EXA Setting*/       
        }
@@ -941,16 +927,19 @@ SiSAccelInit(ScreenPtr pScreen)
 	     return FALSE;
           }
 
-#ifndef XORG_NEW
-          /* Reserve locked offscreen scratch area of 128K for glyph data */
-	  pSiS->exa_scratch = exaOffscreenAlloc(pScreen, 128 * 1024, 16, TRUE,
+
+          /* Reserve locked offscreen scratch area of 64K for glyph data */
+	  pSiS->exa_scratch = exaOffscreenAlloc(pScreen, 64 * 1024, 16, TRUE,
 						SiSScratchSave, pSiS);
 	  if(pSiS->exa_scratch) {
 	     pSiS->exa_scratch_next = pSiS->exa_scratch->offset;
-             pSiS->EXADriverPtr->accel.UploadToScratch = SiSUploadToScratch;
-             //pSiS->EXADriverPtr->UploadToScratch = SiSUploadToScratch;
-	  }
+#ifdef XORG_NEW
+		 pSiS->EXADriverPtr->UploadToScratch = SiSUploadToScratch;
+#else
+		 pSiS->EXADriverPtr->accel.UploadToScratch = SiSUploadToScratch;
 #endif
+	  }
+
 
        } else {
 

@@ -19,7 +19,7 @@ Section "Device"
         ### <string>: "String", <freq>: "<f> Hz/kHz/MHz",
         ### <percent>: "<f>%"
         ### [arg]: arg optional
-        #Option     "ShadowFB"           	"true"
+        Option     "ShadowFB"           	"true"
         #Option     "DefaultRefresh"     	"true"
         #Option     "ModeSetClearScreen" 	"true"
         Option     "DRI"                	"false"
