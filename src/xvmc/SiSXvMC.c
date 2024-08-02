@@ -54,8 +54,8 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "SiSXvMC.h"
 
 
-#define XVMCDEBUG
-#define SUBPDEBUG
+//#define XVMCDEBUG
+//#define SUBPDEBUG
 
 /* Hardware data dump */
 /*

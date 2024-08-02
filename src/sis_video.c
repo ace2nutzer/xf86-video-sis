@@ -99,9 +99,7 @@
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
-/*
-#define XVDEBUG
-*/
+
 #include "sis.h"
 #ifdef SIS_USE_XAA
 #include "xf86fbman.h"

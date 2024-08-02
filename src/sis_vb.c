@@ -323,17 +323,19 @@ void SISLCDPreInit(ScrnInfoPtr pScrn, Bool quiet)
 	     if((CR36 & 0x0f) < 0x0f) CR36 &= 0xf7;
 	  }
        }
-       if(pSiS->PRGB != -1) {
-	  tmp = 0x37;
-	  if((pSiS->VGAEngine == SIS_315_VGA) &&
+
+       tmp = 0x37;
+       if((pSiS->VGAEngine == SIS_315_VGA) &&
 	     (pSiS->ChipType < SIS_661)       &&
 	     (pSiS->ROM661New)                &&
 	     (!(pSiS->SiS_Pr->PanelSelfDetected))) {
 	     tmp = 0x35;
-	  }
-	  if(pSiS->PRGB == 18)      orSISIDXREG(SISCR, tmp, 0x01);
-	  else if(pSiS->PRGB == 24) andSISIDXREG(SISCR, tmp, 0xfe);
-       }
+        }
+	if(pSiS->PRGB == 18)
+		andSISIDXREG(SISCR, tmp, 0xfe);
+	else
+		orSISIDXREG(SISCR, tmp, 0x01);
+
        inSISIDXREG(SISCR, 0x37, CR37);
        if(pSiS->ChipType < SIS_661) {
 	  inSISIDXREG(SISCR, 0x3C, CR7D);
@@ -350,7 +352,7 @@ void SISLCDPreInit(ScrnInfoPtr pScrn, Bool quiet)
 		pSiS->LCDwidth, pSiS->LCDheight,
 		((CR36 & 0xf0) >> 4),
 		(CR37 & 0x10) ? "" : "non-",
-		(CR37 & 0x01) ? 18 : 24);
+		(CR37 & 0x01) ? 24 : 18);
        } else if(pSiS->SiS_Pr->SiS_CustomT == CUT_PANEL848) {
 	  pSiS->VBLCDFlags |= VB_LCD_848x480;
 	  pSiS->LCDwidth = pSiS->SiS_Pr->CP_MaxX = 848;
@@ -392,7 +394,7 @@ void SISLCDPreInit(ScrnInfoPtr pScrn, Bool quiet)
 		}
 	     } else if(pSiS->VGAEngine == SIS_300_VGA) {
 		xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
-		   "BIOS provided invalid panel size, assuming 1024x768, RGB18\n");
+		   "BIOS provided invalid panel size, assuming 1024x768, RGB24\n");
 		setSISIDXREG(SISCR,0x36,0xf0,0x02);
 		setSISIDXREG(SISCR,0x37,0xee,0x01);
 		CR36 = 0x02;
@@ -408,7 +410,7 @@ void SISLCDPreInit(ScrnInfoPtr pScrn, Bool quiet)
 		"Detected LCD/Plasma panel (max. X %d Y %d, pref. %dx%d, RGB%d)\n",
 		pSiS->SiS_Pr->CP_MaxX, pSiS->SiS_Pr->CP_MaxY,
 		pSiS->SiS_Pr->CP_PreferredX, pSiS->SiS_Pr->CP_PreferredY,
-		(CR37 & 0x01) ? 18 : 24);
+		(CR37 & 0x01) ? 24 : 18);
 	  } else {
 	     if(pSiS->VGAEngine == SIS_300_VGA) {
 		pSiS->VBLCDFlags |= SiS300_LCD_Type[(CR36 & 0x0f)].VBLCD_lcdflag;
@@ -439,7 +441,7 @@ void SISLCDPreInit(ScrnInfoPtr pScrn, Bool quiet)
 			((pSiS->VGAEngine == SIS_315_VGA) && (!pSiS->ROM661New)) ?
 			 	((CR36 & 0x0f) - 1) : ((CR36 & 0xf0) >> 4),
 			(CR37 & 0x10) ? "" : "non-",
-			(CR37 & 0x01) ? 18 : 24,
+			(CR37 & 0x01) ? 24 : 18,
 			CR36, CR37, CR7D);
 	  }
        }

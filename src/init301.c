@@ -1176,8 +1176,10 @@ SiS_GetVBInfo(struct SiS_Private *SiS_Pr, unsigned short ModeNo,
       SiS_Pr->SiS_VBInfo, SiS_Pr->SiS_SetFlag);
 #endif
 #ifdef SIS_XORG_XF86
+#ifdef TWDEBUG
    xf86DrvMsg(0, X_PROBED, "(init301: VBInfo=0x%04x, SetFlag=0x%04x)\n",
       SiS_Pr->SiS_VBInfo, SiS_Pr->SiS_SetFlag);
+#endif
 #endif
 }
 
@@ -10719,24 +10721,21 @@ SetDelayComp661(struct SiS_Private *SiS_Pr, unsigned short ModeNo,
 
 	/*5. Other special cases*/
 
-
-
-   if(SiS_Pr->UseFetroTiming == TRUE){/*Futro timing: 741 + 301C, channelB timing error*/
+   if(SiS_Pr->UseFutroTiming == TRUE){/*Futro timing: 741 + 301C, channelB timing error*/
 
 	if(SiS_Pr->SiS_VBInfo & SetCRT2ToLCD){
 		
-		if (SiS_Pr->CHDisplay == 1280  &&  SiS_Pr->CVDisplay == 1024)	
+		if (SiS_Pr->CHDisplay == 1280  &&  SiS_Pr->CVDisplay == 1024) {
 			SiS_SetRegANDOR(SiS_Pr->SiS_Part1Port,0x2d,0xf0,0x03);
-		else if  (SiS_Pr->CHDisplay ==  1600 &&  SiS_Pr->CVDisplay == 1200)
+			xf86DrvMsg(0, X_INFO, "Futro Timing was set.\n");
+		} else if  (SiS_Pr->CHDisplay ==  1600 &&  SiS_Pr->CVDisplay == 1200) {
 			SiS_SetRegANDOR(SiS_Pr->SiS_Part1Port,0x2d,0xf0,0x02);
-
-		xf86DrvMsg(0, X_INFO, "Special Timing has been set\n");
+			xf86DrvMsg(0, X_INFO, "Futro Timing was set.\n");
+		} else
+			xf86DrvMsg(0, X_WARNING, "Futro Timing is not needed for this hardware and can be disabled.\n");
 	}
    	
    }
-
-
-
    
 }
 

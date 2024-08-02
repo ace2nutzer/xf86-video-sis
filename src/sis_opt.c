@@ -155,7 +155,7 @@ typedef enum {
     OPTION_FORCE2ASPECT,
     OPTION_TVBLUE,
     OPTION_PSEUDO,
-    OPTION_FUTRO_TIMING /*chaoyu's modified: for Fuji-Siemans specail timing*/
+    OPTION_FUTRO_TIMING /*chaoyu's modified: for Fuji-Siemens special timing*/
 } SISOpts;
 
 static const OptionInfoRec SISOptions[] = {
@@ -496,7 +496,7 @@ SiSOptions(ScrnInfoPtr pScrn)
     pSiS->PDC = -1;
     pSiS->PDCA = -1;
     pSiS->EMI = -1;
-    pSiS->PRGB = -1;
+    pSiS->PRGB = 0;
     pSiS->OptTVStand = -1;
     pSiS->OptROMUsage = -1;
     pSiS->noInternalModes = FALSE;
@@ -1594,13 +1594,12 @@ SiSOptions(ScrnInfoPtr pScrn)
 	  */
 	  if(xf86GetOptValInteger(pSiS->Options, OPTION_PRGB, &pSiS->PRGB)) {
 	     if((pSiS->PRGB != 18 && pSiS->PRGB != 24)) {
-		pSiS->PRGB = -1;
+		pSiS->PRGB = 24;
 		SiS_PrintBadOpt(pScrn, strptr, OPTION_PRGB);
-	     } else {
-		   xf86DrvMsg(pScrn->scrnIndex, X_CONFIG,
+	     }
+	     xf86DrvMsg(pScrn->scrnIndex, X_CONFIG,
 			"LCD panel color depth is %d\n",
 			pSiS->PRGB);
-	     }
 	  }
 
        }
@@ -2357,8 +2356,8 @@ SiSOptions(ScrnInfoPtr pScrn)
     /*chaoyu's modified: here we determind if use Futro timing, which is a special case*/
     if(xf86GetOptValBool(pSiS->Options, OPTION_FUTRO_TIMING, &val)){
 	if (val) {
-		xf86DrvMsg(pScrn->scrnIndex, X_INFO,"We should use Fetro special timimg\n");
-		pSiS->SiS_Pr->UseFetroTiming = TRUE;
+		xf86DrvMsg(pScrn->scrnIndex, X_INFO,"We should use Futro special timimg\n");
+		pSiS->SiS_Pr->UseFutroTiming = TRUE;
 	}
     }
 

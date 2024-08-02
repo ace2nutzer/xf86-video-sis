@@ -387,7 +387,7 @@ struct SiS_Private
 
 	const struct SiS_PanelDelayTbl	*SiS_PanelDelayTbl;
 	const struct SiS_PanelDelayTbl	*SiS_PanelDelayTblLVDS;
-       BOOLEAN		UseFetroTiming;		/*for Fuji-Siemans Fetro*/
+	BOOLEAN				UseFutroTiming;		/*for Fuji-Siemens Futro*/
 	
 
 	/* SiS bridge */

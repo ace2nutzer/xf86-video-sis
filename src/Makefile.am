@@ -29,7 +29,6 @@ sis_drv_la_LDFLAGS = -module -avoid-version
 sis_drv_ladir = @moduledir@/drivers
 
 sis_drv_la_SOURCES = \
-	300vtbl.h \
 	310vtbl.h \
 	compat-api.h \
 	init.c \
@@ -39,20 +38,14 @@ sis_drv_la_SOURCES = \
 	initdef.h \
 	initextx.c \
 	initextx.h \
-	oem300.h \
 	oem310.h \
 	osdef.h \
 	sis.h \
-	sis300_accel.c \
-	sis300_accel.h \
 	sis310_accel.c \
 	sis310_accel.h \
-	sis6326_video.c \
 	sispcirename.h \
 	sis_3daccel.c \
 	sis_3daccel.h \
-	sis_accel.c \
-	sis_accel.h \
 	sis_common.h \
 	sis_config.h \
 	sis_cursor.c \

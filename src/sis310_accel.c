@@ -42,10 +42,6 @@
 #include "sis_regs.h"
 #include "sis310_accel.h"
 
-#if 0
-#define ACCELDEBUG
-#endif
-
 #define FBOFFSET 	(pSiS->dhmOffset)
 
 #define DEV_HEIGHT	0xfff	/* "Device height of destination bitmap" */
@@ -56,6 +52,33 @@
 
 #ifdef SIS_USE_XAA
 
+#undef TRAP		/* Use/Don't use Trapezoid Fills
+			 * DOES NOT WORK. XAA sometimes provides illegal
+			 * trapezoid data (left and right edges cross each
+			 * other) which causes drawing errors. Since
+			 * checking the trapezoid for such a case is very
+			 * time-intensive, it is faster to let it be done
+			 * by the generic polygon functions.
+			 * Does not work on 330 series at all, hangs the engine.
+			 * Even with correct trapezoids, this is slower than
+			 * doing it by the CPU.
+                         */
+
+#undef CTSCE		/* Use/Don't use CPUToScreenColorExpand. Disabled
+			 * because it is slower than doing it by the CPU.
+			 * Indirect mode does not work in VRAM queue mode.
+			 * Does not work on 330 series (even in MMIO mode).
+			 */
+#undef CTSCE_DIRECT	/* Use direct method - This works (on both 315 and 330 at
+			 * least in VRAM queue mode) but we don't use this either,
+			 * because it's slower than doing it by the CPU. (Using it
+			 * would require defining CTSCE)
+			 */
+
+#undef STSCE		/* Use/Don't use ScreenToScreenColorExpand - does not work,
+			 * see comments below.
+			 */
+
 #define INCL_RENDER	/* Use/Don't use RENDER extension acceleration */
 
 #ifdef INCL_RENDER
@@ -63,31 +86,33 @@
 #  include "mipict.h"
 #  include "dixstruct.h"
 #  define SIS_NEED_ARRAY
-#  undef SISNEWRENDER
-#  ifdef XORG_VERSION_CURRENT
-#   ifdef XORG_NEW
-#    define SISNEWRENDER
-#   endif
-#  endif
+# ifdef XORG_NEW
+#  define SISNEWRENDER
+# endif
 # endif
 #endif
 
 #endif /* XAA */
 
+
 /* For EXA */
+
+#define EXA_HAVE_UPLOAD_TO_SCRATCH	0
 
 #ifdef SIS_USE_EXA
 #if 0
 #define SIS_HAVE_COMPOSITE		/* Have our own EXA composite */
 #endif
-#if 1
+#ifdef SIS_HAVE_COMPOSITE
 #ifndef SIS_NEED_ARRAY
 #define SIS_NEED_ARRAY
 #endif
 #endif
 #endif
 
-#if defined(SIS_USE_XAA) && defined(INCL_RENDER) && defined(RENDER)  /* XAA */
+#ifdef SIS_USE_XAA		/* XAA */
+#ifdef INCL_RENDER
+#ifdef RENDER
 static CARD32 SiSAlphaTextureFormats[2] = { PICT_a8      , 0 };
 static CARD32 SiSTextureFormats[2]      = { PICT_a8r8g8b8, 0 };
 static CARD32 SiS3DAlphaTextureFormats[2] = { PICT_a8r8g8b8 , 0 };
@@ -95,13 +120,13 @@ static CARD32 SiS3DAlphaTextureFormats[2] = { PICT_a8r8g8b8 , 0 };
 static CARD32 SiSDstTextureFormats16[2] = { PICT_r5g6b5  , 0 };
 static CARD32 SiSDstTextureFormats32[3] = { PICT_x8r8g8b8, PICT_a8r8g8b8, 0 };
 #endif
-#endif
+#endif /* RENDER */
+#endif /* INCL_RENDER */
+#endif /* XAA */
 
 #ifdef SIS_USE_EXA		/* EXA */
-#ifndef XORG_NEW
 void SiSScratchSave(ScreenPtr pScreen, ExaOffscreenArea *area);
 Bool SiSUploadToScratch(PixmapPtr pSrc, PixmapPtr pDst);
-#endif
 Bool SiSUploadToScreen(PixmapPtr pDst, int x, int y, int w, int h, char *src, int src_pitch);
 Bool SiSDownloadFromScreen(PixmapPtr pSrc, int x, int y, int w, int h, char *dst, int dst_pitch);
 #endif /* EXA */
@@ -205,7 +230,6 @@ SiSCalcRenderAccelArray(ScrnInfoPtr pScrn)
 #endif
 
 #ifdef SIS_USE_EXA
-#ifndef XORG_NEW
 void
 SiSScratchSave(ScreenPtr pScreen, ExaOffscreenArea *area)
 {
@@ -213,7 +237,6 @@ SiSScratchSave(ScreenPtr pScreen, ExaOffscreenArea *area)
 
 	pSiS->exa_scratch = NULL;
 }
-#endif
 #endif
 
 static void
@@ -229,7 +252,7 @@ SiSSync(ScrnInfoPtr pScrn)
 
 	pSiS->alphaBlitBusy = FALSE;
 
-	SiSIdle
+	SiSIdle;
 }
 
 static void
@@ -1075,13 +1098,13 @@ SiSSubsequentCPUToScreenTexture(ScrnInfoPtr pScrn,
 
 #endif /* XAA */
 
+
 #ifdef SIS_USE_EXA  /* ---------------------------- EXA -------------------------- */
 
 static void
 SiSEXASync(ScreenPtr pScreen, int marker)
 {
 	SISPtr pSiS = SISPTR(xf86ScreenToScrn(pScreen));
-
 	SiSIdle;
 }
 
@@ -1090,7 +1113,6 @@ SiSPrepareSolid(PixmapPtr pPixmap, int alu, Pixel planemask, Pixel fg)
 {
 	ScrnInfoPtr pScrn = xf86ScreenToScrn(pPixmap->drawable.pScreen);
 	SISPtr pSiS = SISPTR(pScrn);
-	CARD16 pitch;
 
 	/* Planemask not supported */
 	if((planemask & ((1 << pPixmap->drawable.depth) - 1)) !=
@@ -1103,27 +1125,24 @@ SiSPrepareSolid(PixmapPtr pPixmap, int alu, Pixel planemask, Pixel fg)
 	   (pPixmap->drawable.bitsPerPixel != 32))
 	   return FALSE;
 
-	/* Check that the pitch matches the hardware's requirements. Should
-	 * never be a problem due to pixmapPitchAlign and fbScreenInit.
-	 */
-	if(((pitch = exaGetPixmapPitch(pPixmap)) & 3))
-	   return FALSE;
-
-	if(pSiS->disablecolorkeycurrent || pSiS->nocolorkey) {
+	if(pSiS->disablecolorkeycurrent) {
 	   if((CARD32)fg == pSiS->colorKey) {
-	      /* NOOP - does not work: Pixmap is not neccessarily in the frontbuffer */
-	      /* alu = 5; */
-	      /* Fill it black; better than blue anyway */
-	      fg = 0;
+	      alu = 5;  /* NOOP */
 	   }
 	}
 
+	/* Check that the pitch matches the hardware's requirements. Should
+	 * never be a problem due to pixmapPitchAlign and fbScreenInit.
+	 */
+	if(exaGetPixmapPitch(pPixmap) & 3)
+	   return FALSE;
+
 	SiSSetupDSTColorDepth((pPixmap->drawable.bitsPerPixel >> 4) << 16);
 	SiSCheckQueue(16 * 1);
-	SiSSetupPATFGDSTRect(fg, pitch, DEV_HEIGHT);
-	SiSSetupROP(SiSGetPatternROP(alu));
-	SiSSetupCMDFlag(PATFG);
-	SiSSyncWP;
+	SiSSetupPATFGDSTRect(fg, exaGetPixmapPitch(pPixmap), DEV_HEIGHT)
+	SiSSetupROP(SiSGetPatternROP(alu))
+	SiSSetupCMDFlag(PATFG)
+	SiSSyncWP
 
 	pSiS->fillDstBase = (CARD32)exaGetPixmapOffset(pPixmap) + FBOFFSET;
 
@@ -1155,7 +1174,6 @@ SiSPrepareCopy(PixmapPtr pSrcPixmap, PixmapPtr pDstPixmap, int xdir, int ydir,
 	ScrnInfoPtr pScrn = xf86ScreenToScrn(pDstPixmap->drawable.pScreen);
 	SISPtr pSiS = SISPTR(pScrn);
 	CARD32 srcbase, dstbase;
-	CARD16 srcpitch, dstpitch;
 
 	/* Planemask not supported */
 	if((planemask & ((1 << pSrcPixmap->drawable.depth) - 1)) !=
@@ -1171,9 +1189,9 @@ SiSPrepareCopy(PixmapPtr pSrcPixmap, PixmapPtr pDstPixmap, int xdir, int ydir,
 	/* Check that the pitch matches the hardware's requirements. Should
 	 * never be a problem due to pixmapPitchAlign and fbScreenInit.
 	 */
-	if((srcpitch = exaGetPixmapPitch(pSrcPixmap)) & 3)
+	if(exaGetPixmapPitch(pSrcPixmap) & 3)
 	   return FALSE;
-	if((dstpitch = exaGetPixmapPitch(pDstPixmap)) & 3)
+	if(exaGetPixmapPitch(pDstPixmap) & 3)
 	   return FALSE;
 
 	srcbase = (CARD32)exaGetPixmapOffset(pSrcPixmap) + FBOFFSET;
@@ -1189,7 +1207,8 @@ SiSPrepareCopy(PixmapPtr pSrcPixmap, PixmapPtr pDstPixmap, int xdir, int ydir,
 
 	SiSSetupDSTColorDepth((pDstPixmap->drawable.bitsPerPixel >> 4) << 16);
 	SiSCheckQueue(16 * 3);
-	SiSSetupSRCPitchDSTRect(srcpitch, dstpitch, DEV_HEIGHT);
+	SiSSetupSRCPitchDSTRect(exaGetPixmapPitch(pSrcPixmap),
+					exaGetPixmapPitch(pDstPixmap), DEV_HEIGHT);
 	SiSSetupROP(SiSGetCopyROP(alu));
 	SiSSetupSRCDSTBase(srcbase, dstbase);
 	SiSSyncWP;
@@ -1218,23 +1237,24 @@ static Bool
 SiSCheckComposite(int op, PicturePtr pSrcPicture, PicturePtr pMaskPicture,
 				PicturePtr pDstPicture)
 {
-	//ScrnInfoPtr pScrn = xf86ScreenToScrn(pDstPicture->pDrawable->pScreen);
-	//SISPtr pSiS = SISPTR(pScrn);
-/*
-	xf86DrvMsg(0, X_INFO, "CC: %d Src %x (fi %d ca %d) Msk %x (%d %d) Dst %x (%d %d)\n",
+	ScrnInfoPtr pScrn = xf86ScreenToScrn(pDstPicture->pDrawable->pScreen);
+	SISPtr pSiS = SISPTR(pScrn);
+
+#ifdef ACCELDEBUG
+	xf86DrvMsg(0, 0, "CC: %d Src %x (fi %d ca %d) Msk %x (%d %d) Dst %x (%d %d)\n",
 		op, pSrcPicture->format, pSrcPicture->filter, pSrcPicture->componentAlpha,
 		pMaskPicture ? pMaskPicture->format : 0x2011, pMaskPicture ? pMaskPicture->filter : -1,
 			pMaskPicture ? pMaskPicture->componentAlpha : -1,
 		pDstPicture->format, pDstPicture->filter, pDstPicture->componentAlpha);
-*/
-#ifdef ACCELDEBUG
+
 	if(pSrcPicture->transform || (pMaskPicture && pMaskPicture->transform) || pDstPicture->transform) {
-		xf86DrvMsg(0, X_WARNING, "CC: src tr %p msk %p dst %p  !!!!!!!!!!!!!!!\n",
+		xf86DrvMsg(0, 0, "CC: src tr %p msk %p dst %p  !!!!!!!!!!!!!!!\n",
 			pSrcPicture->transform,
 			pMaskPicture ? pMaskPicture->transform : 0,
 			pDstPicture->transform);
         }
 #endif
+
 	return FALSE;
 }
 
@@ -1242,12 +1262,8 @@ static Bool
 SiSPrepareComposite(int op, PicturePtr pSrcPicture, PicturePtr pMaskPicture,
 				PicturePtr pDstPicture, PixmapPtr pSrc, PixmapPtr pMask, PixmapPtr pDst)
 {
-	//ScrnInfoPtr pScrn = xf86ScreenToScrn(pDst->drawable.pScreen);
-	//SISPtr pSiS = SISPTR(pScrn);
-
-#ifdef ACCELDEBUG
-	xf86DrvMsg(0, X_INFO, "calling SiSPrepareComposite\n");
-#endif
+	ScrnInfoPtr pScrn = xf86ScreenToScrn(pDst->drawable.pScreen);
+	SISPtr pSiS = SISPTR(pScrn);
 
 	return FALSE;
 }
@@ -1256,12 +1272,8 @@ static void
 SiSComposite(PixmapPtr pDst, int srcX, int srcY, int maskX, int maskY, int dstX, int dstY,
 				int width, int height)
 {
-	//ScrnInfoPtr pScrn = xf86ScreenToScrn(pDst->drawable.pScreen);
-	//SISPtr pSiS = SISPTR(pScrn);
-
-#ifdef ACCELDEBUG
-	xf86DrvMsg(0, X_INFO, "calling SiSComposite\n");
-#endif
+	ScrnInfoPtr pScrn = xf86ScreenToScrn(pDst->drawable.pScreen);
+	SISPtr pSiS = SISPTR(pScrn);
 }
 
 static void
@@ -1295,10 +1307,10 @@ SiSUploadToScreen(PixmapPtr pDst, int x, int y, int w, int h, char *src, int src
 	return TRUE;
 }
 
-#ifndef XORG_NEW
 Bool
 SiSUploadToScratch(PixmapPtr pSrc, PixmapPtr pDst)
 {
+#if EXA_HAVE_UPLOAD_TO_SCRATCH
 	ScrnInfoPtr pScrn = xf86ScreenToScrn(pSrc->drawable.pScreen);
 	SISPtr pSiS = SISPTR(pScrn);
 	unsigned char *src, *dst;
@@ -1347,8 +1359,10 @@ SiSUploadToScratch(PixmapPtr pSrc, PixmapPtr pDst)
 	}
 
 	return TRUE;
-}
+#else
+	return FALSE;
 #endif
+}
 
 Bool
 SiSDownloadFromScreen(PixmapPtr pSrc, int x, int y, int w, int h, char *dst, int dst_pitch)
@@ -1446,7 +1460,7 @@ SiS315AccelInit(ScreenPtr pScreen)
 #endif
 #ifdef SIS_USE_EXA
 	   if(pSiS->useEXA) {
-	      if(!(pSiS->EXADriverPtr = XNFcallocarray(1, sizeof(ExaDriverRec)))) {
+	      if(!(pSiS->EXADriverPtr = exaDriverAlloc())) {
 		 pSiS->NoAccel = TRUE;
 		 pSiS->NoXvideo = TRUE; /* No fbmem manager -> no xv */
 	      }
@@ -1604,12 +1618,9 @@ SiS315AccelInit(ScreenPtr pScreen)
 	      pSiS->EXADriverPtr->accel.Copy = SiSCopy;
 	      pSiS->EXADriverPtr->accel.DoneCopy = SiSDoneCopy;
 
-#ifdef SIS_NEED_ARRAY
-	      SiSCalcRenderAccelArray(pScrn);
-#endif
-
 	      /* Composite */
 #ifdef SIS_HAVE_COMPOSITE
+	      SiSCalcRenderAccelArray(pScrn);
 	      if(pSiS->RenderAccelArray) {
 		 pSiS->EXADriverPtr->accel.CheckComposite = SiSCheckComposite;
 		 pSiS->EXADriverPtr->accel.PrepareComposite = SiSPrepareComposite;
@@ -1657,12 +1668,9 @@ SiS315AccelInit(ScreenPtr pScreen)
 	      pSiS->EXADriverPtr->Copy = SiSCopy;
 	      pSiS->EXADriverPtr->DoneCopy = SiSDoneCopy;
 
-#ifdef SIS_NEED_ARRAY
-	      SiSCalcRenderAccelArray(pScrn);
-#endif
-
 	      /* Composite */
 #ifdef SIS_HAVE_COMPOSITE
+	      SiSCalcRenderAccelArray(pScrn);
 	      if(pSiS->RenderAccelArray) {
 		 pSiS->EXADriverPtr->CheckComposite = SiSCheckComposite;
 		 pSiS->EXADriverPtr->PrepareComposite = SiSPrepareComposite;
@@ -1752,16 +1760,17 @@ SiS315AccelInit(ScreenPtr pScreen)
 		 return FALSE;
 	      }
 
-#ifndef XORG_NEW
 	      /* Reserve locked offscreen scratch area of 128K for glyph data */
 	      pSiS->exa_scratch = exaOffscreenAlloc(pScreen, 128 * 1024, 16, TRUE,
 						SiSScratchSave, pSiS);
 	      if(pSiS->exa_scratch) {
 		 pSiS->exa_scratch_next = pSiS->exa_scratch->offset;
-		 //pSiS->EXADriverPtr->accel.UploadToScratch = SiSUploadToScratch;
-                 pSiS->EXADriverPtr->UploadToScratch = SiSUploadToScratch;
-               }
+#ifdef XORG_NEW
+		 pSiS->EXADriverPtr->UploadToScratch = SiSUploadToScratch;
+#else
+		 pSiS->EXADriverPtr->accel.UploadToScratch = SiSUploadToScratch;
 #endif
+	      }
 
 	   } else {
 

@@ -40,9 +40,9 @@
 #include "sis_config.h"
 #include <sispcirename.h>
 
-#define SISDRIVERVERSIONYEAR    6
-#define SISDRIVERVERSIONMONTH   10
-#define SISDRIVERVERSIONDAY     17
+#define SISDRIVERVERSIONYEAR    5
+#define SISDRIVERVERSIONMONTH   9
+#define SISDRIVERVERSIONDAY     20
 #define SISDRIVERREVISION       1
 
 #define SISDRIVERIVERSION ((SISDRIVERVERSIONYEAR << 16) |  \
@@ -59,10 +59,6 @@
 #ifdef linux
 #define SIS_LINUX
 #endif
-#endif
-
-#if 0
-#define TWDEBUG    
 #endif
 
 #include "compiler.h"
@@ -107,14 +103,12 @@
 #define SIS_HaveDriverFuncs HaveDriverFuncs
 #define SIS_HAVE_DRIVER_FUNC
 #endif /* HaveDriverFuncs */
-#ifdef XORG_NEW
 #define SISISXORG6899900
 #define SISISXORG6899901
 #ifdef RANDR
 #define SIS_HAVE_RR_GET_MODE_MM
 #define SIS_HAVE_RANDR_SIZE_PATCH
 #endif /* RANDR */
-#endif
 #endif
 #else   /* XORG_VERSION_CURRENT */
 #include "xf86Version.h"
@@ -124,19 +118,10 @@
 #define SIS_NAME                "SIS"
 #define SIS_DRIVER_NAME         "sis"
 #define SIS_MAJOR_VERSION	PACKAGE_VERSION_MAJOR
-
-/* chris, sync. with DRI(3D driver) request version */
-#ifdef SISISXORG6899900
 #define SIS_MINOR_VERSION	PACKAGE_VERSION_MINOR	/* DRI changes */
 #define SIS_PATCHLEVEL		PACKAGE_VERSION_PATCHLEVEL
-#else
-#define SIS_MINOR_VERSION       7
-#define SIS_PATCHLEVEL          1
-#endif
-
 #define SIS_CURRENT_VERSION     ((SIS_MAJOR_VERSION << 16) | \
-				 (SIS_MINOR_VERSION <<  8) | \
-				 (SIS_PATCHLEVEL))
+                                 (SIS_MINOR_VERSION << 8) | SIS_PATCHLEVEL )
 
 #if (XF86_VERSION_CURRENT >= XF86_VERSION_NUMERIC(4,3,99,0,0)) || (defined(XvExtension))
 #include "xf86xv.h"
@@ -251,12 +236,11 @@
 #endif
 #endif
 
-#if 0
-#define SIS761MEMFIX		/* Does the 761 need the same special care as the 760? */
-#endif				/* (apparently not) */
-#if 0
-#define SIS770MEMFIX		/* Does the 770 need the same special care as the 760? */
-#endif				/* (Hopefully no) */
+#undef SISCHECKOSSSE
+/* xf86InterceptSigIll() is discontinued in xorg-server 1.20 */
+#if (XORG_VERSION_CURRENT < XORG_VERSION_NUMERIC(1,19,99,1,0))
+#define SISCHECKOSSSE		/* Automatic check OS for SSE; requires SigIll facility */
+#endif
 
 #ifdef TWDEBUG
 #define SISVERBLEVEL 3

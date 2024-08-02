@@ -41,10 +41,6 @@
 #include "sis310_accel.h"
 #include "sis_3daccel.h"
 
-/*
-#define _3DACCELDEBUG
-*/
-
 #define FBOFFSET 	(pSiS->dhmOffset)
 
 #define DEV_HEIGHT	0xfff	/* "Device height of destination bitmap" */
@@ -52,6 +48,33 @@
 /* For XAA */
 
 #ifdef SIS_USE_XAA
+
+#undef TRAP		/* Use/Don't use Trapezoid Fills
+			 * DOES NOT WORK. XAA sometimes provides illegal
+			 * trapezoid data (left and right edges cross each
+			 * other) which causes drawing errors. Since
+			 * checking the trapezoid for such a case is very
+			 * time-intensive, it is faster to let it be done
+			 * by the generic polygon functions.
+			 * Does not work on 330 series at all, hangs the engine.
+			 * Even with correct trapezoids, this is slower than
+			 * doing it by the CPU.
+                         */
+
+#undef CTSCE		/* Use/Don't use CPUToScreenColorExpand. Disabled
+			 * because it is slower than doing it by the CPU.
+			 * Indirect mode does not work in VRAM queue mode.
+			 * Does not work on 330 series (even in MMIO mode).
+			 */
+#undef CTSCE_DIRECT	/* Use direct method - This works (on both 315 and 330 at
+			 * least in VRAM queue mode) but we don't use this either,
+			 * because it's slower than doing it by the CPU. (Using it
+			 * would require defining CTSCE)
+			 */
+
+#undef STSCE		/* Use/Don't use ScreenToScreenColorExpand - does not work,
+			 * see comments below.
+			 */
 
 #define INCL_RENDER	/* Use/Don't use RENDER extension acceleration */
 
@@ -68,14 +91,18 @@
 
 #endif /* XAA */
 
-#if defined(SIS_USE_XAA) && defined(INCL_RENDER) && defined(RENDER)  /* XAA */
+#ifdef SIS_USE_XAA		/* XAA */
+#ifdef INCL_RENDER
+#ifdef RENDER
 static CARD32 SiSAlphaTextureFormats[2] = { PICT_a8      , 0 };
 static CARD32 SiSTextureFormats[2]      = { PICT_a8r8g8b8, 0 };
 #ifdef SISNEWRENDER
 static CARD32 SiSDstTextureFormats16[2] = { PICT_r5g6b5  , 0 };
 static CARD32 SiSDstTextureFormats32[3] = { PICT_x8r8g8b8, PICT_a8r8g8b8, 0 };
 #endif
-#endif
+#endif /* RENDER */
+#endif /* INCL_RENDER */
+#endif /* XAA */
 
 #define _SHT_PS_SrcNum	        6
 #define _SHT_PS_DstNum	        18

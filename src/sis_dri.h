@@ -44,7 +44,7 @@
 #endif
 
 #define SIS_MAX_DRAWABLES 256
-#define SISIOMAPSIZE (64*1024)
+#define SISIOMAPSIZE (128*1024)
 
 typedef struct {
   int CtxOwner;
@@ -94,8 +94,8 @@ typedef struct {
   unsigned int scrnX;			/* TODO: = width = pScrn->virtualX */
   unsigned int scrnY;			/* TODO: = height = pScrn->virtualY */
 #ifdef SIS315DRI
-  unsigned int  cmdQueueOffset;	        /* Offset of start of command queue in VRAM */                                            /* Size of VRAM command queue */
-  unsigned int  cmdQueueSize; 
+  unsigned int  cmdQueueOffset;	        /* Offset of start of command queue in VRAM */
+  unsigned int  cmdQueueSize;		/* Size of VRAM command queue */
   int deviceRev;			/* Chip revision */
 #endif
 } SISDRIRec, *SISDRIPtr;

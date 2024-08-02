@@ -31,39 +31,70 @@
  *
  */
 
+#undef XORG_NEW
 #undef SISDUALHEAD
 #undef SISMERGED
 #undef SISXINERAMA
 #undef SIS_USE_XAA
 #undef SIS_USE_EXA
+#undef DEBUG
+#undef ACCELDEBUG
+#undef _3DACCELDEBUG
+#undef TWDEBUG
+#undef XVDEBUG
+#undef TWDEBUG_VID
 
 /* Configurable stuff: ------------------------------------- */
 
 #if 1
-#define XORG_NEW
+#define XORG_NEW		/* Toggle this if you get compile errors */
 #endif
 
+#if 0
 #define SISDUALHEAD		/* Include Dual Head support  */
-
-#define SISMERGED		/* Include Merged-FB support */
-
-#undef SISXINERAMA
-#ifdef SISMERGED
-#define SISXINERAMA		/* Include SiS Pseudo-Xinerama support for MergedFB mode */
 #endif
 
+#if 0
+#define SISMERGED		/* Include Merged-FB support */
+#endif
+
+#if 0
+#ifdef SISMERGED
+#define SISXINERAMA		/* Include SiS Pseudo-Xinerama for MergedFB mode */
+#endif
+#endif
+
+#if 1
 #ifdef HAVE_XAA_H
 #define SIS_USE_XAA		/* Include support for XAA */
 #endif
+#endif
 
-#if defined(SIS_HAVE_EXA) || (defined(USE_EXA) && (USE_EXA != 0))
 #if 1
+#if defined(SIS_HAVE_EXA) || (defined(USE_EXA) && (USE_EXA != 0))
 #define SIS_USE_EXA		/* Include support for EXA */
 #endif
 #endif
 
 #if 0
-#define SISCHECKOSSSE		/* Automatic check OS for SSE; requires SigIll facility */
+#define SIS761MEMFIX		/* Does the 761 need the same special care as the 760? */
+#endif				/* (apparently not) */
+
+#if 0
+#define SIS770MEMFIX		/* Does the 770 need the same special care as the 760? */
+#endif				/* (Hopefully no) */
+
+#if 1
+#define SIS671MEMFIX		/* Fix wrong DRAM clock for SIS_671 */
+#endif
+
+#if 0
+#define DEBUG			/* DEBUG */
+#define ACCELDEBUG
+#define _3DACCELDEBUG
+#define TWDEBUG
+#define XVDEBUG
+#define TWDEBUG_VID
 #endif
 
 /* End of configurable stuff --------------------------------- */

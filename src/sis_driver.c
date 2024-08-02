@@ -567,8 +567,8 @@ static Bool SIS_pci_probe (DriverPtr driver, int entity_num, struct pci_device *
     ScrnInfoPtr pScrn = NULL;
 #ifdef SISDUALHEAD
     EntityInfoPtr pEnt;
-    Bool    foundScreen = FALSE;
 #endif
+    Bool    foundScreen = FALSE;
 xf86DrvMsg(0, X_INFO, "SIS_pci_probe - begin, entity_num=%d\n", entity_num);
 xf86DrvMsg(0, X_INFO, "                       vendor_id=0x%x\n", device->vendor_id);
 xf86DrvMsg(0, X_INFO, "                       device_id=0x%x\n", device->device_id);
@@ -1230,8 +1230,6 @@ SiS_CheckKernelFB(ScrnInfoPtr pScrn)
        if(pSiS->sisfbfound) {
           strncpy(pSiS->sisfbdevname, name, 15);
           pSiS->sisfbdevname[15] = '\0';
-       } else {
-          xf86DrvMsg(pScrn->scrnIndex, X_PROBED, "sisfb not found\n");
        }
     }
 
@@ -4088,7 +4086,7 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
      * routines inside init.c/init301.c
      */
     pSiS->SiS_Pr->IOAddress = (SISIOADDRESS)(pSiS->RelIO + 0x30);
-    pSiS->SiS_Pr->UseFetroTiming = FALSE;
+    pSiS->SiS_Pr->UseFutroTiming = FALSE;
     SiSRegInit(pSiS->SiS_Pr, pSiS->RelIO + 0x30);
 
     /*
@@ -5423,15 +5421,12 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
        pSiS->DRIheapstart = pSiS->DRIheapend = 0;
     } else
 #endif
-           if(pSiS->DRIheapstart >= pSiS->DRIheapend) {
-#if 0  /* For future use */
+    if((pSiS->loadDRI) && (pSiS->DRIheapstart >= pSiS->DRIheapend)) {
        xf86DrvMsg(pScrn->scrnIndex, X_INFO,
-	  "No memory for DRI heap. Please set the option \"MaxXFBMem\" to\n"
-	  "\tlimit the memory X should use and leave the rest to DRI\n");
-#endif
+	  	"No memory for DRI heap. Please set the option \"MaxXFBMem\" to\n"
+	  		"\tlimit the memory X should use and leave the rest to DRI\n");
        pSiS->DRIheapstart = pSiS->DRIheapend = 0;
     }
-
 
     /* DDC/EDID handling */
     /* (DDC eventually uses the VBE. Make sure that our ptr is NULL) */
@@ -5741,46 +5736,49 @@ SISPreInit(ScrnInfoPtr pScrn, int flags)
 
     /* Load XAA/EXA (if needed) */
     if(!pSiS->NoAccel) {
-       char *modName = NULL;
 #ifdef SIS_USE_XAA
        if(!pSiS->useEXA) {
-	 modName = (char *) "xaa";
+	  if (!xf86LoadSubModule(pScrn, "xaa")) {
+	      xf86DrvMsg(pScrn->scrnIndex, X_WARNING, "Could not load XAA module - 2D acceleration disabled!\n");
+	      pSiS->NoAccel = TRUE;
+	  } else {
+	    xf86DrvMsg(pScrn->scrnIndex, X_INFO, "2D acceleration enabled, modename XAA\n");
+	  }
        }
 #endif
 #ifdef SIS_USE_EXA
        if(pSiS->useEXA) {
-	  modName = (char *) "exa";
+	  XF86ModReqInfo req;
+	  int errmaj, errmin;
+
+	  memset(&req, 0, sizeof(req));
+	  req.majorversion = 2;
+	  req.minorversion = 0;
+	  if (!LoadSubModule(pScrn->module, "exa", NULL, NULL, NULL, &req,
+	    &errmaj, &errmin)) {
+	    LoaderErrorMsg(NULL, "exa", errmaj, errmin);
+	      xf86DrvMsg(pScrn->scrnIndex, X_WARNING, "Could not load EXA module - 2D acceleration disabled!\n");
+	    pSiS->NoAccel = TRUE;
+	    pSiS->NoXvideo = TRUE;
+	  } else {
+	    xf86DrvMsg(pScrn->scrnIndex, X_INFO, "2D acceleration enabled, modename EXA\n");
+	  }
        }
 #endif
-       if(modName && (!xf86LoadSubModule(pScrn, modName))) {
-	  SISErrorLog(pScrn, "Could not load %s module\n", modName);
-	  xf86DrvMsg(pScrn->scrnIndex, X_WARNING, "2D acceleration disabled, modename %s\n",modName);
-	  xf86DrvMsg(pScrn->scrnIndex, X_INFO,
-			 "Falling back to shadowfb\n");
-	  pSiS->NoAccel = TRUE;
-	  pSiS->ShadowFB = TRUE;
-#ifdef SIS_USE_EXA
-	  if(pSiS->useEXA) {
-	     pSiS->NoXvideo = TRUE;
-	  }
-#endif
-       } else {
-	  if(pSiS->useEXA)
-		xf86DrvMsg(pScrn->scrnIndex, X_INFO, "Basic 2D acceleration enabled, modename %s\n",modName);
-	  else
-		xf86DrvMsg(pScrn->scrnIndex, X_INFO, "Full 2D acceleration enabled, modename %s\n",modName);
-	  }
+	if(pSiS->NoAccel) {
+		xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
+				"Falling back to shadowfb\n");
+		pSiS->ShadowFB = TRUE;
+	}
     }
 
     /* Load shadowfb (if needed) */
     if(pSiS->ShadowFB) {
        if(!xf86LoadSubModule(pScrn, "shadowfb")) {
 	  SISErrorLog(pScrn, "Could not load shadowfb module\n");
-	  if(pSiS->ShadowFB) {
 	     xf86DrvMsg(pScrn->scrnIndex, X_INFO, "ShadowFB support disabled\n");
 	     pSiS->ShadowFB = FALSE;
 	     pSiS->Rotate = pSiS->Reflect = 0;
-	  }
        }
     }
 
@@ -5927,7 +5925,7 @@ SISMapMem(ScrnInfoPtr pScrn)
 #ifdef SISDUALHEAD
     SISEntPtr pSiSEnt = pSiS->entityPrivate;
 #endif
-
+    int err = 0;
     /*
      * Map IO registers to virtual address space
      * (For Alpha, we need to map SPARSE memory, since we need
@@ -5949,7 +5947,7 @@ SISMapMem(ScrnInfoPtr pScrn)
                          pSiS->PciTag, pSiS->IOAddress, (pSiS->mmioSize * 1024));
 #else
 	     void **result = (void **)&pSiSEnt->IOBase;
-	     int err = pci_device_map_range(pSiS->PciInfo,
+	     err = pci_device_map_range(pSiS->PciInfo,
  	                                    pSiS->IOAddress,
 	                                    (pSiS->mmioSize * 1024),
                                             PCI_DEV_MAP_FLAG_WRITABLE,
@@ -5971,7 +5969,7 @@ SISMapMem(ScrnInfoPtr pScrn)
 #else
        {
 	     void **result = (void **)&pSiS->IOBase;
-	     int err = pci_device_map_range(pSiS->PciInfo,
+	     err = pci_device_map_range(pSiS->PciInfo,
  	                                    pSiS->IOAddress,
 	                                    (pSiS->mmioSize * 1024),
                                             PCI_DEV_MAP_FLAG_WRITABLE,
@@ -6005,7 +6003,7 @@ SISMapMem(ScrnInfoPtr pScrn)
                     pSiS->PciTag, pSiS->IOAddress, (pSiS->mmioSize * 1024));
 #else
 	     void **result = (void **)&pSiSEnt->IOBaseDense;
-	     int err = pci_device_map_range(pSiS->PciInfo,
+	     err = pci_device_map_range(pSiS->PciInfo,
  	                                    pSiS->IOAddress,
 	                                    (pSiS->mmioSize * 1024),
                                             PCI_DEV_MAP_FLAG_WRITABLE,
@@ -6026,7 +6024,7 @@ SISMapMem(ScrnInfoPtr pScrn)
                     pSiS->PciTag, pSiS->IOAddress, (pSiS->mmioSize * 1024));
 #else
 	     void **result = (void **)&pSiS->IOBaseDense;
-	     int err = pci_device_map_range(pSiS->PciInfo,
+	     err = pci_device_map_range(pSiS->PciInfo,
  	                                    pSiS->IOAddress,
 	                                    (pSiS->mmioSize * 1024),
                                             PCI_DEV_MAP_FLAG_WRITABLE,
@@ -6058,7 +6056,7 @@ SISMapMem(ScrnInfoPtr pScrn)
 			 pSiS->PciTag, (ULong)pSiS->realFbAddress,
 			 pSiS->FbMapSize);
 #else
-         int err = pci_device_map_range(pSiS->PciInfo,
+         err = pci_device_map_range(pSiS->PciInfo,
                                    (ULong)pSiS->realFbAddress,
                                    pSiS->FbMapSize,
                                    PCI_DEV_MAP_FLAG_WRITABLE |
@@ -6085,7 +6083,7 @@ SISMapMem(ScrnInfoPtr pScrn)
 			 pSiS->PciTag, (ULong)pSiS->realFbAddress,
 			 pSiS->FbMapSize);
 #else
-         int err = pci_device_map_range(pSiS->PciInfo,
+         err = pci_device_map_range(pSiS->PciInfo,
                                    (ULong)pSiS->realFbAddress,
                                    pSiS->FbMapSize,
                                    PCI_DEV_MAP_FLAG_WRITABLE |
@@ -7201,9 +7199,11 @@ SiSPreSetMode(ScrnInfoPtr pScrn, DisplayModePtr mode, int viewmode)
        inSISIDXREG(SISCR, 0x38, CR38);
        inSISIDXREG(SISCR, 0x39, CR39);
 
+#ifdef TWDEBUG
        xf86DrvMsgVerb(pScrn->scrnIndex, X_PROBED, SISVERBLEVEL,
 	   "Before: CR30=0x%02x,CR31=0x%02x,CR32=0x%02x,CR33=0x%02x,CR35=0x%02x,CR38=0x%02x\n",
               CR30, CR31, CR32, CR33, CR35, CR38);
+#endif
 
        CR38 &= ~0x07;
 
@@ -7222,12 +7222,17 @@ SiSPreSetMode(ScrnInfoPtr pScrn, DisplayModePtr mode, int viewmode)
        }
        inSISIDXREG(SISCR, 0x3b, CR3B);
 
+#ifdef TWDEBUG
        xf86DrvMsgVerb(pScrn->scrnIndex, X_PROBED, SISVERBLEVEL,
 	   "Before: CR30=0x%02x, CR31=0x%02x, CR32=0x%02x, CR33=0x%02x, CR%02x=0x%02x\n",
               CR30, CR31, CR32, CR33, temp, CR38);
+#endif
+
     }
 
+#ifdef TWDEBUG
     xf86DrvMsgVerb(pScrn->scrnIndex, X_INFO, SISVERBLEVEL, "VBFlags=0x%x\n", pSiS->VBFlags);
+#endif
 
     CR30 = 0x00;
     CR31 &= ~0x60;  /* Clear VB_Drivermode & VB_OutputDisable */
@@ -7457,9 +7462,11 @@ SiSPreSetMode(ScrnInfoPtr pScrn, DisplayModePtr mode, int viewmode)
 	setSISIDXREG(SISCR, 0x38, 0xf8, CR38);
 	outSISIDXREG(SISCR, 0x39, CR39);
 
+#ifdef TWDEBUG
 	xf86DrvMsgVerb(pScrn->scrnIndex, X_INFO, SISVERBLEVEL,
 		"After:  CR30=0x%02x,CR31=0x%02x,CR33=0x%02x,CR35=0x%02x,CR38=%02x\n",
 		    CR30, CR31, CR33, CR35, CR38);
+#endif
 
      } else {
 
@@ -7474,9 +7481,12 @@ SiSPreSetMode(ScrnInfoPtr pScrn, DisplayModePtr mode, int viewmode)
 	   outSISIDXREG(SISCR, 0x79, CR79);
 	}
 
+#ifdef TWDEBUG
 	xf86DrvMsgVerb(pScrn->scrnIndex, X_INFO, SISVERBLEVEL,
 		"After:  CR30=0x%02x,CR31=0x%02x,CR33=0x%02x,CR%02x=%02x\n",
 		    CR30, CR31, CR33, temp, CR38);
+#endif
+
      }
 
      pSiS->SiS_Pr->SiS_UseOEM = pSiS->OptUseOEM;
@@ -7749,7 +7759,7 @@ SiSPostSetMode(ScrnInfoPtr pScrn, SISRegPtr sisReg)
 	 case SIS_661:
 	 case SIS_741:
 	 case SIS_670:
-        case SIS_662:
+	 case SIS_662:
 	 case SIS_671:
 #ifndef SIS761MEMFIX
 	 case SIS_761:
@@ -9422,6 +9432,7 @@ SISScreenInit(SCREEN_INIT_ARGS_DECL)
     xf86DrvMsg(pScrn->scrnIndex, X_INFO, "CPUFlags %x\n", pSiS->CPUFlags);
 #endif
 
+
     /* Benchmark memcpy() methods (needs FB manager initialized) */
     /* Dual head: Do this AFTER the mode for CRT1 has been set */
     pSiS->NeedCopyFastVidCpy = FALSE;
@@ -9432,10 +9443,11 @@ SISScreenInit(SCREEN_INIT_ARGS_DECL)
 	     pSiSEnt->SiSFastVidCopy = SiSVidCopyInit(pScreen, &pSiSEnt->SiSFastMemCopy, FALSE);
 	     pSiSEnt->SiSFastVidCopyFrom = SiSVidCopyGetDefault();
 	     pSiSEnt->SiSFastMemCopyFrom = SiSVidCopyGetDefault();
-	     if(pSiS->useEXA
-						       ) {
+#ifdef SIS_USE_EXA
+	     if(pSiS->useEXA) {
 	        pSiSEnt->SiSFastVidCopyFrom = SiSVidCopyInit(pScreen, &pSiSEnt->SiSFastMemCopyFrom, TRUE);
 	     }
+#endif /* EXA */
 	     pSiSEnt->HaveFastVidCpy = TRUE;
 	     pSiS->SiSFastVidCopy = pSiSEnt->SiSFastVidCopy;
 	     pSiS->SiSFastMemCopy = pSiSEnt->SiSFastMemCopy;
@@ -9449,10 +9461,11 @@ SISScreenInit(SCREEN_INIT_ARGS_DECL)
 	  pSiS->SiSFastVidCopy = SiSVidCopyInit(pScreen, &pSiS->SiSFastMemCopy, FALSE);
 	  pSiS->SiSFastVidCopyFrom = SiSVidCopyGetDefault();
 	  pSiS->SiSFastMemCopyFrom = SiSVidCopyGetDefault();
-	  if(pSiS->useEXA
-						    ) {
+#ifdef SIS_USE_EXA
+	  if(pSiS->useEXA) {
 	     pSiS->SiSFastVidCopyFrom = SiSVidCopyInit(pScreen, &pSiS->SiSFastMemCopyFrom, TRUE);
 	  }
+#endif /* EXA */
 #ifdef SISDUALHEAD
        }
 #endif
