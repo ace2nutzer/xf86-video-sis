@@ -132,7 +132,7 @@ Section "Device"
         #Option     "XvInsideChromaKey"  	# [<bool>]
         #Option     "XvYUVChromaKey"     	# [<bool>]
         #Option     "XvDisableColorKey"  	# [<bool>]
-        #Option     "XvDefaultAdaptor"   	# <str>
+        Option     "XvDefaultAdaptor"   	"BLITTER"
         #Option     "YV12"               	# [<bool>]
         #Option     "MergedFB"           	# [<str>]
         #Option     "TwinView"           	# [<str>]
