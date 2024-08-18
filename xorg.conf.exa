@@ -23,6 +23,8 @@ Section "Device"
         ### <percent>: "<f>%"
         ### [arg]: arg optional
 	Option     "MigrationHeuristic"        "greedy"
+	Option     "EXANoUploadToScreen"        "true"
+	Option     "EXANoDownloadFromScreen"    "true"
         Option     "FastVram"           	"true"
         #Option     "HostBus"            	# [<bool>]
         Option     "BenchmarkMemcpy"    	"false"
