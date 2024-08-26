@@ -2271,7 +2271,7 @@ SiSOptions(ScrnInfoPtr pScrn)
 		      pSiS->XvGamma = pSiS->XvGammaGiven = TRUE;
 		      pSiS->XvGammaRedDef = pSiS->XvGammaRed;
 		      pSiS->XvGammaGreenDef = pSiS->XvGammaGreen;
-		      pSiS->XvGammaBlue = pSiS->XvGammaBlue;
+		      pSiS->XvGammaBlueDef = pSiS->XvGammaBlue;
 		   }
 		}
 	     }
