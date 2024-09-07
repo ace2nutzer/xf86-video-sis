@@ -534,7 +534,7 @@ void sis_free_privContext(SiSXvMCContext *pSiSXvMC);
 		    
 #define setregmask(base,idx,data,mask)		   	\
 		    do {				   	\
-		      unsigned char __Temp;		   		\
+		      int __Temp;		   		\
 		      outb(idx,base);			\
 		      __Temp = (inb((base)+1)) & (~(mask));\
 		      __Temp |= ((data) & (mask));	   	\
