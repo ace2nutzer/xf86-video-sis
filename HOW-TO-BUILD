@@ -3,7 +3,7 @@ Tested to work on Xorg 1.20 with sis671
 How to download, build and install this driver:
 
 # Install required packages
-sudo apt-get install git make autoconf xorg-dev xutils-dev mesa-common-dev libdrm-dev libtool 
+sudo apt-get install git make autoconf xorg-dev libtool
 
 # download
 git clone https://github.com/ace2nutzer/xf86-video-sis.git
