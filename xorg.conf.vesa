@@ -1,7 +1,19 @@
+Section "ServerLayout"
+	Identifier     "X.org Configured"
+	Screen      0  "Screen0" 0 0
+	InputDevice    "Mouse0" "CorePointer"
+	InputDevice    "Keyboard0" "CoreKeyboard"
+EndSection
+
 Section "Files"
 	ModulePath   "/usr/lib/xorg/modules"
 	FontPath     "/usr/share/fonts/X11/misc"
+	FontPath     "/usr/share/fonts/X11/cyrillic"
+	FontPath     "/usr/share/fonts/X11/100dpi/:unscaled"
+	FontPath     "/usr/share/fonts/X11/75dpi/:unscaled"
 	FontPath     "/usr/share/fonts/X11/Type1"
+	FontPath     "/usr/share/fonts/X11/100dpi"
+	FontPath     "/usr/share/fonts/X11/75dpi"
 	FontPath     "built-ins"
 EndSection
 
@@ -9,8 +21,23 @@ Section "Module"
 	Load  "glx"
 EndSection
 
+Section "InputDevice"
+	Identifier  "Keyboard0"
+	Driver      "kbd"
+EndSection
+
+Section "InputDevice"
+	Identifier  "Mouse0"
+	Driver      "mouse"
+	Option	    "Protocol" "auto"
+	Option	    "Device" "/dev/input/mice"
+	Option	    "ZAxisMapping" "4 5 6 7"
+EndSection
+
 Section "Monitor"
 	Identifier   "Monitor0"
+	VendorName   "Monitor Vendor"
+	ModelName    "Monitor Model"
 EndSection
 
 Section "Device"
@@ -20,7 +47,7 @@ Section "Device"
         ### <percent>: "<f>%"
         ### [arg]: arg optional
         Option      "ShadowFB"           	"true"
-        Option      "DefaultRefresh"     	"false"
+        Option      "DefaultRefresh"     	"true"
         Option      "ModeSetClearScreen" 	"true"
         Identifier  "Card0"
         Driver      "vesa"
@@ -34,7 +61,7 @@ Section "Screen"
 	SubSection "Display"
 		Viewport   0 0
 		Depth     24
-		Modes     "1280x800@60"    "1024x768@60"    "800x600@60"    "640x480@60"
+		Modes     "1280x800@60"    "1280x768@60"    "1024x768@60"    "800x600@60"    "640x480@60"
 	EndSubSection
 EndSection
 
