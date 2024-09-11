@@ -23,5 +23,5 @@ if test -z "$NOCONFIGURE"; then
 		CFLAGS="$FLAGS_CPU -O2 -ftree-vectorize -fomit-frame-pointer -fno-strict-aliasing \
 		-Werror-implicit-function-declaration -Wno-stringop-overflow -Wno-redundant-decls \
 		-Wno-unused-variable -Wno-unused-function -Wno-unused-but-set-variable -DNDEBUG -pipe" \
-		--prefix=/usr/local "$@"
+		--prefix=/usr "$@"
 fi

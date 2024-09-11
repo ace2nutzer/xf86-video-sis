@@ -10,15 +10,10 @@ elif [ -f /usr/lib/xorg/modules/libexa.so ] ; then
 	sudo cp xorg.conf.exa /etc/X11/xorg.conf
 	sudo cp xorg.conf.exa /etc/X11
 	sudo cp XvMCConfig /etc/X11
-	if ! [ -f /usr/local/lib/x86_64-linux-gnu/libSiSXvMC.so ] ; then
-		if ! [ -d /usr/local/lib/x86_64-linux-gnu ] ; then
-			sudo mkdir /usr/local/lib/x86_64-linux-gnu
-		fi
-		sudo ln -s /usr/local/lib/libSiSXvMC.so /usr/local/lib/x86_64-linux-gnu/libSiSXvMC.so
+	if ! [ -f /usr/lib/x86_64-linux-gnu/libSiSXvMC.so ] ; then
+		sudo ln -s /usr/lib/libSiSXvMC.so /usr/lib/x86_64-linux-gnu/libSiSXvMC.so
 	fi
 elif [ -f /usr/lib/xorg/modules/drivers/vesa_drv.so ] ; then
 	sudo cp xorg.conf.vesa /etc/X11/xorg.conf
 fi
 sudo cp xorg.conf.vesa /etc/X11
-
-sudo ln -s /usr/local/lib/xorg/modules/drivers/sis_drv.so /usr/lib/xorg/modules/drivers/sis_drv.so
