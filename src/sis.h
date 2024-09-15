@@ -36,6 +36,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
+#include <sys/perm.h>
 #include <xf86fbman.h>
 #include "sis_config.h"
 #include <sispcirename.h>
