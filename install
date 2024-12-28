@@ -1,6 +1,8 @@
 #!/bin/bash
 
-sudo make -j2 install
+N=$(nproc)
+
+sudo make -j$N install
 
 if [ -f /usr/lib/xorg/modules/libxaa.so ] ; then
 	sudo cp xorg.conf.xaa /etc/X11/xorg.conf
@@ -15,5 +17,7 @@ elif [ -f /usr/lib/xorg/modules/libexa.so ] ; then
 	fi
 elif [ -f /usr/lib/xorg/modules/drivers/vesa_drv.so ] ; then
 	sudo cp xorg.conf.vesa /etc/X11/xorg.conf
+	sudo cp xorg.conf.vesa /etc/X11
+else
+	echo "installation failed!"
 fi
-sudo cp xorg.conf.vesa /etc/X11

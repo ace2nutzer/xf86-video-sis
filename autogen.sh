@@ -1,8 +1,10 @@
 #! /bin/sh
 
+N=$(nproc)
+
 if [ -f Makefile ] ; then
-	make -j2 clean
-	make -j2 distclean
+	make -j$N clean
+	make -j$N distclean
 fi
 
 autoupdate
@@ -22,6 +24,9 @@ if test -z "$NOCONFIGURE"; then
     exec "$srcdir"/configure \
 		CFLAGS="$FLAGS_CPU -O2 -ftree-vectorize -fomit-frame-pointer -fno-strict-aliasing \
 		-Werror-implicit-function-declaration -Wno-stringop-overflow -Wno-redundant-decls \
-		-Wno-unused-variable -Wno-unused-function -Wno-unused-but-set-variable -DNDEBUG -pipe" \
-		--prefix=/usr "$@"
+		-Wno-unused-variable -Wno-unused-function -Wno-unused-but-set-variable \
+		-Werror=incompatible-pointer-types \
+		-DNDEBUG -pipe" \
+		--prefix=/usr \
+		"$@"
 fi

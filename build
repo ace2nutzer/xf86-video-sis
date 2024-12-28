@@ -1,8 +1,10 @@
 #!/bin/bash
 
+N=$(nproc)
+
 if [ -f Makefile ] ; then
-	make -j2
+	make -j$N
 else
 	./autogen.sh
-	make -j2
+	make -j$N
 fi
