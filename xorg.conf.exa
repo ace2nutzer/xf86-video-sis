@@ -27,6 +27,7 @@ Section "Device"
         ### <string>: "String", <freq>: "<f> Hz/kHz/MHz",
         ### <percent>: "<f>%"
         ### [arg]: arg optional
+	Option     "EXANoComposite"            "true"
 	Option     "MigrationHeuristic"        "greedy"
 	Option     "EXANoUploadToScreen"        "true"
 	Option     "EXANoDownloadFromScreen"    "true"
@@ -139,7 +140,7 @@ Section "Device"
         #Option     "XvInsideChromaKey"  	# [<bool>]
         #Option     "XvYUVChromaKey"     	# [<bool>]
         #Option     "XvDisableColorKey"  	# [<bool>]
-        Option     "XvDefaultAdaptor"   	"BLITTER"
+        #Option     "XvDefaultAdaptor"   	"BLITTER"
         #Option     "YV12"               	# [<bool>]
         #Option     "MergedFB"           	# [<str>]
         #Option     "TwinView"           	# [<str>]
@@ -173,10 +174,6 @@ Section "Screen"
 		Depth     24
 		Modes     "1280x800@60"    "1024x768@60"    "800x600@60"    "640x480@60"
 	EndSubSection
-EndSection
-
-Section "DRI"
-#	Mode 0666
 EndSection
 
 Section "ServerFlags"

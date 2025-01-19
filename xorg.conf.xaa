@@ -15,6 +15,7 @@ EndSection
 
 Section "Module"
 	Load  "glx"
+	Load  "dri"
 EndSection
 
 Section "Monitor"
@@ -36,7 +37,7 @@ Section "Device"
         Option     "Accel"              	"true"
         Option     "TurboQueue"         	"true"
         Option     "RenderAcceleration" 	"true"
-        Option     "DRI"                	"false"
+        Option     "DRI"                	"true"
         #Option     "AGPSize"            	# <i>
         #Option     "GARTSize"           	# <i>
         Option     "ShadowFB"           	"false"
@@ -137,7 +138,7 @@ Section "Device"
         #Option     "XvInsideChromaKey"  	# [<bool>]
         #Option     "XvYUVChromaKey"     	# [<bool>]
         #Option     "XvDisableColorKey"  	# [<bool>]
-        Option     "XvDefaultAdaptor"   	"BLITTER"
+        #Option     "XvDefaultAdaptor"   	"BLITTER"
         #Option     "YV12"               	# [<bool>]
         #Option     "MergedFB"           	# [<str>]
         #Option     "TwinView"           	# [<str>]
@@ -173,10 +174,10 @@ Section "Screen"
 	EndSubSection
 EndSection
 
-Section "DRI"
-#	Mode 0666
-EndSection
-
 Section "ServerFlags"
 	Option        "IgnoreABI"	"true"
+EndSection
+
+Section "DRI"
+  Mode 0666
 EndSection
