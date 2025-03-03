@@ -101,7 +101,7 @@ static char SISKernelDriverName[] = "sis";
 /* The client side DRI drivers are different: */
 static char SISClientDriverNameSiS300[] = "sis";	/* 300, 540, 630, 730 */
 static char SISClientDriverNameSiS315[] = "sis315";	/* All of 315/330 series */
-static char SISClientDriverNameSiS671[] = "sis671";	/* for sis671 */
+static char SISClientDriverNameSiS671[] = "sis";	/* for sis671 */
 static char SISClientDriverNameXGI[]    = "xgi";	/* XGI V3, V5, V8 */
 
 static Bool SISCreateContext(ScreenPtr pScreen, VisualPtr visual,
