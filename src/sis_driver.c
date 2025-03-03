@@ -1399,12 +1399,8 @@ SiSReadROM(ScrnInfoPtr pScrn)
 		}
 #endif
 	     } else {
-		if (pSiS->ChipType == SIS_671)
-		        xf86DrvMsg(pScrn->scrnIndex, X_INFO,
-				 "Could not find/read video BIOS (don't care)\n");
-		else
-		        xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
-				 "Could not find/read video BIOS\n");
+	        xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
+			 "Could not find/read video BIOS\n");
 		free(pSiS->BIOS);
 		pSiS->BIOS = NULL;
 	     }
