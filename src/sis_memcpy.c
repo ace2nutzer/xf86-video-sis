@@ -34,7 +34,7 @@
 #include <stdlib.h>
 #include "sis.h"
 
-#if 0			/* Debug */
+#if 1			/* Debug */
 #define SISDGBMC
 #endif
 
@@ -845,7 +845,7 @@ static char *SiS_GetCPUFreq(ScrnInfoPtr pScrn, char *buf, double *cpuFreq)
 
 #ifdef SISCHECKOSSSE
 
-#ifndef XFree86LOADER
+#ifdef XFree86LOADER
 #include <setjmp.h>
 #endif
 

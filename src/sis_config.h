@@ -89,6 +89,14 @@
 #endif
 
 #if 0
+#undef SISCHECKOSSSE
+/* xf86InterceptSigIll() is discontinued in xorg-server 1.20 */
+#if (XORG_VERSION_CURRENT < XORG_VERSION_NUMERIC(1,19,99,1,0))
+#define SISCHECKOSSSE		/* Automatic check OS for SSE; requires SigIll facility */
+#endif
+#endif
+
+#if 0
 #define DEBUG			/* DEBUG */
 #define ACCELDEBUG
 #define _3DACCELDEBUG
