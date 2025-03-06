@@ -559,7 +559,7 @@ Status XvMCCreateContext(Display *display, XvPortID port,
   pSiSXvMC->pOverlay->HDisplay = pContextRec->HDisplay;
   pSiSXvMC->pOverlay->VDisplay = pContextRec->VDisplay;
   strncpy(pSiSXvMC->busIdString, (char *)pContextRec->busIdString,9);
-  pSiSXvMC->busIdString[10] = '\0';
+  pSiSXvMC->busIdString[9] = '\0';
 
 #ifdef XVMCDEBUG
   printf("%s:\n",__FUNCTION__);
