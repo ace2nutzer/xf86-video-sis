@@ -1,5 +1,7 @@
 # /etc/X11/xorg.conf file for SIS_671 with LCD panel 1280x800@60 32-bit-color
-# using EXA accelerator for 2D/video HW acceleration
+# using EXA accelerator for basic 2D & video HW acceleration.
+# RenderAcceleration aka composite is not implemented.
+# DRI is in development.
 
 Section "Files"
 	ModulePath   "/usr/lib/xorg/modules"
@@ -15,6 +17,9 @@ EndSection
 
 Section "Module"
 	Load  "glx"
+	Load  "dri"
+	Load  "dri2"
+	Disable "dri3"
 EndSection
 
 Section "Monitor"
@@ -38,7 +43,7 @@ Section "Device"
         #Option     "MaxXFBMem"          	"8192"
         Option     "Accel"              	"true"
         Option     "TurboQueue"         	"true"
-        Option     "RenderAcceleration" 	"true"
+        Option     "RenderAcceleration" 	"false"
         Option     "DRI"                	"false"
         #Option     "AGPSize"            	# <i>
         #Option     "GARTSize"           	# <i>
@@ -180,3 +185,6 @@ Section "ServerFlags"
 	Option        "IgnoreABI"	"true"
 EndSection
 
+Section "DRI"
+  Mode 0666
+EndSection
