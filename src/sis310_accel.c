@@ -212,7 +212,7 @@ SiSCalcRenderAccelArray(ScrnInfoPtr pScrn)
 	   if(pSiSEnt) pSiS->RenderAccelArray = pSiSEnt->RenderAccelArray;
 #endif
 	   if(!pSiS->RenderAccelArray) {
-	      if((pSiS->RenderAccelArray = XNFcallocarray(65536, 1))) {
+	      if((pSiS->RenderAccelArray = xnfcalloc(1, 65536))) {
 #ifdef SISDUALHEAD
 	         if(pSiSEnt) pSiSEnt->RenderAccelArray = pSiS->RenderAccelArray;
 #endif
