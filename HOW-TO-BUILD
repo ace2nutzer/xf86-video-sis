@@ -1,9 +1,9 @@
-Tested to work on Xorg 1.20 with sis671
+Tested to work on Xorg 1.21 with sis 671
 
 How to download, build and install this driver:
 
 # Install required packages
-sudo apt-get install git make autoconf xorg-dev libtool
+sudo apt-get install git make autoconf xorg-dev libtool libdrm-dev
 
 # download
 git clone https://github.com/ace2nutzer/xf86-video-sis.git
@@ -18,13 +18,11 @@ cd xf86-video-sis
 # install the driver
 ./install
 
-# optional, but recommended:
-# use your console in text mode to improve scrolling (up to 3x faster!)
-sudo nano /etc/default/grub
-# uncomment "GRUB_TERMINAL=console" in order to disable graphical terminal (grub-pc only)
-# add "nomodeset" to GRUB_CMDLINE_LINUX_DEFAULT if DRI is not supported
-# save with Strg+X  then Y then ENTER
-# update bootloader
-sudo update-grub
+# reboot or logout to enjoy!
 
-# reboot and enjoy!
+# for old distros like Lubuntu 12.04:
+git config --global color.ui auto
+sudo apt-get install colorgcc
+sudo ln -s /usr/bin/colorgcc /usr/local/bin/gcc
+sudo ln -s /usr/bin/colorgcc /usr/local/bin/g++
+mkdir m4
