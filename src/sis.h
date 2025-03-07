@@ -97,7 +97,6 @@
 	(((major) * 10000000) + ((minor) * 100000) + ((patch) * 1000) + snap)
 #define XF86_VERSION_CURRENT XF86_VERSION_NUMERIC(4,3,99,902,0)
 #endif
-#ifdef XORG_NEW
 #define SIS_HAVE_RR_FUNC
 #ifdef HaveDriverFuncs
 #undef  SIS_HaveDriverFuncs
@@ -110,7 +109,6 @@
 #define SIS_HAVE_RR_GET_MODE_MM
 #define SIS_HAVE_RANDR_SIZE_PATCH
 #endif /* RANDR */
-#endif
 #else   /* XORG_VERSION_CURRENT */
 #include "xf86Version.h"
 #define SISMYSERVERNAME "XFree86"

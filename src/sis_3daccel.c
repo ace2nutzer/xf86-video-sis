@@ -82,7 +82,6 @@
 # ifdef RENDER
 #  include "mipict.h"
 #  include "dixstruct.h"
-#  undef SISNEWRENDER
 #   ifdef XORG_NEW
 #    define SISNEWRENDER
 #   endif

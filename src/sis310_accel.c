@@ -96,10 +96,8 @@
 
 
 /* For EXA */
-
-#define EXA_HAVE_UPLOAD_TO_SCRATCH	0
-
 #ifdef SIS_USE_EXA
+#define EXA_HAVE_UPLOAD_TO_SCRATCH	0
 #if 0
 #define SIS_HAVE_COMPOSITE		/* Have our own EXA composite */
 #endif
