@@ -202,7 +202,7 @@ _X_EXPORT
 #endif
 DriverRec SIS = {
     SIS_CURRENT_VERSION,
-    SIS_DRIVER_NAME,
+    (char *)SIS_DRIVER_NAME,
     SISIdentify,
 #ifdef XSERVER_LIBPCIACCESS
     NULL,
@@ -485,8 +485,8 @@ SISProbe(DriverPtr drv, int flags)
 			NULL, NULL, NULL, NULL, NULL))) {
 	    /* Fill in what we can of the ScrnInfoRec */
 	    pScrn->driverVersion    = SIS_CURRENT_VERSION;
-	    pScrn->driverName       = SIS_DRIVER_NAME;
-	    pScrn->name             = SIS_NAME;
+	    pScrn->driverName       = (char *)SIS_DRIVER_NAME;
+	    pScrn->name             = (char *)SIS_NAME;
 	    pScrn->Probe            = NULL;
 	    pScrn->PreInit          = SISPreInit;
 	    pScrn->ScreenInit       = SISScreenInit;
@@ -581,8 +581,8 @@ xf86DrvMsg(0, X_INFO, "                       func=%d\n", device->func);
 	    xf86DrvMsg(0, X_INFO, "SIS_pci_probe - ConfigPciEntity found\n");
 	    /* Fill in what we can of the ScrnInfoRec */
 	    pScrn->driverVersion    = SIS_CURRENT_VERSION;
-	    pScrn->driverName       = SIS_DRIVER_NAME;
-	    pScrn->name             = SIS_NAME;
+	    pScrn->driverName       = (char *)SIS_DRIVER_NAME;
+	    pScrn->name             = (char *)SIS_NAME;
 	    pScrn->Probe            = NULL;
 	    pScrn->PreInit          = SISPreInit;
 	    pScrn->ScreenInit       = SISScreenInit;

@@ -21,8 +21,8 @@ cd xf86-video-sis
 # reboot or logout to enjoy!
 
 # for old distros like Lubuntu 12.04:
+sudo apt-get install colorgcc git-core
 git config --global color.ui auto
-sudo apt-get install colorgcc
 sudo ln -s /usr/bin/colorgcc /usr/local/bin/gcc
 sudo ln -s /usr/bin/colorgcc /usr/local/bin/g++
 mkdir m4
