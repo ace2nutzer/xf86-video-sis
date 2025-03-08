@@ -18,7 +18,7 @@ cd "$srcdir"
 autoreconf --force -v --install || exit 1
 cd "$ORIGDIR" || exit $?
 
-FLAGS_CPU="-march=native -mcpu=native -mtune=native"
+FLAGS_CPU="-march=native -mtune=native"
 
 if test -z "$NOCONFIGURE"; then
     exec "$srcdir"/configure \
@@ -26,7 +26,9 @@ if test -z "$NOCONFIGURE"; then
 		-fomit-frame-pointer -fno-strict-aliasing \
 		-Werror-implicit-function-declaration -Wno-redundant-decls \
 		-Wno-unused-variable -Wno-unused-function -Wno-unused-but-set-variable \
-		-Werror=incompatible-pointer-types \
+		-Wno-shadow -Wno-cast-qual -Wno-missing-prototypes \
+		-Wno-missing-declarations -Wno-declaration-after-statement \
+		-Wno-format-nonliteral \
 		-DNDEBUG -pipe" \
 		--prefix=/usr \
 		"$@"

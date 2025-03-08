@@ -3,7 +3,7 @@ Tested to work on Xorg 1.21 with sis 671
 How to download, build and install this driver:
 
 # Install required packages
-sudo apt-get install git make autoconf xorg-dev libtool libdrm-dev
+sudo apt-get install git make autoconf automake xorg-dev libtool libdrm-dev
 
 # download
 git clone https://github.com/ace2nutzer/xf86-video-sis.git
@@ -21,8 +21,40 @@ cd xf86-video-sis
 # reboot or logout to enjoy!
 
 # for old distros like Lubuntu 12.04:
+sudo apt-get install colorgcc git-core
 git config --global color.ui auto
-sudo apt-get install colorgcc
 sudo ln -s /usr/bin/colorgcc /usr/local/bin/gcc
 sudo ln -s /usr/bin/colorgcc /usr/local/bin/g++
 mkdir m4
+
+# for ancient Ubuntu 8:
+# add the following to your xorg.conf:
+
+Section "InputDevice"
+	Identifier	"Generic Keyboard"
+	Driver		"kbd"
+	Option		"XkbRules"	"xorg"
+	Option		"XkbModel"	"pc105"
+	Option		"XkbLayout"	"de"
+EndSection
+
+Section "InputDevice"
+	Identifier	"Configured Mouse"
+	Driver		"mouse"
+	Option		"CorePointer"
+EndSection
+
+Section "InputDevice"
+	Identifier	"Synaptics Touchpad"
+	Driver		"synaptics"
+	Option		"SendCoreEvents"	"true"
+	Option		"Device"		"/dev/psaux"
+	Option		"Protocol"		"auto-dev"
+	Option		"HorizEdgeScroll"	"0"
+EndSection
+
+Section "ServerLayout"
+	Identifier	"Configured"
+	Screen		"Screen0"
+	InputDevice	"Synaptics Touchpad"
+EndSection

@@ -1,12 +1,5 @@
 Section "Files"
 	ModulePath   "/usr/lib/xorg/modules"
-	FontPath     "/usr/share/fonts/X11/misc"
-	FontPath     "/usr/share/fonts/X11/cyrillic"
-	FontPath     "/usr/share/fonts/X11/100dpi/:unscaled"
-	FontPath     "/usr/share/fonts/X11/75dpi/:unscaled"
-	FontPath     "/usr/share/fonts/X11/Type1"
-	FontPath     "/usr/share/fonts/X11/100dpi"
-	FontPath     "/usr/share/fonts/X11/75dpi"
 	FontPath     "built-ins"
 EndSection
 
@@ -25,7 +18,7 @@ Section "Device"
         ### <percent>: "<f>%"
         ### [arg]: arg optional
         Option      "ShadowFB"           	"true"
-        Option      "DefaultRefresh"     	"true"
+        Option      "DefaultRefresh"     	"false"
         Option      "ModeSetClearScreen" 	"true"
         Identifier  "Card0"
         Driver      "vesa"

@@ -6,17 +6,26 @@ sudo make -j$N install
 
 if [ -f /usr/lib/xorg/modules/libxaa.so ] ; then
 	sudo cp xorg.conf.xaa /etc/X11/xorg.conf
-	sudo cp XvMCConfig /usr/lib/xvmcconfig-standard
 elif [ -f /usr/lib/xorg/modules/libexa.so ] ; then
 	sudo cp xorg.conf.exa /etc/X11/xorg.conf
-	sudo cp XvMCConfig /etc/X11
-	if ! [ -f /usr/lib/x86_64-linux-gnu/libSiSXvMC.so ] ; then
-		sudo ln -s /usr/lib/libSiSXvMC.so /usr/lib/x86_64-linux-gnu/libSiSXvMC.so
-	fi
 elif [ -f /usr/lib/xorg/modules/drivers/vesa_drv.so ] ; then
 	sudo cp xorg.conf.vesa /etc/X11/xorg.conf
 fi
 
-sudo cp xorg.conf.vesa /etc/X11
-sudo cp xorg.conf.xaa /etc/X11
-sudo cp xorg.conf.exa /etc/X11
+if [ -f /usr/lib/xorg/modules/libxaa.so ] ; then
+	sudo cp xorg.conf.xaa /etc/X11
+fi
+
+if [ -f /usr/lib/xorg/modules/libexa.so ] ; then
+	sudo cp xorg.conf.exa /etc/X11
+fi
+
+if [ -f /usr/lib/xorg/modules/drivers/vesa_drv.so ] ; then
+	sudo cp xorg.conf.vesa /etc/X11
+fi
+
+sudo cp XvMCConfig /usr/lib/xvmcconfig-standard
+sudo cp XvMCConfig /etc/X11
+if ! [ -f /usr/lib/x86_64-linux-gnu/libSiSXvMC.so ] ; then
+	sudo ln -s /usr/lib/libSiSXvMC.so /usr/lib/x86_64-linux-gnu/libSiSXvMC.so
+fi

@@ -232,7 +232,7 @@ static char sisxvvsync[]				= "XV_SYNC_TO_VBLANK";
 static XF86VideoEncodingRec DummyEncoding =
 {
    0,
-   "XV_IMAGE",
+   (char *)"XV_IMAGE",
    0, 0,		/* Will be filled in */
    {1, 1}
 };
@@ -483,7 +483,7 @@ typedef struct {
 static XF86VideoEncodingRec DummyEncodingBlit =
 {
    0,
-   "XV_IMAGE",
+   (char *)"XV_IMAGE",
    IMAGE_MAX_WIDTH_BLIT, IMAGE_MAX_HEIGHT_BLIT,
    {1, 1}
 };

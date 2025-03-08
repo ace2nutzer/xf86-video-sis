@@ -911,6 +911,7 @@ SiSHandleSiSDirectCommand(xSiSCtrlCommandReply *sdcbuf)
 #endif
    SISPortPrivPtr pPriv = NULL;
    ULong j;
+   int i;
 
    if(sdcbuf->sdc_id != SDC_ID)
       return BadMatch;
@@ -920,7 +921,7 @@ SiSHandleSiSDirectCommand(xSiSCtrlCommandReply *sdcbuf)
    }
 
    j = sdcbuf->sdc_command;
-   for(int i = 0; i < SDC_NUM_PARM_RESULT; i++) {
+   for(i = 0; i < SDC_NUM_PARM_RESULT; i++) {
       j += sdcbuf->sdc_parm[i];
    }
 
@@ -2110,7 +2111,7 @@ SiSCtrlExtInit(ScrnInfoPtr pScrn)
       if(!(myctrl = calloc(1, sizeof(xSiSCtrlScreenTable))))
          return;
 
-      if(!(myext = AddExtension(SISCTRL_PROTOCOL_NAME, 0, 0,
+      if(!(myext = AddExtension((char *)SISCTRL_PROTOCOL_NAME, 0, 0,
 				SiSProcSiSCtrlDispatch,
 				SiSSProcSiSCtrlDispatch,
 				SiSCtrlResetProc,
