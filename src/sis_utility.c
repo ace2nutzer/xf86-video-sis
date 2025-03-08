@@ -2110,7 +2110,7 @@ SiSCtrlExtInit(ScrnInfoPtr pScrn)
       if(!(myctrl = calloc(1, sizeof(xSiSCtrlScreenTable))))
          return;
 
-      if(!(myext = AddExtension(SISCTRL_PROTOCOL_NAME, 0, 0,
+      if(!(myext = AddExtension((char *)SISCTRL_PROTOCOL_NAME, 0, 0,
 				SiSProcSiSCtrlDispatch,
 				SiSSProcSiSCtrlDispatch,
 				SiSCtrlResetProc,

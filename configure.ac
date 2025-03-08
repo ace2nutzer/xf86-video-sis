@@ -21,12 +21,12 @@
 # Process this file with autoconf to produce a configure script
 
 # Initialize Autoconf
-AC_PREREQ([2.71])
+AC_PREREQ([2.68])
 AC_INIT([xf86-video-sis],[0.12.1],[https://gitlab.freedesktop.org/xorg/driver/xf86-video-sis/issues],[xf86-video-sis])
 AC_CONFIG_SRCDIR([Makefile.am])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_AUX_DIR(.)
-AC_CONFIG_MACRO_DIRS([m4])
+AC_CONFIG_MACRO_DIR([m4])
 
 # Initialize Automake
 AM_INIT_AUTOMAKE([foreign dist-xz])

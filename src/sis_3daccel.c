@@ -83,7 +83,7 @@
 #  include "mipict.h"
 #  include "dixstruct.h"
 #   ifdef XORG_NEW
-#    define SISNEWRENDER
+//#    define SISNEWRENDER
 #   endif
 # endif
 #endif
@@ -408,7 +408,7 @@ SiSSetupForCPUToScreenAlphaTexture3D(ScrnInfoPtr pScrn,
 	CARD32 *dstPtr;
 	int    sbpp = pSiS->CurrentLayout.bytesPerPixel;
 	int    sbppshift = sbpp >> 1;	/* 8->0, 16->1, 32->2 */
-	int    pitch, sizeNeeded;
+	int    pitch, sizeNeeded = 0;
 	CARD8  myalpha;
 	Bool   docopy = TRUE;
 
