@@ -5,13 +5,7 @@
 
 Section "Files"
 	ModulePath   "/usr/lib/xorg/modules"
-	FontPath     "/usr/share/fonts/X11/misc"
-	FontPath     "/usr/share/fonts/X11/cyrillic"
-	FontPath     "/usr/share/fonts/X11/100dpi/:unscaled"
-	FontPath     "/usr/share/fonts/X11/75dpi/:unscaled"
-	FontPath     "/usr/share/fonts/X11/Type1"
-	FontPath     "/usr/share/fonts/X11/100dpi"
-	FontPath     "/usr/share/fonts/X11/75dpi"
+	ModulePath   "/usr/local/lib/xorg/modules/drivers"
 	FontPath     "built-ins"
 EndSection
 
@@ -142,7 +136,7 @@ Section "Device"
         #Option     "XvInsideChromaKey"  	# [<bool>]
         #Option     "XvYUVChromaKey"     	# [<bool>]
         #Option     "XvDisableColorKey"  	# [<bool>]
-        #Option     "XvDefaultAdaptor"   	"BLITTER"
+        Option     "XvDefaultAdaptor"   	"BLITTER"
         #Option     "YV12"               	# [<bool>]
         #Option     "MergedFB"           	# [<str>]
         #Option     "TwinView"           	# [<str>]

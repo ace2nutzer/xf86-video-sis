@@ -3014,7 +3014,7 @@ SiSXineramaExtensionInit(ScrnInfoPtr pScrn)
 	  if(!EventType)
 	     break;
 
-	  pSiS->XineramaExtEntry = AddExtension(PANORAMIX_PROTOCOL_NAME, 1, 0,
+	  pSiS->XineramaExtEntry = AddExtension((char *)PANORAMIX_PROTOCOL_NAME, 1, 0,
 					SiSProcXineramaDispatch,
 					SiSSProcXineramaDispatch,
 					SiSXineramaResetProc,

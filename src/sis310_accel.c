@@ -87,7 +87,7 @@
 #  include "dixstruct.h"
 #  define SIS_NEED_ARRAY
 # ifdef XORG_NEW
-#  define SISNEWRENDER
+//#  define SISNEWRENDER
 # endif
 # endif
 #endif
