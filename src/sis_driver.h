@@ -296,7 +296,7 @@ const customttable SiS_customttable[] = {
  */
 static DisplayModeRec SiS6326PAL800x600Mode = {
 	NULL, NULL,     /* prev, next */
-	"PAL800x600",   /* identifier of this mode */
+	(char *)"PAL800x600",   /* identifier of this mode */
 	MODE_OK,        /* mode status */
 	M_T_BUILTIN,    /* mode type */
 	36000,		/* Clock frequency */
@@ -341,7 +341,7 @@ static DisplayModeRec SiS6326PAL800x600Mode = {
 static DisplayModeRec SiS6326PAL800x600UMode = {
 	NULL,           /* prev */
 	&SiS6326PAL800x600Mode, /* next */
-	"PAL800x600U",  /* identifier of this mode */
+	(char *)"PAL800x600U",  /* identifier of this mode */
 	MODE_OK,        /* mode status */
 	M_T_BUILTIN,    /* mode type */
 	37120,		/* Clock frequency */
@@ -382,7 +382,7 @@ static DisplayModeRec SiS6326PAL800x600UMode = {
 static DisplayModeRec SiS6326PAL720x540Mode = {
 	NULL,      	/* prev */
 	&SiS6326PAL800x600UMode, /* next */
-	"PAL720x540",   /* identifier of this mode */
+	(char *)"PAL720x540",   /* identifier of this mode */
 	MODE_OK,        /* mode status */
 	M_T_BUILTIN,    /* mode type */
 	36000,		/* Clock frequency */
@@ -423,7 +423,7 @@ static DisplayModeRec SiS6326PAL720x540Mode = {
 static DisplayModeRec SiS6326PAL640x480Mode = {
 	NULL,      	/* prev */
 	&SiS6326PAL720x540Mode, /* next */
-	"PAL640x480",   /* identifier of this mode */
+	(char *)"PAL640x480",   /* identifier of this mode */
 	MODE_OK,        /* mode status */
 	M_T_BUILTIN,    /* mode type */
 	36000,		/* Clock frequency */
@@ -463,7 +463,7 @@ static DisplayModeRec SiS6326PAL640x480Mode = {
 
 static DisplayModeRec SiS6326NTSC640x480Mode = {
 	NULL, NULL,	/* prev, next */
-	"NTSC640x480",  /* identifier of this mode */
+	(char *)"NTSC640x480",  /* identifier of this mode */
 	MODE_OK,        /* mode status */
 	M_T_BUILTIN,    /* mode type */
 	27000,		/* Clock frequency */
@@ -508,7 +508,7 @@ static DisplayModeRec SiS6326NTSC640x480Mode = {
 static DisplayModeRec SiS6326NTSC640x480UMode = {
 	NULL, 		/* prev */
 	&SiS6326NTSC640x480Mode, /* next */
-	"NTSC640x480U", /* identifier of this mode */
+	(char *)"NTSC640x480U", /* identifier of this mode */
 	MODE_OK,        /* mode status */
 	M_T_BUILTIN,    /* mode type */
 	32215,		/* Clock frequency */
@@ -550,7 +550,7 @@ static DisplayModeRec SiS6326NTSC640x480UMode = {
 static DisplayModeRec SiS6326NTSC640x400Mode = {
 	NULL, 	     	/* prev */
 	&SiS6326NTSC640x480UMode, /* next */
-	"NTSC640x400",  /* identifier of this mode */
+	(char *)"NTSC640x400",  /* identifier of this mode */
 	MODE_OK,        /* mode status */
 	M_T_BUILTIN,    /* mode type */
 	27000,		/* Clock frequency */
@@ -606,7 +606,7 @@ static DisplayModeRec SiS6326NTSC640x400Mode = {
 static DisplayModeRec SiS6326SIS1280x1024_75Mode = {
 	NULL, 	       	/* prev */
 	NULL,           /* next */
-	"SIS1280x1024-75",  /* identifier of this mode */
+	(char *)"SIS1280x1024-75",  /* identifier of this mode */
 	MODE_OK,        /* mode status */
 	M_T_BUILTIN,    /* mode type */
 	135000,		/* Clock frequency */
@@ -647,7 +647,7 @@ static DisplayModeRec SiS6326SIS1280x1024_75Mode = {
 static DisplayModeRec SiS6326SIS1600x1200_60Mode = {
 	NULL, 	       	/* prev */
 	NULL,           /* next */
-	"SIS1600x1200-60",  /* identifier of this mode */
+	(char *)"SIS1600x1200-60",  /* identifier of this mode */
 	MODE_OK,        /* mode status */
 	M_T_BUILTIN,    /* mode type */
 	162000,		/* Clock frequency */

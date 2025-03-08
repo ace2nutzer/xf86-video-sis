@@ -989,7 +989,7 @@ SISSetupImageVideo(ScreenPtr pScreen)
 
     adapt->type = XvWindowMask | XvInputMask | XvImageMask;
     adapt->flags = VIDEO_OVERLAID_IMAGES | VIDEO_CLIP_TO_VIEWPORT;
-    adapt->name = "SIS 300/315/330 series Video Overlay";
+    adapt->name = (char *)"SIS 300/315/330 series Video Overlay";
     adapt->nEncodings = 1;
     adapt->pEncodings = &DummyEncoding;
 
@@ -2588,7 +2588,7 @@ set_overlay(SISPtr pSiS, SISOverlayPtr pOverlay, SISPortPrivPtr pPriv, int index
     CARD16 screenX, screenY;
     CARD32 PSY;
     int    modeflags, totalPixels, confactor, sample, watchdog = 0;
-    CARD8 alignMask;
+    CARD8 alignMask = 0;
 
 #ifdef SISMERGED
     if(pSiS->MergedFB && iscrt2) {
@@ -4437,7 +4437,7 @@ SISSetupBlitVideo(ScreenPtr pScreen)
 
    adapt->type = XvWindowMask | XvInputMask | XvImageMask;
    adapt->flags = 0;
-   adapt->name = "SIS 315/330/340/350 series Video Blitter";
+   adapt->name = (char *)"SIS 315/330/340/350 series Video Blitter";
    adapt->nEncodings = 1;
    adapt->pEncodings = &DummyEncodingBlit;
    adapt->nFormats = NUM_FORMATS;

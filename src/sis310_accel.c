@@ -86,9 +86,7 @@
 #  include "mipict.h"
 #  include "dixstruct.h"
 #  define SIS_NEED_ARRAY
-# ifdef XORG_NEW
 #  define SISNEWRENDER
-# endif
 # endif
 #endif
 
