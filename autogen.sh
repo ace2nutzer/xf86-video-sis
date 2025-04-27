@@ -22,7 +22,7 @@ FLAGS_CPU="-march=native -mtune=native"
 
 if test -z "$NOCONFIGURE"; then
     exec "$srcdir"/configure \
-		CFLAGS="$FLAGS_CPU -O2 \
+		CFLAGS="$FLAGS_CPU -O3 \
 		-fomit-frame-pointer -fno-strict-aliasing \
 		-Werror-implicit-function-declaration -Wno-redundant-decls \
 		-Wno-unused-variable -Wno-unused-function -Wno-unused-but-set-variable \
