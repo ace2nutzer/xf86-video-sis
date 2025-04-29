@@ -69,11 +69,6 @@
 			 * Indirect mode does not work in VRAM queue mode.
 			 * Does not work on 330 series (even in MMIO mode).
 			 */
-#undef CTSCE_DIRECT	/* Use direct method - This works (on both 315 and 330 at
-			 * least in VRAM queue mode) but we don't use this either,
-			 * because it's slower than doing it by the CPU. (Using it
-			 * would require defining CTSCE)
-			 */
 
 #undef STSCE		/* Use/Don't use ScreenToScreenColorExpand - does not work,
 			 * see comments below.
