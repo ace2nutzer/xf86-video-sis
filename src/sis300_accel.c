@@ -603,7 +603,6 @@ SiSSetupForScreenToScreenColorExpand(ScrnInfoPtr pScrn,
 				SRCVIDEO);
 	};
 }
-#endif
 
 /* This method blits in a single task; this does not seem to work
  * because the hardware does not use the source pitch as scanline
@@ -611,7 +610,6 @@ SiSSetupForScreenToScreenColorExpand(ScrnInfoPtr pScrn,
  * XAA provides the pattern bitmap with scrnOffset (displayWidth * bpp/8)
  * offset, but this does not seem to be supported by the hardware.
  */
-#ifdef STSCE
 
 /* For testing, these are the methods: (use only one at a time!) */
 
