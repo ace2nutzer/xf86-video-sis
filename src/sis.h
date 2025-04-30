@@ -996,6 +996,7 @@ typedef struct {
     Bool		VGAPaletteEnabled;
     Bool		VGACMapSaved;
 
+    int			GpuClock;
     int			MemClock;
     int			BusWidth;
     int			MinClock;

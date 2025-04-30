@@ -38,6 +38,7 @@ void SiSCalcClock(ScrnInfoPtr pScrn, int clock, int max_VLD,
 void SiSIODump(ScrnInfoPtr pScrn);
 int  SiSMemBandWidth(ScrnInfoPtr pScrn, Bool IsForCRT2, Bool quiet);
 int  SiSMclk(SISPtr pSiS);
+int  SiSGclk(SISPtr pSiS);
 void SiSRestoreBridge(ScrnInfoPtr pScrn, SISRegPtr sisReg);
 void SiS_UpdateGammaCRT2(ScrnInfoPtr pScrn);
 
