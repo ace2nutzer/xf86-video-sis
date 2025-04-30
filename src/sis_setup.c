@@ -45,6 +45,7 @@
 #include "sis_regs.h"
 
 extern int SiSMclk(SISPtr pSiS);
+extern int SiSGclk(SISPtr pSiS);
 
 static const char *dramTypeStr[] = {
 	"Fast Page DRAM",
@@ -687,7 +688,7 @@ sis550Setup(ScrnInfoPtr pScrn)
     if(pSiS->Chipset == PCI_CHIP_SIS671){
        inSISIDXREG(SISCR,0x79,config);
        /* DDR */
-       ramtype = 0xa;
+       ramtype = 10;
 
        /* Bus Data Width*/
        pSiS->BusWidth = (!(config & 0x0C))? 64 : 0;
@@ -1033,9 +1034,15 @@ sis550Setup(ScrnInfoPtr pScrn)
 	}
     }
 
+    pSiS->GpuClock = SiSGclk(pSiS);
+
+    xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
+		"GPU clock: %3.3f MHz\n",
+		pSiS->GpuClock/1000.0);
+
     /* DDR -> Mclk * 2 - needed for bandwidth calculation */
     if(ddrtimes2) {
-       if(ramtype == 8 || ramtype == 0xa)
+       if(ramtype >= 7)
            pSiS->MemClock *= 2;
     }
 

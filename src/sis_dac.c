@@ -1291,7 +1291,10 @@ SiSMclk(SISPtr pSiS)
 
 	/* Numerator */
 	inSISIDXREG(SISSR, 0x28, Num);
-	mclk = 16000 * ((Num & 0x7f) + 1);
+	if(pSiS->Chipset == PCI_CHIP_SIS671)
+		mclk = 16000 * ((Num & 0x7f) + 1);
+	else
+		mclk = 14318 * ((Num & 0x7f) + 1);
 
 	/* Denumerator */
 	inSISIDXREG(SISSR, 0x29, Denum);
@@ -1338,6 +1341,60 @@ SiSMclk(SISPtr pSiS)
     }
 
     return(mclk);
+}
+
+/* Auxiliary function to find real GPU clock (in Khz) */
+int
+SiSGclk(SISPtr pSiS)
+{
+    int gclk = 0;
+    int sr = 46;
+    UChar Num, Denum;
+
+    switch (pSiS->Chipset)  {
+
+    case PCI_CHIP_SIS300:
+    case PCI_CHIP_SIS540:
+    case PCI_CHIP_SIS630:
+    case PCI_CHIP_SIS315:
+    case PCI_CHIP_SIS315H:
+    case PCI_CHIP_SIS315PRO:
+    case PCI_CHIP_SIS550:
+    case PCI_CHIP_SIS650:
+    case PCI_CHIP_SIS330:
+    case PCI_CHIP_SIS660:
+    case PCI_CHIP_SIS340:
+    case PCI_CHIP_SIS670:
+    case PCI_CHIP_SIS671:
+    case PCI_CHIP_XGIXG20:
+    case PCI_CHIP_XGIXG40:
+
+	/* Numerator */
+	inSISIDXREG(SISSR, sr, Num);
+	if(pSiS->Chipset == PCI_CHIP_SIS671)
+		gclk = 16000 * ((Num & 0x7f) + 1);
+	else
+		gclk = 14318 * ((Num & 0x7f) + 1);
+
+	/* Denumerator */
+	inSISIDXREG(SISSR, sr+1, Denum);
+	gclk = gclk / ((Denum & 0x1f) + 1);
+
+	/* Divider */
+	if((Num & 0x80) != 0)  gclk *= 2;
+
+	/* Post-Scaler */
+	if((Denum & 0x80) == 0) {
+	   gclk = gclk / (((Denum & 0x60) >> 5) + 1);
+	} else {
+	   gclk = gclk / ((((Denum & 0x60) >> 5) + 1) * 2);
+	}
+
+	break;
+
+    }
+
+    return(gclk);
 }
 
 /* This estimates the CRT2 clock we are going to use.
