@@ -126,7 +126,7 @@
  *       Raw register access     *
  *********************************/
 
-
+#if 0
 static CARD32 _sisread(SISPtr pSiS, CARD32 reg)
 {
    return SIS_MMIO_IN32(pSiS->IOBase, reg);
@@ -136,7 +136,7 @@ static void _siswrite(SISPtr pSiS, CARD32 reg, CARD32 data)
 {
     SIS_MMIO_OUT32(pSiS->IOBase, reg, data);
 }
-
+#endif
 
 static CARD8 getsrreg(SISPtr pSiS, CARD8 reg)
 {
@@ -187,7 +187,8 @@ static CARD8 vblank_active_CRT2(SISPtr pSiS, SISPortPrivPtr pPriv)
     return(ret & 0x02);  /* Verified */
 }
 
-
+/* Scanline - unused */
+#if 0
 static CARD16 get_scanline_CRT1(SISPtr pSiS)
 {
     CARD32 line;
@@ -197,6 +198,7 @@ static CARD16 get_scanline_CRT1(SISPtr pSiS)
 
     return((CARD16)((line >> 16) & 0x07FF));
 }
+#endif
 
 static CARD16 get_scanline_CRT2(SISPtr pSiS, SISPortPrivPtr pPriv)
 {

@@ -339,7 +339,7 @@ void		SiS_SetCH70xx(struct SiS_Private *SiS_Pr, unsigned short reg, unsigned cha
 unsigned short	SiS_GetCH70xx(struct SiS_Private *SiS_Pr, unsigned short tempax);
 #endif
 void		SiS_SetCH70xxANDOR(struct SiS_Private *SiS_Pr, unsigned short reg,
-			unsigned char orval,unsigned short andval);
+			unsigned char orval, unsigned short andval);
 #ifdef SIS315H
 static void	SiS_Chrontel701xOn(struct SiS_Private *SiS_Pr);
 static void	SiS_Chrontel701xOff(struct SiS_Private *SiS_Pr);

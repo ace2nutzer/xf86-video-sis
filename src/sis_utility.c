@@ -1245,7 +1245,7 @@ SiSHandleSiSDirectCommand(xSiSCtrlCommandReply *sdcbuf)
 
    case SDC_CMD_GETCHTVOVERSCAN:
       {  /* Changing of CRT2 settings not supported in DHM! */
-	 int i = 0;
+	 i = 0;
 	 if(pSiS->OptTVSOver == 1)         i = 3;
 	 else if(pSiS->UseCHOverScan == 1) i = 2;
 	 else if(pSiS->UseCHOverScan == 0) i = 1;
@@ -1269,7 +1269,7 @@ SiSHandleSiSDirectCommand(xSiSCtrlCommandReply *sdcbuf)
 
    case SDC_CMD_GETGAMMASTATUS:
       {
-         int i = 0;
+         i = 0;
 #ifdef SISDUALHEAD
 	 if(pSiS->DualHeadMode) {
 	    if(pSiSEnt->CRT1gamma) i |= 0x01;
@@ -1581,7 +1581,7 @@ SiSHandleSiSDirectCommand(xSiSCtrlCommandReply *sdcbuf)
 
    case SDC_CMD_GETPANELMODE:
       {
-	 int i = 0;
+	 i = 0;
 	 if(pSiS->SiS_SD_Flags & SiS_SD_SUPPORTSCALE) {
 	    switch(pSiS->SiS_Pr->UsePanelScaler) {
 	    case -1: i |= 0x01; break;

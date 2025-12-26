@@ -394,8 +394,9 @@ SiS_EvalOneOrThreeFloats(ScrnInfoPtr pScrn, int token, const char *myerror,
        }
     }
     if(!valid) {
-       xf86DrvMsg(pScrn->scrnIndex, X_WARNING, myerror,
-                  pSiS->Options[SiS_FIFT(pSiS->Options, token)].name);
+       xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
+	"\"%s\" is is not a valid parameter for option \"%s\"\n",
+		myerror, pSiS->Options[SiS_FIFT(pSiS->Options, token)].name);
     }
     return (valid);
 }
@@ -424,8 +425,9 @@ SiS_EvalOneOrThreeFloats2(ScrnInfoPtr pScrn, int token, const char *myerror,
        }
     }
     if(!valid) {
-       xf86DrvMsg(pScrn->scrnIndex, X_WARNING, myerror,
-                  pSiS->Options[SiS_FIFT(pSiS->Options, token)].name);
+       xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
+	"\"%s\" is is not a valid parameter for option \"%s\"\n",
+	myerror, pSiS->Options[SiS_FIFT(pSiS->Options, token)].name);
     }
     return (valid);
 }

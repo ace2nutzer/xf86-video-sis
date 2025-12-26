@@ -387,7 +387,7 @@ SISDriverFunc(ScrnInfoPtr pScrn, SISDRIVERFUNCOPTYPE op, SISDRIVERFUNCPTRTYPE pt
 /*                     Probe()                      */
 /****************************************************/
 
-
+#ifndef XSERVER_LIBPCIACCESS
 static Bool
 SISProbe(DriverPtr drv, int flags)
 {
@@ -558,6 +558,7 @@ SISProbe(DriverPtr drv, int flags)
 
     return foundScreen;
 }
+#endif
 
 #ifdef XSERVER_LIBPCIACCESS
 static Bool SIS_pci_probe (DriverPtr driver, int entity_num, struct pci_device *device, intptr_t match_data)

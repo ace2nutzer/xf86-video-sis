@@ -766,7 +766,9 @@ struct _SISFB_INFO {
 
 /* Mandatory functions */
 static void SISIdentify(int flags);
+#ifndef XSERVER_LIBPCIACCESS
 static Bool SISProbe(DriverPtr drv, int flags);
+#endif
 static Bool SISPreInit(ScrnInfoPtr pScrn, int flags);
 static Bool SISScreenInit(SCREEN_INIT_ARGS_DECL);
 static Bool SISEnterVT(VT_FUNC_ARGS_DECL);

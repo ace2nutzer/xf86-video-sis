@@ -253,6 +253,7 @@ extern Bool SiSAllocateLinear(ScrnInfoPtr pScrn, int sizeNeeded);
 
 #define FBOFFSET	(pSiS->dhmOffset)
 
+#if defined(RENDER) && defined(INCL_RENDER)
 static unsigned long Float2FixedS7(unsigned long dwValue)
 {
     unsigned long dwMantissa;
@@ -374,7 +375,6 @@ static unsigned long GetTexturePitch(unsigned long dwPitch)
     return dwPitch | (i<<9);
 }
 
-#if defined(RENDER) && defined(INCL_RENDER)
 Bool
 SiSSetupForCPUToScreenAlphaTexture3D(ScrnInfoPtr pScrn,
 			int op, CARD16 red, CARD16 green,
