@@ -18,18 +18,18 @@ cd "$srcdir"
 autoreconf --force -v --install || exit 1
 cd "$ORIGDIR" || exit $?
 
-FLAGS_CPU="-march=native -mtune=native"
+CPUFLAGS="-march=native -mcpu=native -mtune=native"
 
 if test -z "$NOCONFIGURE"; then
     exec "$srcdir"/configure \
-		CFLAGS="$FLAGS_CPU -O2 \
-		-fomit-frame-pointer -fno-strict-aliasing \
-		-Werror-implicit-function-declaration -Wno-redundant-decls \
-		-Wno-unused-variable -Wno-unused-function -Wno-unused-but-set-variable \
-		-Wno-shadow -Wno-cast-qual -Wno-missing-prototypes \
-		-Wno-missing-declarations -Wno-declaration-after-statement \
-		-Wno-format-nonliteral \
+		CFLAGS="$CPUFLAGS -O2 -ftree-vectorize \
+		-fvect-cost-model=dynamic -flto=auto -fomit-frame-pointer \
+		-Werror-implicit-function-declaration \
+		-Werror=incompatible-pointer-types \
+		-Wno-unused-variable -Wno-unused-but-set-variable \
+		-Wno-declaration-after-statement -Wno-redundant-decls \
 		-DNDEBUG -pipe" \
+		LDFLAGS="-flto=auto" \
 		--prefix=/usr \
 		"$@"
 fi
