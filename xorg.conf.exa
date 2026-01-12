@@ -9,7 +9,12 @@ Section "Files"
 EndSection
 
 Section "Module"
-	Load  "glx"
+	#Disable  "glx"
+EndSection
+
+Section "Extensions"
+    Option "SELinux" "Disable"
+    #Option "COMPOSITE" "Disable"
 EndSection
 
 Section "Monitor"
@@ -173,5 +178,5 @@ Section "Screen"
 EndSection
 
 Section "ServerFlags"
-	Option        "IgnoreABI"	"true"
+	Option        "IgnoreABI"	"false"
 EndSection
